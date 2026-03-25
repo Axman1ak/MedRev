@@ -7,7 +7,6 @@ export default function AuthPage() {
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [pendingEmail, setPendingEmail] = useState('')
   const router = useRouter()
   const supabase = createClient()
   const [lEmail, setLEmail] = useState('')
@@ -20,21 +19,13 @@ export default function AuthPage() {
     e.preventDefault()
     setLoading(true); setError('')
     const { error } = await supabase.auth.signInWithPassword({ email: lEmail, password: lPass })
-    if (error) {
-      if (error.message.includes('Email not confirmed')) {
-        setError("Votre email n'est pas encore confirmé. Vérifiez votre boîte mail.")
-      } else {
-        setError(error.message)
-      }
-      setLoading(false)
-      return
-    }
+    if (error) { setError(error.message); setLoading(false); return }
     router.push('/dashboard')
   }
 
   async function doRegister(e: React.FormEvent) {
     e.preventDefault()
-    if (rPass.length < 6) { setError('Mot de passe trop court (min. 6 caractères)'); return }
+    if (rPass.length < 6) { setError('Mot de passe trop court (min. 6 caracteres)'); return }
     setLoading(true); setError('')
     const { error } = await supabase.auth.signUp({
       email: rEmail,
@@ -42,64 +33,23 @@ export default function AuthPage() {
       options: { data: { name: rName } }
     })
     if (error) { setError(error.message); setLoading(false); return }
-    setPendingEmail(rEmail)
-    setLoading(false)
-  }
-
-  async function resendEmail() {
-    await supabase.auth.resend({ type: 'signup', email: pendingEmail })
-    alert('Email renvoyé !')
-  }
-
-  // ── Écran de confirmation en attente ──────────────────────
-  if (pendingEmail) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-5" style={{ background: 'var(--bg)' }}>
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 24, padding: 44, maxWidth: 420, width: '100%', textAlign: 'center', animation: 'mIn 0.3s ease' }}>
-          <div style={{ fontSize: 52, marginBottom: 20 }}>📬</div>
-          <div className="font-syne font-black text-2xl mb-3" style={{ color: 'var(--t1)', letterSpacing: '-0.02em' }}>
-            Confirmez votre email
-          </div>
-          <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--t2)' }}>
-            Un lien de confirmation a été envoyé à<br />
-            <strong style={{ color: 'var(--accent)' }}>{pendingEmail}</strong>
-          </p>
-          <div style={{ background: 'rgba(79,142,247,.08)', border: '1px solid rgba(79,142,247,.2)', borderRadius: 12, padding: '14px 18px', marginBottom: 24, textAlign: 'left' }}>
-            <p className="text-sm" style={{ color: 'var(--t2)', lineHeight: 1.7 }}>
-              1. Ouvrez votre boîte mail<br />
-              2. Cliquez sur le lien <strong style={{ color: 'var(--t1)' }}>&quot;Confirmer mon adresse&quot;</strong><br />
-              3. Vous serez automatiquement connecté
-            </p>
-          </div>
-          <p className="text-xs mb-4" style={{ color: 'var(--t3)' }}>
-            Pas reçu ? Vérifiez vos spams.
-          </p>
-          <button
-            onClick={resendEmail}
-            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 20px', color: 'var(--t2)', fontSize: 13, cursor: 'pointer', fontFamily: 'DM Sans' }}
-          >
-            Renvoyer l&apos;email
-          </button>
-        </div>
-      </div>
-    )
+    router.push('/dashboard')
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5" style={{ background: 'var(--bg)' }}>
-      <div className="w-full max-w-md" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 24, padding: 40, animation: 'mIn 0.3s ease' }}>
-
-        <div className="font-syne font-black text-3xl tracking-tight mb-1" style={{ letterSpacing: '-0.04em' }}>
+      <div className="w-full max-w-md" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 24, padding: 40 }}>
+        <div className="font-syne font-black text-3xl mb-1" style={{ letterSpacing: '-0.04em' }}>
           Med<span style={{ color: 'var(--accent)' }}>Rev</span>
         </div>
-        <p className="text-xs mb-7" style={{ color: 'var(--t3)' }}>Révision médicale espacée · Propulsée par l&apos;IA · RGPD compliant</p>
+        <p className="text-xs mb-7" style={{ color: 'var(--t3)' }}>Revision medicale espacee</p>
 
         <div className="flex gap-1 p-1 rounded-xl mb-6" style={{ background: 'var(--bg3)' }}>
           {(['login', 'register'] as const).map(t => (
             <button key={t} onClick={() => { setTab(t); setError('') }}
               className="flex-1 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border-0"
               style={{ background: tab === t ? 'var(--accent)' : 'transparent', color: tab === t ? '#fff' : 'var(--t2)', fontFamily: 'DM Sans' }}>
-              {t === 'login' ? 'Connexion' : 'Créer un compte'}
+              {t === 'login' ? 'Connexion' : 'Creer un compte'}
             </button>
           ))}
         </div>
@@ -114,8 +64,7 @@ export default function AuthPage() {
           <form onSubmit={doLogin} className="flex flex-col gap-3">
             <input className="input" type="email" placeholder="Email" value={lEmail} onChange={e => setLEmail(e.target.value)} required autoComplete="email" />
             <input className="input" type="password" placeholder="Mot de passe" value={lPass} onChange={e => setLPass(e.target.value)} required autoComplete="current-password" />
-            <button type="submit" disabled={loading}
-              className="mt-1 py-3 rounded-xl font-semibold text-sm border-0 cursor-pointer transition-all"
+            <button type="submit" disabled={loading} className="mt-1 py-3 rounded-xl font-semibold text-sm border-0 cursor-pointer"
               style={{ background: 'var(--accent)', color: '#fff', opacity: loading ? 0.6 : 1, fontFamily: 'DM Sans' }}>
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
@@ -124,24 +73,22 @@ export default function AuthPage() {
 
         {tab === 'register' && (
           <form onSubmit={doRegister} className="flex flex-col gap-3">
-            <input className="input" type="text" placeholder="Prénom" value={rName} onChange={e => setRName(e.target.value)} required />
-            <input className="input" type="email" placeholder="Email" value={rEmail} onChange={e => setREmail(e.target.value)} required autoComplete="email" />
-            <input className="input" type="password" placeholder="Mot de passe (min. 6 caractères)" value={rPass} onChange={e => setRPass(e.target.value)} required autoComplete="new-password" />
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--t3)' }}>
-              En créant un compte, vous acceptez notre{' '}
-              <a href="/privacy" className="underline" style={{ color: 'var(--accent)' }}>politique de confidentialité</a>.
+            <input className="input" type="text" placeholder="Prenom" value={rName} onChange={e => setRName(e.target.value)} required />
+            <input className="input" type="email" placeholder="Email" value={rEmail} onChange={e => setREmail(e.target.value)} required />
+            <input className="input" type="password" placeholder="Mot de passe (min. 6)" value={rPass} onChange={e => setRPass(e.target.value)} required />
+            <p className="text-xs" style={{ color: 'var(--t3)' }}>
+              En creant un compte vous acceptez notre <a href="/privacy" style={{ color: 'var(--accent)' }}>politique de confidentialite</a>.
             </p>
-            <button type="submit" disabled={loading}
-              className="mt-1 py-3 rounded-xl font-semibold text-sm border-0 cursor-pointer transition-all"
+            <button type="submit" disabled={loading} className="mt-1 py-3 rounded-xl font-semibold text-sm border-0 cursor-pointer"
               style={{ background: 'var(--accent)', color: '#fff', opacity: loading ? 0.6 : 1, fontFamily: 'DM Sans' }}>
-              {loading ? 'Création...' : 'Créer mon compte gratuit'}
+              {loading ? 'Creation...' : 'Creer mon compte gratuit'}
             </button>
           </form>
         )}
 
         <div className="flex gap-2 mt-5 flex-wrap">
-          <span className="badge" style={{ background: 'rgba(79,142,247,.1)', color: 'var(--accent)', borderColor: 'rgba(79,142,247,.3)' }}>✓ Gratuit — 15 fiches</span>
-          <span className="badge" style={{ background: 'rgba(245,158,11,.1)', color: 'var(--gold)', borderColor: 'rgba(245,158,11,.3)' }}>⭐ Premium — IA + illimité</span>
+          <span className="badge" style={{ background: 'rgba(79,142,247,.1)', color: 'var(--accent)', borderColor: 'rgba(79,142,247,.3)' }}>Gratuit - 15 fiches</span>
+          <span className="badge" style={{ background: 'rgba(245,158,11,.1)', color: 'var(--gold)', borderColor: 'rgba(245,158,11,.3)' }}>Premium - IA + illimite</span>
         </div>
       </div>
     </div>
