@@ -157,7 +157,7 @@ export default function DashboardPage() {
               <span style={{ fontSize: 11 }}>{cnt}</span>
               <button onClick={e => { e.stopPropagation(); setEditSystem(s); setShowSysModal(true) }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--t3)', opacity: 0, padding: '2px 4px', borderRadius: 4, position: 'absolute', right: 4 }}
-                className="group-hover:opacity-100 transition-opacity">⚙️</button>
+                className="transition-opacity">⚙️</button>
             </div>
           )
         })}
