@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e28;
+  --card: #1e2330;
+  --border: #2a3045;
+  --accent: #4f8ef7;
+  --accent2: #6ee7b7;
+  --accent3: #f59e6b;
+  --danger: #f87171;
+  --gold: #f59e0b;
+  --purple: #a78bfa;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: #e8ecf4;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+@layer utilities {
+  .font-syne { font-family: 'Syne', sans-serif; }
+  .font-mono-dm { font-family: 'DM Mono', monospace; }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-xl border-0 font-sans text-sm font-medium cursor-pointer transition-all duration-200;
+  }
+  .btn-primary {
+    @apply bg-accent text-white hover:bg-blue-500 hover:-translate-y-px;
+  }
+  .btn-ghost {
+    @apply bg-card text-t2 border border-border hover:text-t1 hover:border-accent;
+  }
+  .btn-gold {
+    @apply bg-gold text-bg font-bold hover:bg-yellow-500 hover:-translate-y-px;
+  }
+  .btn-purple {
+    @apply bg-purple text-white font-semibold hover:bg-violet-500 hover:-translate-y-px;
+  }
+  .btn-danger {
+    @apply bg-transparent text-danger border border-red-800 hover:bg-red-900/20;
+  }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .btn-xs { @apply px-2.5 py-1 text-xs; }
+
+  .card {
+    @apply bg-card border border-border rounded-2xl;
+  }
+
+  .input {
+    @apply w-full px-3 py-2.5 bg-bg3 border border-border rounded-xl text-t1 
+           font-sans text-sm transition-colors duration-200
+           focus:outline-none focus:border-accent placeholder:text-t3;
+  }
+
+  .label {
+    @apply block text-xs text-t2 font-medium mb-1.5;
+  }
+
+  .badge {
+    @apply text-xs font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap;
+  }
+  .badge-sys {
+    @apply bg-accent2/10 text-accent2 border-accent2/30;
+  }
+  .badge-done {
+    @apply bg-accent/10 text-accent border-accent/30;
+  }
+  .badge-ai {
+    @apply bg-purple/10 text-purple border-purple/30;
+  }
+  .badge-pro {
+    @apply bg-gold text-bg text-xs font-bold px-1.5 py-0.5 rounded;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  }
+  .modal {
+    @apply bg-bg2 border border-border rounded-2xl p-7 w-full max-h-[92vh] overflow-y-auto;
+    animation: mIn 0.2s ease;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-xl cursor-pointer
+           transition-all duration-200 text-t2 text-sm font-medium border border-transparent
+           hover:bg-bg3 hover:text-t1 no-underline;
+  }
+  .nav-item.active {
+    @apply bg-card text-t1 border-border;
+  }
+}
+
+@keyframes mIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(167,139,250,0.3);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
