@@ -1,6 +1,4 @@
 'use client'
-// src/app/dashboard/layout.tsx
-
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -65,11 +63,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
-
-      {/* Sidebar */}
       <nav className="flex flex-col" style={{ width: 220, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--border)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
 
-        {/* Logo */}
         <div style={{ padding: '20px 18px 14px', borderBottom: '1px solid var(--border)' }}>
           <div className="font-syne font-black text-xl" style={{ letterSpacing: '-0.03em' }}>
             Med<span style={{ color: 'var(--accent)' }}>Rev</span>
@@ -77,15 +72,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="text-xs mt-0.5" style={{ color: 'var(--t3)', fontFamily: 'DM Mono', letterSpacing: '0.05em' }}>REVISION MEDICALE IA</div>
         </div>
 
-        {/* Today banner */}
         {todayCount > 0 && (
           <Link href="/dashboard/calendar" style={{ margin: '10px 8px 0', padding: '8px 12px', background: 'rgba(79,142,247,.08)', border: '1px solid rgba(79,142,247,.15)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
             <span style={{ background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 20 }}>{todayCount}</span>
-            <span className="text-xs" style={{ color: 'var(--t2)' }}>a reviser aujourd'hui</span>
+            <span className="text-xs" style={{ color: 'var(--t2)' }}>a reviser aujourd&apos;hui</span>
           </Link>
         )}
 
-        {/* Nav */}
         <div className="text-xs font-bold uppercase mt-4" style={{ padding: '0 14px 6px', color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.1em' }}>Navigation</div>
         <div className="flex flex-col" style={{ padding: '0 4px' }}>
           {NAV.map(n => (
@@ -101,7 +94,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div id="sidebar-subjects" className="flex-1" />
 
-        {/* Footer */}
         <div style={{ padding: '10px 8px', borderTop: '1px solid var(--border)' }}>
           <div className="relative group">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, cursor: 'pointer' }} className="hover:bg-bg3 transition-colors">
@@ -122,7 +114,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </nav>
 
-      {/* Main */}
       <main className="flex-1 min-w-0 overflow-y-auto">
         {children}
       </main>
