@@ -35,9 +35,12 @@ body {
   .font-syne { font-family: 'Syne', sans-serif; }
   .font-mono-dm { font-family: 'DM Mono', monospace; }
 }
-  
 
 /* Boutons sidebar : visibles au hover uniquement */
-aside div:has(button.transition-opacity):hover button.transition-opacity {
+aside div.group > button.transition-opacity {
+  opacity: 0 !important;
+  transition: opacity 0.2s ease !important;
+}
+aside div.group:hover > button.transition-opacity {
   opacity: 1 !important;
 }
