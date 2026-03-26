@@ -34,7 +34,8 @@ body {
 @layer utilities {
   .font-syne { font-family: 'Syne', sans-serif; }
   .font-mono-dm { font-family: 'DM Mono', monospace; }
-
+}
+  
 
 /* Boutons sidebar : visibles au hover uniquement */
 aside div:has(button.transition-opacity):hover button.transition-opacity {
