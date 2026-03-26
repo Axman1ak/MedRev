@@ -37,10 +37,6 @@ body {
 
 
 /* Boutons sidebar : visibles au hover uniquement */
-aside div.group > button.transition-opacity {
-  opacity: 0 !important;
-  transition: opacity 0.2s ease !important;
-}
-aside div.group:hover > button.transition-opacity {
+aside div:has(button.transition-opacity):hover button.transition-opacity {
   opacity: 1 !important;
 }
