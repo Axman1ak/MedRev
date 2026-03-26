@@ -34,6 +34,14 @@ body {
 @layer utilities {
   .font-syne { font-family: 'Syne', sans-serif; }
   .font-mono-dm { font-family: 'DM Mono', monospace; }
+
+/* Force sidebar buttons visible - override inline opacity */
+aside button[style*="opacity: 0"],
+aside button[style*="opacity:0"] {
+  opacity: 1 !important;
+  position: relative !important;
+  right: auto !important;
+}
 }
 
 @layer components {
