@@ -154,6 +154,6 @@ aside div.group:hover > button.transition-opacity {
 }
 
 /* Cacher le compteur au hover pour laisser place aux boutons */
-aside div.group:hover span:last-child {
+aside div.group:hover > span:nth-child(3) {
   display: none;
 }
