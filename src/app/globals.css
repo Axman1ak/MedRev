@@ -35,6 +35,12 @@ body {
   .font-syne { font-family: 'Syne', sans-serif; }
   .font-mono-dm { font-family: 'DM Mono', monospace; }
 
+/* Boutons sidebar : visibles au hover uniquement */
+aside div:hover > button[style*="opacity: 0"],
+aside div:hover button[style*="opacity:0"] {
+  opacity: 1 !important;
+}
+
 /* Force sidebar buttons visible - override inline opacity */
 aside button[style*="opacity: 0"],
 aside button[style*="opacity:0"] {
