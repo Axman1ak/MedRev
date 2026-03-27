@@ -3,12 +3,31 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'register' | 'login'>('register')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const goToAuth = (mode: string) => {
-    window.location.href = `/auth?mode=${mode}`
+  const supabase = createClient()
+
+  const handleRegister = async () => {
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.signUp({ email, password })
+    if (error) { setError(error.message); setLoading(false); return }
+    window.location.href = '/dashboard'
+  }
+
+  const handleLogin = async () => {
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) { setError(error.message); setLoading(false); return }
+    window.location.href = '/dashboard'
   }
 
   return (
@@ -481,7 +500,7 @@ export default function LandingPage() {
               {['QCM IA (upload cours PDF)','Fiches illimitées','Synchro multi-appareils'].map(f=>(
                 <div key={f} className="lp-pc-feat off"><span className="lp-pc-cross">✗</span> {f}</div>
               ))}
-              <button className="lp-pc-cta free" onClick={() => goToAuth('register')}>Commencer gratuitement</button>
+              <button className="lp-pc-cta free" onClick={() => document.getElementById('auth')?.scrollIntoView({behavior:'smooth'})}>Commencer gratuitement</button>
             </div>
             <div>
               <div className="lp-pc-rec"><span>⭐ Recommandé</span></div>
@@ -493,7 +512,7 @@ export default function LandingPage() {
                 {['Fiches illimitées','Révision espacée J0→J+120','Calendrier de révision','Module Voyage (2 passages)','Export / Import JSON','✨ QCM IA profonds (upload PDF)','✨ Formats EDN : QCM, KFP, V/F','✨ Synchro cloud (bientôt)'].map(f=>(
                   <div key={f} className="lp-pc-feat on"><span className="lp-pc-check">✓</span> {f}</div>
                 ))}
-                <button className="lp-pc-cta prem" onClick={() => goToAuth('register')}>Passer Premium →</button>
+                <button className="lp-pc-cta prem" onClick={() => document.getElementById('auth')?.scrollIntoView({behavior:'smooth'})}>Passer Premium →</button>
               </div>
             </div>
           </div>
@@ -525,18 +544,24 @@ export default function LandingPage() {
 
             {activeTab === 'register' && (
               <div>
-                <div className="lp-fg-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="prenom@univ-medecine.fr" /></div>
-                <div className="lp-fg-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="Minimum 8 caractères" /></div>
-                <button className="lp-auth-submit" onClick={() => goToAuth('register')}>Créer mon compte gratuit →</button>
+                <div className="lp-fg-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="prenom@univ-medecine.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div className="lp-fg-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="Minimum 8 caractères" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                {error && <p style={{color:'#f87171',fontSize:'13px',marginBottom:'8px'}}>{error}</p>}
+                <button className="lp-auth-submit" onClick={handleRegister} disabled={loading}>
+                  {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}
+                </button>
                 <p className="lp-auth-terms">En créant un compte, tu acceptes nos <a href="/privacy">CGU</a>. Données hébergées en France 🇫🇷</p>
               </div>
             )}
 
             {activeTab === 'login' && (
               <div>
-                <div className="lp-fg-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="ton@email.fr" /></div>
-                <div className="lp-fg-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="••••••••" /></div>
-                <button className="lp-auth-submit" onClick={() => goToAuth('login')}>Se connecter →</button>
+                <div className="lp-fg-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="ton@email.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div className="lp-fg-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                {error && <p style={{color:'#f87171',fontSize:'13px',marginBottom:'8px'}}>{error}</p>}
+                <button className="lp-auth-submit" onClick={handleLogin} disabled={loading}>
+                  {loading ? 'Connexion en cours…' : 'Se connecter →'}
+                </button>
                 <div className="lp-auth-div">ou</div>
                 <p style={{textAlign:'center',fontSize:'13px',color:'var(--text-muted)'}}>
                   Pas encore de compte ?{' '}
