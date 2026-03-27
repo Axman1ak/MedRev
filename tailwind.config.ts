@@ -1,5 +1,4 @@
 import type { Config } from 'tailwindcss'
-
 const config: Config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,23 +8,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#0d0f14',
-        bg2: '#13161e',
-        bg3: '#1a1e28',
-        card: '#1e2330',
-        border: '#2a3045',
-        accent: '#4f8ef7',
-        accent2: '#6ee7b7',
+        bg: '#fafaf8',
+        bg2: '#f5f4f0',
+        bg3: '#edeae3',
+        card: '#ffffff',
+        border: '#e2dfd8',
+        accent: '#2d6a4f',
+        accent2: '#1b4332',
         accent3: '#f59e6b',
-        danger: '#f87171',
-        gold: '#f59e0b',
-        purple: '#a78bfa',
-        t1: '#e8ecf4',
-        t2: '#8892aa',
-        t3: '#4a5268',
+        danger: '#dc2626',
+        gold: '#d97706',
+        purple: '#6d28d9',
+        t1: '#1a1a18',
+        t2: '#4a4a46',
+        t3: '#9b9890',
       },
       fontFamily: {
-        syne: ['Syne', 'sans-serif'],
+        syne: ['Fraunces', 'serif'],
         sans: ['DM Sans', 'sans-serif'],
         mono: ['DM Mono', 'monospace'],
       },
@@ -37,3 +36,4 @@ const config: Config = {
   plugins: [],
 }
 export default config
+ 
