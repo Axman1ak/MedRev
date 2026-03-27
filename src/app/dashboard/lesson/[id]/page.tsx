@@ -18,7 +18,6 @@ export default function LessonPage() {
   const [isPro, setIsPro] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
-  // Step entry state
   const [activeStep, setActiveStep] = useState<number | null>(null)
   const [stepScore, setStepScore] = useState<number | null>(null)
   const [stepNote, setStepNote] = useState('')
@@ -81,7 +80,13 @@ export default function LessonPage() {
   function toast(msg: string) {
     const el = document.createElement('div')
     el.textContent = msg
-    Object.assign(el.style, { position: 'fixed', bottom: '24px', right: '24px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 18px', fontSize: '14px', zIndex: '300', animation: 'mIn .3s ease', boxShadow: '0 4px 24px rgba(0,0,0,.4)', color: 'var(--t1)' })
+    Object.assign(el.style, {
+      position: 'fixed', bottom: '24px', right: '24px',
+      background: 'var(--card)', border: '1px solid var(--border)',
+      borderRadius: '12px', padding: '12px 18px', fontSize: '14px',
+      zIndex: '300', animation: 'mIn .3s ease',
+      boxShadow: '0 4px 24px rgba(0,0,0,.12)', color: 'var(--t1)'
+    })
     document.body.appendChild(el)
     setTimeout(() => el.remove(), 2500)
   }
@@ -94,9 +99,13 @@ export default function LessonPage() {
 
   const t = todayStr()
 
-  // Score colors
-  const SCORE_COLORS: Record<number, string> = { 1: '#f87171', 2: '#fb923c', 3: '#facc15', 4: '#4ade80', 5: '#6ee7b7' }
-  const SCORE_TEXT: Record<number, string> = { 1: '#fff', 2: '#fff', 3: '#0d0f14', 4: '#0d0f14', 5: '#0d0f14' }
+  // Score colors adapted for light mode
+  const SCORE_COLORS: Record<number, string> = {
+    1: '#dc2626', 2: '#ea580c', 3: '#ca8a04', 4: '#16a34a', 5: '#2d6a4f'
+  }
+  const SCORE_TEXT: Record<number, string> = {
+    1: '#fff', 2: '#fff', 3: '#fff', 4: '#fff', 5: '#fff'
+  }
 
   const activeStepData = activeStep !== null ? (lesson.steps[activeStep] as StepEntry | null) : null
   const activeStepDateStr = activeStep !== null ? stepDate(lesson, activeStep) : null
@@ -104,7 +113,7 @@ export default function LessonPage() {
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
 
-      {/* ── Top bar ── */}
+      {/* Top bar */}
       <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 20, lineHeight: 1, padding: 0 }}>←</button>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -122,15 +131,13 @@ export default function LessonPage() {
         )}
       </div>
 
-      {/* ── Body: 2-col layout ── */}
+      {/* Body: 2-col layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: 0, minHeight: 'calc(100vh - 73px)' }}>
 
-        {/* ── LEFT: Step timeline + entry ── */}
+        {/* LEFT: Step timeline */}
         <div style={{ borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-
-          {/* Step grid */}
           <div style={{ padding: '20px 20px 0', flex: 1, overflowY: 'auto' }}>
-            <div className="text-xs font-bold uppercase mb-3" style={{ color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.08em' }}>
+            <div className="text-xs font-bold uppercase mb-3" style={{ color: 'var(--t3)', letterSpacing: '0.08em' }}>
               14 étapes de révision espacée
             </div>
 
@@ -144,32 +151,34 @@ export default function LessonPage() {
                 const isActive = activeStep === i
 
                 let borderColor = 'var(--border)'
-                let bg = 'var(--bg3)'
-                if (isActive) { borderColor = 'var(--accent)'; bg = 'rgba(79,142,247,.08)' }
-                else if (step) { borderColor = scoreColor(step.score) + '55'; bg = scoreColor(step.score) + '18' }
-                else if (isToday) { borderColor = 'rgba(79,142,247,.5)'; bg = 'rgba(79,142,247,.06)' }
-                else if (isLate) { borderColor = 'rgba(74,82,104,.4)'; bg = 'rgba(74,82,104,.08)' }
+                let bg = 'var(--bg2)'
+                if (isActive) { borderColor = 'var(--accent)'; bg = 'rgba(45,106,79,.06)' }
+                else if (step) {
+                  borderColor = SCORE_COLORS[step.score] + '60'
+                  bg = SCORE_COLORS[step.score] + '12'
+                }
+                else if (isToday) { borderColor = 'rgba(45,106,79,.4)'; bg = 'rgba(45,106,79,.04)' }
+                else if (isLate) { borderColor = 'rgba(220,38,38,.3)'; bg = 'rgba(220,38,38,.04)' }
 
                 return (
                   <div key={i}
                     onClick={() => openStep(i)}
-                    style={{ background: bg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: '10px 10px', cursor: 'pointer', transition: 'all .2s', opacity: isFuture ? 0.45 : 1, boxShadow: isActive ? '0 0 0 2px rgba(79,142,247,.3)' : 'none' }}
-                    className="hover:border-accent hover:bg-accent/5">
+                    style={{ background: bg, border: `1px solid ${borderColor}`, borderRadius: 10, padding: '10px', cursor: 'pointer', transition: 'all .2s', opacity: isFuture ? 0.45 : 1, boxShadow: isActive ? `0 0 0 2px rgba(45,106,79,.2)` : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span className="font-syne font-bold text-xs" style={{ color: step ? scoreColor(step.score) : isToday ? 'var(--accent)' : isLate ? 'var(--t2)' : 'var(--t3)' }}>
+                      <span className="font-syne font-bold text-xs" style={{ color: step ? SCORE_COLORS[step.score] : isToday ? 'var(--accent)' : isLate ? 'var(--danger)' : 'var(--t3)' }}>
                         {jLabel(i)}
                       </span>
                       {ds && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{fmtDate(ds)}</span>}
                     </div>
                     {step ? (
                       <>
-                        <div style={{ width: 28, height: 28, borderRadius: 7, background: scoreColor(step.score), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne', fontWeight: 800, fontSize: 14, color: step.score >= 3 ? '#0d0f14' : '#fff', margin: '4px 0' }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: SCORE_COLORS[step.score], display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Fraunces, serif', fontWeight: 700, fontSize: 14, color: SCORE_TEXT[step.score], margin: '4px 0' }}>
                           {step.score}
                         </div>
                         {step.note && <div style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{step.note}</div>}
                       </>
                     ) : (
-                      <div style={{ fontSize: 10, color: 'var(--t3)', fontStyle: 'italic', marginTop: 4 }}>
+                      <div style={{ fontSize: 10, color: isLate ? 'var(--danger)' : 'var(--t3)', fontStyle: 'italic', marginTop: 4 }}>
                         {isLate ? 'Non fait' : isToday ? '📝 Aujourd\'hui !' : 'À venir'}
                       </div>
                     )}
@@ -180,18 +189,17 @@ export default function LessonPage() {
 
             {/* Step entry panel */}
             {activeStep !== null && (
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 20 }}>
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 20, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
                 <div className="font-syne font-bold text-sm mb-1" style={{ color: 'var(--t1)' }}>
                   {jLabel(activeStep)}{activeStepDateStr ? ` — ${fmtDate(activeStepDateStr)}` : ''}
                 </div>
                 <div className="text-xs mb-4" style={{ color: 'var(--t3)' }}>{lesson.name}</div>
 
-                {/* Score selector */}
                 <div className="text-xs font-medium mb-2" style={{ color: 'var(--t2)' }}>Note de confiance</div>
                 <div className="flex gap-2 mb-2">
                   {[1,2,3,4,5].map(v => (
                     <button key={v} onClick={() => setStepScore(v)}
-                      style={{ width: 44, height: 44, borderRadius: 10, border: `2px solid ${stepScore === v ? SCORE_COLORS[v] : 'var(--border)'}`, background: stepScore === v ? SCORE_COLORS[v] : 'var(--bg3)', color: stepScore === v ? SCORE_TEXT[v] : 'var(--t2)', fontFamily: 'Syne', fontSize: 16, fontWeight: 800, cursor: 'pointer', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      style={{ width: 44, height: 44, borderRadius: 10, border: `2px solid ${stepScore === v ? SCORE_COLORS[v] : 'var(--border)'}`, background: stepScore === v ? SCORE_COLORS[v] : 'var(--bg2)', color: stepScore === v ? '#fff' : 'var(--t2)', fontFamily: 'Fraunces, serif', fontSize: 16, fontWeight: 700, cursor: 'pointer', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {v}
                     </button>
                   ))}
@@ -200,7 +208,6 @@ export default function LessonPage() {
                   <span>1 😵 Très dur</span><span>3 🤔 Moyen</span><span>5 🎯 Maîtrisé</span>
                 </div>
 
-                {/* Note */}
                 <div className="text-xs font-medium mb-1.5" style={{ color: 'var(--t2)' }}>Remarques</div>
                 <textarea className="input mb-4" rows={3} placeholder="Points difficiles, clés à retenir..." value={stepNote} onChange={e => setStepNote(e.target.value)} style={{ resize: 'vertical', lineHeight: 1.6 }} />
 
@@ -224,7 +231,7 @@ export default function LessonPage() {
           </div>
         </div>
 
-        {/* ── RIGHT: QCM Panel ── */}
+        {/* RIGHT: QCM Panel */}
         <div style={{ padding: 24, overflowY: 'auto', background: 'var(--bg)' }}>
           <QcmPanel
             lesson={lesson}
