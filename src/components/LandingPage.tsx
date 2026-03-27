@@ -9,6 +9,7 @@ export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'register' | 'login'>('register')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -17,7 +18,11 @@ export default function LandingPage() {
   const handleRegister = async () => {
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { username } }
+    })
     if (error) { setError(error.message); setLoading(false); return }
     window.location.href = '/dashboard'
   }
@@ -544,6 +549,7 @@ export default function LandingPage() {
 
             {activeTab === 'register' && (
               <div>
+                <div className="lp-fg-group"><label className="lp-label">Nom d&apos;utilisateur</label><input type="text" className="lp-input" placeholder="ex : lou_medecine" value={username} onChange={e => setUsername(e.target.value)} /></div>
                 <div className="lp-fg-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="prenom@univ-medecine.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
                 <div className="lp-fg-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="Minimum 8 caractères" value={password} onChange={e => setPassword(e.target.value)} /></div>
                 {error && <p style={{color:'#f87171',fontSize:'13px',marginBottom:'8px'}}>{error}</p>}
