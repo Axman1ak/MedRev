@@ -244,8 +244,8 @@ export default function LandingPage() {
             <span className="lp-nav-sub">Révision Médicale IA</span>
           </a>
           <div className="lp-nav-links">
-            <a href="#features">Fonctionnalités</a>
             <a href="#how">Comment ça marche</a>
+            <a href="#features">Fonctionnalités</a>
             <a href="#pricing">Tarifs</a>
           </div>
           <a href="#auth" className="lp-nav-cta">Commencer gratuitement</a>
@@ -311,6 +311,27 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* HOW IT WORKS */}
+        <div className="lp-section" id="how">
+          <span className="lp-sec-label">Comment ça marche</span>
+          <h2 className="lp-sec-title">De zéro à une fiche révisée<br /><em>en 60 secondes.</em></h2>
+          <div className="lp-steps-grid">
+            {[
+              {n:'01', icon:'📋', title:'Crée ta fiche', desc:"Donne un nom, choisis une matière. MedRev planifie automatiquement 14 étapes de révision espacée de J0 à J+120, basées sur la courbe d'oubli d'Ebbinghaus.", arrow:true},
+              {n:'02', icon:'✨', title:'Génère les questions', desc:"Colle ton cours ou uploade un PDF. L'IA génère des QCM, KFP et V/F niveau annales EDN, personnalisés sur ton contenu — pas des questions génériques.", arrow:true},
+              {n:'03', icon:'📅', title:'Révise au bon moment', desc:"Le calendrier te dit chaque jour quelles fiches réviser. Note ta session, MedRev ajuste ta progression automatiquement sur toutes les étapes.", arrow:false},
+            ].map(s => (
+              <div key={s.n} className="lp-step-card">
+                <div className="lp-step-num">{s.n}</div>
+                <span className="lp-step-icon">{s.icon}</span>
+                <div className="lp-step-title">{s.title}</div>
+                <div className="lp-step-desc">{s.desc}</div>
+                {s.arrow && <div className="lp-step-arrow" />}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -400,27 +421,6 @@ export default function LandingPage() {
                 <li>Badge &quot;à réviser aujourd&apos;hui&quot; dans la sidebar</li>
               </ul>
             </div>
-          </div>
-        </div>
-
-        {/* HOW IT WORKS */}
-        <div className="lp-section" id="how">
-          <span className="lp-sec-label">Comment ça marche</span>
-          <h2 className="lp-sec-title">De zéro à une fiche révisée<br /><em>en 60 secondes.</em></h2>
-          <div className="lp-steps-grid">
-            {[
-              {n:'01', icon:'📋', title:'Crée ta fiche', desc:"Donne un nom, choisis une matière. MedRev planifie automatiquement 14 étapes de révision espacée de J0 à J+120, basées sur la courbe d'oubli d'Ebbinghaus.", arrow:true},
-              {n:'02', icon:'✨', title:'Génère les questions', desc:"Colle ton cours ou uploade un PDF. L'IA génère des QCM, KFP et V/F niveau annales EDN, personnalisés sur ton contenu — pas des questions génériques.", arrow:true},
-              {n:'03', icon:'📅', title:'Révise au bon moment', desc:"Le calendrier te dit chaque jour quelles fiches réviser. Note ta session, MedRev ajuste ta progression automatiquement sur toutes les étapes.", arrow:false},
-            ].map(s => (
-              <div key={s.n} className="lp-step-card">
-                <div className="lp-step-num">{s.n}</div>
-                <span className="lp-step-icon">{s.icon}</span>
-                <div className="lp-step-title">{s.title}</div>
-                <div className="lp-step-desc">{s.desc}</div>
-                {s.arrow && <div className="lp-step-arrow" />}
-              </div>
-            ))}
           </div>
         </div>
 
