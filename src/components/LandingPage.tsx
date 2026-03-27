@@ -337,7 +337,7 @@ export default function LandingPage() {
 
         {/* FEATURE 1 : QCM IA */}
         <div className="lp-section" id="features">
-          <span className="lp-sec-label">Fonctionnalité 1</span>
+          <span className="lp-sec-label">Fonctionnalité </span>
           <div className="lp-feat-grid">
             <div>
               <div className="lp-feat-tag">QCM IA</div>
