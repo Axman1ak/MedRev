@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 
 export default function AuthPage() {
   const [tab, setTab] = useState<'login' | 'register'>('login')
@@ -42,7 +43,12 @@ export default function AuthPage() {
         <div className="font-syne font-black text-3xl mb-1" style={{ letterSpacing: '-0.04em' }}>
           Med<span style={{ color: 'var(--accent)' }}>Rev</span>
         </div>
-        <p className="text-xs mb-7" style={{ color: 'var(--t3)' }}>Revision medicale espacee</p>
+        <p className="text-xs mb-1" style={{ color: 'var(--t3)' }}>Revision medicale espacee</p>
+
+        {/* Bouton retour */}
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', textDecoration: 'none', marginBottom: 24, opacity: 0.8 }}>
+          ← Retour à l&apos;accueil
+        </Link>
 
         <div className="flex gap-1 p-1 rounded-xl mb-6" style={{ background: 'var(--bg3)' }}>
           {(['login', 'register'] as const).map(t => (
