@@ -9,29 +9,42 @@ export default function PricingPage() {
   const supabase = createClient()
   const router = useRouter()
   const [plan, setPlan] = useState<'free' | 'pro'>('free')
-  const [userId, setUserId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/auth'); return }
-      setUserId(user.id)
       supabase.from('profiles').select('plan').eq('id', user.id).single()
         .then(({ data }) => setPlan(data?.plan || 'free'))
     })
+
+    // Afficher un message si retour de Stripe
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('success') === 'true') {
+      alert('🎉 Paiement réussi ! Ton plan Premium est activé.')
+      router.replace('/dashboard/pricing')
+    }
+    if (params.get('cancelled') === 'true') {
+      alert('Paiement annulé. Tu peux réessayer quand tu veux.')
+      router.replace('/dashboard/pricing')
+    }
   }, [])
 
-  async function activatePro() {
-    // In production: redirect to Stripe checkout
-    // For now: toggle locally for testing
-    if (!userId) return
-    if (!confirm('Fonctionnalité de paiement bientôt disponible.\n\nActiver le plan Premium en mode test ?')) return
-    await supabase.from('profiles').update({ plan: 'pro' }).eq('id', userId)
-    setPlan('pro')
-    alert('🎉 Plan Premium activé !')
+  async function handleUpgrade() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/stripe/checkout', { method: 'POST' })
+      const { url, error } = await res.json()
+      if (error) { alert(error); setLoading(false); return }
+      window.location.href = url
+    } catch {
+      alert('Erreur lors de la redirection vers le paiement.')
+      setLoading(false)
+    }
   }
 
   const FREE_FEATURES = [
-    { label: 'Jusqu\'à 15 fiches', included: true },
+    { label: "Jusqu'à 15 fiches", included: true },
     { label: 'Révision espacée J0 → J+120', included: true },
     { label: 'Calendrier visuel', included: true },
     { label: 'Module Voyage (2 passages)', included: true },
@@ -102,15 +115,19 @@ export default function PricingPage() {
               Plan actuel ✓
             </div>
           ) : (
-            <button onClick={activatePro} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'var(--gold)', color: '#0d0f14', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'DM Sans', transition: 'all .2s' }}>
-              Activer Premium →
+            <button
+              onClick={handleUpgrade}
+              disabled={loading}
+              style={{ width: '100%', padding: '11px', borderRadius: 10, background: loading ? 'rgba(245,158,11,0.5)' : 'var(--gold)', color: '#0d0f14', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'DM Sans', transition: 'all .2s' }}
+            >
+              {loading ? 'Redirection...' : 'Activer Premium →'}
             </button>
           )}
         </div>
       </div>
 
       <div className="text-xs mt-5" style={{ color: 'var(--t3)', maxWidth: 680 }}>
-        💳 Paiement sécurisé · Annulation à tout moment · Données hébergées en Europe (RGPD compliant)
+        💳 Paiement sécurisé via Stripe · Annulation à tout moment · Données hébergées en Europe (RGPD compliant)
       </div>
     </div>
   )
