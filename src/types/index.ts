@@ -39,6 +39,7 @@ export interface Profile {
   id: string
   email: string
   name: string
+  username: string | null
   plan: 'free' | 'pro'
   created_at: string
 }
