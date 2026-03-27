@@ -24,7 +24,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/auth'); return }
       supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => { if (data) setProfile(data) })
+        .then(({ data }) => {
+          if (data) {
+            // Prioritise username (landing page) then name (auth page) then email
+            const displayName =
+              user.user_metadata?.username ||
+              user.user_metadata?.name ||
+              data.name ||
+              user.email?.split('@')[0] ||
+              '...'
+            setProfile({ ...data, name: displayName })
+          }
+        })
     })
   }, [])
 
@@ -59,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return pathname.startsWith(href)
   }
 
-  const initials = profile?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || '?'
+  const initials = profile?.name?.slice(0, 2).toUpperCase() || '?'
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
