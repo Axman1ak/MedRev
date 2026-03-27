@@ -65,7 +65,7 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
       toast(`✨ ${data.questions.length} questions générées !`)
     } catch (err) {
       console.error(err)
-      toast('❌ Erreur — vérifiez votre clé API Anthropic dans .env.local')
+      toast('❌ Erreur — vérifiez votre clé API dans les variables d\'environnement')
     }
     setGenerating(false)
   }
@@ -89,28 +89,42 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
   function toast(msg: string) {
     const el = document.createElement('div')
     el.textContent = msg
-    Object.assign(el.style, { position: 'fixed', bottom: '24px', right: '24px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 18px', fontSize: '14px', zIndex: '300', animation: 'mIn .3s ease', boxShadow: '0 4px 24px rgba(0,0,0,.4)', color: 'var(--t1)' })
+    Object.assign(el.style, {
+      position: 'fixed', bottom: '24px', right: '24px',
+      background: 'var(--card)', border: '1px solid var(--border)',
+      borderRadius: '12px', padding: '12px 18px', fontSize: '14px',
+      zIndex: '300', animation: 'mIn .3s ease',
+      boxShadow: '0 4px 24px rgba(0,0,0,.12)', color: 'var(--t1)'
+    })
     document.body.appendChild(el)
     setTimeout(() => el.remove(), 2500)
   }
 
   const TYPE_LABELS: Record<string, string> = { qcm: 'QCM', kfp: 'KFP', vf: 'V/F' }
-  const TYPE_COLORS: Record<string, string> = {
-    qcm: 'background:rgba(79,142,247,.15);color:var(--accent)',
-    kfp: 'background:rgba(167,139,250,.15);color:var(--purple)',
-    vf: 'background:rgba(245,158,11,.15);color:var(--gold)'
+  const TYPE_STYLES: Record<string, { bg: string; color: string }> = {
+    qcm: { bg: 'rgba(45,106,79,.1)', color: 'var(--accent)' },
+    kfp: { bg: 'rgba(109,40,217,.1)', color: 'var(--purple)' },
+    vf:  { bg: 'rgba(217,119,6,.1)', color: 'var(--gold)' },
+  }
+
+  // Score colors adapted for light mode
+  const SCORE_COLORS: Record<number, string> = {
+    1: '#dc2626', 2: '#ea580c', 3: '#ca8a04', 4: '#16a34a', 5: '#2d6a4f'
+  }
+  const SCORE_TEXT: Record<number, string> = {
+    1: '#fff', 2: '#fff', 3: '#fff', 4: '#fff', 5: '#fff'
   }
 
   if (!isPro) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', gap: 14, background: 'rgba(167,139,250,.04)', border: '1px solid rgba(167,139,250,.15)', borderRadius: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', gap: 14, background: 'rgba(109,40,217,.04)', border: '1px solid rgba(109,40,217,.12)', borderRadius: 14 }}>
         <div style={{ fontSize: 36 }}>🔒</div>
         <div className="font-syne font-bold text-base" style={{ color: 'var(--t1)' }}>QCM IA — niveau annales</div>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--t3)', maxWidth: 280 }}>
           Générez des QCM précis sur vos cours, au niveau des annales EDN, avec upload de PDF.<br />
           Réservé aux membres Premium.
         </p>
-        <a href="/dashboard/pricing" className="btn btn-gold" style={{ textDecoration: 'none' }}>Passer Premium →</a>
+        <a href="/dashboard/pricing" className="btn btn-primary" style={{ textDecoration: 'none' }}>Passer Premium →</a>
       </div>
     )
   }
@@ -120,7 +134,7 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
 
   return (
     <div>
-      <div className="font-syne font-bold text-base mb-4" style={{ color: 'var(--purple)', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="font-syne font-bold text-base mb-4" style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 8 }}>
         ✨ QCM IA — niveau annales EDN
         {questions.length > 0 && !generating && (
           <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--t3)', fontFamily: 'DM Sans', fontWeight: 400 }}>
@@ -134,7 +148,7 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
         {(['text', 'file'] as const).map(t => (
           <button key={t} onClick={() => setSourceTab(t)}
             className="flex-1 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer transition-all"
-            style={{ background: sourceTab === t ? 'var(--purple)' : 'transparent', color: sourceTab === t ? '#fff' : 'var(--t3)', fontFamily: 'DM Sans' }}>
+            style={{ background: sourceTab === t ? 'var(--accent)' : 'transparent', color: sourceTab === t ? '#fff' : 'var(--t3)', fontFamily: 'DM Sans' }}>
             {t === 'text' ? '📝 Coller le cours' : '📄 Uploader un fichier'}
           </button>
         ))}
@@ -153,8 +167,8 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
       ) : (
         <div>
           <label htmlFor="qcm-file-input"
-            style={{ display: 'block', border: `2px dashed ${fileName ? 'var(--accent2)' : 'rgba(167,139,250,.3)'}`, borderRadius: 10, padding: '16px', textAlign: 'center', cursor: 'pointer', transition: 'all .2s', background: fileName ? 'rgba(110,231,183,.05)' : 'rgba(167,139,250,.03)', marginBottom: 12 }}>
-            <div className="text-sm font-semibold mb-1" style={{ color: fileName ? 'var(--accent2)' : 'var(--t2)' }}>
+            style={{ display: 'block', border: `2px dashed ${fileName ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '16px', textAlign: 'center', cursor: 'pointer', transition: 'all .2s', background: fileName ? 'rgba(45,106,79,.05)' : 'var(--bg2)', marginBottom: 12 }}>
+            <div className="text-sm font-semibold mb-1" style={{ color: fileName ? 'var(--accent)' : 'var(--t2)' }}>
               {fileName ? `📄 ${fileName}` : '📤 Cliquer pour uploader'}
             </div>
             <div className="text-xs" style={{ color: 'var(--t3)' }}>
@@ -195,21 +209,21 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
       {/* Generate button */}
       <button onClick={generate} disabled={generating}
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm border-0 cursor-pointer transition-all mb-5"
-        style={{ background: 'var(--purple)', color: '#fff', opacity: generating ? 0.5 : 1, fontFamily: 'DM Sans' }}>
+        style={{ background: 'var(--accent)', color: '#fff', opacity: generating ? 0.5 : 1, fontFamily: 'DM Sans' }}>
         {generating ? <><div className="spinner" /> Génération en cours...</> : '🤖 Générer les questions'}
       </button>
 
       {/* Loading */}
       {generating && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24, color: 'var(--t3)', fontSize: 13 }}>
-          <div className="spinner" /> L'IA analyse votre cours et génère {nbQ} questions...
+          <div className="spinner" /> L&apos;IA analyse votre cours et génère {nbQ} questions...
         </div>
       )}
 
       {/* Results score */}
       {showResults && (
-        <div style={{ background: 'rgba(110,231,183,.07)', border: '1px solid rgba(110,231,183,.2)', borderRadius: 12, padding: 18, textAlign: 'center', marginBottom: 20 }}>
-          <div className="font-syne font-black" style={{ fontSize: 40, color: 'var(--accent2)', lineHeight: 1 }}>{correctCount}/{questions.length}</div>
+        <div style={{ background: 'rgba(45,106,79,.06)', border: '1px solid rgba(45,106,79,.2)', borderRadius: 12, padding: 18, textAlign: 'center', marginBottom: 20 }}>
+          <div className="font-syne font-black" style={{ fontSize: 40, color: 'var(--accent)', lineHeight: 1 }}>{correctCount}/{questions.length}</div>
           <div className="text-sm mt-1" style={{ color: 'var(--t3)' }}>
             {pct}% — {pct >= 80 ? '🎯 Excellent niveau annales !' : pct >= 60 ? '👍 Bien, continuez !' : '📚 À retravailler avant le J+'}
           </div>
@@ -227,15 +241,16 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
           {questions.map((q, qi) => {
             const answered = answers[qi] !== undefined
             const isCorrect = answers[qi] === q.correct
+            const typeStyle = TYPE_STYLES[q.type] || TYPE_STYLES.qcm
 
             return (
-              <div key={qi} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+              <div key={qi} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span className="font-syne font-bold text-xs" style={{ color: 'var(--t3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     Question {qi + 1}
                   </span>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em', ...Object.fromEntries((TYPE_COLORS[q.type] || TYPE_COLORS.qcm).split(';').map(s => s.trim().split(':').map(x => x.trim()))) }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em', background: typeStyle.bg, color: typeStyle.color }}>
                     {TYPE_LABELS[q.type] || 'QCM'}
                   </span>
                   {answered && (
@@ -245,7 +260,7 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
 
                 {/* Clinical vignette */}
                 {q.context && (
-                  <div style={{ fontSize: 12, color: 'var(--t3)', fontStyle: 'italic', marginBottom: 10, padding: '8px 10px', background: 'rgba(255,255,255,.03)', borderRadius: 7, borderLeft: '3px solid var(--border)', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--t2)', fontStyle: 'italic', marginBottom: 10, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 7, borderLeft: '3px solid var(--border)', lineHeight: 1.6 }}>
                     {q.context}
                   </div>
                 )}
@@ -264,8 +279,8 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
                     let bg = 'var(--bg)'
                     let color = 'var(--t2)'
                     if (isAnswered) {
-                      if (isRight) { borderColor = 'var(--accent2)'; bg = 'rgba(110,231,183,.1)'; color = 'var(--accent2)' }
-                      else if (isChosen && !isRight) { borderColor = 'var(--danger)'; bg = 'rgba(248,113,113,.08)'; color = 'var(--danger)' }
+                      if (isRight) { borderColor = 'var(--accent)'; bg = 'rgba(45,106,79,.08)'; color = 'var(--accent)' }
+                      else if (isChosen && !isRight) { borderColor = 'var(--danger)'; bg = 'rgba(220,38,38,.06)'; color = 'var(--danger)' }
                     }
 
                     return (
@@ -273,7 +288,7 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
                         onClick={() => answer(qi, oi)}
                         disabled={isAnswered}
                         style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: bg, fontSize: 13, color, cursor: isAnswered ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'DM Sans', transition: 'all .15s', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ fontWeight: 700, flexShrink: 0, width: 18, color: isAnswered && isRight ? 'var(--accent2)' : color }}>
+                        <span style={{ fontWeight: 700, flexShrink: 0, width: 18 }}>
                           {String.fromCharCode(65 + oi)}.
                         </span>
                         <span>{opt.replace(/^[A-D]\.\s*/, '')}</span>
@@ -284,10 +299,10 @@ export default function QcmPanel({ lesson, isPro, onSave }: Props) {
 
                 {/* Explanation */}
                 {answered && (
-                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(79,142,247,.05)', borderLeft: '3px solid var(--accent)', borderRadius: '0 8px 8px 0', fontSize: 12, color: 'var(--t2)', lineHeight: 1.65 }}>
+                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(45,106,79,.05)', borderLeft: '3px solid var(--accent)', borderRadius: '0 8px 8px 0', fontSize: 12, color: 'var(--t2)', lineHeight: 1.65 }}>
                     <strong style={{ color: 'var(--t1)' }}>Explication :</strong> {q.explanation}
                     {q.source_ref && q.source_ref !== 'null' && (
-                      <span style={{ display: 'inline-block', background: 'rgba(79,142,247,.15)', color: 'var(--accent)', fontSize: 11, padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>
+                      <span style={{ display: 'inline-block', background: 'rgba(45,106,79,.1)', color: 'var(--accent)', fontSize: 11, padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>
                         📖 {q.source_ref.slice(0, 60)}
                       </span>
                     )}
