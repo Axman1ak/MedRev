@@ -6,49 +6,157 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 const FACS = [
-  { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6' },
-  { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5' },
-  { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13' },
-  { id: 'upec', name: 'UPEC Créteil', badge: 'Paris 12' },
-  { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon' },
-  { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier' },
-  { id: 'autre', name: 'Autre faculté', badge: 'Autre' },
+  { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6', hasOptions: true },
+  { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5', hasOptions: false },
+  { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13', hasOptions: false },
+  { id: 'upec', name: 'UPEC Créteil', badge: 'Paris 12', hasOptions: false },
+  { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: false },
+  { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: false },
+  { id: 'autre', name: 'Autre faculté', badge: 'Autre', hasOptions: false },
 ]
+
+// Matières pré-créées selon la fac et l'option
+const FAC_SYSTEMS: Record<string, Record<string, { name: string; icon: string }[]>> = {
+  sorbonne: {
+    sciences: [
+      { name: 'Biochimie', icon: '🧬' },
+      { name: 'Biologie cellulaire', icon: '🔬' },
+      { name: 'Anatomie générale', icon: '🦴' },
+      { name: 'Physique', icon: '⚡' },
+      { name: 'Chimie', icon: '⚗️' },
+      { name: 'Biophysique', icon: '🌊' },
+      { name: 'Physiologie', icon: '❤️' },
+      { name: 'Biostatistiques', icon: '📊' },
+      { name: 'Pharmacologie', icon: '💊' },
+      { name: 'Santé, Société, Humanité', icon: '🌍' },
+      { name: 'Anatomie spécifique', icon: '🫀' },
+    ],
+    lettres: [
+      { name: 'Biochimie', icon: '🧬' },
+      { name: 'Biologie cellulaire', icon: '🔬' },
+      { name: 'Anatomie générale', icon: '🦴' },
+      { name: 'Sociolinguistique', icon: '📖' },
+      { name: 'Linguistique', icon: '✍️' },
+      { name: 'Biophysique', icon: '🌊' },
+      { name: 'Physiologie', icon: '❤️' },
+      { name: 'Biostatistiques', icon: '📊' },
+      { name: 'Pharmacologie', icon: '💊' },
+      { name: 'Santé, Société, Humanité', icon: '🌍' },
+      { name: 'Anatomie spécifique', icon: '🫀' },
+    ],
+  },
+  'paris-cite': {
+    default: [
+      { name: 'Chimie organique', icon: '⚗️' },
+      { name: 'Biologie cellulaire', icon: '🔬' },
+      { name: 'Physiologie', icon: '❤️' },
+      { name: 'Biophysique', icon: '🌊' },
+      { name: 'Biostatistiques', icon: '📊' },
+      { name: 'Santé, Société, Humanité', icon: '🌍' },
+      { name: 'Pharmacologie', icon: '💊' },
+    ],
+  },
+  'sorbonne-paris-nord': {
+    default: [
+      { name: 'Biochimie', icon: '🧬' },
+      { name: 'Biologie cellulaire', icon: '🔬' },
+      { name: 'Biophysique', icon: '🌊' },
+      { name: 'Physiologie', icon: '❤️' },
+      { name: 'Biostatistiques', icon: '📊' },
+      { name: 'Pharmacologie', icon: '💊' },
+      { name: 'Santé, Société, Humanité', icon: '🌍' },
+    ],
+  },
+  upec: {
+    default: [
+      { name: 'Biochimie', icon: '🧬' },
+      { name: 'Biologie cellulaire', icon: '🔬' },
+      { name: 'Biophysique', icon: '🌊' },
+      { name: 'Physiologie', icon: '❤️' },
+      { name: 'Biostatistiques', icon: '📊' },
+      { name: 'Pharmacologie', icon: '💊' },
+      { name: 'Santé, Société, Humanité', icon: '🌍' },
+    ],
+  },
+  autre: {
+    default: [
+      { name: 'Biochimie', icon: '🧬' },
+      { name: 'Biologie cellulaire', icon: '🔬' },
+      { name: 'Physiologie', icon: '❤️' },
+      { name: 'Biostatistiques', icon: '📊' },
+      { name: 'Pharmacologie', icon: '💊' },
+      { name: 'Santé, Société, Humanité', icon: '🌍' },
+    ],
+  },
+}
+
+type Step = 'form' | 'fac' | 'option'
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'register' | 'login'>('register')
-  const [step, setStep] = useState<'form' | 'fac'>('form')
+  const [step, setStep] = useState<Step>('form')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [fac, setFac] = useState('')
+  const [option, setOption] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const supabase = createClient()
+  const selectedFac = FACS.find(f => f.id === fac)
 
-  const handleRegister = async () => {
-    setLoading(true)
-    setError(null)
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username, fac } }
-    })
-    if (error) { setError(error.message); setLoading(false); return }
-    if (data.user) {
-      await supabase.from('profiles').update({ username, fac }).eq('id', data.user.id)
-    }
-    window.location.href = '/dashboard'
-  }
-
-  const handleContinue = () => {
+  const handleContinueForm = () => {
     if (!username.trim() || !email.trim() || !password.trim()) {
       setError('Merci de remplir tous les champs.')
       return
     }
     setError(null)
     setStep('fac')
+  }
+
+  const handleContinueFac = () => {
+    if (!fac) return
+    if (selectedFac?.hasOptions) {
+      setStep('option')
+    } else {
+      handleRegister(fac, 'default')
+    }
+  }
+
+  const handleRegister = async (facId: string, opt: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username, fac: facId, option: opt } }
+      })
+      if (error) throw error
+      if (!data.user) throw new Error('Erreur création compte')
+
+      // Mise à jour du profil
+      await supabase.from('profiles').update({ username, fac: facId }).eq('id', data.user.id)
+
+      // Création automatique des matières (systems)
+      const matieres = FAC_SYSTEMS[facId]?.[opt] || FAC_SYSTEMS[facId]?.['default'] || FAC_SYSTEMS['autre']['default']
+      if (matieres?.length) {
+        await supabase.from('systems').insert(
+          matieres.map(m => ({
+            user_id: data.user!.id,
+            name: m.name,
+            icon: m.icon,
+            cal_hidden: false,
+          }))
+        )
+      }
+
+      window.location.href = '/dashboard'
+    } catch (e: any) {
+      setError(e.message)
+      setLoading(false)
+    }
   }
 
   const handleLogin = async () => {
@@ -58,6 +166,10 @@ export default function LandingPage() {
     if (error) { setError(error.message); setLoading(false); return }
     window.location.href = '/dashboard'
   }
+
+  // Nombre d'étapes selon la fac
+  const totalSteps = selectedFac?.hasOptions ? 3 : 2
+  const currentStepNum = step === 'form' ? 1 : step === 'fac' ? 2 : 3
 
   return (
     <>
@@ -198,9 +310,8 @@ export default function LandingPage() {
         .lp-pc-cross { color: #9b9890; flex-shrink: 0; }
         .lp-pc-cta { width: 100%; padding: 13px; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; margin-top: 24px; transition: all .2s; }
         .lp-pc-cta.free { background: #f5f4f0; color: #1a1a18; border: 1px solid #e8e6e0; }
-        .lp-pc-cta.free:hover { background: #edeae3; }
         .lp-pc-cta.prem { background: #2d6a4f; color: white; }
-        .lp-pc-cta.prem:hover { background: #1b4332; transform: translateY(-1px); }
+        .lp-pc-cta.prem:hover { background: #1b4332; }
         .lp-auth { padding: 80px 60px; display: flex; align-items: center; justify-content: center; background: #f5f4f0; border-top: 1px solid #e8e6e0; }
         .lp-auth-wrap { display: grid; grid-template-columns: 1fr 1fr; max-width: 940px; width: 100%; background: white; border: 1px solid #e8e6e0; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
         .lp-auth-left { padding: 52px 48px; background: #f9f8f5; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; justify-content: space-between; }
@@ -222,8 +333,8 @@ export default function LandingPage() {
         .lp-input::placeholder { color: #9b9890; }
         .lp-auth-error { color: #dc2626; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #fef2f2; border-radius: 8px; border: 1px solid #fca5a5; }
         .lp-auth-submit { width: 100%; padding: 13px; background: #2d6a4f; border: none; border-radius: 10px; color: white; font-size: 15px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s; margin-top: 6px; }
-        .lp-auth-submit:hover { background: #1b4332; transform: translateY(-1px); }
-        .lp-auth-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+        .lp-auth-submit:hover { background: #1b4332; }
+        .lp-auth-submit:disabled { opacity: .6; cursor: not-allowed; }
         .lp-auth-terms { font-size: 12px; color: #9b9890; text-align: center; margin-top: 14px; line-height: 1.6; }
         .lp-auth-terms a { color: #2d6a4f; }
         .lp-switch-link { color: #2d6a4f; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 0; text-decoration: underline; }
@@ -235,14 +346,12 @@ export default function LandingPage() {
         .lp-footer-links { display: flex; gap: 24px; }
         .lp-footer-links a { font-size: 13px; color: #9b9890; text-decoration: none; }
         .lp-footer-links a:hover { color: #1a1a18; }
-
-        /* Fac cards */
-        .lp-fac-step { animation: lp-fade-in .25s ease; }
+        .lp-step-anim { animation: lp-fade-in .25s ease; }
         @keyframes lp-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .lp-fac-back { background: none; border: none; color: #9b9890; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 4px; }
-        .lp-fac-back:hover { color: #4a4a46; }
-        .lp-fac-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1a18; margin-bottom: 6px; }
-        .lp-fac-sub { font-size: 14px; color: #9b9890; margin-bottom: 20px; }
+        .lp-back-btn { background: none; border: none; color: #9b9890; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 4px; }
+        .lp-back-btn:hover { color: #4a4a46; }
+        .lp-step-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1a18; margin-bottom: 6px; }
+        .lp-step-sub { font-size: 14px; color: #9b9890; margin-bottom: 20px; }
         .lp-fac-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
         .lp-fac-card { border: 1.5px solid #e8e6e0; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all .15s; background: #fafaf8; text-align: left; }
         .lp-fac-card:hover { border-color: #b7dfca; background: #f9fdfb; }
@@ -250,10 +359,18 @@ export default function LandingPage() {
         .lp-fac-card-name { font-size: 14px; font-weight: 500; color: #1a1a18; margin-bottom: 2px; }
         .lp-fac-card-badge { display: inline-block; background: #e8f5ee; color: #2d6a4f; border-radius: 4px; padding: 2px 7px; font-size: 11px; font-family: 'DM Mono', monospace; margin-top: 5px; }
         .lp-fac-card.selected .lp-fac-card-badge { background: #2d6a4f; color: white; }
+        .lp-opt-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .lp-opt-card { border: 1.5px solid #e8e6e0; border-radius: 12px; padding: 18px 20px; cursor: pointer; transition: all .15s; background: #fafaf8; }
+        .lp-opt-card:hover { border-color: #b7dfca; background: #f9fdfb; }
+        .lp-opt-card.selected { border-color: #2d6a4f; background: #f0faf5; }
+        .lp-opt-card-title { font-size: 15px; font-weight: 500; color: #1a1a18; margin-bottom: 4px; }
+        .lp-opt-card-desc { font-size: 13px; color: #9b9890; }
+        .lp-opt-card-matieres { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+        .lp-opt-matiere { background: #f5f4f0; border: 1px solid #e8e6e0; border-radius: 4px; padding: 2px 7px; font-size: 11px; color: #4a4a46; }
         .lp-prog-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
         .lp-prog-dot { width: 8px; height: 8px; border-radius: 50%; background: #e2dfd8; transition: all .2s; }
         .lp-prog-dot.on { background: #2d6a4f; width: 20px; border-radius: 4px; }
-
+        .lp-prog-dot.done { background: #b7dfca; }
         @media(max-width: 900px) {
           .lp-nav { padding: 16px 24px; }
           .lp-nav-links { display: none; }
@@ -376,7 +493,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* FEATURE 1 : QCM IA */}
+        {/* FEATURE 1 */}
         <div className="lp-section" id="features">
           <span className="lp-sec-label">Fonctionnalité 1</span>
           <div className="lp-feat-grid">
@@ -426,7 +543,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* FEATURE 2 : CALENDRIER */}
+        {/* FEATURE 2 */}
         <div className="lp-section">
           <div className="lp-feat-grid rev">
             <div className="lp-mockup-wrap">
@@ -482,7 +599,7 @@ export default function LandingPage() {
               <div className="lp-pc-price free">0€</div>
               <div className="lp-pc-period">pour toujours</div>
               <hr className="lp-pc-div" />
-              {["Jusqu'à 15 fiches","Révision espacée J0→J+120","Calendrier de révision","Simulateur d'examen (5 QCM)","Export / Import JSON"].map(f=>(
+              {["Jusqu'à 15 fiches","Révision espacée J0→J+120","Calendrier de révision","Matières pré-configurées selon ta fac","Export / Import JSON"].map(f=>(
                 <div key={f} className="lp-pc-feat on"><span className="lp-pc-check">✓</span> {f}</div>
               ))}
               {["QCM IA illimités (PDF)","Fiches illimitées","Simulateur complet (durée réelle)"].map(f=>(
@@ -519,8 +636,8 @@ export default function LandingPage() {
               </div>
               <div className="lp-auth-testi">
                 <div className="lp-auth-stars">★★★★★</div>
-                <div className="lp-auth-testi-text">&quot;J&apos;ai arrêté de relire mes cours en boucle. MedRev me dit exactement quoi réviser chaque matin.&quot;</div>
-                <div className="lp-auth-testi-author">— Étudiante PASS · Sorbonne</div>
+                <div className="lp-auth-testi-text">&quot;Dès l&apos;inscription mes matières Sorbonne étaient déjà là. J&apos;ai commencé à réviser en 2 minutes.&quot;</div>
+                <div className="lp-auth-testi-author">— Étudiant PASS · Sorbonne</div>
               </div>
             </div>
             <div className="lp-auth-right">
@@ -530,29 +647,33 @@ export default function LandingPage() {
               </div>
               {error && <div className="lp-auth-error">{error}</div>}
 
+              {/* ÉTAPE 1 : Formulaire */}
               {activeTab === 'register' && step === 'form' && (
-                <div>
+                <div className="lp-step-anim">
                   <div className="lp-prog-dots">
                     <div className="lp-prog-dot on" />
+                    <div className="lp-prog-dot" />
                     <div className="lp-prog-dot" />
                   </div>
                   <div className="lp-form-group"><label className="lp-label">Nom d&apos;utilisateur</label><input type="text" className="lp-input" placeholder="ex : lou_pass2026" value={username} onChange={e => setUsername(e.target.value)} /></div>
                   <div className="lp-form-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="prenom.nom@etu.sorbonne-universite.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
                   <div className="lp-form-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="Minimum 8 caractères" value={password} onChange={e => setPassword(e.target.value)} /></div>
-                  <button className="lp-auth-submit" onClick={handleContinue}>Continuer →</button>
+                  <button className="lp-auth-submit" onClick={handleContinueForm}>Continuer →</button>
                   <p className="lp-auth-terms">En créant un compte, tu acceptes nos <a href="/privacy">CGU</a>. Données en France 🇫🇷</p>
                 </div>
               )}
 
+              {/* ÉTAPE 2 : Choix de la fac */}
               {activeTab === 'register' && step === 'fac' && (
-                <div className="lp-fac-step">
+                <div className="lp-step-anim">
                   <div className="lp-prog-dots">
-                    <div className="lp-prog-dot" />
+                    <div className="lp-prog-dot done" />
                     <div className="lp-prog-dot on" />
+                    <div className="lp-prog-dot" />
                   </div>
-                  <button className="lp-fac-back" onClick={() => setStep('form')}>← Retour</button>
-                  <div className="lp-fac-title">Quelle est ta faculté ?</div>
-                  <div className="lp-fac-sub">MedRev adapte le simulateur d&apos;examen au barème officiel de ta fac.</div>
+                  <button className="lp-back-btn" onClick={() => setStep('form')}>← Retour</button>
+                  <div className="lp-step-title">Quelle est ta faculté ?</div>
+                  <div className="lp-step-sub">Tes matières seront pré-configurées automatiquement selon ta fac.</div>
                   <div className="lp-fac-grid">
                     {FACS.map(f => (
                       <div key={f.id} className={`lp-fac-card${fac === f.id ? ' selected' : ''}`} onClick={() => setFac(f.id)}>
@@ -561,10 +682,48 @@ export default function LandingPage() {
                       </div>
                     ))}
                   </div>
-                  <button className="lp-auth-submit" onClick={handleRegister} disabled={loading || !fac}>
-                    {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}
+                  <button className="lp-auth-submit" onClick={handleContinueFac} disabled={!fac || loading}>
+                    {loading ? 'Création en cours…' : 'Continuer →'}
                   </button>
                   {!fac && <p style={{textAlign:'center',fontSize:'12px',color:'#9b9890',marginTop:'10px'}}>Sélectionne ta faculté pour continuer</p>}
+                </div>
+              )}
+
+              {/* ÉTAPE 3 : Choix de l'option (Sorbonne uniquement) */}
+              {activeTab === 'register' && step === 'option' && (
+                <div className="lp-step-anim">
+                  <div className="lp-prog-dots">
+                    <div className="lp-prog-dot done" />
+                    <div className="lp-prog-dot done" />
+                    <div className="lp-prog-dot on" />
+                  </div>
+                  <button className="lp-back-btn" onClick={() => setStep('fac')}>← Retour</button>
+                  <div className="lp-step-title">Quelle est ton option ?</div>
+                  <div className="lp-step-sub">Sorbonne PASS — choisir la mineure disciplinaire pour pré-configurer tes matières.</div>
+                  <div className="lp-opt-grid">
+                    <div className={`lp-opt-card${option === 'sciences' ? ' selected' : ''}`} onClick={() => setOption('sciences')}>
+                      <div className="lp-opt-card-title">⚡ Option Sciences</div>
+                      <div className="lp-opt-card-desc">Biologie-Chimie-Physique · Mineure Sciences</div>
+                      <div className="lp-opt-card-matieres">
+                        {['Biochimie','Biologie cell.','Anatomie','Physique','Chimie','Biophysique','Physiologie','Biostat','Pharmaco','SSH','Anatomie spéc.'].map(m => (
+                          <span key={m} className="lp-opt-matiere">{m}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className={`lp-opt-card${option === 'lettres' ? ' selected' : ''}`} onClick={() => setOption('lettres')}>
+                      <div className="lp-opt-card-title">📖 Option Lettres</div>
+                      <div className="lp-opt-card-desc">Sciences du langage et humanités · Mineure Lettres</div>
+                      <div className="lp-opt-card-matieres">
+                        {['Biochimie','Biologie cell.','Anatomie','Sociolinguistique','Linguistique','Biophysique','Physiologie','Biostat','Pharmaco','SSH','Anatomie spéc.'].map(m => (
+                          <span key={m} className="lp-opt-matiere">{m}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <button className="lp-auth-submit" onClick={() => handleRegister(fac, option)} disabled={!option || loading}>
+                    {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}
+                  </button>
+                  {!option && <p style={{textAlign:'center',fontSize:'12px',color:'#9b9890',marginTop:'10px'}}>Sélectionne ton option pour continuer</p>}
                 </div>
               )}
 
