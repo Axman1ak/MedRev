@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/auth'); return }
+      if (!user) { router.push('/'); return }
       supabase.from('profiles').select('*').eq('id', user.id).single()
         .then(({ data }) => {
           if (data) {
