@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 })
     }
  
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
  
     const prompt = `Tu es un créateur de QCM expert pour le concours PASS de ${fac || 'Sorbonne Université'}, semestre ${semestre || 1}.
  
