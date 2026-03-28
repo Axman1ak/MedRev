@@ -5,11 +5,23 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const FACS = [
+  { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6' },
+  { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5' },
+  { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13' },
+  { id: 'upec', name: 'UPEC Créteil', badge: 'Paris 12' },
+  { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon' },
+  { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier' },
+  { id: 'autre', name: 'Autre faculté', badge: 'Autre' },
+]
+
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'register' | 'login'>('register')
+  const [step, setStep] = useState<'form' | 'fac'>('form')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
+  const [fac, setFac] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,13 +33,22 @@ export default function LandingPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username } }
+      options: { data: { username, fac } }
     })
     if (error) { setError(error.message); setLoading(false); return }
     if (data.user) {
-      await supabase.from('profiles').update({ username }).eq('id', data.user.id)
+      await supabase.from('profiles').update({ username, fac }).eq('id', data.user.id)
     }
     window.location.href = '/dashboard'
+  }
+
+  const handleContinue = () => {
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setError('Merci de remplir tous les champs.')
+      return
+    }
+    setError(null)
+    setStep('fac')
   }
 
   const handleLogin = async () => {
@@ -214,6 +235,25 @@ export default function LandingPage() {
         .lp-footer-links { display: flex; gap: 24px; }
         .lp-footer-links a { font-size: 13px; color: #9b9890; text-decoration: none; }
         .lp-footer-links a:hover { color: #1a1a18; }
+
+        /* Fac cards */
+        .lp-fac-step { animation: lp-fade-in .25s ease; }
+        @keyframes lp-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .lp-fac-back { background: none; border: none; color: #9b9890; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 4px; }
+        .lp-fac-back:hover { color: #4a4a46; }
+        .lp-fac-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #1a1a18; margin-bottom: 6px; }
+        .lp-fac-sub { font-size: 14px; color: #9b9890; margin-bottom: 20px; }
+        .lp-fac-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .lp-fac-card { border: 1.5px solid #e8e6e0; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all .15s; background: #fafaf8; text-align: left; }
+        .lp-fac-card:hover { border-color: #b7dfca; background: #f9fdfb; }
+        .lp-fac-card.selected { border-color: #2d6a4f; background: #f0faf5; }
+        .lp-fac-card-name { font-size: 14px; font-weight: 500; color: #1a1a18; margin-bottom: 2px; }
+        .lp-fac-card-badge { display: inline-block; background: #e8f5ee; color: #2d6a4f; border-radius: 4px; padding: 2px 7px; font-size: 11px; font-family: 'DM Mono', monospace; margin-top: 5px; }
+        .lp-fac-card.selected .lp-fac-card-badge { background: #2d6a4f; color: white; }
+        .lp-prog-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+        .lp-prog-dot { width: 8px; height: 8px; border-radius: 50%; background: #e2dfd8; transition: all .2s; }
+        .lp-prog-dot.on { background: #2d6a4f; width: 20px; border-radius: 4px; }
+
         @media(max-width: 900px) {
           .lp-nav { padding: 16px 24px; }
           .lp-nav-links { display: none; }
@@ -232,6 +272,7 @@ export default function LandingPage() {
           .lp-auth-right { padding: 36px 24px; }
           .lp-footer { flex-direction: column; gap: 20px; text-align: center; padding: 32px 24px; }
           .lp-cal-week { grid-template-columns: repeat(4, 1fr); }
+          .lp-fac-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -254,7 +295,7 @@ export default function LandingPage() {
         {/* HERO */}
         <div className="lp-hero">
           <div>
-            <div className="lp-hero-tag"><div className="lp-hero-dot" />Conçu pour l&apos;EDN &amp; le PASS</div>
+            <div className="lp-hero-tag"><div className="lp-hero-dot" />Conçu pour le PASS &amp; l&apos;EDN</div>
             <h1 className="lp-h1">Révise moins,<br /><em>retiens plus.</em></h1>
             <p className="lp-hero-p">La révision espacée intelligente, avec des QCM générés par IA sur tes propres cours. Zéro effort d&apos;organisation.</p>
             <div className="lp-hero-btns">
@@ -289,8 +330,8 @@ export default function LandingPage() {
                 <div className="lp-app-main">
                   <div className="lp-app-main-h">Toutes les fiches</div>
                   {[
-                    {title:'❤️ Cardio', name:'Insuffisance cardiaque', score:'7/10', bg:'#2d6a4f', steps:[1,1,2,0,0,0]},
-                    {title:'🫁 Pneumo', name:'Asthme sévère', score:'5/10', bg:'#d97706', steps:[1,1,1,2,0,0]},
+                    {title:'🧬 Biochimie', name:'Métabolisme glucidique', score:'7/10', bg:'#2d6a4f', steps:[1,1,2,0,0,0]},
+                    {title:'🔬 Biologie cellulaire', name:'Cycle cellulaire', score:'5/10', bg:'#d97706', steps:[1,1,1,2,0,0]},
                   ].map((f,i) => (
                     <div key={i} className="lp-app-fiche">
                       <div className="lp-app-fiche-title">{f.title}</div>
@@ -321,7 +362,7 @@ export default function LandingPage() {
           <div className="lp-steps-grid">
             {[
               {n:'01', icon:'📋', title:'Crée ta fiche', desc:"Donne un nom, choisis une matière. MedRev planifie automatiquement 14 étapes de révision espacée de J0 à J+120, basées sur la courbe d'oubli d'Ebbinghaus.", arrow:true},
-              {n:'02', icon:'✨', title:'Génère les questions', desc:"Colle ton cours ou uploade un PDF. L'IA génère des QCM, KFP et V/F niveau annales EDN, personnalisés sur ton contenu — pas des questions génériques.", arrow:true},
+              {n:'02', icon:'✨', title:'Génère les questions', desc:"Colle ton cours ou uploade un PDF. L'IA génère des QCM niveau annales, personnalisés sur ton contenu — pas des questions génériques.", arrow:true},
               {n:'03', icon:'📅', title:'Révise au bon moment', desc:"Le calendrier te dit chaque jour quelles fiches réviser. Note ta session, MedRev ajuste ta progression automatiquement sur toutes les étapes.", arrow:false},
             ].map(s => (
               <div key={s.n} className="lp-step-card">
@@ -337,16 +378,16 @@ export default function LandingPage() {
 
         {/* FEATURE 1 : QCM IA */}
         <div className="lp-section" id="features">
-          <span className="lp-sec-label">Fonctionnalité </span>
+          <span className="lp-sec-label">Fonctionnalité 1</span>
           <div className="lp-feat-grid">
             <div>
               <div className="lp-feat-tag">QCM IA</div>
-              <h3 className="lp-feat-h3">Des questions <em>niveau annales EDN</em> sur ton cours.</h3>
-              <p className="lp-feat-p">Colle tes notes ou uploade un PDF. MedRev génère des QCM, KFP et Vrai/Faux calibrés sur le niveau des vraies annales — en quelques secondes.</p>
+              <h3 className="lp-feat-h3">Des questions <em>niveau concours</em> sur ton cours.</h3>
+              <p className="lp-feat-p">Colle tes notes ou uploade un PDF. MedRev génère des QCM calibrés sur le niveau de ta fac — en quelques secondes.</p>
               <ul className="lp-feat-list">
                 <li>Choisis le nombre de questions (5 à 20)</li>
-                <li>3 formats : QCM, KFP, Vrai/Faux ou Mix</li>
-                <li>Niveau ajustable : entraînement ou annales EDN</li>
+                <li>3 formats : QCM, V/F, KFP ou Mix</li>
+                <li>Simulateur adapté au barème de ta faculté</li>
                 <li>Upload PDF de cours (Premium)</li>
               </ul>
             </div>
@@ -361,26 +402,23 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="lp-qcm-right">
-                  <div className="lp-qcm-header">✨ QCM IA — niveau annales EDN</div>
+                  <div className="lp-qcm-header">✨ QCM IA — niveau concours PASS</div>
                   <div className="lp-qcm-tabs">
                     <div className="lp-qcm-tab on">📋 Coller le cours</div>
                     <div className="lp-qcm-tab off">📄 PDF</div>
                   </div>
-                  <div className="lp-qcm-textarea">Insuffisance cardiaque aiguë : défaillance brutale de la fonction de pompe. Étiologies : SCA, poussée HTA, arythmie…</div>
+                  <div className="lp-qcm-textarea">ATP : molécule adénosine triphosphate. Hydrolyse libère ~30 kJ/mol. Synthèse par l&apos;ATP synthase mitochondriale via la chaîne respiratoire…</div>
                   <div className="lp-qcm-controls">
                     <span style={{fontSize:'10px',color:'#9b9890'}}>Questions</span>
                     <div className="lp-qcm-sel">10 ▾</div>
                     <span style={{fontSize:'10px',color:'#9b9890'}}>Format</span>
-                    <div className="lp-qcm-sel">Mixte ▾</div>
-                    <span style={{fontSize:'10px',color:'#9b9890'}}>Niveau</span>
-                    <div className="lp-qcm-sel">Annales ▾</div>
+                    <div className="lp-qcm-sel">V/F Sorbonne ▾</div>
                   </div>
                   <div className="lp-qcm-btn">🤖 Générer les questions</div>
                   <div className="lp-qcm-q">
-                    <div className="lp-qcm-qt">1ère cause d&apos;insuffisance cardiaque aiguë en France ?</div>
-                    <div className="lp-qcm-opt ok"><div className="lp-radio" />Syndrome coronarien aigu</div>
-                    <div className="lp-qcm-opt no"><div className="lp-radio" />Fibrillation atriale</div>
-                    <div className="lp-qcm-opt"><div className="lp-radio" />Poussée hypertensive</div>
+                    <div className="lp-qcm-qt">L&apos;hydrolyse de l&apos;ATP en ADP libère environ 30 kJ/mol dans les conditions physiologiques.</div>
+                    <div className="lp-qcm-opt ok"><div className="lp-radio" />Vrai</div>
+                    <div className="lp-qcm-opt no"><div className="lp-radio" />Faux</div>
                   </div>
                 </div>
               </div>
@@ -400,12 +438,12 @@ export default function LandingPage() {
                   <div className="lp-cal-btn" style={{background:'#e8f5ee',color:'#2d6a4f',borderColor:'#b7dfca'}}>Aujourd&apos;hui</div>
                 </div>
                 <div className="lp-cal-week">
-                  <div className="lp-cal-day"><div className="lp-cal-dn">LUN</div><div className="lp-cal-num">24</div><div className="lp-cal-ev done">Cardio · J3</div></div>
-                  <div className="lp-cal-day"><div className="lp-cal-dn">MAR</div><div className="lp-cal-num">25</div><div className="lp-cal-ev done">Pneumo</div><div className="lp-cal-ev done">Neuro</div></div>
+                  <div className="lp-cal-day"><div className="lp-cal-dn">LUN</div><div className="lp-cal-num">24</div><div className="lp-cal-ev done">Biochimie · J3</div></div>
+                  <div className="lp-cal-day"><div className="lp-cal-dn">MAR</div><div className="lp-cal-num">25</div><div className="lp-cal-ev done">Physio</div><div className="lp-cal-ev done">Anatomie</div></div>
                   <div className="lp-cal-day"><div className="lp-cal-dn">MER</div><div className="lp-cal-num">26</div></div>
-                  <div className="lp-cal-day today"><div className="lp-cal-dn">JEU</div><div className="lp-cal-num">27</div><div className="lp-cal-ev planned">Cardio · J7</div><div className="lp-cal-ev planned">Dermato</div></div>
-                  <div className="lp-cal-day"><div className="lp-cal-dn">VEN</div><div className="lp-cal-num">28</div><div className="lp-cal-ev up">Pneumo</div></div>
-                  <div className="lp-cal-day"><div className="lp-cal-dn">SAM</div><div className="lp-cal-num">29</div><div className="lp-cal-ev up">Neuro</div></div>
+                  <div className="lp-cal-day today"><div className="lp-cal-dn">JEU</div><div className="lp-cal-num">27</div><div className="lp-cal-ev planned">Biochimie · J7</div><div className="lp-cal-ev planned">Biologie cell.</div></div>
+                  <div className="lp-cal-day"><div className="lp-cal-dn">VEN</div><div className="lp-cal-num">28</div><div className="lp-cal-ev up">Physio</div></div>
+                  <div className="lp-cal-day"><div className="lp-cal-dn">SAM</div><div className="lp-cal-num">29</div><div className="lp-cal-ev up">Anatomie</div></div>
                   <div className="lp-cal-day"><div className="lp-cal-dn">DIM</div><div className="lp-cal-num">30</div></div>
                 </div>
               </div>
@@ -429,7 +467,7 @@ export default function LandingPage() {
           <div className="lp-testi-inner">
             <div className="lp-testi-stars">★★★★★</div>
             <div className="lp-testi-quote">&quot;J&apos;ai arrêté de relire mes cours en boucle. MedRev me dit exactement quoi réviser chaque matin — j&apos;ai gagné 2h par jour.&quot;</div>
-            <div className="lp-testi-author">— Étudiante en médecine, P2 · Faculté de Lyon</div>
+            <div className="lp-testi-author">— Étudiante PASS, Sorbonne · Promotion 2025</div>
           </div>
         </div>
 
@@ -444,10 +482,10 @@ export default function LandingPage() {
               <div className="lp-pc-price free">0€</div>
               <div className="lp-pc-period">pour toujours</div>
               <hr className="lp-pc-div" />
-              {["Jusqu'à 15 fiches","Révision espacée J0→J+120","Calendrier de révision","Module Voyage (2 passages)","Export / Import JSON"].map(f=>(
+              {["Jusqu'à 15 fiches","Révision espacée J0→J+120","Calendrier de révision","Simulateur d'examen (5 QCM)","Export / Import JSON"].map(f=>(
                 <div key={f} className="lp-pc-feat on"><span className="lp-pc-check">✓</span> {f}</div>
               ))}
-              {["QCM IA (upload cours PDF)","Fiches illimitées","Synchro multi-appareils"].map(f=>(
+              {["QCM IA illimités (PDF)","Fiches illimitées","Simulateur complet (durée réelle)"].map(f=>(
                 <div key={f} className="lp-pc-feat off"><span className="lp-pc-cross">✗</span> {f}</div>
               ))}
               <button className="lp-pc-cta free" onClick={() => document.getElementById('auth')?.scrollIntoView({behavior:'smooth'})}>Commencer gratuitement</button>
@@ -459,7 +497,7 @@ export default function LandingPage() {
                 <div className="lp-pc-price">9,99€</div>
                 <div className="lp-pc-period">/mois · sans engagement</div>
                 <hr className="lp-pc-div" />
-                {["Fiches illimitées","Révision espacée J0→J+120","Calendrier de révision","Module Voyage (2 passages)","Export / Import JSON","✨ QCM IA profonds (upload PDF)","✨ Formats EDN : QCM, KFP, V/F","✨ Synchro cloud (bientôt)"].map(f=>(
+                {["Fiches illimitées","Révision espacée J0→J+120","Calendrier de révision","✨ QCM IA illimités (upload PDF)","✨ Simulateur complet conditions réelles","✨ Barème officiel de ta faculté","✨ Formats V/F · KFP · QCM"].map(f=>(
                   <div key={f} className="lp-pc-feat on"><span className="lp-pc-check">✓</span> {f}</div>
                 ))}
                 <button className="lp-pc-cta prem" onClick={() => document.getElementById('auth')?.scrollIntoView({behavior:'smooth'})}>Passer Premium →</button>
@@ -477,29 +515,59 @@ export default function LandingPage() {
             <div className="lp-auth-left">
               <div>
                 <div className="lp-auth-lt">Commence à retenir<br /><em>pour de bon.</em></div>
-                <p className="lp-auth-lsub">Rejoins les étudiants en médecine qui préparent l&apos;EDN avec MedRev. Gratuit pour commencer.</p>
+                <p className="lp-auth-lsub">Rejoins les étudiants en PASS et en médecine qui révisent avec MedRev. Gratuit pour commencer.</p>
               </div>
               <div className="lp-auth-testi">
                 <div className="lp-auth-stars">★★★★★</div>
                 <div className="lp-auth-testi-text">&quot;J&apos;ai arrêté de relire mes cours en boucle. MedRev me dit exactement quoi réviser chaque matin.&quot;</div>
-                <div className="lp-auth-testi-author">— Étudiante P2 · Lyon</div>
+                <div className="lp-auth-testi-author">— Étudiante PASS · Sorbonne</div>
               </div>
             </div>
             <div className="lp-auth-right">
               <div className="lp-auth-tabs">
-                <button className={`lp-auth-tab${activeTab==='register'?' active':''}`} onClick={() => { setActiveTab('register'); setError(null); }}>Créer un compte</button>
-                <button className={`lp-auth-tab${activeTab==='login'?' active':''}`} onClick={() => { setActiveTab('login'); setError(null); }}>Se connecter</button>
+                <button className={`lp-auth-tab${activeTab==='register'?' active':''}`} onClick={() => { setActiveTab('register'); setError(null); setStep('form'); }}>Créer un compte</button>
+                <button className={`lp-auth-tab${activeTab==='login'?' active':''}`} onClick={() => { setActiveTab('login'); setError(null); setStep('form'); }}>Se connecter</button>
               </div>
               {error && <div className="lp-auth-error">{error}</div>}
-              {activeTab === 'register' && (
+
+              {activeTab === 'register' && step === 'form' && (
                 <div>
-                  <div className="lp-form-group"><label className="lp-label">Nom d&apos;utilisateur</label><input type="text" className="lp-input" placeholder="ex : lou_medecine" value={username} onChange={e => setUsername(e.target.value)} /></div>
-                  <div className="lp-form-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="prenom@univ-medecine.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                  <div className="lp-prog-dots">
+                    <div className="lp-prog-dot on" />
+                    <div className="lp-prog-dot" />
+                  </div>
+                  <div className="lp-form-group"><label className="lp-label">Nom d&apos;utilisateur</label><input type="text" className="lp-input" placeholder="ex : lou_pass2026" value={username} onChange={e => setUsername(e.target.value)} /></div>
+                  <div className="lp-form-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="prenom.nom@etu.sorbonne-universite.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
                   <div className="lp-form-group"><label className="lp-label">Mot de passe</label><input type="password" className="lp-input" placeholder="Minimum 8 caractères" value={password} onChange={e => setPassword(e.target.value)} /></div>
-                  <button className="lp-auth-submit" onClick={handleRegister} disabled={loading}>{loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}</button>
+                  <button className="lp-auth-submit" onClick={handleContinue}>Continuer →</button>
                   <p className="lp-auth-terms">En créant un compte, tu acceptes nos <a href="/privacy">CGU</a>. Données en France 🇫🇷</p>
                 </div>
               )}
+
+              {activeTab === 'register' && step === 'fac' && (
+                <div className="lp-fac-step">
+                  <div className="lp-prog-dots">
+                    <div className="lp-prog-dot" />
+                    <div className="lp-prog-dot on" />
+                  </div>
+                  <button className="lp-fac-back" onClick={() => setStep('form')}>← Retour</button>
+                  <div className="lp-fac-title">Quelle est ta faculté ?</div>
+                  <div className="lp-fac-sub">MedRev adapte le simulateur d&apos;examen au barème officiel de ta fac.</div>
+                  <div className="lp-fac-grid">
+                    {FACS.map(f => (
+                      <div key={f.id} className={`lp-fac-card${fac === f.id ? ' selected' : ''}`} onClick={() => setFac(f.id)}>
+                        <div className="lp-fac-card-name">{f.name}</div>
+                        <div className="lp-fac-card-badge">{f.badge}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="lp-auth-submit" onClick={handleRegister} disabled={loading || !fac}>
+                    {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}
+                  </button>
+                  {!fac && <p style={{textAlign:'center',fontSize:'12px',color:'#9b9890',marginTop:'10px'}}>Sélectionne ta faculté pour continuer</p>}
+                </div>
+              )}
+
               {activeTab === 'login' && (
                 <div>
                   <div className="lp-form-group"><label className="lp-label">Adresse email</label><input type="email" className="lp-input" placeholder="ton@email.fr" value={email} onChange={e => setEmail(e.target.value)} /></div>
@@ -508,7 +576,7 @@ export default function LandingPage() {
                   <div className="lp-auth-or">ou</div>
                   <p style={{textAlign:'center',fontSize:'13px',color:'#9b9890'}}>
                     Pas encore de compte ?{' '}
-                    <button className="lp-switch-link" onClick={() => { setActiveTab('register'); setError(null); }}>Créer un compte gratuit</button>
+                    <button className="lp-switch-link" onClick={() => { setActiveTab('register'); setError(null); setStep('form'); }}>Créer un compte gratuit</button>
                   </p>
                 </div>
               )}
