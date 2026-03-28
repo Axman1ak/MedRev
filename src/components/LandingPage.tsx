@@ -16,76 +16,88 @@ const FACS = [
 ]
 
 // Matières pré-créées selon la fac et l'option
-const FAC_SYSTEMS: Record<string, Record<string, { name: string; icon: string }[]>> = {
+const FAC_SYSTEMS: Record<string, Record<string, { name: string; icon: string; semestre: number }[]>> = {
   sorbonne: {
     sciences: [
-      { name: 'Biochimie', icon: '🧬' },
-      { name: 'Biologie cellulaire', icon: '🔬' },
-      { name: 'Anatomie générale', icon: '🦴' },
-      { name: 'Physique', icon: '⚡' },
-      { name: 'Chimie', icon: '⚗️' },
-      { name: 'Biophysique', icon: '🌊' },
-      { name: 'Physiologie', icon: '❤️' },
-      { name: 'Biostatistiques', icon: '📊' },
-      { name: 'Pharmacologie', icon: '💊' },
-      { name: 'Santé, Société, Humanité', icon: '🌍' },
-      { name: 'Anatomie spécifique', icon: '🫀' },
+      // Semestre 1
+      { name: 'Biochimie', icon: '🧬', semestre: 1 },
+      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
+      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
+      { name: 'Physique', icon: '⚡', semestre: 1 },
+      { name: 'Chimie', icon: '⚗️', semestre: 1 },
+      // Semestre 2
+      { name: 'Biophysique', icon: '🌊', semestre: 2 },
+      { name: 'Physiologie', icon: '❤️', semestre: 2 },
+      { name: 'Biostatistiques', icon: '📊', semestre: 2 },
+      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
+      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
+      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
     ],
     lettres: [
-      { name: 'Biochimie', icon: '🧬' },
-      { name: 'Biologie cellulaire', icon: '🔬' },
-      { name: 'Anatomie générale', icon: '🦴' },
-      { name: 'Sociolinguistique', icon: '📖' },
-      { name: 'Linguistique', icon: '✍️' },
-      { name: 'Biophysique', icon: '🌊' },
-      { name: 'Physiologie', icon: '❤️' },
-      { name: 'Biostatistiques', icon: '📊' },
-      { name: 'Pharmacologie', icon: '💊' },
-      { name: 'Santé, Société, Humanité', icon: '🌍' },
-      { name: 'Anatomie spécifique', icon: '🫀' },
+      // Semestre 1
+      { name: 'Biochimie', icon: '🧬', semestre: 1 },
+      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
+      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
+      { name: 'Sociolinguistique', icon: '📖', semestre: 1 },
+      { name: 'Linguistique', icon: '✍️', semestre: 1 },
+      // Semestre 2
+      { name: 'Biophysique', icon: '🌊', semestre: 2 },
+      { name: 'Physiologie', icon: '❤️', semestre: 2 },
+      { name: 'Biostatistiques', icon: '📊', semestre: 2 },
+      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
+      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
+      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
     ],
   },
   'paris-cite': {
     default: [
-      { name: 'Chimie organique', icon: '⚗️' },
-      { name: 'Biologie cellulaire', icon: '🔬' },
-      { name: 'Physiologie', icon: '❤️' },
-      { name: 'Biophysique', icon: '🌊' },
-      { name: 'Biostatistiques', icon: '📊' },
-      { name: 'Santé, Société, Humanité', icon: '🌍' },
-      { name: 'Pharmacologie', icon: '💊' },
+      // Semestre 1
+      { name: 'Chimie organique', icon: '⚗️', semestre: 1 },
+      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
+      { name: 'Physiologie', icon: '❤️', semestre: 1 },
+      // Semestre 2
+      { name: 'Biophysique', icon: '🌊', semestre: 2 },
+      { name: 'Biostatistiques', icon: '📊', semestre: 2 },
+      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
+      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
     ],
   },
   'sorbonne-paris-nord': {
     default: [
-      { name: 'Biochimie', icon: '🧬' },
-      { name: 'Biologie cellulaire', icon: '🔬' },
-      { name: 'Biophysique', icon: '🌊' },
-      { name: 'Physiologie', icon: '❤️' },
-      { name: 'Biostatistiques', icon: '📊' },
-      { name: 'Pharmacologie', icon: '💊' },
-      { name: 'Santé, Société, Humanité', icon: '🌍' },
+      // Semestre 1
+      { name: 'Biochimie', icon: '🧬', semestre: 1 },
+      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
+      { name: 'Biophysique', icon: '🌊', semestre: 1 },
+      // Semestre 2
+      { name: 'Physiologie', icon: '❤️', semestre: 2 },
+      { name: 'Biostatistiques', icon: '📊', semestre: 2 },
+      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
+      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
     ],
   },
   upec: {
     default: [
-      { name: 'Biochimie', icon: '🧬' },
-      { name: 'Biologie cellulaire', icon: '🔬' },
-      { name: 'Biophysique', icon: '🌊' },
-      { name: 'Physiologie', icon: '❤️' },
-      { name: 'Biostatistiques', icon: '📊' },
-      { name: 'Pharmacologie', icon: '💊' },
-      { name: 'Santé, Société, Humanité', icon: '🌍' },
+      // Semestre 1
+      { name: 'Biochimie', icon: '🧬', semestre: 1 },
+      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
+      { name: 'Biophysique', icon: '🌊', semestre: 1 },
+      // Semestre 2
+      { name: 'Physiologie', icon: '❤️', semestre: 2 },
+      { name: 'Biostatistiques', icon: '📊', semestre: 2 },
+      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
+      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
     ],
   },
   autre: {
     default: [
-      { name: 'Biochimie', icon: '🧬' },
-      { name: 'Biologie cellulaire', icon: '🔬' },
-      { name: 'Physiologie', icon: '❤️' },
-      { name: 'Biostatistiques', icon: '📊' },
-      { name: 'Pharmacologie', icon: '💊' },
-      { name: 'Santé, Société, Humanité', icon: '🌍' },
+      // Semestre 1
+      { name: 'Biochimie', icon: '🧬', semestre: 1 },
+      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
+      // Semestre 2
+      { name: 'Physiologie', icon: '❤️', semestre: 2 },
+      { name: 'Biostatistiques', icon: '📊', semestre: 2 },
+      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
+      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
     ],
   },
 }
@@ -147,6 +159,7 @@ export default function LandingPage() {
             user_id: data.user!.id,
             name: m.name,
             icon: m.icon,
+            semestre: m.semestre,
             cal_hidden: false,
           }))
         )
