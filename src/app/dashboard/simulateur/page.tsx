@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-// Config officielle Sorbonne 2025-2026
 const SORBONNE_CONFIG = {
   fac: 'Sorbonne Université',
   bareme: { correct: 0.2, incorrect: -0.1, abstention: 0 },
@@ -60,7 +59,9 @@ export default function SimulateurPage() {
   const [selectedMatiere, setSelectedMatiere] = useState<typeof SORBONNE_CONFIG.semestres[0]['matieres'][0] | null>(null)
   const [userFac, setUserFac] = useState('sorbonne')
 
-  // Exam state
+  // ← MODIFICATION 1 : state isPro ajouté
+  const [isPro, setIsPro] = useState(false)
+
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQ, setCurrentQ] = useState(0)
   const [answers, setAnswers] = useState<VFAnswer[]>([])
@@ -73,8 +74,10 @@ export default function SimulateurPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/auth'); return }
-      const { data } = await supabase.from('profiles').select('fac').eq('id', user.id).single()
+      // ← MODIFICATION 2 : on récupère aussi "plan"
+      const { data } = await supabase.from('profiles').select('fac, plan').eq('id', user.id).single()
       if (data?.fac) setUserFac(data.fac)
+      if (data?.plan === 'pro') setIsPro(true)
     })
   }, [])
 
@@ -165,84 +168,113 @@ export default function SimulateurPage() {
   // ── PHASE: SELECT ──
   if (phase === 'select') return (
     <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 className="font-syne font-bold" style={{ fontSize: 28, color: 'var(--t1)', marginBottom: 6 }}>
-          Simulateur d&apos;examen
-        </h1>
-        <p style={{ fontSize: 15, color: 'var(--t3)', lineHeight: 1.6 }}>
-          Conditions réelles · Barème officiel Sorbonne · Format 5 items Vrai/Faux
-        </p>
-      </div>
 
-      {/* Fac badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '10px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <span style={{ fontSize: 16 }}>🎓</span>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--t1)' }}>Sorbonne Université · PASS</div>
-          <div style={{ fontSize: 12, color: 'var(--t3)' }}>Barème : +0,2 correct · −0,1 incorrect · 0 abstention</div>
-        </div>
-        <button onClick={() => router.push('/dashboard')} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 12, color: 'var(--t3)', cursor: 'pointer' }}>
-          Changer de fac →
-        </button>
-      </div>
-
-      {/* Semestre tabs */}
-      <div style={{ display: 'flex', gap: 4, background: 'var(--bg3)', borderRadius: 10, padding: 4, marginBottom: 24, maxWidth: 400 }}>
-        {SORBONNE_CONFIG.semestres.map(s => (
-          <button key={s.id} onClick={() => { setSemestre(s.id); setSelectedMatiere(null) }}
-            style={{ flex: 1, padding: '9px 12px', borderRadius: 7, fontSize: 13, cursor: 'pointer', border: semestre === s.id ? '1px solid var(--border)' : 'none', background: semestre === s.id ? 'var(--card)' : 'transparent', color: semestre === s.id ? 'var(--accent)' : 'var(--t3)', fontWeight: semestre === s.id ? 500 : 400, fontFamily: 'DM Sans, sans-serif', transition: 'all .15s' }}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Matières grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-        {sem.matieres.map(m => (
-          <div key={m.id} onClick={() => setSelectedMatiere(m)}
-            style={{ background: selectedMatiere?.id === m.id ? 'rgba(45,106,79,.04)' : 'var(--card)', border: `${selectedMatiere?.id === m.id ? '2px solid var(--accent)' : '1px solid var(--border)'}`, borderRadius: 14, padding: '18px 16px', cursor: 'pointer', transition: 'all .15s', boxShadow: selectedMatiere?.id === m.id ? '0 0 0 3px rgba(45,106,79,.1)' : 'none' }}>
-            <div style={{ fontSize: 26, marginBottom: 10 }}>{m.emoji}</div>
-            <div className="font-syne font-bold" style={{ fontSize: 15, color: 'var(--t1)', marginBottom: 4 }}>{m.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 10 }}>{m.description}</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--t2)', fontFamily: 'DM Mono, monospace' }}>
-                {m.duree} min
-              </span>
-              <span style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--t2)', fontFamily: 'DM Mono, monospace' }}>
-                {m.nbQcm} QCM
-              </span>
-              {m.calculatrice && (
-                <span style={{ background: 'rgba(45,106,79,.08)', border: '1px solid rgba(45,106,79,.2)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--accent)', fontFamily: 'DM Mono, monospace' }}>
-                  🖩 calc.
-                </span>
-              )}
-            </div>
+      {/* ← MODIFICATION 3 : écran Premium lock si pas pro */}
+      {!isPro ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: 52, marginBottom: 20 }}>🔒</div>
+          <div className="font-syne font-bold" style={{ fontSize: 26, color: 'var(--t1)', marginBottom: 12 }}>
+            Simulateur d&apos;examen — Premium
           </div>
-        ))}
-      </div>
-
-      {/* Launch panel */}
-      {selectedMatiere && (
-        <div style={{ background: 'var(--card)', border: '2px solid var(--accent)', borderRadius: 16, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ fontSize: 32 }}>{selectedMatiere.emoji}</div>
-          <div style={{ flex: 1 }}>
-            <div className="font-syne font-bold" style={{ fontSize: 18, color: 'var(--t1)', marginBottom: 4 }}>{selectedMatiere.name}</div>
-            <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--t3)' }}>
-              <span>⏱ {selectedMatiere.duree} minutes</span>
-              <span>📝 {selectedMatiere.nbQcm} questions · 5 items V/F chacune</span>
-              <span>{selectedMatiere.calculatrice ? '🖩 Calculatrice autorisée' : '🚫 Sans calculatrice'}</span>
-            </div>
+          <p style={{ fontSize: 15, color: 'var(--t3)', maxWidth: 420, margin: '0 auto 28px', lineHeight: 1.75 }}>
+            Simule les conditions réelles de ton concours PASS — chrono officiel, barème de ta fac, format 5 items V/F. Réservé aux membres Premium.
+          </p>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 28px', marginBottom: 28, textAlign: 'left', maxWidth: 380, margin: '0 auto 28px' }}>
+            {[
+              'Chrono en temps réel (conditions réelles)',
+              'Barème officiel Sorbonne +0,2 / −0,1 / 0',
+              'Format 5 items Vrai / Faux par question',
+              'Correction détaillée item par item',
+              'Toutes les matières PASS disponibles',
+            ].map(f => (
+              <div key={f} style={{ display: 'flex', gap: 10, fontSize: 14, color: 'var(--t1)', marginBottom: 10, alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
+              </div>
+            ))}
           </div>
-          <button onClick={() => setPhase('confirm')} className="btn btn-primary" style={{ padding: '12px 28px', fontSize: 15, flexShrink: 0 }}>
-            Lancer ▶
-          </button>
+          <a href="/dashboard/pricing" className="btn btn-primary" style={{ textDecoration: 'none', padding: '14px 36px', fontSize: 15 }}>
+            Passer Premium — 9,99€/mois →
+          </a>
+          <p style={{ fontSize: 12, color: 'var(--t3)', marginTop: 12 }}>Sans engagement · Annulable à tout moment</p>
         </div>
-      )}
+      ) : (
+        <>
+          <div style={{ marginBottom: 28 }}>
+            <h1 className="font-syne font-bold" style={{ fontSize: 28, color: 'var(--t1)', marginBottom: 6 }}>
+              Simulateur d&apos;examen
+            </h1>
+            <p style={{ fontSize: 15, color: 'var(--t3)', lineHeight: 1.6 }}>
+              Conditions réelles · Barème officiel Sorbonne · Format 5 items Vrai/Faux
+            </p>
+          </div>
 
-      {genError && (
-        <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 10, fontSize: 13, color: 'var(--danger)' }}>
-          ❌ {genError}
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '10px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10 }}>
+            <span style={{ fontSize: 16 }}>🎓</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--t1)' }}>Sorbonne Université · PASS</div>
+              <div style={{ fontSize: 12, color: 'var(--t3)' }}>Barème : +0,2 correct · −0,1 incorrect · 0 abstention</div>
+            </div>
+            <button onClick={() => router.push('/dashboard')} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 12, color: 'var(--t3)', cursor: 'pointer' }}>
+              Changer de fac →
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg3)', borderRadius: 10, padding: 4, marginBottom: 24, maxWidth: 400 }}>
+            {SORBONNE_CONFIG.semestres.map(s => (
+              <button key={s.id} onClick={() => { setSemestre(s.id); setSelectedMatiere(null) }}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: 7, fontSize: 13, cursor: 'pointer', border: semestre === s.id ? '1px solid var(--border)' : 'none', background: semestre === s.id ? 'var(--card)' : 'transparent', color: semestre === s.id ? 'var(--accent)' : 'var(--t3)', fontWeight: semestre === s.id ? 500 : 400, fontFamily: 'DM Sans, sans-serif', transition: 'all .15s' }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+            {sem.matieres.map(m => (
+              <div key={m.id} onClick={() => setSelectedMatiere(m)}
+                style={{ background: selectedMatiere?.id === m.id ? 'rgba(45,106,79,.04)' : 'var(--card)', border: `${selectedMatiere?.id === m.id ? '2px solid var(--accent)' : '1px solid var(--border)'}`, borderRadius: 14, padding: '18px 16px', cursor: 'pointer', transition: 'all .15s', boxShadow: selectedMatiere?.id === m.id ? '0 0 0 3px rgba(45,106,79,.1)' : 'none' }}>
+                <div style={{ fontSize: 26, marginBottom: 10 }}>{m.emoji}</div>
+                <div className="font-syne font-bold" style={{ fontSize: 15, color: 'var(--t1)', marginBottom: 4 }}>{m.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 10 }}>{m.description}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--t2)', fontFamily: 'DM Mono, monospace' }}>
+                    {m.duree} min
+                  </span>
+                  <span style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--t2)', fontFamily: 'DM Mono, monospace' }}>
+                    {m.nbQcm} QCM
+                  </span>
+                  {m.calculatrice && (
+                    <span style={{ background: 'rgba(45,106,79,.08)', border: '1px solid rgba(45,106,79,.2)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--accent)', fontFamily: 'DM Mono, monospace' }}>
+                      🖩 calc.
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedMatiere && (
+            <div style={{ background: 'var(--card)', border: '2px solid var(--accent)', borderRadius: 16, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div style={{ fontSize: 32 }}>{selectedMatiere.emoji}</div>
+              <div style={{ flex: 1 }}>
+                <div className="font-syne font-bold" style={{ fontSize: 18, color: 'var(--t1)', marginBottom: 4 }}>{selectedMatiere.name}</div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--t3)' }}>
+                  <span>⏱ {selectedMatiere.duree} minutes</span>
+                  <span>📝 {selectedMatiere.nbQcm} questions · 5 items V/F chacune</span>
+                  <span>{selectedMatiere.calculatrice ? '🖩 Calculatrice autorisée' : '🚫 Sans calculatrice'}</span>
+                </div>
+              </div>
+              <button onClick={() => setPhase('confirm')} className="btn btn-primary" style={{ padding: '12px 28px', fontSize: 15, flexShrink: 0 }}>
+                Lancer ▶
+              </button>
+            </div>
+          )}
+
+          {genError && (
+            <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 10, fontSize: 13, color: 'var(--danger)' }}>
+              ❌ {genError}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -291,7 +323,6 @@ export default function SimulateurPage() {
 
     return (
       <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-        {/* Exam topbar */}
         <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div>
             <div className="font-syne font-bold" style={{ fontSize: 16, color: 'var(--t1)' }}>{selectedMatiere?.name}</div>
@@ -305,7 +336,6 @@ export default function SimulateurPage() {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12, color: 'var(--t3)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
             QCM {currentQ + 1}/{questions.length}
@@ -318,7 +348,6 @@ export default function SimulateurPage() {
           </span>
         </div>
 
-        {/* Question body */}
         <div style={{ padding: '32px 40px', maxWidth: 860, margin: '0 auto' }}>
           <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>⚠️</span> Examen en cours · Impossible de revenir en arrière · Barème dégressif appliqué
@@ -388,7 +417,6 @@ export default function SimulateurPage() {
 
     return (
       <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
-        {/* Score header */}
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '32px 36px', marginBottom: 28, textAlign: 'center' }}>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginBottom: 8, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '.1em' }}>
             {selectedMatiere?.name} · Sorbonne PASS
@@ -413,7 +441,6 @@ export default function SimulateurPage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
           <button onClick={() => { setPhase('select'); setSelectedMatiere(null); setQuestions([]); setAnswers([]); setResults(null) }} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '12px' }}>
             ← Choisir une autre matière
@@ -423,7 +450,6 @@ export default function SimulateurPage() {
           </button>
         </div>
 
-        {/* Détail par question */}
         <div className="font-syne font-bold" style={{ fontSize: 18, marginBottom: 16, color: 'var(--t1)' }}>
           Correction détaillée
         </div>
