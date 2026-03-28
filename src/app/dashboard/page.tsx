@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [activeSystem, setActiveSystem] = useState<string | null>(null)
+  const [activeSemestre, setActiveSemestre] = useState<1 | 2 | null>(null)
   const [filter, setFilter] = useState<'all' | 'notstarted' | 'inprogress'>('all')
   const [search, setSearch] = useState('')
   const [showLessonModal, setShowLessonModal] = useState(false)
@@ -26,7 +27,7 @@ export default function DashboardPage() {
 
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }] = await Promise.all([
-      supabase.from('systems').select('*').eq('user_id', uid).order('created_at'),
+      supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid).order('created_at'),
     ])
     setSystems(sys || [])
@@ -43,7 +44,6 @@ export default function DashboardPage() {
     })
   }, [])
 
-  // Wire up import/export buttons in layout
   useEffect(() => {
     const expBtn = document.getElementById('trigger-export')
     const impBtn = document.getElementById('trigger-import')
@@ -66,7 +66,6 @@ export default function DashboardPage() {
       try {
         const d = JSON.parse(ev.target?.result as string)
         if (!d.systems || !d.lessons) throw new Error()
-        // Upsert into Supabase
         await supabase.from('systems').upsert(d.systems.map((s: System) => ({ ...s, user_id: userId })))
         await supabase.from('lessons').upsert(d.lessons.map((l: Lesson) => ({ ...l, user_id: userId })))
         load(userId)
@@ -78,26 +77,33 @@ export default function DashboardPage() {
 
   function toast(msg: string) {
     const el = document.createElement('div')
-    el.className = 'toast'
     el.textContent = msg
-    el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:14px;z-index:300;animation:mIn .3s ease;box-shadow:0 4px 24px rgba(0,0,0,.4)'
+    el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:14px;z-index:300;box-shadow:0 4px 24px rgba(0,0,0,.2)'
     document.body.appendChild(el)
     setTimeout(() => el.remove(), 2500)
   }
 
+  // Groupement par semestre
+  const s1Systems = systems.filter(s => !s.semestre || s.semestre === 1)
+  const s2Systems = systems.filter(s => s.semestre === 2)
+  const hasSemestres = s2Systems.length > 0
+
   // Filtered lessons
   const displayed = lessons
-    .filter(l => !activeSystem || l.system_id === activeSystem)
+    .filter(l => {
+      if (activeSystem) return l.system_id === activeSystem
+      if (activeSemestre) {
+        const sys = systems.find(s => s.id === l.system_id)
+        return sys?.semestre === activeSemestre || (!sys?.semestre && activeSemestre === 1)
+      }
+      return true
+    })
     .filter(l => !search || l.name.toLowerCase().includes(search.toLowerCase()))
     .filter(l => {
       if (filter === 'notstarted') return doneCount(l) === 0
       if (filter === 'inprogress') return doneCount(l) > 0
       return true
     })
-
-  const pageTitle = activeSystem
-    ? (() => { const s = systems.find(x => x.id === activeSystem); return s ? `${s.icon} ${s.name}` : '' })()
-    : 'Toutes les fiches'
 
   function cardScoreClass(l: Lesson) {
     const a = avgScore(l)
@@ -132,37 +138,78 @@ export default function DashboardPage() {
     if (activeSystem === id) setActiveSystem(null)
   }
 
+  // Composant sidebar item
+  const SysItem = ({ s }: { s: System }) => {
+    const cnt = lessons.filter(l => l.system_id === s.id).length
+    const isActive = activeSystem === s.id
+    return (
+      <div key={s.id} onClick={() => { setActiveSystem(s.id); setActiveSemestre(null) }}
+        className="group"
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: isActive ? 'rgba(79,142,247,.1)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--t3)', fontSize: 13, transition: 'all .15s', position: 'relative' }}>
+        <span>{s.icon}</span>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+        <span style={{ fontSize: 11 }}>{cnt}</span>
+        <button onClick={e => { e.stopPropagation(); setEditSystem(s); setShowSysModal(true) }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--t3)', opacity: 0, padding: '2px 4px', borderRadius: 4, position: 'absolute', right: 4 }}
+          className="transition-opacity">⚙️</button>
+      </div>
+    )
+  }
+
+  // Titre de la page
+  const pageTitle = (() => {
+    if (activeSystem) {
+      const s = systems.find(x => x.id === activeSystem)
+      return s ? <>{s.icon} <span style={{ color: 'var(--accent)' }}>{s.name}</span></> : null
+    }
+    if (activeSemestre) return <>Semestre <span style={{ color: 'var(--accent)' }}>{activeSemestre}</span></>
+    return <>Toutes les <span style={{ color: 'var(--accent)' }}>fiches</span></>
+  })()
+
   return (
     <div style={{ display: 'flex', minHeight: '100%' }}>
 
       {/* Subject sidebar */}
       <aside style={{ width: 200, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--border)', padding: '14px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
-        <div className="text-xs font-bold uppercase mb-1" style={{ padding: '0 10px', color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.1em' }}>Matières</div>
 
-        {/* All */}
-        <div onClick={() => setActiveSystem(null)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: !activeSystem ? 'rgba(79,142,247,.1)' : 'transparent', color: !activeSystem ? 'var(--accent)' : 'var(--t3)', fontSize: 13, transition: 'all .15s' }}>
+        {/* Toutes */}
+        <div onClick={() => { setActiveSystem(null); setActiveSemestre(null) }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: !activeSystem && !activeSemestre ? 'rgba(79,142,247,.1)' : 'transparent', color: !activeSystem && !activeSemestre ? 'var(--accent)' : 'var(--t3)', fontSize: 13, transition: 'all .15s', marginBottom: 4 }}>
           <span>📋</span><span style={{ flex: 1 }}>Toutes</span>
           <span style={{ fontSize: 11, color: 'var(--t3)' }}>{lessons.length}</span>
         </div>
 
-        {systems.map(s => {
-          const cnt = lessons.filter(l => l.system_id === s.id).length
-          return (
-            <div key={s.id} onClick={() => setActiveSystem(s.id)}
-              className="group"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: activeSystem === s.id ? 'rgba(79,142,247,.1)' : 'transparent', color: activeSystem === s.id ? 'var(--accent)' : 'var(--t3)', fontSize: 13, transition: 'all .15s', position: 'relative' }}>
-              <span>{s.icon}</span>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-              <span style={{ fontSize: 11 }}>{cnt}</span>
-              <button onClick={e => { e.stopPropagation(); setEditSystem(s); setShowSysModal(true) }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--t3)', opacity: 0, padding: '2px 4px', borderRadius: 4, position: 'absolute', right: 4 }}
-                className="transition-opacity">⚙️</button>
+        {hasSemestres ? (
+          <>
+            {/* Semestre 1 */}
+            <div style={{ padding: '4px 10px 2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="text-xs font-bold uppercase" style={{ color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.1em' }}>Semestre 1</span>
+              <button onClick={() => { setActiveSemestre(1); setActiveSystem(null) }}
+                style={{ fontSize: 10, color: activeSemestre === 1 ? 'var(--accent)' : 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Mono, monospace' }}>
+                {activeSemestre === 1 ? '● tout' : '○ tout'}
+              </button>
             </div>
-          )
-        })}
+            {s1Systems.map(s => <SysItem key={s.id} s={s} />)}
+
+            {/* Semestre 2 */}
+            <div style={{ padding: '8px 10px 2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+              <span className="text-xs font-bold uppercase" style={{ color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.1em' }}>Semestre 2</span>
+              <button onClick={() => { setActiveSemestre(2); setActiveSystem(null) }}
+                style={{ fontSize: 10, color: activeSemestre === 2 ? 'var(--accent)' : 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Mono, monospace' }}>
+                {activeSemestre === 2 ? '● tout' : '○ tout'}
+              </button>
+            </div>
+            {s2Systems.map(s => <SysItem key={s.id} s={s} />)}
+          </>
+        ) : (
+          <>
+            <div className="text-xs font-bold uppercase mb-1" style={{ padding: '0 10px', color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.1em' }}>Matières</div>
+            {systems.map(s => <SysItem key={s.id} s={s} />)}
+          </>
+        )}
+
         <button onClick={() => { setEditSystem(null); setShowSysModal(true) }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', marginTop: 4, borderRadius: 8, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--t3)', fontSize: 13, cursor: 'pointer', transition: 'all .2s', width: '100%' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', marginTop: 8, borderRadius: 8, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--t3)', fontSize: 13, cursor: 'pointer', transition: 'all .2s', width: '100%' }}
           className="hover:border-accent hover:text-accent">
           ＋ Ajouter
         </button>
@@ -175,13 +222,23 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <h1 className="font-syne font-black text-2xl" style={{ color: 'var(--t1)' }}>
-            {activeSystem
-              ? <>{systems.find(s => s.id === activeSystem)?.icon} <span style={{ color: 'var(--accent)' }}>{systems.find(s => s.id === activeSystem)?.name}</span></>
-              : <>Toutes les <span style={{ color: 'var(--accent)' }}>fiches</span></>
-            }
+            {pageTitle}
           </h1>
           <button onClick={openAddLesson} className="btn btn-primary">＋ Nouvelle fiche</button>
         </div>
+
+        {/* Semestre tabs — affichés quand on voit toutes les fiches */}
+        {hasSemestres && !activeSystem && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {[null, 1, 2].map(s => (
+              <button key={String(s)}
+                onClick={() => setActiveSemestre(s as 1 | 2 | null)}
+                style={{ padding: '7px 16px', borderRadius: 20, fontSize: 13, border: '1px solid var(--border)', background: activeSemestre === s ? 'var(--accent)' : 'var(--bg2)', color: activeSemestre === s ? '#fff' : 'var(--t2)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'all .15s', fontWeight: activeSemestre === s ? 500 : 400 }}>
+                {s === null ? 'Tous les semestres' : `Semestre ${s}`}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Search + filters */}
         <div style={{ position: 'relative', marginBottom: 14 }}>
@@ -198,86 +255,49 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Empty state */}
+        {/* Empty state — pas de matières */}
         {systems.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--t3)' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
             <div className="font-syne font-bold text-lg mb-2" style={{ color: 'var(--t2)' }}>Commencez par créer une matière</div>
-            <p className="text-sm mb-6" style={{ color: 'var(--t3)' }}>Cliquez sur "＋ Ajouter" dans la colonne de gauche pour créer votre première matière, puis ajoutez vos fiches de cours.</p>
+            <p className="text-sm mb-6" style={{ color: 'var(--t3)' }}>Cliquez sur "＋ Ajouter" dans la colonne de gauche pour créer votre première matière.</p>
             <button onClick={() => { setEditSystem(null); setShowSysModal(true) }} className="btn btn-primary">＋ Créer ma première matière</button>
           </div>
         )}
 
-        {/* Grid */}
+        {/* Empty state — pas de fiches */}
         {systems.length > 0 && displayed.length === 0 && (
           <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--t3)' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
-            <div>Aucune fiche trouvée.</div>
+            <div style={{ marginBottom: 16 }}>Aucune fiche dans cette matière.</div>
+            <button onClick={openAddLesson} className="btn btn-primary">＋ Créer une fiche</button>
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-          {displayed.map(l => {
-            const sys = systems.find(s => s.id === l.system_id)
-            const done = doneCount(l)
-            const hasAi = l.ai_questions?.length > 0
-            const t = todayStr()
-
-            // Mini bar chart
-            const bars = J_STEPS.map((_, i) => {
-              const step = l.steps[i]
-              const ds = stepDate(l, i)
-              const isFuture = ds && ds > t && i > 0
-              if (step) {
-                const col = scoreColor(step.score)
-                const h = Math.round((step.score / 5) * 34) + 4
-                return <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <div style={{ width: '100%', height: h, background: col, borderRadius: '3px 3px 0 0', minHeight: 2 }} />
-                  <span style={{ fontSize: 8, color: col, lineHeight: 1 }}>{step.score}</span>
-                </div>
-              }
-              return <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <div style={{ width: '100%', height: 30, background: 'var(--bg3)', border: '1px dashed var(--border)', borderRadius: '3px 3px 0 0', opacity: isFuture ? 0.3 : 0.7 }} />
-                <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{jLabel(i)}</span>
-              </div>
-            })
-
+        {/* Groupement par semestre quand on voit tout */}
+        {hasSemestres && !activeSystem && !activeSemestre && displayed.length > 0 ? (
+          [1, 2].map(sem => {
+            const semSystems = systems.filter(s => (!s.semestre && sem === 1) || s.semestre === sem)
+            const semLessons = displayed.filter(l => semSystems.some(s => s.id === l.system_id))
+            if (semLessons.length === 0) return null
             return (
-              <div key={l.id}
-                onClick={() => router.push(`/dashboard/lesson/${l.id}`)}
-                style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'all .25s' }}
-                className={`hover:-translate-y-0.5 hover:shadow-lg lesson-card-${cardScoreClass(l)}`}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(79,142,247,.4)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
-
-                {/* Score stripe */}
-                <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: { 'sc-none': 'var(--t3)', 'sc-low': 'var(--danger)', 'sc-mid': 'var(--accent3)', 'sc-high': 'var(--accent2)' }[cardScoreClass(l)] }} />
-
-                <div className="flex items-start justify-between gap-2" style={{ paddingLeft: 8 }}>
-                  <div className="font-syne font-bold text-sm leading-snug" style={{ color: 'var(--t1)' }}>{l.name}</div>
-                  <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setEditLesson(l); setShowLessonModal(true) }} className="icon-btn" style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: 'var(--bg3)', color: 'var(--t2)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✏️</button>
-                    <button onClick={() => deleteLesson(l.id)} className="icon-btn" style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: 'var(--bg3)', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+              <div key={sem} style={{ marginBottom: 36 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t2)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                    Semestre {sem}
                   </div>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  <span style={{ fontSize: 12, color: 'var(--t3)' }}>{semLessons.length} fiche{semLessons.length > 1 ? 's' : ''}</span>
                 </div>
-
-                <div className="flex gap-1.5 flex-wrap" style={{ paddingLeft: 8 }}>
-                  {sys && <span className="badge badge-sys">{sys.icon} {sys.name}</span>}
-                  <span className="badge badge-done">{done}/14</span>
-                  {hasAi && <span className="badge badge-ai">✨ {l.ai_questions.length} QCM</span>}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 40, marginTop: 2, paddingLeft: 8 }}>
-                  {bars}
-                </div>
-
-                <div className="text-xs" style={{ color: 'var(--t3)', paddingLeft: 8 }}>
-                  {l.learn_date ? `📖 J0 : ${fmtDate(l.learn_date)}` : <span style={{ color: 'var(--t3)' }}>Pas de J0 défini</span>}
-                </div>
+                <LessonGrid lessons={semLessons} systems={systems} router={router} setEditLesson={setEditLesson} setShowLessonModal={setShowLessonModal} deleteLesson={deleteLesson} cardScoreClass={cardScoreClass} />
               </div>
             )
-          })}
-        </div>
+          })
+        ) : (
+          displayed.length > 0 && (
+            <LessonGrid lessons={displayed} systems={systems} router={router} setEditLesson={setEditLesson} setShowLessonModal={setShowLessonModal} deleteLesson={deleteLesson} cardScoreClass={cardScoreClass} />
+          )
+        )}
       </div>
 
       {/* Modals */}
@@ -319,6 +339,81 @@ export default function DashboardPage() {
           onDelete={editSystem ? () => deleteSystem(editSystem.id) : undefined}
         />
       )}
+    </div>
+  )
+}
+
+// Composant grille de fiches extrait pour éviter la duplication
+function LessonGrid({ lessons, systems, router, setEditLesson, setShowLessonModal, deleteLesson, cardScoreClass }: {
+  lessons: Lesson[]
+  systems: System[]
+  router: any
+  setEditLesson: (l: Lesson) => void
+  setShowLessonModal: (b: boolean) => void
+  deleteLesson: (id: string) => void
+  cardScoreClass: (l: Lesson) => string
+}) {
+  const t = todayStr()
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+      {lessons.map(l => {
+        const sys = systems.find(s => s.id === l.system_id)
+        const done = doneCount(l)
+        const hasAi = l.ai_questions?.length > 0
+
+        const bars = J_STEPS.map((_, i) => {
+          const step = l.steps[i]
+          const ds = stepDate(l, i)
+          const isFuture = ds && ds > t && i > 0
+          if (step) {
+            const col = scoreColor(step.score)
+            const h = Math.round((step.score / 5) * 34) + 4
+            return <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div style={{ width: '100%', height: h, background: col, borderRadius: '3px 3px 0 0', minHeight: 2 }} />
+              <span style={{ fontSize: 8, color: col, lineHeight: 1 }}>{step.score}</span>
+            </div>
+          }
+          return <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <div style={{ width: '100%', height: 30, background: 'var(--bg3)', border: '1px dashed var(--border)', borderRadius: '3px 3px 0 0', opacity: isFuture ? 0.3 : 0.7 }} />
+            <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{jLabel(i)}</span>
+          </div>
+        })
+
+        const scoreClass = cardScoreClass(l)
+        return (
+          <div key={l.id}
+            onClick={() => router.push(`/dashboard/lesson/${l.id}`)}
+            style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'all .25s' }}
+            className={`hover:-translate-y-0.5 hover:shadow-lg lesson-card-${scoreClass}`}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(79,142,247,.4)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
+
+            <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: { 'sc-none': 'var(--t3)', 'sc-low': 'var(--danger)', 'sc-mid': 'var(--accent3)', 'sc-high': 'var(--accent2)' }[scoreClass] }} />
+
+            <div className="flex items-start justify-between gap-2" style={{ paddingLeft: 8 }}>
+              <div className="font-syne font-bold text-sm leading-snug" style={{ color: 'var(--t1)' }}>{l.name}</div>
+              <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                <button onClick={() => { setEditLesson(l); setShowLessonModal(true) }} className="icon-btn" style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: 'var(--bg3)', color: 'var(--t2)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✏️</button>
+                <button onClick={() => deleteLesson(l.id)} className="icon-btn" style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: 'var(--bg3)', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
+              </div>
+            </div>
+
+            <div className="flex gap-1.5 flex-wrap" style={{ paddingLeft: 8 }}>
+              {sys && <span className="badge badge-sys">{sys.icon} {sys.name}</span>}
+              <span className="badge badge-done">{done}/14</span>
+              {hasAi && <span className="badge badge-ai">✨ {l.ai_questions.length} QCM</span>}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 40, marginTop: 2, paddingLeft: 8 }}>
+              {bars}
+            </div>
+
+            <div className="text-xs" style={{ color: 'var(--t3)', paddingLeft: 8 }}>
+              {l.learn_date ? `📖 J0 : ${fmtDate(l.learn_date)}` : <span style={{ color: 'var(--t3)' }}>Pas de J0 défini</span>}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
