@@ -8,6 +8,7 @@ import type { Profile } from '@/types'
 const NAV = [
   { href: '/dashboard', label: 'Fiches', icon: '📚', exact: true },
   { href: '/dashboard/calendar', label: 'Calendrier', icon: '📅' },
+  { href: '/dashboard/simulateur', label: 'Simulateur', icon: '🏆' },
   { href: '/dashboard/voyage', label: 'Voyage', icon: '🧳' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '📊' },
   { href: '/dashboard/pricing', label: 'Premium', icon: '⭐' },
