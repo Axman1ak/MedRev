@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const NAV = [
-  { href: '/dashboard', label: 'Fiches', icon: '📚', exact: true },
-  { href: '/dashboard/calendar', label: 'Calendrier', icon: '📅' },
-  { href: '/dashboard/simulateur', label: 'Simulateur', icon: '🏆' },
-  { href: '/dashboard/stats', label: 'Statistiques', icon: '📊' },
-  { href: '/dashboard/pricing', label: 'Premium', icon: '⭐' },
+  { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
+  { href: '/dashboard/calendar', label: 'Calendrier', icon: '▦' },
+  { href: '/dashboard/fiches', label: 'Mes matières', icon: '▤' },
+  { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
+  { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       supabase.from('profiles').select('*').eq('id', user.id).single()
         .then(({ data }) => {
           if (data) {
-            // Prioritise username (landing page) then name (auth page) then email
             const displayName =
               user.user_metadata?.username ||
               user.user_metadata?.name ||
@@ -73,59 +72,106 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const initials = profile?.name?.slice(0, 2).toUpperCase() || '?'
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
-      <nav className="flex flex-col" style={{ width: 220, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--border)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#EDEAE3', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+        .db-nav-item {
+          display: flex; align-items: center; gap: 9px;
+          padding: 8px 10px; border-radius: 7px; cursor: pointer;
+          font-size: 13px; color: rgba(255,255,255,.52);
+          margin-bottom: 1px; transition: all .15s;
+          text-decoration: none;
+        }
+        .db-nav-item:hover { background: rgba(255,255,255,.08); color: white; }
+        .db-nav-item.active { background: rgba(255,255,255,.08); color: white; }
+        .db-nav-item .ic { width: 16px; text-align: center; font-style: normal; font-size: 13px; }
+        .db-nav-item .badge { margin-left: auto; font-size: 10px; font-weight: 700; background: #2D6A4F; color: white; border-radius: 20px; padding: 1px 7px; }
+      `}</style>
 
-        <div style={{ padding: '20px 18px 14px', borderBottom: '1px solid var(--border)' }}>
-          <div className="font-syne font-black text-xl" style={{ letterSpacing: '-0.03em' }}>
-            Med<span style={{ color: 'var(--accent)' }}>Rev</span>
-          </div>
-          <div className="text-xs mt-0.5" style={{ color: 'var(--t3)', fontFamily: 'DM Mono', letterSpacing: '0.05em' }}>REVISION MEDICALE IA</div>
+      {/* SIDEBAR */}
+      <aside style={{
+        width: 220, flexShrink: 0,
+        background: '#111310',
+        display: 'flex', flexDirection: 'column',
+        padding: '22px 0',
+        position: 'sticky', top: 0, height: '100vh',
+        overflowY: 'auto'
+      }}>
+        {/* Logo */}
+        <div style={{
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontSize: 20, fontWeight: 700,
+          padding: '0 18px 20px',
+          borderBottom: '1px solid rgba(255,255,255,.07)',
+          marginBottom: 12, color: 'white'
+        }}>
+          Med<span style={{ color: '#2D6A4F' }}>Rev</span>
         </div>
 
-        {todayCount > 0 && (
-          <Link href="/dashboard/calendar" style={{ margin: '10px 8px 0', padding: '8px 12px', background: 'rgba(79,142,247,.08)', border: '1px solid rgba(79,142,247,.15)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-            <span style={{ background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 20 }}>{todayCount}</span>
-            <span className="text-xs" style={{ color: 'var(--t2)' }}>a reviser aujourd&apos;hui</span>
-          </Link>
-        )}
+        {/* Navigation */}
+        <div style={{ padding: '0 9px', marginBottom: 20 }}>
+          <div style={{
+            fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '.1em', color: 'rgba(255,255,255,.27)',
+            padding: '0 9px', marginBottom: 5
+          }}>Navigation</div>
 
-        <div className="text-xs font-bold uppercase mt-4" style={{ padding: '0 14px 6px', color: 'var(--t3)', fontFamily: 'Syne', letterSpacing: '0.1em' }}>Navigation</div>
-        <div className="flex flex-col" style={{ padding: '0 4px' }}>
           {NAV.map(n => (
-            <Link key={n.href} href={n.href} className={`nav-item ${isActive(n.href, n.exact) ? 'active' : ''}`}>
-              <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{n.icon}</span>
-              <span>{n.label}</span>
-              {n.href === '/dashboard/pricing' && profile?.plan === 'pro' && (
-                <span className="badge-pro ml-auto">PRO</span>
+            <Link
+              key={n.href}
+              href={n.href}
+              className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
+            >
+              <i className="ic">{n.icon}</i>
+              {n.label}
+              {n.href === '/dashboard/calendar' && todayCount > 0 && (
+                <span className="badge">{todayCount}</span>
               )}
             </Link>
           ))}
         </div>
 
-        <div id="sidebar-subjects" className="flex-1" />
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
 
-        <div style={{ padding: '10px 8px', borderTop: '1px solid var(--border)', background: 'var(--bg2)' }}>
-          <div className="relative group">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, cursor: 'pointer' }} className="hover:bg-bg3 transition-colors">
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', fontFamily: 'Syne', flexShrink: 0 }}>{initials}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate" style={{ color: 'var(--t1)' }}>{profile?.name || '...'}</div>
-                <div className="text-xs" style={{ color: profile?.plan === 'pro' ? 'var(--gold)' : 'var(--t3)' }}>
-                  {profile?.plan === 'pro' ? 'Plan Premium' : 'Plan Gratuit'}
-                </div>
-              </div>
+        {/* User card */}
+        <div style={{
+          marginTop: 'auto', padding: '14px 9px 0',
+          borderTop: '1px solid rgba(255,255,255,.07)'
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 9,
+            padding: 9, borderRadius: 9,
+            background: 'rgba(255,255,255,.05)',
+            cursor: 'pointer',
+            position: 'relative'
+          }}
+            onClick={logout}
+            title="Se déconnecter"
+          >
+            <div style={{
+              width: 30, height: 30, borderRadius: '50%',
+              background: '#2D6A4F',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, color: 'white', minWidth: 30
+            }}>
+              {initials}
             </div>
-            <div className="absolute bottom-full left-0 right-0 hidden group-hover:block z-50 translate-y-1" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
-              <button onClick={logout} className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-bg3 transition-colors cursor-pointer border-0 bg-transparent" style={{ color: 'var(--danger)' }}>
-                Deconnexion
-              </button>
+            <div>
+              <div style={{ fontSize: '12.5px', fontWeight: 500, color: 'white' }}>
+                {profile?.name || '...'}
+              </div>
+              <div style={{ fontSize: '10.5px', color: 'rgba(255,255,255,.35)' }}>
+                {profile?.plan === 'pro' ? 'Premium' : 'Gratuit'}
+                {profile?.fac ? ` · ${profile.fac}` : ''}
+              </div>
             </div>
           </div>
         </div>
-      </nav>
+      </aside>
 
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      {/* MAIN CONTENT */}
+      <main style={{ flex: 1, overflowY: 'auto' }}>
         {children}
       </main>
     </div>
