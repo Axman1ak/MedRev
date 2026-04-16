@@ -4,489 +4,531 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { System, Lesson } from '@/types'
 
-const SORBONNE_CONFIG = {
-  fac: 'Sorbonne Université',
-  bareme: { correct: 0.2, incorrect: -0.1, abstention: 0 },
-  semestres: [
-    {
-      id: 's1',
-      label: 'Semestre 1 — Décembre',
-      matieres: [
-        { id: 'biochimie', name: 'Biochimie', emoji: '🧬', duree: 60, calculatrice: false, nbQcm: 20, description: 'Métabolisme, bioénergétique, enzymologie' },
-        { id: 'biologie-cell', name: 'Biologie cellulaire', emoji: '🔬', duree: 90, calculatrice: false, nbQcm: 30, description: 'Cellule, tissus, histologie' },
-        { id: 'anatomie', name: 'Anatomie générale', emoji: '🦴', duree: 45, calculatrice: false, nbQcm: 15, description: 'Morphologie et fonctions' },
-        { id: 'physique', name: 'Physique', emoji: '⚡', duree: 45, calculatrice: true, nbQcm: 15, description: 'Mécanique, optique, électricité' },
-        { id: 'chimie', name: 'Chimie', emoji: '⚗️', duree: 60, calculatrice: false, nbQcm: 20, description: 'Chimie organique et générale' },
-      ]
-    },
-    {
-      id: 's2',
-      label: 'Semestre 2 — Mai',
-      matieres: [
-        { id: 'biophysique', name: 'Biophysique', emoji: '🌊', duree: 60, calculatrice: true, nbQcm: 20, description: 'Physique appliquée au vivant' },
-        { id: 'physiologie', name: 'Physiologie', emoji: '❤️', duree: 45, calculatrice: false, nbQcm: 15, description: 'Fonctions des grands appareils' },
-        { id: 'biostat', name: 'Biostatistiques', emoji: '📊', duree: 60, calculatrice: true, nbQcm: 20, description: 'Statistiques médicales' },
-        { id: 'pharmaco', name: 'Pharmacologie', emoji: '💊', duree: 60, calculatrice: false, nbQcm: 20, description: 'Mécanismes et classes thérapeutiques' },
-        { id: 'ssh', name: 'Santé, Société, Humanité', emoji: '🌍', duree: 60, calculatrice: false, nbQcm: 20, description: 'Sciences humaines et sociales' },
-        { id: 'anatomie-spec', name: 'Anatomie spécifique', emoji: '🫀', duree: 45, calculatrice: false, nbQcm: 15, description: 'Anatomie des systèmes' },
-      ]
-    }
-  ]
-}
+const SYS_COLORS: [string, string][] = [
+  ['#4ADE80', '#166534'],
+  ['#60A5FA', '#1D4ED8'],
+  ['#F59E0B', '#92400E'],
+  ['#F472B6', '#9D174D'],
+  ['#A78BFA', '#6D28D9'],
+  ['#2D6A4F', '#D8EAE0'],
+  ['#9CA3AF', '#374151'],
+]
 
-type Phase = 'select' | 'confirm' | 'exam' | 'results'
-
-interface VFAnswer { a: boolean | null; b: boolean | null; c: boolean | null; d: boolean | null; e: boolean | null }
 interface Question {
-  stem: string
-  context?: string
-  items: { a: string; b: string; c: string; d: string; e: string }
-  correct: { a: boolean; b: boolean; c: boolean; d: boolean; e: boolean }
-  explanation: string
+  question: string
+  options: string[]
+  answer: number
+  source?: string
+  lessonName?: string
+  systemName?: string
 }
-interface ExamResult {
-  total: number; max: number; pct: number
-  byItem: { correct: number; incorrect: number; abstention: number }
-  questions: { q: Question; answer: VFAnswer; score: number }[]
+
+function parseQuestions(lesson: Lesson, systemName: string): Question[] {
+  const raw = lesson.ai_questions as any[]
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  return raw.map((q: any) => ({
+    question: q.question || q.q || '',
+    options: q.options || q.opts || [],
+    answer: typeof q.answer === 'number' ? q.answer : (typeof q.correct_index === 'number' ? q.correct_index : 0),
+    source: q.source || q.src || undefined,
+    lessonName: lesson.name,
+    systemName,
+  })).filter(q => q.question && q.options.length >= 2)
 }
 
 export default function SimulateurPage() {
-  const router = useRouter()
   const supabase = createClient()
-  const [phase, setPhase] = useState<Phase>('select')
-  const [semestre, setSemestre] = useState('s1')
-  const [selectedMatiere, setSelectedMatiere] = useState<typeof SORBONNE_CONFIG.semestres[0]['matieres'][0] | null>(null)
-  const [userFac, setUserFac] = useState('sorbonne')
+  const router = useRouter()
 
-  // ← MODIFICATION 1 : state isPro ajouté
-  const [isPro, setIsPro] = useState(false)
+  const [systems, setSystems] = useState<System[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [selectedSysIds, setSelectedSysIds] = useState<Set<string>>(new Set())
 
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [currentQ, setCurrentQ] = useState(0)
-  const [answers, setAnswers] = useState<VFAnswer[]>([])
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [generating, setGenerating] = useState(false)
-  const [genError, setGenError] = useState<string | null>(null)
-  const [results, setResults] = useState<ExamResult | null>(null)
+  // Config
+  const [nbQuestions, setNbQuestions] = useState(20)
+  const [duration, setDuration] = useState<number | null>(30) // minutes, null = libre
+  const [selectionMode, setSelectionMode] = useState<'random' | 'weak'>('random')
+
+  // Session state
+  type Phase = 'config' | 'session' | 'results'
+  const [phase, setPhase] = useState<Phase>('config')
+  const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const [answers, setAnswers] = useState<(number | null)[]>([]) // selected option per question
+  const [revealed, setRevealed] = useState(false)
+  const [selfRatings, setSelfRatings] = useState<string[]>([]) // 'reprendre'|'difficile'|'bien'|'facile'
+  const [timeLeft, setTimeLeft] = useState(0) // seconds
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.push('/auth'); return }
-      // ← MODIFICATION 2 : on récupère aussi "plan"
-      const { data } = await supabase.from('profiles').select('fac, plan').eq('id', user.id).single()
-      if (data?.fac) setUserFac(data.fac)
-      if (data?.plan === 'pro') setIsPro(true)
-    })
-  }, [])
-
-  const finishExam = useCallback((qs: Question[], ans: VFAnswer[]) => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    const bareme = SORBONNE_CONFIG.bareme
-    let total = 0
-    const byItem = { correct: 0, incorrect: 0, abstention: 0 }
-    const detailed = qs.map((q, qi) => {
-      const a = ans[qi] || { a: null, b: null, c: null, d: null, e: null }
-      let score = 0
-      const letters = ['a','b','c','d','e'] as const
-      letters.forEach(l => {
-        if (a[l] === null) { byItem.abstention++; score += bareme.abstention }
-        else if (a[l] === q.correct[l]) { byItem.correct++; score += bareme.correct }
-        else { byItem.incorrect++; score += bareme.incorrect }
-      })
-      score = Math.max(0, score)
-      total += score
-      return { q, answer: a, score: Math.round(score * 100) / 100 }
-    })
-    const max = qs.length * 5 * bareme.correct
-    setResults({ total: Math.round(total * 100) / 100, max: Math.round(max * 100) / 100, pct: Math.round(total / max * 100), byItem, questions: detailed })
-    setPhase('results')
-  }, [])
-
-  const startExam = async () => {
-    if (!selectedMatiere) return
-    setGenerating(true)
-    setGenError(null)
-    try {
-      const res = await fetch('/api/generate-pass-qcm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          matiere: selectedMatiere.name,
-          nbQ: selectedMatiere.nbQcm,
-          fac: 'Sorbonne Université',
-          semestre: semestre === 's1' ? 1 : 2,
-        })
-      })
-      const data = await res.json()
-      if (!res.ok || !data.questions?.length) throw new Error(data.error || 'Erreur génération')
-      setQuestions(data.questions)
-      setAnswers(data.questions.map(() => ({ a: null, b: null, c: null, d: null, e: null })))
-      setCurrentQ(0)
-      setTimeLeft(selectedMatiere.duree * 60)
-      setPhase('exam')
-      timerRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) {
-            finishExam(data.questions, answers)
-            return 0
-          }
-          return t - 1
-        })
-      }, 1000)
-    } catch (e: any) {
-      setGenError(e.message)
+  const load = useCallback(async (uid: string) => {
+    const [{ data: sys }, { data: les }] = await Promise.all([
+      supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
+      supabase.from('lessons').select('*').eq('user_id', uid),
+    ])
+    setSystems(sys || [])
+    setLessons(les || [])
+    if (sys && sys.length > 0) {
+      setSelectedSysIds(new Set(sys.map((s: System) => s.id)))
     }
-    setGenerating(false)
-  }
+  }, [])
 
-  const setVF = (item: keyof VFAnswer, val: boolean) => {
-    setAnswers(prev => {
-      const next = [...prev]
-      const cur = { ...next[currentQ] }
-      cur[item] = cur[item] === val ? null : val
-      next[currentQ] = cur
-      return next
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/'); return }
+      load(user.id)
     })
+  }, [])
+
+  // Timer
+  useEffect(() => {
+    if (phase === 'session' && duration !== null) {
+      setTimeLeft(duration * 60)
+    }
+  }, [phase, duration])
+
+  useEffect(() => {
+    if (phase !== 'session' || duration === null) return
+    if (timeLeft <= 0) { endSession(); return }
+    timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [phase, timeLeft])
+
+  function formatTime(s: number) {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}:${sec.toString().padStart(2, '0')}`
   }
 
-  const nextQuestion = () => {
-    if (currentQ < questions.length - 1) setCurrentQ(q => q + 1)
-    else finishExam(questions, answers)
+  // Available questions for selected systems
+  function getAvailableQuestions(): Question[] {
+    const qs: Question[] = []
+    lessons.forEach(l => {
+      if (!selectedSysIds.has(l.system_id)) return
+      const sys = systems.find(s => s.id === l.system_id)
+      if (!sys) return
+      qs.push(...parseQuestions(l, sys.name))
+    })
+    return qs
   }
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60), sec = s % 60
-    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  function countQuestionsForSystem(sysId: string): number {
+    return lessons
+      .filter(l => l.system_id === sysId)
+      .reduce((acc, l) => acc + (Array.isArray(l.ai_questions) ? (l.ai_questions as any[]).length : 0), 0)
   }
 
-  const isUrgent = timeLeft < 300
-  const progress = questions.length ? ((currentQ) / questions.length) * 100 : 0
-  const sem = SORBONNE_CONFIG.semestres.find(s => s.id === semestre)!
+  function shuffle<T>(arr: T[]): T[] {
+    const a = [...arr]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
 
-  // ── PHASE: SELECT ──
-  if (phase === 'select') return (
-    <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
+  function launchSession() {
+    let qs = getAvailableQuestions()
+    if (qs.length === 0) return
+    qs = shuffle(qs).slice(0, nbQuestions)
+    setSessionQuestions(qs)
+    setCurrentIdx(0)
+    setAnswers(new Array(qs.length).fill(null))
+    setSelfRatings(new Array(qs.length).fill(''))
+    setRevealed(false)
+    setPhase('session')
+  }
 
-      {/* ← MODIFICATION 3 : écran Premium lock si pas pro */}
-      {!isPro ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: 52, marginBottom: 20 }}>🔒</div>
-          <div className="font-syne font-bold" style={{ fontSize: 26, color: 'var(--t1)', marginBottom: 12 }}>
-            Simulateur d&apos;examen — Premium
-          </div>
-          <p style={{ fontSize: 15, color: 'var(--t3)', maxWidth: 420, margin: '0 auto 28px', lineHeight: 1.75 }}>
-            Simule les conditions réelles de ton concours PASS — chrono officiel, barème de ta fac, format 5 items V/F. Réservé aux membres Premium.
+  function selectOption(optIdx: number) {
+    if (revealed) return
+    const newAnswers = [...answers]
+    newAnswers[currentIdx] = optIdx
+    setAnswers(newAnswers)
+    setRevealed(true)
+  }
+
+  function rateSelf(rating: string) {
+    const newRatings = [...selfRatings]
+    newRatings[currentIdx] = rating
+    setSelfRatings(newRatings)
+    // Go to next question
+    if (currentIdx < sessionQuestions.length - 1) {
+      setCurrentIdx(i => i + 1)
+      setRevealed(false)
+    } else {
+      endSession()
+    }
+  }
+
+  function endSession() {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setPhase('results')
+  }
+
+  const correctCount = answers.filter((a, i) => a === sessionQuestions[i]?.answer).length
+  const score = sessionQuestions.length > 0 ? Math.round((correctCount / sessionQuestions.length) * 100) : 0
+  const availableQs = getAvailableQuestions()
+  const totalAvailable = availableQs.length
+
+  // ---- CONFIG PHASE ----
+  if (phase === 'config') return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+        :root { --dark:#111310;--green:#1B4332;--gm:#2D6A4F;--gl:#D8EAE0;--amber:#C47B2B;--al:#FBF0E0;--gray:#6B7280;--border:#DDD8CE; }
+        .sim-main { padding:26px 28px; background:#EDEAE3; min-height:100vh; display:flex; flex-direction:column; gap:16px; font-family:'Plus Jakarta Sans',sans-serif; }
+        .sim-card { background:white; border:1px solid var(--border); border-radius:13px; padding:20px; }
+        .sim-ct { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--gray); margin-bottom:14px; }
+        .sim-label { display:block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--gray); margin-bottom:10px; }
+        .popt { padding:6px 14px; border-radius:20px; border:1.5px solid var(--border); font-size:12.5px; font-weight:500; color:var(--gray); cursor:pointer; background:white; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; }
+        .popt:hover { border-color:#aaa; }
+        .popt.sel { background:var(--dark); border-color:var(--dark); color:white; }
+        .spill { display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:20px; border:1.5px solid var(--border); background:white; font-size:12.5px; font-weight:500; color:var(--gray); cursor:pointer; transition:all .15s; font-family:'Plus Jakarta Sans',sans-serif; }
+        .spill:hover { border-color:#aaa; }
+        .spill.sel { border-color:var(--green); background:var(--gl); color:var(--green); }
+        .spill .sd { width:7px; height:7px; border-radius:50%; min-width:7px; }
+      `}</style>
+      <div className="sim-main">
+        <div>
+          <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 500, color: '#111310' }}>
+            Simulateur d&apos;examen
+          </h1>
+          <p style={{ fontSize: '12.5px', color: 'var(--gray)', marginTop: 3 }}>
+            Prépare-toi dans les conditions réelles du concours — multi-matières, chronométré, corrigé.
           </p>
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 28px', marginBottom: 28, textAlign: 'left', maxWidth: 380, margin: '0 auto 28px' }}>
-            {[
-              'Chrono en temps réel (conditions réelles)',
-              'Barème officiel Sorbonne +0,2 / −0,1 / 0',
-              'Format 5 items Vrai / Faux par question',
-              'Correction détaillée item par item',
-              'Toutes les matières PASS disponibles',
-            ].map(f => (
-              <div key={f} style={{ display: 'flex', gap: 10, fontSize: 14, color: 'var(--t1)', marginBottom: 10, alignItems: 'flex-start' }}>
-                <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
-              </div>
-            ))}
-          </div>
-          <a href="/dashboard/pricing" className="btn btn-primary" style={{ textDecoration: 'none', padding: '14px 36px', fontSize: 15 }}>
-            Passer Premium — 9,99€/mois →
-          </a>
-          <p style={{ fontSize: 12, color: 'var(--t3)', marginTop: 12 }}>Sans engagement · Annulable à tout moment</p>
         </div>
-      ) : (
-        <>
-          <div style={{ marginBottom: 28 }}>
-            <h1 className="font-syne font-bold" style={{ fontSize: 28, color: 'var(--t1)', marginBottom: 6 }}>
-              Simulateur d&apos;examen
-            </h1>
-            <p style={{ fontSize: 15, color: 'var(--t3)', lineHeight: 1.6 }}>
-              Conditions réelles · Barème officiel Sorbonne · Format 5 items Vrai/Faux
-            </p>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '10px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <span style={{ fontSize: 16 }}>🎓</span>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--t1)' }}>Sorbonne Université · PASS</div>
-              <div style={{ fontSize: 12, color: 'var(--t3)' }}>Barème : +0,2 correct · −0,1 incorrect · 0 abstention</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 18, alignItems: 'start' }}>
+          {/* Config left */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Matières */}
+            <div className="sim-card">
+              <div className="sim-ct">Matières à inclure</div>
+              {systems.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--gray)' }}>Aucune matière — crée des fiches d&apos;abord.</p>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {systems.map((sys, i) => {
+                    const [dotColor] = SYS_COLORS[i % SYS_COLORS.length]
+                    const isSel = selectedSysIds.has(sys.id)
+                    const qCount = countQuestionsForSystem(sys.id)
+                    return (
+                      <div
+                        key={sys.id}
+                        className={`spill${isSel ? ' sel' : ''}`}
+                        onClick={() => {
+                          const next = new Set(selectedSysIds)
+                          isSel ? next.delete(sys.id) : next.add(sys.id)
+                          setSelectedSysIds(next)
+                        }}
+                      >
+                        <span className="sd" style={{ background: dotColor }} />
+                        {sys.icon} {sys.name}
+                        <span style={{ fontSize: 10, marginLeft: 3, color: isSel ? 'var(--green)' : 'var(--gray)' }}>
+                          {qCount} Q
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-            <button onClick={() => router.push('/dashboard')} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 12, color: 'var(--t3)', cursor: 'pointer' }}>
-              Changer de fac →
-            </button>
-          </div>
 
-          <div style={{ display: 'flex', gap: 4, background: 'var(--bg3)', borderRadius: 10, padding: 4, marginBottom: 24, maxWidth: 400 }}>
-            {SORBONNE_CONFIG.semestres.map(s => (
-              <button key={s.id} onClick={() => { setSemestre(s.id); setSelectedMatiere(null) }}
-                style={{ flex: 1, padding: '9px 12px', borderRadius: 7, fontSize: 13, cursor: 'pointer', border: semestre === s.id ? '1px solid var(--border)' : 'none', background: semestre === s.id ? 'var(--card)' : 'transparent', color: semestre === s.id ? 'var(--accent)' : 'var(--t3)', fontWeight: semestre === s.id ? 500 : 400, fontFamily: 'DM Sans, sans-serif', transition: 'all .15s' }}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-            {sem.matieres.map(m => (
-              <div key={m.id} onClick={() => setSelectedMatiere(m)}
-                style={{ background: selectedMatiere?.id === m.id ? 'rgba(45,106,79,.04)' : 'var(--card)', border: `${selectedMatiere?.id === m.id ? '2px solid var(--accent)' : '1px solid var(--border)'}`, borderRadius: 14, padding: '18px 16px', cursor: 'pointer', transition: 'all .15s', boxShadow: selectedMatiere?.id === m.id ? '0 0 0 3px rgba(45,106,79,.1)' : 'none' }}>
-                <div style={{ fontSize: 26, marginBottom: 10 }}>{m.emoji}</div>
-                <div className="font-syne font-bold" style={{ fontSize: 15, color: 'var(--t1)', marginBottom: 4 }}>{m.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 10 }}>{m.description}</div>
+            {/* Options grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="sim-card">
+                <label className="sim-label">Nb de questions</label>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--t2)', fontFamily: 'DM Mono, monospace' }}>
-                    {m.duree} min
-                  </span>
-                  <span style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--t2)', fontFamily: 'DM Mono, monospace' }}>
-                    {m.nbQcm} QCM
-                  </span>
-                  {m.calculatrice && (
-                    <span style={{ background: 'rgba(45,106,79,.08)', border: '1px solid rgba(45,106,79,.2)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--accent)', fontFamily: 'DM Mono, monospace' }}>
-                      🖩 calc.
-                    </span>
-                  )}
+                  {[10, 20, 30, 50].map(n => (
+                    <button key={n} className={`popt${nbQuestions === n ? ' sel' : ''}`} onClick={() => setNbQuestions(n)}>{n}</button>
+                  ))}
                 </div>
               </div>
-            ))}
+              <div className="sim-card">
+                <label className="sim-label">Durée</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[{ label: '15 min', val: 15 }, { label: '30 min', val: 30 }, { label: '45 min', val: 45 }, { label: 'Libre', val: null }].map(({ label, val }) => (
+                    <button key={label} className={`popt${duration === val ? ' sel' : ''}`} onClick={() => setDuration(val)}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="sim-card" style={{ gridColumn: '1 / -1' }}>
+                <label className="sim-label">Sélection des questions</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button className={`popt${selectionMode === 'weak' ? ' sel' : ''}`} onClick={() => setSelectionMode('weak')}>Angles morts</button>
+                  <button className={`popt${selectionMode === 'random' ? ' sel' : ''}`} onClick={() => setSelectionMode('random')}>Aléatoire</button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {selectedMatiere && (
-            <div style={{ background: 'var(--card)', border: '2px solid var(--accent)', borderRadius: 16, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
-              <div style={{ fontSize: 32 }}>{selectedMatiere.emoji}</div>
-              <div style={{ flex: 1 }}>
-                <div className="font-syne font-bold" style={{ fontSize: 18, color: 'var(--t1)', marginBottom: 4 }}>{selectedMatiere.name}</div>
-                <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--t3)' }}>
-                  <span>⏱ {selectedMatiere.duree} minutes</span>
-                  <span>📝 {selectedMatiere.nbQcm} questions · 5 items V/F chacune</span>
-                  <span>{selectedMatiere.calculatrice ? '🖩 Calculatrice autorisée' : '🚫 Sans calculatrice'}</span>
-                </div>
+          {/* Summary + launch */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ background: '#111310', borderRadius: 13, padding: 22 }}>
+              <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'rgba(255,255,255,.32)', marginBottom: 16 }}>
+                Résumé
               </div>
-              <button onClick={() => setPhase('confirm')} className="btn btn-primary" style={{ padding: '12px 28px', fontSize: 15, flexShrink: 0 }}>
-                Lancer ▶
+              {[
+                { label: 'Matières', value: systems.filter(s => selectedSysIds.has(s.id)).map(s => s.name).join(', ') || '—' },
+                { label: 'Questions disponibles', value: `${totalAvailable} QCMs` },
+                { label: 'Questions lancées', value: `${Math.min(nbQuestions, totalAvailable)} QCMs` },
+                { label: 'Durée max', value: duration ? `${duration} minutes` : 'Libre' },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ borderBottom: '1px solid rgba(255,255,255,.08)', padding: '9px 0', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,.42)' }}>{label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'white', maxWidth: 160, textAlign: 'right' }}>{value}</span>
+                </div>
+              ))}
+
+              <button
+                onClick={launchSession}
+                disabled={totalAvailable === 0 || selectedSysIds.size === 0}
+                style={{
+                  width: '100%', marginTop: 16, padding: 12,
+                  background: totalAvailable === 0 || selectedSysIds.size === 0 ? 'rgba(255,255,255,.1)' : '#2D6A4F',
+                  border: 'none', borderRadius: 9,
+                  fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 700,
+                  color: totalAvailable === 0 || selectedSysIds.size === 0 ? 'rgba(255,255,255,.3)' : 'white',
+                  cursor: totalAvailable === 0 || selectedSysIds.size === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {totalAvailable === 0 ? 'Aucune question disponible' : 'Lancer la session →'}
               </button>
-            </div>
-          )}
 
-          {genError && (
-            <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 10, fontSize: 13, color: 'var(--danger)' }}>
-              ❌ {genError}
+              {totalAvailable === 0 && (
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
+                  Importe des cours depuis<br />Mes matières pour générer des QCMs.
+                </p>
+              )}
             </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-
-  // ── PHASE: CONFIRM ──
-  if (phase === 'confirm') return (
-    <div style={{ padding: '60px 40px', maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ fontSize: 48, marginBottom: 20 }}>⚠️</div>
-      <h2 className="font-syne font-bold" style={{ fontSize: 24, color: 'var(--t1)', marginBottom: 12 }}>
-        Prêt·e à commencer ?
-      </h2>
-      <p style={{ fontSize: 15, color: 'var(--t3)', lineHeight: 1.7, marginBottom: 32 }}>
-        Tu vas simuler l&apos;épreuve <strong style={{color:'var(--t1)'}}>{selectedMatiere?.name}</strong> dans les conditions réelles du concours Sorbonne.
-      </p>
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 28, textAlign: 'left' }}>
-        {[
-          ['⏱', 'Durée', `${selectedMatiere?.duree} minutes chrono`],
-          ['📝', 'Format', `${selectedMatiere?.nbQcm} QCM · 5 items Vrai/Faux par question`],
-          ['📊', 'Barème', '+0,2 correct · −0,1 incorrect · 0 abstention'],
-          ['🚫', 'Règle', 'Impossible de revenir à une question précédente'],
-          [selectedMatiere?.calculatrice ? '🖩' : '🚫', 'Calculatrice', selectedMatiere?.calculatrice ? 'Autorisée' : 'Non autorisée'],
-        ].map(([icon, label, value]) => (
-          <div key={label} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 18, width: 24, textAlign: 'center' }}>{icon}</span>
-            <span style={{ fontSize: 13, color: 'var(--t3)', width: 100 }}>{label}</span>
-            <span style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 500 }}>{value}</span>
           </div>
-        ))}
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-        <button onClick={() => setPhase('select')} className="btn btn-ghost" style={{ padding: '12px 24px' }}>
-          ← Annuler
-        </button>
-        <button onClick={startExam} disabled={generating} className="btn btn-primary" style={{ padding: '12px 32px', fontSize: 15, opacity: generating ? .6 : 1 }}>
-          {generating ? '⏳ Génération des questions…' : '🚀 Démarrer l\'examen'}
-        </button>
-      </div>
-    </div>
+    </>
   )
 
-  // ── PHASE: EXAM ──
-  if (phase === 'exam' && questions.length > 0) {
-    const q = questions[currentQ]
-    const a = answers[currentQ]
-    const answeredItems = Object.values(a).filter(v => v !== null).length
+  // ---- SESSION PHASE ----
+  if (phase === 'session') {
+    const q = sessionQuestions[currentIdx]
+    const selectedAnswer = answers[currentIdx]
+    const progress = ((currentIdx) / sessionQuestions.length) * 100
+    const correctSoFar = answers.slice(0, currentIdx).filter((a, i) => a === sessionQuestions[i]?.answer).length
+    const wrongSoFar = answers.slice(0, currentIdx).filter((a, i) => a !== null && a !== sessionQuestions[i]?.answer).length
 
     return (
-      <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-        <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div>
-            <div className="font-syne font-bold" style={{ fontSize: 16, color: 'var(--t1)' }}>{selectedMatiere?.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--t3)' }}>Sorbonne · PASS · {semestre.toUpperCase()}</div>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, background: isUrgent ? 'rgba(220,38,38,.06)' : 'var(--bg2)', border: `1px solid ${isUrgent ? 'rgba(220,38,38,.3)' : 'var(--border)'}`, borderRadius: 10, padding: '8px 16px' }}>
-            <span style={{ fontSize: 22, fontFamily: 'DM Mono, monospace', fontWeight: 500, color: isUrgent ? 'var(--danger)' : 'var(--t1)' }}>
-              {formatTime(timeLeft)}
-            </span>
-            <span style={{ fontSize: 11, color: isUrgent ? 'var(--danger)' : 'var(--t3)' }}>restantes</span>
-          </div>
-        </div>
-
-        <div style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12, color: 'var(--t3)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
-            QCM {currentQ + 1}/{questions.length}
-          </span>
-          <div style={{ flex: 1, height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ height: '100%', background: 'var(--accent)', borderRadius: 3, width: `${progress}%`, transition: 'width .3s' }} />
-          </div>
-          <span style={{ fontSize: 12, color: 'var(--t3)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
-            {answeredItems}/5 items
-          </span>
-        </div>
-
-        <div style={{ padding: '32px 40px', maxWidth: 860, margin: '0 auto' }}>
-          <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>⚠️</span> Examen en cours · Impossible de revenir en arrière · Barème dégressif appliqué
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-              Question {currentQ + 1}
-            </span>
-            <span style={{ background: 'rgba(45,106,79,.1)', color: 'var(--accent)', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
-              5 items V/F
-            </span>
-          </div>
-
-          {q.context && (
-            <div style={{ fontSize: 14, color: 'var(--t2)', fontStyle: 'italic', marginBottom: 14, padding: '10px 14px', background: 'var(--bg2)', borderRadius: 8, borderLeft: '3px solid var(--border)', lineHeight: 1.65 }}>
-              {q.context}
-            </div>
-          )}
-
-          <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--t1)', lineHeight: 1.55, marginBottom: 24 }}>{q.stem}</div>
-
-          <div style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 12, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-            Pour chaque item, indiquer Vrai ou Faux
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-            {(['a','b','c','d','e'] as const).map(letter => (
-              <div key={letter} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--t3)', fontFamily: 'DM Mono, monospace', flexShrink: 0 }}>
-                  {letter.toUpperCase()}
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+          :root { --dark:#111310;--green:#1B4332;--gm:#2D6A4F;--gl:#D8EAE0;--gray:#6B7280;--border:#DDD8CE; }
+          .ses-main { padding:26px 28px; background:#EDEAE3; min-height:100vh; display:flex; flex-direction:column; gap:16px; font-family:'Plus Jakarta Sans',sans-serif; }
+          .opt-btn { padding:13px 18px; border-radius:10px; border:1.5px solid var(--border); background:white; font-family:'Plus Jakarta Sans',sans-serif; font-size:13.5px; color:var(--dark); cursor:pointer; text-align:left; transition:all .15s; display:block; width:100%; margin-bottom:6px; }
+          .opt-btn:hover:not(:disabled) { border-color:var(--gm); background:var(--gl); }
+          .opt-btn.correct { border-color:var(--green); background:var(--gl); color:var(--green); font-weight:600; }
+          .opt-btn.wrong { border-color:#FCA5A5; background:#FEF2F2; color:#B91C1C; }
+          .opt-btn.neutral-revealed { opacity:.5; }
+          .sab { flex:1; padding:9px; border-radius:9px; border:1.5px solid var(--border); font-family:'Plus Jakarta Sans',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; background:white; transition:all .15s; }
+          .sab:hover { opacity:.8; }
+          .sa-a { color:#B91C1C; border-color:#FCA5A5; }
+          .sa-h { color:var(--amber); border-color:#E8C89A; }
+          .sa-ok2 { color:var(--green); border-color:var(--gl); }
+          .sa-e { color:var(--green); background:var(--gl); border-color:var(--gl); }
+        `}</style>
+        <div className="ses-main">
+          {/* Session header */}
+          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 13, padding: 0, overflow: 'hidden' }}>
+            <div style={{ background: '#FAFAF8', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--gray)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                  Session en cours
                 </span>
-                <span style={{ flex: 1, fontSize: 14, color: 'var(--t1)', lineHeight: 1.5 }}>
-                  {q.items[letter]}
-                </span>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button onClick={() => setVF(letter, true)}
-                    style={{ padding: '7px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: `2px solid ${a[letter] === true ? 'var(--accent)' : 'var(--border)'}`, background: a[letter] === true ? 'rgba(45,106,79,.1)' : 'var(--bg2)', color: a[letter] === true ? 'var(--accent)' : 'var(--t2)', fontFamily: 'DM Sans, sans-serif', transition: 'all .15s' }}>
-                    Vrai
-                  </button>
-                  <button onClick={() => setVF(letter, false)}
-                    style={{ padding: '7px 20px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: `2px solid ${a[letter] === false ? 'var(--danger)' : 'var(--border)'}`, background: a[letter] === false ? 'rgba(220,38,38,.08)' : 'var(--bg2)', color: a[letter] === false ? 'var(--danger)' : 'var(--t2)', fontFamily: 'DM Sans, sans-serif', transition: 'all .15s' }}>
-                    Faux
-                  </button>
-                </div>
+                <button
+                  onClick={endSession}
+                  style={{ fontSize: 11, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 6, padding: '3px 9px', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  Terminer
+                </button>
               </div>
-            ))}
+              <div style={{ display: 'flex', gap: 14 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 500, color: '#4ADE80' }}>{correctSoFar}</div>
+                  <div style={{ fontSize: 9, color: 'var(--gray)', textTransform: 'uppercase' }}>Bonnes</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 500, color: '#F472B6' }}>{wrongSoFar}</div>
+                  <div style={{ fontSize: 9, color: 'var(--gray)', textTransform: 'uppercase' }}>Ratées</div>
+                </div>
+                {duration !== null && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 500, color: timeLeft < 120 ? '#B91C1C' : 'var(--amber)' }}>
+                      {formatTime(timeLeft)}
+                    </div>
+                    <div style={{ fontSize: 9, color: 'var(--gray)', textTransform: 'uppercase' }}>Restant</div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div style={{ height: 4, background: '#E5E7EB', overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, height: '100%', background: '#1B4332', transition: 'width .3s' }} />
+            </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <button onClick={() => finishExam(questions, answers)} className="btn btn-ghost btn-sm">
-              Terminer l&apos;examen
-            </button>
-            <button onClick={nextQuestion} className="btn btn-primary" style={{ padding: '11px 28px', fontSize: 14 }}>
-              {currentQ < questions.length - 1 ? 'Question suivante →' : 'Terminer et voir les résultats'}
-            </button>
+          {/* Question card */}
+          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 13, padding: 24, maxWidth: 720, margin: '0 auto', width: '100%' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--gray)', marginBottom: 11, textAlign: 'center' }}>
+              Question {currentIdx + 1} / {sessionQuestions.length}
+              {q.systemName && ` · ${q.systemName}`}
+            </div>
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 400, lineHeight: 1.5, color: '#111310', textAlign: 'center', marginBottom: 14 }}>
+              {q.question}
+            </div>
+            {q.source && (
+              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <span style={{ background: 'var(--gl)', color: 'var(--green)', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 500 }}>
+                  {q.source}
+                </span>
+              </div>
+            )}
+            {q.lessonName && !q.source && (
+              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <span style={{ background: '#F3F4F6', color: 'var(--gray)', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>
+                  {q.lessonName}
+                </span>
+              </div>
+            )}
+
+            {/* Options */}
+            <div style={{ marginBottom: 14 }}>
+              {q.options.map((opt, i) => {
+                const isSelected = selectedAnswer === i
+                const isCorrect = i === q.answer
+                let cls = 'opt-btn'
+                if (revealed) {
+                  if (isCorrect) cls += ' correct'
+                  else if (isSelected && !isCorrect) cls += ' wrong'
+                  else cls += ' neutral-revealed'
+                }
+                return (
+                  <button
+                    key={i}
+                    className={cls}
+                    disabled={revealed}
+                    onClick={() => selectOption(i)}
+                  >
+                    {opt}{isCorrect && revealed ? ' ✓' : ''}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Self-rating (only after revealing) */}
+            {revealed && (
+              <>
+                <div style={{ fontSize: 11, color: 'var(--gray)', textAlign: 'center', marginBottom: 7, fontWeight: 500 }}>
+                  Comment tu t&apos;es senti ?
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[
+                    { label: 'À reprendre', cls: 'sab sa-a', val: 'reprendre' },
+                    { label: 'Difficile', cls: 'sab sa-h', val: 'difficile' },
+                    { label: 'Bien', cls: 'sab sa-ok2', val: 'bien' },
+                    { label: 'Facile', cls: 'sab sa-e', val: 'facile' },
+                  ].map(({ label, cls, val }) => (
+                    <button key={val} className={cls} onClick={() => rateSelf(val)}>{label}</button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
-  // ── PHASE: RESULTS ──
-  if (phase === 'results' && results) {
-    const scoreColor = results.pct >= 70 ? 'var(--accent)' : results.pct >= 50 ? 'var(--gold)' : 'var(--danger)'
-    const scoreMsg = results.pct >= 70 ? '🎯 Excellent niveau !' : results.pct >= 50 ? '👍 Bien, continue !' : '📚 À retravailler'
+  // ---- RESULTS PHASE ----
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+        :root { --dark:#111310;--green:#1B4332;--gm:#2D6A4F;--gl:#D8EAE0;--gray:#6B7280;--border:#DDD8CE; }
+        .res-main { padding:26px 28px; background:#EDEAE3; min-height:100vh; display:flex; flex-direction:column; gap:16px; font-family:'Plus Jakarta Sans',sans-serif; align-items:center; justify-content:center; }
+      `}</style>
+      <div className="res-main">
+        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 36, maxWidth: 520, width: '100%', textAlign: 'center' }}>
+          {/* Score */}
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 56, fontWeight: 500, color: score >= 70 ? '#1B4332' : score >= 50 ? '#C47B2B' : '#B91C1C', lineHeight: 1, marginBottom: 6 }}>
+            {score}%
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--gray)', marginBottom: 24 }}>
+            {score >= 70 ? 'Excellente session ! 🎉' : score >= 50 ? 'Bonne session, continue !' : 'À retravailler — tu progresses.'}
+          </p>
 
-    return (
-      <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '32px 36px', marginBottom: 28, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--t3)', marginBottom: 8, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '.1em' }}>
-            {selectedMatiere?.name} · Sorbonne PASS
-          </div>
-          <div className="font-syne font-bold" style={{ fontSize: 64, color: scoreColor, lineHeight: 1, marginBottom: 8 }}>
-            {results.total}/{results.max}
-          </div>
-          <div style={{ fontSize: 18, color: 'var(--t2)', marginBottom: 20 }}>
-            {results.pct}% · {scoreMsg}
-          </div>
-          <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
             {[
-              { label: 'Items corrects', val: results.byItem.correct, color: 'var(--accent)', bg: 'rgba(45,106,79,.08)' },
-              { label: 'Items incorrects', val: results.byItem.incorrect, color: 'var(--danger)', bg: 'rgba(220,38,38,.06)' },
-              { label: 'Abstentions', val: results.byItem.abstention, color: 'var(--t3)', bg: 'var(--bg2)' },
-            ].map(s => (
-              <div key={s.label} style={{ background: s.bg, borderRadius: 12, padding: '12px 20px', textAlign: 'center' }}>
-                <div className="font-syne font-bold" style={{ fontSize: 28, color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>{s.label}</div>
+              { n: correctCount, label: 'Bonnes', color: '#4ADE80' },
+              { n: sessionQuestions.length - correctCount, label: 'Ratées', color: '#F472B6' },
+              { n: sessionQuestions.length, label: 'Questions', color: '#60A5FA' },
+            ].map(({ n, label, color }) => (
+              <div key={label} style={{ background: '#FAFAF8', borderRadius: 10, padding: '14px 8px' }}>
+                <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 28, fontWeight: 500, color }}>{n}</div>
+                <div style={{ fontSize: 10, color: 'var(--gray)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
-        </div>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
-          <button onClick={() => { setPhase('select'); setSelectedMatiere(null); setQuestions([]); setAnswers([]); setResults(null) }} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '12px' }}>
-            ← Choisir une autre matière
-          </button>
-          <button onClick={() => setPhase('confirm')} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '12px' }}>
-            🔄 Recommencer {selectedMatiere?.name}
-          </button>
-        </div>
-
-        <div className="font-syne font-bold" style={{ fontSize: 18, marginBottom: 16, color: 'var(--t1)' }}>
-          Correction détaillée
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {results.questions.map((r, qi) => (
-            <div key={qi} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Question {qi + 1}</span>
-                <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600, color: r.score > 0 ? 'var(--accent)' : r.score === 0 ? 'var(--t3)' : 'var(--danger)' }}>
-                  {r.score > 0 ? '+' : ''}{r.score} pt
-                </span>
+          {/* Self-rating breakdown */}
+          {selfRatings.some(Boolean) && (
+            <div style={{ background: '#FAFAF8', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--gray)', marginBottom: 10 }}>
+                Ressenti
               </div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--t1)', marginBottom: 14, lineHeight: 1.5 }}>{r.q.stem}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                {(['a','b','c','d','e'] as const).map(letter => {
-                  const isCorrect = r.answer[letter] === r.q.correct[letter]
-                  const wasNull = r.answer[letter] === null
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                {[
+                  { val: 'reprendre', label: 'À reprendre', color: '#B91C1C' },
+                  { val: 'difficile', label: 'Difficile', color: '#C47B2B' },
+                  { val: 'bien', label: 'Bien', color: '#1B4332' },
+                  { val: 'facile', label: 'Facile', color: '#1B4332' },
+                ].map(({ val, label, color }) => {
+                  const count = selfRatings.filter(r => r === val).length
+                  if (count === 0) return null
                   return (
-                    <div key={letter} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: wasNull ? 'var(--bg2)' : isCorrect ? 'rgba(45,106,79,.06)' : 'rgba(220,38,38,.04)', border: `1px solid ${wasNull ? 'var(--border)' : isCorrect ? 'rgba(45,106,79,.2)' : 'rgba(220,38,38,.2)'}` }}>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, fontWeight: 700, color: 'var(--t3)', width: 16 }}>{letter.toUpperCase()}</span>
-                      <span style={{ flex: 1, fontSize: 13, color: 'var(--t2)' }}>{r.q.items[letter]}</span>
-                      <span style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', color: wasNull ? 'var(--t3)' : isCorrect ? 'var(--accent)' : 'var(--danger)' }}>
-                        {wasNull ? '—' : r.answer[letter] ? 'Vrai' : 'Faux'} → {r.q.correct[letter] ? 'Vrai ✓' : 'Faux ✓'}
-                      </span>
+                    <div key={val} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color }}>{count}</div>
+                      <div style={{ fontSize: 10, color: 'var(--gray)' }}>{label}</div>
                     </div>
                   )
                 })}
               </div>
-              <div style={{ padding: '10px 14px', background: 'rgba(45,106,79,.04)', borderLeft: '3px solid var(--accent)', borderRadius: '0 8px 8px 0', fontSize: 13, color: 'var(--t2)', lineHeight: 1.65 }}>
-                <strong style={{ color: 'var(--t1)' }}>Explication :</strong> {r.q.explanation}
-              </div>
             </div>
-          ))}
+          )}
+
+          <div style={{ display: 'flex', gap: 9 }}>
+            <button
+              onClick={() => { setPhase('config'); setSessionQuestions([]); setAnswers([]); setSelfRatings([]) }}
+              style={{
+                flex: 1, padding: '11px', borderRadius: 8,
+                fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 600,
+                cursor: 'pointer', border: '1.5px solid var(--border)', background: 'white', color: '#111310'
+              }}
+            >
+              Nouvelle session
+            </button>
+            <button
+              onClick={launchSession}
+              style={{
+                flex: 1, padding: '11px', borderRadius: 8,
+                fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 600,
+                cursor: 'pointer', border: 'none', background: '#1B4332', color: 'white'
+              }}
+            >
+              Rejouer →
+            </button>
+          </div>
         </div>
       </div>
-    )
-  }
-
-  return <div className="flex items-center justify-center h-64"><div className="spinner" /></div>
+    </>
+  )
 }
