@@ -1,39 +1,126 @@
 'use client'
 // src/app/dashboard/fiches/page.tsx
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
-const COLORS = ['#4ADE80', '#60A5FA', '#F59E0B', '#F472B6', '#A78BFA', '#2D6A4F', '#E5E7EB']
-const ICONS = ['📁', '🧬', '🦴', '🫀', '🧠', '💊', '🔬', '⚗️', '🫁', '🦷', '👁️', '🩺']
 
-function jDotStatus(lesson: Lesson, stepIndex: number, today: string): 'ok' | 'late' | 'miss' | 'next' | 'future' {
-  if (!lesson.learn_date) return 'future'
-  const steps = lesson.steps as (null | object)[]
-  const d = new Date(lesson.learn_date + 'T12:00:00')
-  d.setDate(d.getDate() + J[stepIndex])
-  const dateStr = d.toISOString().split('T')[0]
-  if (steps[stepIndex]) return 'ok'
-  if (dateStr < today) return 'miss'
-  if (dateStr === today) return 'next'
-  return 'future'
+// Palette de couleurs pour les matières, utilisée si sys.color n'est pas défini
+const SUBJ_COLORS = [
+  '#C75050', // rouge
+  '#5B8ED4', // bleu
+  '#8D6BB0', // violet
+  '#A06840', // marron
+  '#C47B2B', // ambre
+  '#3A8F8A', // teal
+  '#7AA56B', // vert
+  '#D9B24A', // jaune
+]
+
+type Score = 1 | 2 | 3 | 4 | 5
+type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
+
+// Normalise une step : supporte l'ancien format {ok, date} et le nouveau {score, date}
+function stepScore(s: StepEntry): Score | null {
+  if (!s) return null
+  if (typeof (s as any).score === 'number') {
+    const sc = (s as any).score
+    if (sc >= 1 && sc <= 5) return sc as Score
+  }
+  if (typeof (s as any).ok === 'boolean') {
+    return (s as any).ok ? 5 : 1
+  }
+  return null
 }
 
+function stepDate(lesson: Lesson, i: number): string {
+  if (!lesson.learn_date) return ''
+  const d = new Date(lesson.learn_date + 'T12:00:00')
+  d.setDate(d.getDate() + J[i])
+  return d.toISOString().split('T')[0]
+}
+
+type StampState =
+  | { kind: 'score'; score: Score }
+  | { kind: 'today' }
+  | { kind: 'missed' }
+  | { kind: 'future' }
+
+function getStampState(lesson: Lesson, i: number, today: string): StampState {
+  const steps = (lesson.steps as StepEntry[]) || []
+  const sc = stepScore(steps[i])
+  if (sc) return { kind: 'score', score: sc }
+  if (!lesson.learn_date) return { kind: 'future' }
+  const ds = stepDate(lesson, i)
+  if (ds === today) return { kind: 'today' }
+  if (ds < today) return { kind: 'missed' }
+  return { kind: 'future' }
+}
+
+// Retourne l'index du premier J dû (date <= today, non fait)
 function getDueStepIndex(lesson: Lesson, today: string): number {
   if (!lesson.learn_date) return -1
-  const steps = lesson.steps as (null | object)[]
+  const steps = (lesson.steps as StepEntry[]) || []
   for (let i = 0; i < J.length; i++) {
-    if (steps[i]) continue
-    const d = new Date(lesson.learn_date + 'T12:00:00')
-    d.setDate(d.getDate() + J[i])
-    if (d.toISOString().split('T')[0] <= today) return i
+    if (stepScore(steps[i])) continue
+    const ds = stepDate(lesson, i)
+    if (ds <= today) return i
   }
   return -1
 }
+
+// Dernière note donnée à cette fiche (pour filtre + accent de carte)
+function getLastScore(lesson: Lesson): Score | null {
+  const steps = (lesson.steps as StepEntry[]) || []
+  for (let i = J.length - 1; i >= 0; i--) {
+    const sc = stepScore(steps[i])
+    if (sc) return sc
+  }
+  return null
+}
+
+// Prochaine date de révision (première step non faite)
+function getNextRevDate(lesson: Lesson): string | null {
+  if (!lesson.learn_date) return null
+  const steps = (lesson.steps as StepEntry[]) || []
+  for (let i = 0; i < J.length; i++) {
+    if (!stepScore(steps[i])) return stepDate(lesson, i)
+  }
+  return null
+}
+
+// Label pour le pied de carte ("aujourd'hui", "dans 3 j", "terminée", "à planifier"…)
+function nextRevLabel(lesson: Lesson, today: string): { text: string; html: string; urgent: boolean; calm: boolean; start: boolean } {
+  if (!lesson.learn_date) {
+    return { text: 'À planifier', html: 'À planifier', urgent: false, calm: false, start: true }
+  }
+  const d = getNextRevDate(lesson)
+  if (!d) return { text: 'Terminée', html: 'Terminée', urgent: false, calm: true, start: false }
+  if (d === today) return { text: "aujourd'hui", html: "Révision <strong>aujourd'hui</strong>", urgent: true, calm: false, start: false }
+  if (d < today) return { text: 'en retard', html: '<strong>En retard</strong>', urgent: true, calm: false, start: false }
+  const diff = Math.round((new Date(d).getTime() - new Date(today).getTime()) / 86400000)
+  if (diff === 1) return { text: 'demain', html: 'Prochaine <strong>demain</strong>', urgent: false, calm: true, start: false }
+  return { text: `dans ${diff} j`, html: `Prochaine <strong>dans ${diff} j</strong>`, urgent: false, calm: true, start: false }
+}
+
+// Status label (pastille en haut à droite de la carte)
+function cardStatus(lesson: Lesson): { cls: string; label: string } {
+  const last = getLastScore(lesson)
+  if (last === null) {
+    return { cls: 'new', label: 'Nouvelle' }
+  }
+  if (last === 1) return { cls: 's1', label: 'À revoir' }
+  if (last === 2) return { cls: 's2', label: 'Faible' }
+  if (last === 3) return { cls: 's3', label: 'Moyen' }
+  if (last === 4) return { cls: 's4', label: 'Bien' }
+  return { cls: 's5', label: 'Maîtrisée' }
+}
+
+type FilterKey = 'all' | 's1' | 's2' | 's3' | 's4' | 's5' | 'new' | 'due'
 
 export default function FichesPage() {
   const supabase = createClient()
@@ -42,32 +129,56 @@ export default function FichesPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<FilterKey>('all')
   const [search, setSearch] = useState('')
+  const [semester, setSemester] = useState<1 | 2>(2)
+
+  // Create modals
   const [showNewSystem, setShowNewSystem] = useState(false)
   const [showNewLesson, setShowNewLesson] = useState(false)
+
+  // New system form
   const [newSysName, setNewSysName] = useState('')
-  const [newSysIcon, setNewSysIcon] = useState('📁')
-  const [newSysSemestre, setNewSysSemestre] = useState(1)
+  const [newSysSemestre, setNewSysSemestre] = useState<1 | 2>(2)
+  const [newSysColor, setNewSysColor] = useState(SUBJ_COLORS[0])
   const [sysLoading, setSysLoading] = useState(false)
+
+  // New lesson form
   const [newLesName, setNewLesName] = useState('')
   const [newLesDate, setNewLesDate] = useState('')
   const [newLesSysId, setNewLesSysId] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
-  const [reviewSysId, setReviewSysId] = useState<string | null>(null)
+
+  // Review session
+  const [reviewLessons, setReviewLessons] = useState<Lesson[] | null>(null) // null = closed
   const [reviewIdx, setReviewIdx] = useState(0)
-  const [reviewResults, setReviewResults] = useState<{ lessonId: string; ok: boolean }[]>([])
+  const [reviewResults, setReviewResults] = useState<{ lessonId: string; score: Score }[]>([])
   const [reviewDone, setReviewDone] = useState(false)
   const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewTitle, setReviewTitle] = useState<string>('')
 
   const today = new Date().toISOString().split('T')[0]
+
+  // Load persisted semester + listen to changes from sidebar
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = localStorage.getItem('medrev-sem')
+    setSemester(raw === '1' ? 1 : 2)
+    const onSem = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail === 1 || detail === 2) setSemester(detail)
+    }
+    window.addEventListener('medrev-sem-change', onSem)
+    return () => window.removeEventListener('medrev-sem-change', onSem)
+  }, [])
 
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid).order('created_at'),
     ])
-    setSystems(sys || [])
-    setLessons(les || [])
+    setSystems((sys as System[]) || [])
+    setLessons((les as Lesson[]) || [])
   }, [])
 
   useEffect(() => {
@@ -78,19 +189,41 @@ export default function FichesPage() {
     })
   }, [])
 
-  useEffect(() => {
-    if (systems.length > 0 && !selectedSystemId) setSelectedSystemId(systems[0].id)
-  }, [systems])
+  // Matières du semestre courant
+  const semSystems = useMemo(
+    () => systems.filter(s => (s as any).semestre === semester),
+    [systems, semester]
+  )
 
+  // Sélection par défaut quand on change de semestre
+  useEffect(() => {
+    if (semSystems.length === 0) {
+      setSelectedSystemId(null)
+      return
+    }
+    if (!selectedSystemId || !semSystems.find(s => s.id === selectedSystemId)) {
+      setSelectedSystemId(semSystems[0].id)
+    }
+  }, [semSystems, selectedSystemId])
+
+  // ---- Create functions ----
   async function createSystem() {
     if (!userId || !newSysName.trim()) return
     setSysLoading(true)
-    const { data } = await supabase.from('systems').insert({
-      user_id: userId, name: newSysName.trim(), icon: newSysIcon, semestre: newSysSemestre,
-    }).select().single()
+    const payload: any = {
+      user_id: userId,
+      name: newSysName.trim(),
+      semestre: newSysSemestre,
+      color: newSysColor,
+      icon: '',
+    }
+    const { data } = await supabase.from('systems').insert(payload).select().single()
     setSysLoading(false)
-    if (data) { setSystems(prev => [...prev, data]); setSelectedSystemId(data.id) }
-    setShowNewSystem(false); setNewSysName(''); setNewSysIcon('📁'); setNewSysSemestre(1)
+    if (data) {
+      setSystems(prev => [...prev, data as System])
+      if ((data as any).semestre === semester) setSelectedSystemId(data.id)
+    }
+    setShowNewSystem(false); setNewSysName(''); setNewSysColor(SUBJ_COLORS[0]); setNewSysSemestre(semester)
   }
 
   async function createLesson() {
@@ -101,231 +234,367 @@ export default function FichesPage() {
       learn_date: newLesDate || today, steps: new Array(J.length).fill(null), ai_questions: [],
     }).select().single()
     setLesLoading(false)
-    if (data) setLessons(prev => [...prev, data])
+    if (data) setLessons(prev => [...prev, data as Lesson])
     setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
   }
 
-  function getDueLessons(sysId: string): Lesson[] {
-    return lessons.filter(l => l.system_id === sysId && getDueStepIndex(l, today) !== -1)
+  // ---- Review session ----
+  function lessonsToReview(sysId?: string): Lesson[] {
+    const pool = sysId
+      ? lessons.filter(l => l.system_id === sysId)
+      : lessons.filter(l => semSystems.find(s => s.id === l.system_id))
+    return pool.filter(l => getDueStepIndex(l, today) !== -1)
   }
 
-  function startReview(sysId: string) {
-    setReviewSysId(sysId); setReviewIdx(0); setReviewResults([]); setReviewDone(false)
+  function openReview(list: Lesson[], title: string) {
+    if (list.length === 0) return
+    setReviewLessons(list)
+    setReviewTitle(title)
+    setReviewIdx(0)
+    setReviewResults([])
+    setReviewDone(false)
   }
 
-  async function rateLesson(ok: boolean) {
-    if (!reviewSysId) return
-    const dueLessons = getDueLessons(reviewSysId)
-    const lesson = dueLessons[reviewIdx]
+  async function rateLesson(score: Score) {
+    if (!reviewLessons) return
+    const lesson = reviewLessons[reviewIdx]
     if (!lesson) return
     const stepIdx = getDueStepIndex(lesson, today)
     if (stepIdx === -1) return
+
     setReviewLoading(true)
-    const newSteps = [...(lesson.steps as any[])]
-    newSteps[stepIdx] = { ok, date: today }
+    const newSteps = [...((lesson.steps as StepEntry[]) || [])]
+    while (newSteps.length < J.length) newSteps.push(null)
+    newSteps[stepIdx] = { score, date: today }
+
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', lesson.id)
-    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, steps: newSteps as any } : l))
-    setReviewResults(prev => [...prev, { lessonId: lesson.id, ok }])
+
+    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, steps: newSteps } as Lesson : l))
+    setReviewResults(prev => [...prev, { lessonId: lesson.id, score }])
     setReviewLoading(false)
-    if (reviewIdx + 1 >= dueLessons.length) setReviewDone(true)
+
+    if (reviewIdx + 1 >= reviewLessons.length) setReviewDone(true)
     else setReviewIdx(i => i + 1)
   }
 
-  function sysStats(sys: System) {
-    const sysLessons = lessons.filter(l => l.system_id === sys.id)
-    const totalSteps = sysLessons.length * J.length
-    const doneSteps = sysLessons.reduce((acc, l) => acc + (l.steps as (null | object)[]).filter(Boolean).length, 0)
-    const mastery = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0
-    const dueCount = getDueLessons(sys.id).length
-    const lastLesson = [...sysLessons].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-    const lastDate = lastLesson ? new Date(lastLesson.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null
-    return { count: sysLessons.length, mastery, dueCount, lastDate }
-  }
+  // ---- Dérivées ----
+  const selectedSystem = semSystems.find(s => s.id === selectedSystemId) ?? null
 
-  function nextRevision(lesson: Lesson) {
-    if (!lesson.learn_date) return null
-    const steps = lesson.steps as (null | object)[]
-    for (let i = 0; i < J.length; i++) {
-      if (!steps[i]) {
-        const d = new Date(lesson.learn_date + 'T12:00:00')
-        d.setDate(d.getDate() + J[i])
-        return d.toISOString().split('T')[0]
-      }
+  // Matière ⇒ couleur
+  const colorOfSystem = useMemo(() => {
+    const map = new Map<string, string>()
+    semSystems.forEach((s, idx) => {
+      const c = (s as any).color || SUBJ_COLORS[idx % SUBJ_COLORS.length]
+      map.set(s.id, c)
+    })
+    return map
+  }, [semSystems])
+
+  // Compteurs par matière (pour les onglets)
+  const countsBySystem = useMemo(() => {
+    const counts = new Map<string, { total: number; due: number }>()
+    semSystems.forEach(s => {
+      const sysLessons = lessons.filter(l => l.system_id === s.id)
+      const due = sysLessons.filter(l => getDueStepIndex(l, today) !== -1).length
+      counts.set(s.id, { total: sysLessons.length, due })
+    })
+    return counts
+  }, [semSystems, lessons, today])
+
+  // Fiches visibles dans la grille selon l'onglet et filtre
+  const visibleLessons = useMemo(() => {
+    let pool: Lesson[]
+    if (filter === 'due') {
+      pool = lessonsToReview() // toutes matières du semestre
+    } else {
+      if (!selectedSystem) return []
+      pool = lessons.filter(l => l.system_id === selectedSystem.id)
     }
-    return null
-  }
+    if (search) {
+      const q = search.toLowerCase()
+      pool = pool.filter(l => l.name.toLowerCase().includes(q))
+    }
+    if (filter !== 'all' && filter !== 'due') {
+      pool = pool.filter(l => {
+        const st = cardStatus(l)
+        return st.cls === filter
+      })
+    }
+    return pool
+  }, [lessons, selectedSystem, filter, search, semSystems])
 
-  function masteryLevel(lesson: Lesson): { label: string; color: string } {
-    const steps = lesson.steps as (null | object)[]
-    const done = steps.filter(Boolean).length
-    const pct = Math.round((done / J.length) * 100)
-    if (pct >= 70) return { label: 'Bonne', color: '#4ADE80' }
-    if (pct >= 35) return { label: 'Moyenne', color: '#F59E0B' }
-    return { label: 'Faible', color: '#F472B6' }
-  }
+  const dueTodayCount = useMemo(
+    () => lessonsToReview().length,
+    [lessons, semSystems, today]
+  )
 
-  const selectedSystem = systems.find(s => s.id === selectedSystemId) ?? null
-  const visibleLessons = lessons
-    .filter(l => l.system_id === selectedSystemId)
-    .filter(l => !search || l.name.toLowerCase().includes(search.toLowerCase()))
-  const reviewSystem = systems.find(s => s.id === reviewSysId)
-  const dueLessons = reviewSysId ? getDueLessons(reviewSysId) : []
-  const currentReviewLesson = dueLessons[reviewIdx]
+  const totalSemFiches = useMemo(
+    () => lessons.filter(l => semSystems.find(s => s.id === l.system_id)).length,
+    [lessons, semSystems]
+  )
+
+  // Review session helpers
+  const currentReviewLesson = reviewLessons?.[reviewIdx] ?? null
   const currentStepIdx = currentReviewLesson ? getDueStepIndex(currentReviewLesson, today) : -1
+  const reviewSystemName = currentReviewLesson
+    ? (systems.find(s => s.id === currentReviewLesson.system_id)?.name || '')
+    : ''
 
   return (
     <>
       <div className="fi-main">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 500, color: '#111310' }}>Mes matières</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 13px', width: 200 }}>
-              <input type="text" placeholder="Rechercher une fiche..." value={search} onChange={e => setSearch(e.target.value)}
-                style={{ border: 'none', outline: 'none', fontSize: '12.5px', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#111310', width: '100%', background: 'transparent' }} />
+
+        {/* Header */}
+        <div className="fi-topbar">
+          <div>
+            <h1 className="fi-h1">Mes matières</h1>
+            <div className="fi-sub">
+              Semestre {semester} · {semSystems.length} matière{semSystems.length > 1 ? 's' : ''} · {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
             </div>
-            <button className="fi-btn-o" style={{ fontSize: 12 }} onClick={() => setShowNewSystem(true)}>+ Nouvelle matiere</button>
-            <button className="fi-btn-g" style={{ fontSize: 12 }} onClick={() => { setNewLesSysId(selectedSystemId || (systems[0]?.id ?? '')); setNewLesDate(today); setShowNewLesson(true) }}>+ Creer une fiche</button>
+          </div>
+          <div className="fi-actions">
+            <input
+              type="text"
+              className="fi-search"
+              placeholder="Rechercher une fiche…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <button className="fi-btn-o" onClick={() => { setNewSysSemestre(semester); setShowNewSystem(true) }}>
+              + Matière
+            </button>
+            <button className="fi-btn-g" onClick={() => {
+              setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? ''))
+              setNewLesDate(today)
+              setShowNewLesson(true)
+            }}>
+              + Nouvelle fiche
+            </button>
           </div>
         </div>
 
-        <div className="fi-grid">
-          {systems.map((sys, idx) => {
-            const { count, mastery, dueCount, lastDate } = sysStats(sys)
-            const color = COLORS[idx % COLORS.length]
-            const isUrgent = dueCount > 0
-            return (
-              <div key={sys.id} className={"fi-subj" + (selectedSystemId === sys.id ? ' active' : '')} onClick={() => setSelectedSystemId(sys.id)}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: color, display: 'inline-block', minWidth: 9 }} />
-                    <span style={{ fontSize: '14.5px', fontWeight: 600, color: '#111310' }}>{sys.icon} {sys.name}</span>
-                  </div>
-                  <button className={"fi-btn-sm" + (isUrgent ? ' urgent' : '')} onClick={e => { e.stopPropagation(); startReview(sys.id) }}>
-                    {isUrgent ? 'Reviser (' + dueCount + ')' : 'Reviser'}
-                  </button>
-                </div>
-                <div className="fi-sstats">
-                  <div style={{ textAlign: 'center' }}><div className="fi-sst-n">{count}</div><div className="fi-sst-l">Fiches</div></div>
-                  <div style={{ textAlign: 'center' }}><div className="fi-sst-n" style={{ color: isUrgent ? '#B91C1C' : undefined }}>{dueCount}</div><div className="fi-sst-l">A revoir</div></div>
-                  <div style={{ textAlign: 'center' }}><div className="fi-sst-n">{mastery}%</div><div className="fi-sst-l">Maitrise</div></div>
-                </div>
-                <div className="fi-spb"><div className="fi-spbf" style={{ width: mastery + '%', background: color }} /></div>
-                {lastDate ? <div className="fi-slast">Derniere fiche : {lastDate}</div> : <div className="fi-slast">Aucune fiche</div>}
-              </div>
-            )
-          })}
-          <div className="fi-subj-add" onClick={() => setShowNewSystem(true)}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: '#D8EAE0', color: '#1B4332', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</div>
-            <span style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--gray)' }}>Nouvelle matiere</span>
-          </div>
-        </div>
+        {/* Matière tabs — horizontal, dot colorée */}
+        {semSystems.length > 0 && (
+          <div className="mtabs">
+            {semSystems.map(sys => {
+              const c = colorOfSystem.get(sys.id) || SUBJ_COLORS[0]
+              const counts = countsBySystem.get(sys.id) || { total: 0, due: 0 }
+              const active = filter !== 'due' && selectedSystemId === sys.id
+              return (
+                <button
+                  key={sys.id}
+                  className={`mtab${active ? ' active' : ''}`}
+                  onClick={() => { setSelectedSystemId(sys.id); setFilter('all') }}
+                >
+                  <span className="mdot" style={{ background: c }} />
+                  <span className="nm">{sys.name}</span>
+                  <span className="ct">{counts.total}</span>
+                  {counts.due > 0 && <span className="urg" />}
+                </button>
+              )
+            })}
 
-        {systems.length === 0 && (
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 13, padding: '48px 28px', textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📚</div>
-            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 500, color: '#111310', marginBottom: 8 }}>Cree ta premiere matiere</h2>
-            <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 20 }}>Commence par ajouter une matiere, puis cree tes fiches dedans.</p>
-            <button className="fi-btn-g" onClick={() => setShowNewSystem(true)}>+ Creer une matiere</button>
+            {dueTodayCount > 0 && (
+              <button
+                className={`mtab-review${filter === 'due' ? ' active' : ''}`}
+                onClick={() => setFilter('due')}
+              >
+                À réviser
+                <span className="ct">{dueTodayCount}</span>
+              </button>
+            )}
           </div>
         )}
 
-        {selectedSystem && (
-          <div className="fi-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLORS[systems.indexOf(selectedSystem) % COLORS.length], display: 'inline-block', minWidth: 10 }} />
-                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 500, color: '#111310' }}>{selectedSystem.icon} {selectedSystem.name}</h2>
-                <span style={{ fontSize: 13, color: 'var(--gray)' }}>{visibleLessons.length} fiche{visibleLessons.length !== 1 ? 's' : ''}</span>
-              </div>
-              <button className="fi-btn-g" style={{ fontSize: 11, padding: '5px 11px' }} onClick={() => { setNewLesSysId(selectedSystem.id); setNewLesDate(today); setShowNewLesson(true) }}>+ Creer une fiche</button>
+        {/* Empty state semestre vide */}
+        {semSystems.length === 0 && (
+          <div className="fi-empty">
+            <h2 className="fi-empty-title">Aucune matière pour le semestre {semester}</h2>
+            <p className="fi-empty-text">
+              Commence par ajouter une matière, puis crée tes fiches dedans.
+            </p>
+            <button className="fi-btn-g" onClick={() => { setNewSysSemestre(semester); setShowNewSystem(true) }}>
+              + Créer une matière
+            </button>
+          </div>
+        )}
+
+        {/* Filtres + stats */}
+        {semSystems.length > 0 && (
+          <div className="filter-row">
+            <div className="filter-group">
+              <span className="filter-label">Dernière note</span>
+              <button className={`pill${filter === 'all' ? ' active' : ''}`} onClick={() => setFilter('all')}>Toutes</button>
+              <button className={`pill${filter === 's1' ? ' active' : ''}`} onClick={() => setFilter('s1')}>
+                <span className="dot" style={{ background: 'var(--s1)' }} />Rouge
+              </button>
+              <button className={`pill${filter === 's2' ? ' active' : ''}`} onClick={() => setFilter('s2')}>
+                <span className="dot" style={{ background: 'var(--s2)' }} />Orange
+              </button>
+              <button className={`pill${filter === 's3' ? ' active' : ''}`} onClick={() => setFilter('s3')}>
+                <span className="dot" style={{ background: 'var(--s3)' }} />Jaune
+              </button>
+              <button className={`pill${filter === 's4' ? ' active' : ''}`} onClick={() => setFilter('s4')}>
+                <span className="dot" style={{ background: 'var(--s4)' }} />Vert clair
+              </button>
+              <button className={`pill${filter === 's5' ? ' active' : ''}`} onClick={() => setFilter('s5')}>
+                <span className="dot" style={{ background: 'var(--s5)' }} />Vert foncé
+              </button>
+              <button className={`pill${filter === 'new' ? ' active' : ''}`} onClick={() => setFilter('new')}>
+                <span className="ring" />Non commencées
+              </button>
             </div>
-            <div style={{ padding: '7px 18px', background: '#FAFAF8', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: 'var(--gray)' }}>
-              <span style={{ fontWeight: 600 }}>Courbe J :</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="jdot ok" />Revise</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="jdot late" />En retard</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="jdot miss" />Manque</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="jdot next" />Aujourd'hui</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="jdot future" />A venir</span>
+            <div className="filter-stats">
+              <strong>{visibleLessons.length}</strong> fiche{visibleLessons.length > 1 ? 's' : ''}
+              {filter !== 'due' && dueTodayCount > 0 && (
+                <> · <strong>{dueTodayCount}</strong> à réviser aujourd'hui</>
+              )}
             </div>
-            {visibleLessons.length === 0 ? (
-              <div style={{ padding: '40px 28px', textAlign: 'center' }}>
-                <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 14 }}>{search ? 'Aucune fiche ne correspond.' : 'Aucune fiche dans cette matiere.'}</p>
-                {!search && <button className="fi-btn-g" style={{ fontSize: 12 }} onClick={() => { setNewLesSysId(selectedSystem.id); setNewLesDate(today); setShowNewLesson(true) }}>+ Creer la premiere fiche</button>}
-              </div>
-            ) : (
-              <table className="fi-table">
-                <thead><tr><th style={{ width: '35%' }}>Fiche</th><th>Maitrise</th><th>Courbe J</th><th>Prochaine revision</th></tr></thead>
-                <tbody>
-                  {visibleLessons.map(lesson => {
-                    const { label: mastLabel, color: mastColor } = masteryLevel(lesson)
-                    const nextRev = nextRevision(lesson)
-                    const isDue = getDueStepIndex(lesson, today) !== -1
-                    const diff = nextRev ? Math.round((new Date(nextRev).getTime() - new Date(today).getTime()) / 86400000) : 0
-                    const nextText = !nextRev ? 'Complete' : nextRev < today ? 'En retard' : nextRev === today ? "Aujourd'hui" : diff === 1 ? 'Demain' : 'Dans ' + diff + ' j.'
-                    const nextCls = !nextRev ? 'done' : nextRev <= today ? 'soon' : ''
-                    return (
-                      <tr key={lesson.id} style={{ background: isDue ? '#FFFBF0' : undefined }}>
-                        <td style={{ fontWeight: 500, color: '#111310' }}>
-                          {lesson.name}
-                          {isDue && <span style={{ marginLeft: 7, fontSize: 10, fontWeight: 700, background: '#FEE2E2', color: '#B91C1C', borderRadius: 20, padding: '1px 6px' }}>A reviser</span>}
-                        </td>
-                        <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: mastColor, display: 'inline-block' }} /><span style={{ fontSize: 12, color: 'var(--gray)' }}>{mastLabel}</span></span></td>
-                        <td><div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>{J.map((_, i) => <span key={i} className={"jdot " + jDotStatus(lesson, i, today)} title={"J+" + J[i]} />)}</div></td>
-                        <td><span className={"nr" + (nextCls ? ' ' + nextCls : '')}>{nextText}</span></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+          </div>
+        )}
+
+        {/* Grille de cartes */}
+        {semSystems.length > 0 && (
+          <div className="fi-grid">
+            {visibleLessons.map(lesson => {
+              const st = cardStatus(lesson)
+              const nr = nextRevLabel(lesson, today)
+              const isDue = getDueStepIndex(lesson, today) !== -1
+              return (
+                <div key={lesson.id} className={`card st-${st.cls}`}>
+                  <div className="card-accent" />
+                  <div className="card-body">
+                    <div className="card-head">
+                      <div className="card-name">{lesson.name}</div>
+                      <span className={`card-status ${st.cls}`}>{st.label}</span>
+                    </div>
+                    <div className="stamps">
+                      {J.map((_, i) => {
+                        const s = getStampState(lesson, i, today)
+                        if (s.kind === 'score') return <span key={i} className={`stamp s${s.score}`} title={`J+${J[i]} · note ${s.score}/5`} />
+                        if (s.kind === 'today') return <span key={i} className="stamp today" title={`J+${J[i]} · aujourd'hui`} />
+                        if (s.kind === 'missed') return <span key={i} className="stamp missed" title={`J+${J[i]} · manqué`} />
+                        return <span key={i} className="stamp future" title={`J+${J[i]} · à venir`} />
+                      })}
+                    </div>
+                    <div className="card-foot">
+                      <span className="next-text" dangerouslySetInnerHTML={{ __html: nr.html }} />
+                      <button
+                        className={`cta ${nr.urgent ? 'urgent' : nr.start ? 'start' : 'calm'}`}
+                        disabled={!isDue && !nr.start}
+                        onClick={() => {
+                          if (isDue) openReview([lesson], lesson.name)
+                          // "Démarrer" (nr.start) pourra ouvrir un futur formulaire d'édition
+                        }}
+                        style={!isDue && !nr.start ? { opacity: .55, cursor: 'default' } : undefined}
+                      >
+                        {nr.urgent ? 'Réviser' : nr.start ? 'Démarrer' : 'Voir'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Empty state filtre vide */}
+        {semSystems.length > 0 && visibleLessons.length === 0 && (
+          <div className="fi-empty">
+            <p className="fi-empty-text">
+              {filter === 'due'
+                ? "Aucune fiche à réviser aujourd'hui dans ce semestre — bravo !"
+                : search
+                  ? "Aucune fiche ne correspond à ta recherche."
+                  : "Aucune fiche pour ce filtre."}
+            </p>
+            {filter !== 'due' && !search && selectedSystem && (
+              <button className="fi-btn-g" onClick={() => {
+                setNewLesSysId(selectedSystem.id); setNewLesDate(today); setShowNewLesson(true)
+              }}>
+                + Créer une fiche
+              </button>
             )}
           </div>
         )}
       </div>
 
-      {reviewSysId && (
-        <div className="fi-overlay" onClick={() => setReviewSysId(null)}>
+      {/* ---- REVIEW SESSION OVERLAY ---- */}
+      {reviewLessons && (
+        <div className="fi-overlay" onClick={() => setReviewLessons(null)}>
           <div className="rev-card" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+
+            <div className="rev-header">
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--gray)', marginBottom: 3 }}>Session de revision</div>
-                <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 500, color: '#111310' }}>{reviewSystem?.icon} {reviewSystem?.name}</div>
+                <div className="rev-kicker">Session de révision</div>
+                <div className="rev-title">{reviewTitle}</div>
               </div>
-              <button onClick={() => setReviewSysId(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--gray)', padding: '4px 8px', borderRadius: 6 }}>x</button>
+              <button className="rev-close" onClick={() => setReviewLessons(null)}>×</button>
             </div>
-            {dueLessons.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
-                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 17, color: '#111310', marginBottom: 6 }}>Tout est a jour !</p>
-                <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 20 }}>Aucune fiche a reviser pour cette matiere aujourd'hui.</p>
-                <button className="fi-btn-g" onClick={() => setReviewSysId(null)}>Fermer</button>
+
+            {reviewLessons.length === 0 && (
+              <div className="rev-empty">
+                <p className="rev-empty-title">Tout est à jour !</p>
+                <p className="rev-empty-text">Aucune fiche à réviser ici aujourd'hui.</p>
+                <button className="fi-btn-g" onClick={() => setReviewLessons(null)}>Fermer</button>
               </div>
             )}
-            {dueLessons.length > 0 && reviewDone && (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 40, marginBottom: 10 }}>{reviewResults.filter(r => r.ok).length === reviewResults.length ? '🏆' : '✅'}</div>
-                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, color: '#111310', marginBottom: 6 }}>Session terminee !</p>
-                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 20 }}>
-                  <div style={{ textAlign: 'center' }}><div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 28, color: '#4ADE80', fontWeight: 500 }}>{reviewResults.filter(r => r.ok).length}</div><div style={{ fontSize: 10, color: 'var(--gray)', textTransform: 'uppercase' }}>Maitrisees</div></div>
-                  <div style={{ textAlign: 'center' }}><div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 28, color: '#F472B6', fontWeight: 500 }}>{reviewResults.filter(r => !r.ok).length}</div><div style={{ fontSize: 10, color: 'var(--gray)', textTransform: 'uppercase' }}>A retravailler</div></div>
+
+            {reviewLessons.length > 0 && reviewDone && (
+              <div className="rev-results">
+                <p className="rev-done-title">Session terminée !</p>
+                <div className="rev-done-grid">
+                  {[1, 2, 3, 4, 5].map(n => {
+                    const c = reviewResults.filter(r => r.score === n).length
+                    return (
+                      <div key={n} className="rev-done-cell">
+                        <span className={`rev-done-dot s${n}`} />
+                        <span className="rev-done-num">{c}</span>
+                      </div>
+                    )
+                  })}
                 </div>
-                <button className="fi-btn-g" style={{ width: '100%' }} onClick={() => setReviewSysId(null)}>Fermer</button>
+                <button className="fi-btn-g" style={{ width: '100%' }} onClick={() => setReviewLessons(null)}>Fermer</button>
               </div>
             )}
-            {dueLessons.length > 0 && !reviewDone && currentReviewLesson && (
+
+            {reviewLessons.length > 0 && !reviewDone && currentReviewLesson && (
               <>
-                <div style={{ background: '#F0EDE6', borderRadius: 20, height: 5, marginBottom: 20, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 20, background: '#1B4332', width: ((reviewIdx / dueLessons.length) * 100) + '%', transition: 'width .3s' }} />
+                <div className="rev-progress">
+                  <div
+                    className="rev-progress-bar"
+                    style={{ width: `${(reviewIdx / reviewLessons.length) * 100}%` }}
+                  />
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 6, textAlign: 'center' }}>{reviewIdx + 1} / {dueLessons.length} · J+{J[currentStepIdx]}</div>
-                <div style={{ background: '#FAFAF8', border: '1px solid var(--border)', borderRadius: 12, padding: '24px 20px', textAlign: 'center', marginBottom: 20 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--gray)', marginBottom: 10 }}>Revision J+{J[currentStepIdx]}</div>
-                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 500, color: '#111310', lineHeight: 1.4 }}>{currentReviewLesson.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 8 }}>{reviewSystem?.name} · appris le {new Date(currentReviewLesson.learn_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</div>
+                <div className="rev-step">
+                  {reviewIdx + 1} / {reviewLessons.length} · J+{J[currentStepIdx]}
                 </div>
-                <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--gray)', textAlign: 'center', fontWeight: 500 }}>Tu maitrises cette fiche ?</div>
-                <div style={{ display: 'flex', gap: 9 }}>
-                  <button className="rev-rating-btn ko" onClick={() => rateLesson(false)} disabled={reviewLoading}>A retravailler</button>
-                  <button className="rev-rating-btn ok" onClick={() => rateLesson(true)} disabled={reviewLoading}>Maitrise</button>
+
+                <div className="rev-lesson">
+                  <div className="rev-lesson-kicker">Révision J+{J[currentStepIdx]}</div>
+                  <div className="rev-lesson-name">{currentReviewLesson.name}</div>
+                  <div className="rev-lesson-meta">
+                    {reviewSystemName} · appris le {currentReviewLesson.learn_date
+                      ? new Date(currentReviewLesson.learn_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+                      : '—'}
+                  </div>
+                </div>
+
+                <div className="rev-ask">Quelle note ?</div>
+                <div className="rev-scores">
+                  {([1, 2, 3, 4, 5] as Score[]).map(n => (
+                    <button
+                      key={n}
+                      className={`rev-score s${n}`}
+                      onClick={() => rateLesson(n)}
+                      disabled={reviewLoading}
+                    >
+                      <span className="num">{n}</span>
+                      <span className="lbl">
+                        {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </>
             )}
@@ -333,23 +602,41 @@ export default function FichesPage() {
         </div>
       )}
 
+      {/* ---- MODAL : Nouvelle matière ---- */}
       {showNewSystem && (
         <div className="fi-overlay" onClick={() => setShowNewSystem(false)}>
           <div className="fi-modal" onClick={e => e.stopPropagation()}>
-            <div className="fi-modal-title">Nouvelle matiere</div>
+            <div className="fi-modal-title">Nouvelle matière</div>
             <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Nom de la matiere</label>
-              <input className="fi-input" type="text" placeholder="ex : Biochimie, Anatomie..." value={newSysName} onChange={e => setNewSysName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && createSystem()} />
+              <label className="fi-label">Nom de la matière</label>
+              <input className="fi-input" type="text" placeholder="ex : Biochimie, Anatomie…" value={newSysName}
+                onChange={e => setNewSysName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && createSystem()} />
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Icone</label>
-              <div className="fi-icon-grid">{ICONS.map(ic => <button key={ic} className={"fi-icon-btn" + (newSysIcon === ic ? ' sel' : '')} onClick={() => setNewSysIcon(ic)}>{ic}</button>)}</div>
+              <label className="fi-label">Couleur</label>
+              <div className="fi-color-grid">
+                {SUBJ_COLORS.map(c => (
+                  <button
+                    key={c}
+                    className={`fi-color-btn${newSysColor === c ? ' sel' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => setNewSysColor(c)}
+                    aria-label={c}
+                  />
+                ))}
+              </div>
             </div>
             <div style={{ marginBottom: 4 }}>
               <label className="fi-label">Semestre</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                {[1, 2].map(s => (
-                  <button key={s} onClick={() => setNewSysSemestre(s)} style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1.5px solid ' + (newSysSemestre === s ? '#2D6A4F' : 'var(--border)'), background: newSysSemestre === s ? '#D8EAE0' : 'white', color: newSysSemestre === s ? '#1B4332' : 'var(--gray)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                {([1, 2] as (1 | 2)[]).map(s => (
+                  <button key={s} onClick={() => setNewSysSemestre(s)} style={{
+                    flex: 1, padding: '9px', borderRadius: 8,
+                    border: `1.5px solid ${newSysSemestre === s ? '#2D6A4F' : 'var(--border)'}`,
+                    background: newSysSemestre === s ? '#D8EAE0' : 'white',
+                    color: newSysSemestre === s ? '#1B4332' : 'var(--gray)',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                  }}>
                     Semestre {s}
                   </button>
                 ))}
@@ -357,34 +644,46 @@ export default function FichesPage() {
             </div>
             <div className="fi-modal-actions">
               <button className="fi-btn-o" onClick={() => setShowNewSystem(false)}>Annuler</button>
-              <button className="fi-btn-g" onClick={createSystem} disabled={!newSysName.trim() || sysLoading} style={{ opacity: !newSysName.trim() ? .5 : 1 }}>{sysLoading ? 'Creation...' : 'Creer la matiere'}</button>
+              <button className="fi-btn-g" onClick={createSystem} disabled={!newSysName.trim() || sysLoading}
+                style={{ opacity: !newSysName.trim() ? .5 : 1 }}>
+                {sysLoading ? 'Création…' : 'Créer la matière'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* ---- MODAL : Nouvelle fiche ---- */}
       {showNewLesson && (
         <div className="fi-overlay" onClick={() => setShowNewLesson(false)}>
           <div className="fi-modal" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">Nouvelle fiche</div>
             <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Intitule de la fiche</label>
-              <input className="fi-input" type="text" placeholder="ex : Glycolyse etapes et regulation" value={newLesName} onChange={e => setNewLesName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && createLesson()} />
+              <label className="fi-label">Intitulé de la fiche</label>
+              <input className="fi-input" type="text" placeholder="ex : Glycolyse — étapes et régulation" value={newLesName}
+                onChange={e => setNewLesName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && createLesson()} />
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Matiere</label>
+              <label className="fi-label">Matière</label>
               <select className="fi-select" value={newLesSysId} onChange={e => setNewLesSysId(e.target.value)}>
-                {systems.map(sys => <option key={sys.id} value={sys.id}>{sys.icon} {sys.name}</option>)}
+                {systems.map(sys => <option key={sys.id} value={sys.id}>
+                  {sys.name} · S{(sys as any).semestre}
+                </option>)}
               </select>
             </div>
             <div style={{ marginBottom: 4 }}>
-              <label className="fi-label">Date apprentissage (J0)</label>
+              <label className="fi-label">Date d&apos;apprentissage (J0)</label>
               <input className="fi-input" type="date" value={newLesDate} onChange={e => setNewLesDate(e.target.value)} />
-              <p style={{ fontSize: 11, color: 'var(--gray)', marginTop: 5 }}>MedRev planifiera les revisions J+1, J+3, J+5 a partir de cette date.</p>
+              <p style={{ fontSize: 11, color: 'var(--gray)', marginTop: 5 }}>
+                MedRev planifiera les révisions J+1, J+3, J+5… à partir de cette date.
+              </p>
             </div>
             <div className="fi-modal-actions">
               <button className="fi-btn-o" onClick={() => setShowNewLesson(false)}>Annuler</button>
-              <button className="fi-btn-g" onClick={createLesson} disabled={!newLesName.trim() || !newLesSysId || lesLoading} style={{ opacity: (!newLesName.trim() || !newLesSysId) ? .5 : 1 }}>{lesLoading ? 'Creation...' : 'Creer la fiche'}</button>
+              <button className="fi-btn-g" onClick={createLesson} disabled={!newLesName.trim() || !newLesSysId || lesLoading}
+                style={{ opacity: (!newLesName.trim() || !newLesSysId) ? .5 : 1 }}>
+                {lesLoading ? 'Création…' : 'Créer la fiche'}
+              </button>
             </div>
           </div>
         </div>
