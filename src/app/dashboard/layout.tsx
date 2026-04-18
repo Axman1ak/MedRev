@@ -19,6 +19,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [todayCount, setTodayCount] = useState(0)
+  const [semester, setSemester] = useState<1 | 2>(2)
+
+  // Load persisted semester on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = localStorage.getItem('medrev-sem')
+    const s = raw === '1' ? 1 : 2
+    setSemester(s)
+  }, [])
+
+  function chooseSemester(s: 1 | 2) {
+    setSemester(s)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('medrev-sem', String(s))
+      window.dispatchEvent(new CustomEvent('medrev-sem-change', { detail: s }))
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -86,6 +103,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .db-nav-item.active { background: rgba(255,255,255,.08); color: white; }
         .db-nav-item .ic { width: 16px; text-align: center; font-style: normal; font-size: 13px; }
         .db-nav-item .badge { margin-left: auto; font-size: 10px; font-weight: 700; background: #2D6A4F; color: white; border-radius: 20px; padding: 1px 7px; }
+        .db-sem {
+          margin: 0 12px 16px;
+          background: rgba(255,255,255,.04);
+          border-radius: 8px;
+          padding: 3px;
+          display: flex;
+          gap: 2px;
+        }
+        .db-sem button {
+          flex: 1;
+          padding: 6px 8px;
+          border: none;
+          background: transparent;
+          color: rgba(255,255,255,.45);
+          font-size: 11.5px;
+          font-weight: 600;
+          border-radius: 6px;
+          cursor: pointer;
+          font-family: inherit;
+          letter-spacing: .02em;
+          transition: all .15s;
+        }
+        .db-sem button:hover { color: rgba(255,255,255,.8); }
+        .db-sem button.active {
+          background: #2D6A4F;
+          color: white;
+        }
       `}</style>
 
       {/* SIDEBAR */}
@@ -101,12 +145,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div style={{
           fontFamily: "'Fraunces', Georgia, serif",
           fontSize: 20, fontWeight: 700,
-          padding: '0 18px 20px',
-          borderBottom: '1px solid rgba(255,255,255,.07)',
-          marginBottom: 12, color: 'white'
+          padding: '0 18px 14px',
+          color: 'white'
         }}>
           Med<span style={{ color: '#2D6A4F' }}>Rev</span>
         </div>
+
+        {/* Semester toggle */}
+        <div className="db-sem">
+          <button
+            className={semester === 1 ? 'active' : ''}
+            onClick={() => chooseSemester(1)}
+          >
+            Sem 1
+          </button>
+          <button
+            className={semester === 2 ? 'active' : ''}
+            onClick={() => chooseSemester(2)}
+          >
+            Sem 2
+          </button>
+        </div>
+
+        {/* Separator */}
+        <div style={{ borderBottom: '1px solid rgba(255,255,255,.07)', margin: '0 12px 12px' }} />
 
         {/* Navigation */}
         <div style={{ padding: '0 9px', marginBottom: 20 }}>
