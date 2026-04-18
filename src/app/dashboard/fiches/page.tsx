@@ -121,10 +121,10 @@ export default function FichesPage() {
     const stepIdx = getDueStepIndex(lesson, today)
     if (stepIdx === -1) return
     setReviewLoading(true)
-    const newSteps = [...(lesson.steps as (null | object)[])]
+    const newSteps = [...(lesson.steps as any[])]
     newSteps[stepIdx] = { ok, date: today }
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', lesson.id)
-    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, steps: newSteps } : l))
+    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, steps: newSteps as any } : l))
     setReviewResults(prev => [...prev, { lessonId: lesson.id, ok }])
     setReviewLoading(false)
     if (reviewIdx + 1 >= dueLessons.length) setReviewDone(true)
