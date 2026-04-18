@@ -157,7 +157,7 @@ export default function StatsPage() {
   const maxDist = Math.max(...dist, 1)
 
   // Semestres disponibles
-  const semestres = [...new Set(systems.map(s => s.semestre).filter(Boolean))].sort() as number[]
+  const semestres = Array.from(new Set(systems.map(s => s.semestre).filter(Boolean))).sort() as number[]
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#EDEAE3' }}>
