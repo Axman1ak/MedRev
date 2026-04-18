@@ -22,6 +22,19 @@ function jDotStatus(lesson: Lesson, stepIndex: number, today: string): 'ok' | 'l
   return 'future'
 }
 
+// Returns the index of the first J-step that is due (date <= today) and not yet done
+function getDueStepIndex(lesson: Lesson, today: string): number {
+  if (!lesson.learn_date) return -1
+  const steps = lesson.steps as (null | object)[]
+  for (let i = 0; i < J.length; i++) {
+    if (steps[i]) continue
+    const d = new Date(lesson.learn_date + 'T12:00:00')
+    d.setDate(d.getDate() + J[i])
+    if (d.toISOString().split('T')[0] <= today) return i
+  }
+  return -1
+}
+
 export default function FichesPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -31,7 +44,7 @@ export default function FichesPage() {
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
-  // Modals
+  // Create modals
   const [showNewSystem, setShowNewSystem] = useState(false)
   const [showNewLesson, setShowNewLesson] = useState(false)
 
@@ -47,6 +60,13 @@ export default function FichesPage() {
   const [newLesSysId, setNewLesSysId] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
 
+  // Review session
+  const [reviewSysId, setReviewSysId] = useState<string | null>(null)
+  const [reviewIdx, setReviewIdx] = useState(0)
+  const [reviewResults, setReviewResults] = useState<{ lessonId: string; ok: boolean }[]>([])
+  const [reviewDone, setReviewDone] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false)
+
   const today = new Date().toISOString().split('T')[0]
 
   const load = useCallback(async (uid: string) => {
@@ -56,10 +76,7 @@ export default function FichesPage() {
     ])
     setSystems(sys || [])
     setLessons(les || [])
-    if (sys && sys.length > 0 && !selectedSystemId) {
-      setSelectedSystemId(sys[0].id)
-    }
-  }, [selectedSystemId])
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -69,50 +86,74 @@ export default function FichesPage() {
     })
   }, [])
 
-  // Auto-select first system when systems load
   useEffect(() => {
     if (systems.length > 0 && !selectedSystemId) {
       setSelectedSystemId(systems[0].id)
     }
   }, [systems])
 
+  // ---- Create functions ----
   async function createSystem() {
     if (!userId || !newSysName.trim()) return
     setSysLoading(true)
-    const { data, error } = await supabase.from('systems').insert({
-      user_id: userId,
-      name: newSysName.trim(),
-      icon: newSysIcon,
-      semestre: newSysSemestre,
+    const { data } = await supabase.from('systems').insert({
+      user_id: userId, name: newSysName.trim(), icon: newSysIcon, semestre: newSysSemestre,
     }).select().single()
     setSysLoading(false)
-    if (data) {
-      setSystems(prev => [...prev, data])
-      setSelectedSystemId(data.id)
-    }
-    setShowNewSystem(false)
-    setNewSysName('')
-    setNewSysIcon('📁')
-    setNewSysSemestre(1)
+    if (data) { setSystems(prev => [...prev, data]); setSelectedSystemId(data.id) }
+    setShowNewSystem(false); setNewSysName(''); setNewSysIcon('📁'); setNewSysSemestre(1)
   }
 
   async function createLesson() {
     if (!userId || !newLesName.trim() || !newLesSysId) return
     setLesLoading(true)
-    const steps = new Array(J.length).fill(null)
     const { data } = await supabase.from('lessons').insert({
-      user_id: userId,
-      system_id: newLesSysId,
-      name: newLesName.trim(),
-      learn_date: newLesDate || today,
-      steps,
-      ai_questions: [],
+      user_id: userId, system_id: newLesSysId, name: newLesName.trim(),
+      learn_date: newLesDate || today, steps: new Array(J.length).fill(null), ai_questions: [],
     }).select().single()
     setLesLoading(false)
     if (data) setLessons(prev => [...prev, data])
-    setShowNewLesson(false)
-    setNewLesName('')
-    setNewLesDate('')
+    setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
+  }
+
+  // ---- Review session ----
+  function getDueLessons(sysId: string): Lesson[] {
+    return lessons.filter(l => l.system_id === sysId && getDueStepIndex(l, today) !== -1)
+  }
+
+  function startReview(sysId: string) {
+    setReviewSysId(sysId)
+    setReviewIdx(0)
+    setReviewResults([])
+    setReviewDone(false)
+  }
+
+  async function rateLesson(ok: boolean) {
+    if (!reviewSysId) return
+    const dueLessons = getDueLessons(reviewSysId)
+    const lesson = dueLessons[reviewIdx]
+    if (!lesson) return
+    const stepIdx = getDueStepIndex(lesson, today)
+    if (stepIdx === -1) return
+
+    setReviewLoading(true)
+    const newSteps = [...(lesson.steps as (null | object)[])]
+    newSteps[stepIdx] = { ok, date: today }
+
+    await supabase.from('lessons').update({ steps: newSteps }).eq('id', lesson.id)
+
+    // Update local state
+    setLessons(prev => prev.map(l =>
+      l.id === lesson.id ? { ...l, steps: newSteps } : l
+    ))
+    setReviewResults(prev => [...prev, { lessonId: lesson.id, ok }])
+    setReviewLoading(false)
+
+    if (reviewIdx + 1 >= dueLessons.length) {
+      setReviewDone(true)
+    } else {
+      setReviewIdx(i => i + 1)
+    }
   }
 
   // ---- Derived data ----
@@ -120,21 +161,11 @@ export default function FichesPage() {
     const sysLessons = lessons.filter(l => l.system_id === sys.id)
     const totalSteps = sysLessons.length * J.length
     const doneSteps = sysLessons.reduce((acc, l) => {
-      const steps = l.steps as (null | object)[]
-      return acc + steps.filter(Boolean).length
+      return acc + (l.steps as (null | object)[]).filter(Boolean).length
     }, 0)
     const mastery = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0
-    const dueCount = sysLessons.filter(l => {
-      if (!l.learn_date) return false
-      const steps = l.steps as (null | object)[]
-      return J.some((off, i) => {
-        if (steps[i]) return false
-        const d = new Date(l.learn_date + 'T12:00:00')
-        d.setDate(d.getDate() + off)
-        return d.toISOString().split('T')[0] <= today
-      })
-    }).length
-    const lastLesson = sysLessons.sort((a, b) =>
+    const dueCount = getDueLessons(sys.id).length
+    const lastLesson = [...sysLessons].sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )[0]
     const lastDate = lastLesson
@@ -153,7 +184,7 @@ export default function FichesPage() {
         return d.toISOString().split('T')[0]
       }
     }
-    return null // all done
+    return null
   }
 
   function masteryLevel(lesson: Lesson): { label: string; color: string } {
@@ -170,77 +201,77 @@ export default function FichesPage() {
     .filter(l => l.system_id === selectedSystemId)
     .filter(l => !search || l.name.toLowerCase().includes(search.toLowerCase()))
 
-  const colorForSystem = (sys: System) => {
-    const idx = systems.indexOf(sys)
-    return COLORS[idx % COLORS.length]
-  }
+  // Review session data
+  const reviewSystem = systems.find(s => s.id === reviewSysId)
+  const dueLessons = reviewSysId ? getDueLessons(reviewSysId) : []
+  const currentReviewLesson = dueLessons[reviewIdx]
+  const currentStepIdx = currentReviewLesson ? getDueStepIndex(currentReviewLesson, today) : -1
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
         :root {
-          --cream: #F5F1EA; --dark: #111310; --green: #1B4332; --gm: #2D6A4F;
-          --gl: #D8EAE0; --amber: #C47B2B; --al: #FBF0E0; --gray: #6B7280; --border: #DDD8CE;
+          --cream:#F5F1EA;--dark:#111310;--green:#1B4332;--gm:#2D6A4F;
+          --gl:#D8EAE0;--amber:#C47B2B;--al:#FBF0E0;--gray:#6B7280;--border:#DDD8CE;
         }
-        .fi-main { padding: 26px 28px; background: #EDEAE3; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; font-family: 'Plus Jakarta Sans', sans-serif; }
-        .fi-card { background: white; border: 1px solid var(--border); border-radius: 13px; }
-        .fi-ct { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--gray); margin-bottom: 14px; }
-        .fi-btn-g { background: #1B4332; color: white; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12.5px; font-weight: 600; padding: 9px 18px; border-radius: 7px; cursor: pointer; }
-        .fi-btn-d { background: #111310; color: white; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12.5px; font-weight: 600; padding: 9px 18px; border-radius: 7px; cursor: pointer; }
-        .fi-btn-o { background: transparent; border: 1.5px solid var(--border); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 7px 13px; border-radius: 7px; cursor: pointer; color: var(--gray); transition: all .15s; }
-        .fi-btn-o:hover { border-color: #aaa; color: #333; }
-        .fi-btn-sm { background: #1B4332; color: white; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 6px; cursor: pointer; }
+        .fi-main{padding:26px 28px;background:#EDEAE3;min-height:100vh;display:flex;flex-direction:column;gap:16px;font-family:'Plus Jakarta Sans',sans-serif}
+        .fi-card{background:white;border:1px solid var(--border);border-radius:13px}
+        .fi-ct{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:14px}
+        .fi-btn-g{background:#1B4332;color:white;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;padding:9px 18px;border-radius:7px;cursor:pointer}
+        .fi-btn-d{background:#111310;color:white;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;padding:9px 18px;border-radius:7px;cursor:pointer}
+        .fi-btn-o{background:transparent;border:1.5px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:500;padding:7px 13px;border-radius:7px;cursor:pointer;color:var(--gray);transition:all .15s}
+        .fi-btn-o:hover{border-color:#aaa;color:#333}
+        .fi-btn-sm{background:#1B4332;color:white;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;padding:5px 11px;border-radius:6px;cursor:pointer}
+        .fi-btn-sm.urgent{background:#B91C1C}
+        .fi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        @media(max-width:900px){.fi-grid{grid-template-columns:1fr 1fr}}
+        .fi-subj{background:white;border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+        .fi-subj:hover{box-shadow:0 4px 14px rgba(0,0,0,.07)}
+        .fi-subj.active{border-color:#2D6A4F;box-shadow:0 0 0 2px rgba(45,106,79,.15)}
+        .fi-subj-add{background:#FAFAF8;border:1.5px dashed var(--border);border-radius:12px;padding:18px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:120px;transition:all .15s}
+        .fi-subj-add:hover{border-color:#2D6A4F;background:#F0F7F3}
+        .fi-sstats{display:flex;gap:14px;margin-bottom:12px}
+        .fi-sst-n{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:500;color:#111310;line-height:1}
+        .fi-sst-l{font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+        .fi-spb{height:4px;background:#F0EDE6;border-radius:20px;overflow:hidden}
+        .fi-spbf{height:100%;border-radius:20px}
+        .fi-slast{font-size:10.5px;color:var(--gray);margin-top:6px}
+        .fi-table{width:100%;border-collapse:collapse}
+        .fi-table th{text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);padding:10px 14px;background:#FAFAF8;border-bottom:1px solid var(--border)}
+        .fi-table td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle}
+        .fi-table tr:last-child td{border-bottom:none}
+        .fi-table tr:hover td{background:#FAFAF8}
+        .jdot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--border);display:inline-block;flex-shrink:0}
+        .jdot.ok{background:#4ADE80;border-color:#4ADE80}
+        .jdot.late{background:#F59E0B;border-color:#F59E0B}
+        .jdot.miss{background:#F472B6;border-color:#F472B6}
+        .jdot.next{background:var(--al);border-color:var(--amber)}
+        .jdot.future{background:#F0EDE6;border-color:#E5E0D8}
+        .fi-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .fi-modal{background:white;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+        .fi-modal-title{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:500;color:#111310;margin-bottom:20px}
+        .fi-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:6px}
+        .fi-input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:#111310;outline:none;transition:border-color .15s;box-sizing:border-box}
+        .fi-input:focus{border-color:#2D6A4F}
+        .fi-select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:#111310;outline:none;background:white;box-sizing:border-box}
+        .fi-icon-grid{display:flex;flex-wrap:wrap;gap:6px}
+        .fi-icon-btn{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+        .fi-icon-btn.sel{border-color:#2D6A4F;background:#D8EAE0}
+        .fi-modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:22px}
+        .nr{font-size:11px;color:var(--gray)}
+        .nr.soon{color:#B91C1C;font-weight:600}
+        .nr.today{color:#2D6A4F;font-weight:600}
+        .nr.done{color:#9CA3AF}
 
-        /* Subject cards */
-        .fi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-        @media (max-width: 900px) { .fi-grid { grid-template-columns: 1fr 1fr; } }
-        .fi-subj { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 18px; cursor: pointer; transition: box-shadow .15s, border-color .15s; }
-        .fi-subj:hover { box-shadow: 0 4px 14px rgba(0,0,0,.07); }
-        .fi-subj.active { border-color: #2D6A4F; box-shadow: 0 0 0 2px rgba(45,106,79,.15); }
-        .fi-subj-add { background: #FAFAF8; border: 1.5px dashed var(--border); border-radius: 12px; padding: 18px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 120px; transition: all .15s; }
-        .fi-subj-add:hover { border-color: #2D6A4F; background: #F0F7F3; }
-
-        /* Stats */
-        .fi-sstats { display: flex; gap: 14px; margin-bottom: 12px; }
-        .fi-sst-n { font-family: 'Fraunces', Georgia, serif; font-size: 20px; font-weight: 500; color: #111310; line-height: 1; }
-        .fi-sst-l { font-size: 9.5px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
-        .fi-spb { height: 4px; background: #F0EDE6; border-radius: 20px; overflow: hidden; }
-        .fi-spbf { height: 100%; border-radius: 20px; }
-        .fi-slast { font-size: 10.5px; color: var(--gray); margin-top: 6px; }
-
-        /* Table */
-        .fi-table { width: 100%; border-collapse: collapse; }
-        .fi-table th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray); padding: 10px 14px; background: #FAFAF8; border-bottom: 1px solid var(--border); }
-        .fi-table td { padding: 10px 14px; font-size: 12.5px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        .fi-table tr:last-child td { border-bottom: none; }
-        .fi-table tr:hover td { background: #FAFAF8; }
-
-        /* J dots */
-        .jdot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--border); display: inline-block; flex-shrink: 0; }
-        .jdot.ok { background: #4ADE80; border-color: #4ADE80; }
-        .jdot.late { background: #F59E0B; border-color: #F59E0B; }
-        .jdot.miss { background: #F472B6; border-color: #F472B6; }
-        .jdot.next { background: var(--al); border-color: var(--amber); }
-        .jdot.future { background: #F0EDE6; border-color: #E5E0D8; }
-
-        /* Modal overlay */
-        .fi-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.38); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .fi-modal { background: white; border-radius: 16px; padding: 28px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
-        .fi-modal-title { font-family: 'Fraunces', Georgia, serif; font-size: 20px; font-weight: 500; color: #111310; margin-bottom: 20px; }
-        .fi-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--gray); margin-bottom: 6px; }
-        .fi-input { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13.5px; color: #111310; outline: none; transition: border-color .15s; box-sizing: border-box; }
-        .fi-input:focus { border-color: #2D6A4F; }
-        .fi-select { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13.5px; color: #111310; outline: none; background: white; box-sizing: border-box; }
-        .fi-icon-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-        .fi-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid var(--border); background: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
-        .fi-icon-btn.sel { border-color: #2D6A4F; background: #D8EAE0; }
-        .fi-modal-actions { display: flex; gap: 9px; justify-content: flex-end; margin-top: 22px; }
-
-        .nr { font-size: 11px; color: var(--gray); }
-        .nr.soon { color: #B91C1C; font-weight: 600; }
-        .nr.today { color: #2D6A4F; font-weight: 600; }
-        .nr.done { color: #9CA3AF; }
+        /* Review session */
+        .rev-card{background:white;border-radius:16px;padding:32px;width:100%;max-width:500px;box-shadow:0 24px 64px rgba(0,0,0,.2)}
+        .rev-rating-btn{flex:1;padding:13px 8px;border-radius:10px;border:1.5px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;background:white}
+        .rev-rating-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+        .rev-rating-btn.ko{color:#B91C1C;border-color:#FCA5A5}
+        .rev-rating-btn.ko:hover{background:#FEF2F2}
+        .rev-rating-btn.ok{color:#1B4332;border-color:#D8EAE0}
+        .rev-rating-btn.ok:hover{background:#D8EAE0}
       `}</style>
 
       <div className="fi-main">
@@ -251,7 +282,7 @@ export default function FichesPage() {
             Mes matières
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 13px', fontSize: '12.5px', color: 'var(--gray)', width: 200 }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 13px', width: 200 }}>
               <input
                 type="text"
                 placeholder="Rechercher une fiche…"
@@ -260,7 +291,7 @@ export default function FichesPage() {
                 style={{ border: 'none', outline: 'none', fontSize: '12.5px', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#111310', width: '100%', background: 'transparent' }}
               />
             </div>
-            <button className="fi-btn-o" style={{ fontSize: 12 }} onClick={() => { setShowNewSystem(true) }}>
+            <button className="fi-btn-o" style={{ fontSize: 12 }} onClick={() => setShowNewSystem(true)}>
               + Nouvelle matière
             </button>
             <button className="fi-btn-g" style={{ fontSize: 12 }} onClick={() => {
@@ -278,6 +309,7 @@ export default function FichesPage() {
           {systems.map((sys, idx) => {
             const { count, mastery, dueCount, lastDate } = sysStats(sys)
             const color = COLORS[idx % COLORS.length]
+            const isUrgent = dueCount > 0
             return (
               <div
                 key={sys.id}
@@ -290,16 +322,10 @@ export default function FichesPage() {
                     <span style={{ fontSize: '14.5px', fontWeight: 600, color: '#111310' }}>{sys.icon} {sys.name}</span>
                   </div>
                   <button
-                    className="fi-btn-sm"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setSelectedSystemId(sys.id)
-                      setNewLesSysId(sys.id)
-                      setNewLesDate(today)
-                      setShowNewLesson(true)
-                    }}
+                    className={`fi-btn-sm${isUrgent ? ' urgent' : ''}`}
+                    onClick={e => { e.stopPropagation(); startReview(sys.id) }}
                   >
-                    Réviser
+                    {isUrgent ? `Réviser (${dueCount})` : 'Réviser'}
                   </button>
                 </div>
                 <div className="fi-sstats">
@@ -308,7 +334,7 @@ export default function FichesPage() {
                     <div className="fi-sst-l">Fiches</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div className="fi-sst-n">{dueCount}</div>
+                    <div className="fi-sst-n" style={{ color: isUrgent ? '#B91C1C' : undefined }}>{dueCount}</div>
                     <div className="fi-sst-l">À revoir</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
@@ -319,21 +345,16 @@ export default function FichesPage() {
                 <div className="fi-spb">
                   <div className="fi-spbf" style={{ width: `${mastery}%`, background: color }} />
                 </div>
-                {lastDate && (
-                  <div className="fi-slast">Dernière fiche : {lastDate}</div>
-                )}
-                {!lastDate && (
-                  <div className="fi-slast">Aucune fiche — clique pour en créer</div>
-                )}
+                {lastDate
+                  ? <div className="fi-slast">Dernière fiche : {lastDate}</div>
+                  : <div className="fi-slast">Aucune fiche — clique pour en créer</div>
+                }
               </div>
             )
           })}
 
-          {/* Add subject card */}
           <div className="fi-subj-add" onClick={() => setShowNewSystem(true)}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: '#D8EAE0', color: '#1B4332', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              +
-            </div>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: '#D8EAE0', color: '#1B4332', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</div>
             <span style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--gray)' }}>Nouvelle matière</span>
           </div>
         </div>
@@ -348,16 +369,13 @@ export default function FichesPage() {
             <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 20 }}>
               Commence par ajouter une matière, puis crée tes fiches dedans.
             </p>
-            <button className="fi-btn-g" onClick={() => setShowNewSystem(true)}>
-              + Créer une matière
-            </button>
+            <button className="fi-btn-g" onClick={() => setShowNewSystem(true)}>+ Créer une matière</button>
           </div>
         )}
 
-        {/* Lessons table for selected system */}
+        {/* Lessons table */}
         {selectedSystem && (
           <div className="fi-card" style={{ padding: 0, overflow: 'hidden' }}>
-            {/* Table header */}
             <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLORS[systems.indexOf(selectedSystem) % COLORS.length], display: 'inline-block', minWidth: 10 }} />
@@ -367,12 +385,8 @@ export default function FichesPage() {
                 <span style={{ fontSize: 13, color: 'var(--gray)' }}>{visibleLessons.length} fiche{visibleLessons.length !== 1 ? 's' : ''}</span>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button className="fi-btn-o" style={{ fontSize: 11, padding: '5px 11px' }}>Toutes</button>
-                <button className="fi-btn-o" style={{ fontSize: 11, padding: '5px 11px' }}>À revoir</button>
                 <button className="fi-btn-g" style={{ fontSize: 11, padding: '5px 11px' }} onClick={() => {
-                  setNewLesSysId(selectedSystem.id)
-                  setNewLesDate(today)
-                  setShowNewLesson(true)
+                  setNewLesSysId(selectedSystem.id); setNewLesDate(today); setShowNewLesson(true)
                 }}>
                   + Créer une fiche
                 </button>
@@ -389,26 +403,20 @@ export default function FichesPage() {
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="jdot future" />À venir</span>
             </div>
 
-            {/* Empty lessons state */}
-            {visibleLessons.length === 0 && (
+            {visibleLessons.length === 0 ? (
               <div style={{ padding: '40px 28px', textAlign: 'center' }}>
                 <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 14 }}>
-                  {search ? 'Aucune fiche ne correspond à ta recherche.' : 'Aucune fiche dans cette matière pour l\'instant.'}
+                  {search ? 'Aucune fiche ne correspond.' : 'Aucune fiche dans cette matière.'}
                 </p>
                 {!search && (
                   <button className="fi-btn-g" style={{ fontSize: 12 }} onClick={() => {
-                    setNewLesSysId(selectedSystem.id)
-                    setNewLesDate(today)
-                    setShowNewLesson(true)
+                    setNewLesSysId(selectedSystem.id); setNewLesDate(today); setShowNewLesson(true)
                   }}>
                     + Créer la première fiche
                   </button>
                 )}
               </div>
-            )}
-
-            {/* Lessons table */}
-            {visibleLessons.length > 0 && (
+            ) : (
               <table className="fi-table">
                 <thead>
                   <tr>
@@ -422,18 +430,20 @@ export default function FichesPage() {
                   {visibleLessons.map(lesson => {
                     const { label: mastLabel, color: mastColor } = masteryLevel(lesson)
                     const nextRev = nextRevision(lesson)
+                    const isDue = getDueStepIndex(lesson, today) !== -1
                     const nextRevLabel = (() => {
                       if (!nextRev) return { text: 'Complétée ✓', cls: 'done' }
                       if (nextRev < today) return { text: 'En retard', cls: 'soon' }
                       if (nextRev === today) return { text: 'Aujourd\'hui', cls: 'today' }
                       const diff = Math.round((new Date(nextRev).getTime() - new Date(today).getTime()) / 86400000)
-                      if (diff === 1) return { text: 'Demain', cls: '' }
-                      return { text: `Dans ${diff} jours`, cls: '' }
+                      return { text: diff === 1 ? 'Demain' : `Dans ${diff} j.`, cls: '' }
                     })()
-
                     return (
-                      <tr key={lesson.id}>
-                        <td style={{ fontWeight: 500, color: '#111310' }}>{lesson.name}</td>
+                      <tr key={lesson.id} style={{ background: isDue ? '#FFFBF0' : undefined }}>
+                        <td style={{ fontWeight: 500, color: '#111310' }}>
+                          {lesson.name}
+                          {isDue && <span style={{ marginLeft: 7, fontSize: 10, fontWeight: 700, background: '#FEE2E2', color: '#B91C1C', borderRadius: 20, padding: '1px 6px' }}>À réviser</span>}
+                        </td>
                         <td>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: mastColor, display: 'inline-block' }} />
@@ -441,11 +451,8 @@ export default function FichesPage() {
                           </span>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'nowrap' }}>
-                            {J.map((_, i) => {
-                              const status = jDotStatus(lesson, i, today)
-                              return <span key={i} className={`jdot ${status}`} title={`J+${J[i]}`} />
-                            })}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            {J.map((_, i) => <span key={i} className={`jdot ${jDotStatus(lesson, i, today)}`} title={`J+${J[i]}`} />)}
                           </div>
                         </td>
                         <td>
@@ -463,134 +470,127 @@ export default function FichesPage() {
         )}
       </div>
 
-      {/* ---- MODAL : Nouvelle matière ---- */}
-      {showNewSystem && (
-        <div className="fi-overlay" onClick={() => setShowNewSystem(false)}>
-          <div className="fi-modal" onClick={e => e.stopPropagation()}>
-            <div className="fi-modal-title">Nouvelle matière</div>
+      {/* ---- REVIEW SESSION OVERLAY ---- */}
+      {reviewSysId && (
+        <div className="fi-overlay" onClick={() => setReviewSysId(null)}>
+          <div className="rev-card" onClick={e => e.stopPropagation()}>
 
-            <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Nom de la matière</label>
-              <input
-                className="fi-input"
-                type="text"
-                placeholder="ex : Biochimie, Anatomie…"
-                value={newSysName}
-                onChange={e => setNewSysName(e.target.value)}
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && createSystem()}
-              />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Icône</label>
-              <div className="fi-icon-grid">
-                {ICONS.map(ic => (
-                  <button
-                    key={ic}
-                    className={`fi-icon-btn${newSysIcon === ic ? ' sel' : ''}`}
-                    onClick={() => setNewSysIcon(ic)}
-                  >
-                    {ic}
-                  </button>
-                ))}
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--gray)', marginBottom: 3 }}>
+                  Session de révision
+                </div>
+                <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 500, color: '#111310' }}>
+                  {reviewSystem?.icon} {reviewSystem?.name}
+                </div>
               </div>
-            </div>
-
-            <div style={{ marginBottom: 4 }}>
-              <label className="fi-label">Semestre</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[1, 2].map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setNewSysSemestre(s)}
-                    style={{
-                      flex: 1, padding: '9px', borderRadius: 8, border: `1.5px solid ${newSysSemestre === s ? '#2D6A4F' : 'var(--border)'}`,
-                      background: newSysSemestre === s ? '#D8EAE0' : 'white',
-                      color: newSysSemestre === s ? '#1B4332' : 'var(--gray)',
-                      fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
-                    }}
-                  >
-                    Semestre {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="fi-modal-actions">
-              <button className="fi-btn-o" onClick={() => setShowNewSystem(false)}>Annuler</button>
               <button
-                className="fi-btn-g"
-                onClick={createSystem}
-                disabled={!newSysName.trim() || sysLoading}
-                style={{ opacity: !newSysName.trim() ? .5 : 1 }}
+                onClick={() => setReviewSysId(null)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--gray)', padding: '4px 8px', borderRadius: 6 }}
               >
-                {sysLoading ? 'Création…' : 'Créer la matière'}
+                ×
               </button>
             </div>
+
+            {/* No lessons due */}
+            {dueLessons.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 17, color: '#111310', marginBottom: 6 }}>
+                  Tout est à jour !
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 20 }}>
+                  Aucune fiche à réviser pour cette matière aujourd&apos;hui.
+                </p>
+                <button className="fi-btn-g" onClick={() => setReviewSysId(null)}>Fermer</button>
+              </div>
+            )}
+
+            {/* Results screen */}
+            {dueLessons.length > 0 && reviewDone && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>
+                  {reviewResults.filter(r => r.ok).length === reviewResults.length ? '🏆' : '✅'}
+                </div>
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, color: '#111310', marginBottom: 6 }}>
+                  Session terminée !
+                </p>
+                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 20 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 28, color: '#4ADE80', fontWeight: 500 }}>
+                      {reviewResults.filter(r => r.ok).length}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--gray)', textTransform: 'uppercase' }}>Maîtrisées</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 28, color: '#F472B6', fontWeight: 500 }}>
+                      {reviewResults.filter(r => !r.ok).length}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--gray)', textTransform: 'uppercase' }}>À retravailler</div>
+                  </div>
+                </div>
+                <button className="fi-btn-g" style={{ width: '100%' }} onClick={() => setReviewSysId(null)}>
+                  Fermer
+                </button>
+              </div>
+            )}
+
+            {/* Review in progress */}
+            {dueLessons.length > 0 && !reviewDone && currentReviewLesson && (
+              <>
+                {/* Progress bar */}
+                <div style={{ background: '#F0EDE6', borderRadius: 20, height: 5, marginBottom: 20, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 20, background: '#1B4332',
+                    width: `${(reviewIdx / dueLessons.length) * 100}%`,
+                    transition: 'width .3s'
+                  }} />
+                </div>
+
+                <div style={{ fontSize: 11, color: 'var(--gray)', marginBottom: 6, textAlign: 'center' }}>
+                  {reviewIdx + 1} / {dueLessons.length} · J+{J[currentStepIdx]}
+                </div>
+
+                {/* Lesson card */}
+                <div style={{
+                  background: '#FAFAF8', border: '1px solid var(--border)', borderRadius: 12,
+                  padding: '24px 20px', textAlign: 'center', marginBottom: 20
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--gray)', marginBottom: 10 }}>
+                    Révision J+{J[currentStepIdx]}
+                  </div>
+                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 500, color: '#111310', lineHeight: 1.4 }}>
+                    {currentReviewLesson.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 8 }}>
+                    {reviewSystem?.name} · appris le {new Date(currentReviewLesson.learn_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                  </div>
+                </div>
+
+                {/* Rating buttons */}
+                <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--gray)', textAlign: 'center', fontWeight: 500 }}>
+                  Tu maîtrises cette fiche ?
+                </div>
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <button
+                    className="rev-rating-btn ko"
+                    onClick={() => rateLesson(false)}
+                    disabled={reviewLoading}
+                  >
+                    À retravailler
+                  </button>
+                  <button
+                    className="rev-rating-btn ok"
+                    onClick={() => rateLesson(true)}
+                    disabled={reviewLoading}
+                  >
+                    Maîtrisé ✓
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* ---- MODAL : Nouvelle fiche ---- */}
-      {showNewLesson && (
-        <div className="fi-overlay" onClick={() => setShowNewLesson(false)}>
-          <div className="fi-modal" onClick={e => e.stopPropagation()}>
-            <div className="fi-modal-title">Nouvelle fiche</div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Intitulé de la fiche</label>
-              <input
-                className="fi-input"
-                type="text"
-                placeholder="ex : Glycolyse — étapes et régulation"
-                value={newLesName}
-                onChange={e => setNewLesName(e.target.value)}
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && createLesson()}
-              />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Matière</label>
-              <select
-                className="fi-select"
-                value={newLesSysId}
-                onChange={e => setNewLesSysId(e.target.value)}
-              >
-                {systems.map(sys => (
-                  <option key={sys.id} value={sys.id}>{sys.icon} {sys.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 4 }}>
-              <label className="fi-label">Date d&apos;apprentissage (J0)</label>
-              <input
-                className="fi-input"
-                type="date"
-                value={newLesDate}
-                onChange={e => setNewLesDate(e.target.value)}
-              />
-              <p style={{ fontSize: 11, color: 'var(--gray)', marginTop: 5 }}>
-                MedRev planifiera les révisions J+1, J+3, J+5… à partir de cette date.
-              </p>
-            </div>
-
-            <div className="fi-modal-actions">
-              <button className="fi-btn-o" onClick={() => setShowNewLesson(false)}>Annuler</button>
-              <button
-                className="fi-btn-g"
-                onClick={createLesson}
-                disabled={!newLesName.trim() || !newLesSysId || lesLoading}
-                style={{ opacity: (!newLesName.trim() || !newLesSysId) ? .5 : 1 }}
-              >
-                {lesLoading ? 'Création…' : 'Créer la fiche'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
