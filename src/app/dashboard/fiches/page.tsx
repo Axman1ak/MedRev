@@ -9,16 +9,10 @@ import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 
-// Palette de couleurs pour les matières, utilisée si sys.color n'est pas défini
+// Palette de couleurs pour les matières
 const SUBJ_COLORS = [
-  '#C75050', // rouge
-  '#5B8ED4', // bleu
-  '#8D6BB0', // violet
-  '#A06840', // marron
-  '#C47B2B', // ambre
-  '#3A8F8A', // teal
-  '#7AA56B', // vert
-  '#D9B24A', // jaune
+  '#C75050', '#5B8ED4', '#8D6BB0', '#A06840',
+  '#C47B2B', '#3A8F8A', '#7AA56B', '#D9B24A',
 ]
 
 type Score = 1 | 2 | 3 | 4 | 5
@@ -61,7 +55,6 @@ function getStampState(lesson: Lesson, i: number, today: string): StampState {
   return { kind: 'future' }
 }
 
-// Retourne l'index du premier J dû (date <= today, non fait)
 function getDueStepIndex(lesson: Lesson, today: string): number {
   if (!lesson.learn_date) return -1
   const steps = (lesson.steps as StepEntry[]) || []
@@ -73,7 +66,6 @@ function getDueStepIndex(lesson: Lesson, today: string): number {
   return -1
 }
 
-// Dernière note donnée à cette fiche (pour filtre + accent de carte)
 function getLastScore(lesson: Lesson): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = J.length - 1; i >= 0; i--) {
@@ -83,7 +75,21 @@ function getLastScore(lesson: Lesson): Score | null {
   return null
 }
 
-// Prochaine date de révision (première step non faite)
+function getDoneCount(lesson: Lesson): number {
+  const steps = (lesson.steps as StepEntry[]) || []
+  let n = 0
+  for (let i = 0; i < J.length; i++) if (stepScore(steps[i])) n++
+  return n
+}
+
+type ProgressKind = 'new' | 'inprogress' | 'done'
+function progressKind(lesson: Lesson): ProgressKind {
+  const n = getDoneCount(lesson)
+  if (n === 0) return 'new'
+  if (n >= J.length) return 'done'
+  return 'inprogress'
+}
+
 function getNextRevDate(lesson: Lesson): string | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
@@ -93,7 +99,6 @@ function getNextRevDate(lesson: Lesson): string | null {
   return null
 }
 
-// Label pour le pied de carte ("aujourd'hui", "dans 3 j", "terminée", "à planifier"…)
 function nextRevLabel(lesson: Lesson, today: string): { text: string; html: string; urgent: boolean; calm: boolean; start: boolean } {
   if (!lesson.learn_date) {
     return { text: 'À planifier', html: 'À planifier', urgent: false, calm: false, start: true }
@@ -107,12 +112,9 @@ function nextRevLabel(lesson: Lesson, today: string): { text: string; html: stri
   return { text: `dans ${diff} j`, html: `Prochaine <strong>dans ${diff} j</strong>`, urgent: false, calm: true, start: false }
 }
 
-// Status label (pastille en haut à droite de la carte)
 function cardStatus(lesson: Lesson): { cls: string; label: string } {
   const last = getLastScore(lesson)
-  if (last === null) {
-    return { cls: 'new', label: 'Nouvelle' }
-  }
+  if (last === null) return { cls: 'new', label: 'Nouvelle' }
   if (last === 1) return { cls: 's1', label: 'À revoir' }
   if (last === 2) return { cls: 's2', label: 'Faible' }
   if (last === 3) return { cls: 's3', label: 'Moyen' }
@@ -120,7 +122,12 @@ function cardStatus(lesson: Lesson): { cls: string; label: string } {
   return { cls: 's5', label: 'Maîtrisée' }
 }
 
-type FilterKey = 'all' | 's1' | 's2' | 's3' | 's4' | 's5' | 'new' | 'due'
+function frenchDate(iso: string): string {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
+type FilterNote = 'all' | 's1' | 's2' | 's3' | 's4' | 's5'
+type FilterProgress = 'all' | 'new' | 'inprogress' | 'done'
 
 export default function FichesPage() {
   const supabase = createClient()
@@ -129,7 +136,9 @@ export default function FichesPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterKey>('all')
+  const [filterNote, setFilterNote] = useState<FilterNote>('all')
+  const [filterProgress, setFilterProgress] = useState<FilterProgress>('all')
+  const [showDueOnly, setShowDueOnly] = useState(false)
   const [search, setSearch] = useState('')
   const [semester, setSemester] = useState<1 | 2>(2)
 
@@ -149,17 +158,14 @@ export default function FichesPage() {
   const [newLesSysId, setNewLesSysId] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
 
-  // Review session
-  const [reviewLessons, setReviewLessons] = useState<Lesson[] | null>(null) // null = closed
-  const [reviewIdx, setReviewIdx] = useState(0)
-  const [reviewResults, setReviewResults] = useState<{ lessonId: string; score: Score }[]>([])
-  const [reviewDone, setReviewDone] = useState(false)
+  // Review session : 2 étapes (picker J → notation)
+  const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
+  const [reviewStepIdx, setReviewStepIdx] = useState<number | null>(null) // null = picker, number = rating
   const [reviewLoading, setReviewLoading] = useState(false)
-  const [reviewTitle, setReviewTitle] = useState<string>('')
+  const [justRated, setJustRated] = useState<{ idx: number; score: Score } | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Load persisted semester + listen to changes from sidebar
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
@@ -189,18 +195,13 @@ export default function FichesPage() {
     })
   }, [])
 
-  // Matières du semestre courant
   const semSystems = useMemo(
     () => systems.filter(s => (s as any).semestre === semester),
     [systems, semester]
   )
 
-  // Sélection par défaut quand on change de semestre
   useEffect(() => {
-    if (semSystems.length === 0) {
-      setSelectedSystemId(null)
-      return
-    }
+    if (semSystems.length === 0) { setSelectedSystemId(null); return }
     if (!selectedSystemId || !semSystems.find(s => s.id === selectedSystemId)) {
       setSelectedSystemId(semSystems[0].id)
     }
@@ -239,48 +240,48 @@ export default function FichesPage() {
   }
 
   // ---- Review session ----
-  function lessonsToReview(sysId?: string): Lesson[] {
-    const pool = sysId
-      ? lessons.filter(l => l.system_id === sysId)
-      : lessons.filter(l => semSystems.find(s => s.id === l.system_id))
-    return pool.filter(l => getDueStepIndex(l, today) !== -1)
+  function openReview(lesson: Lesson) {
+    setReviewLesson(lesson)
+    setReviewStepIdx(null)
+    setJustRated(null)
   }
 
-  function openReview(list: Lesson[], title: string) {
-    if (list.length === 0) return
-    setReviewLessons(list)
-    setReviewTitle(title)
-    setReviewIdx(0)
-    setReviewResults([])
-    setReviewDone(false)
+  function closeReview() {
+    setReviewLesson(null)
+    setReviewStepIdx(null)
+    setJustRated(null)
+  }
+
+  function selectStep(idx: number) {
+    if (!reviewLesson) return
+    // On n'autorise que passé + aujourd'hui (pas de futur)
+    if (!reviewLesson.learn_date) return
+    const ds = stepDate(reviewLesson, idx)
+    if (ds > today) return
+    setReviewStepIdx(idx)
+    setJustRated(null)
   }
 
   async function rateLesson(score: Score) {
-    if (!reviewLessons) return
-    const lesson = reviewLessons[reviewIdx]
-    if (!lesson) return
-    const stepIdx = getDueStepIndex(lesson, today)
-    if (stepIdx === -1) return
-
+    if (!reviewLesson || reviewStepIdx === null) return
     setReviewLoading(true)
-    const newSteps = [...((lesson.steps as StepEntry[]) || [])]
+    const newSteps = [...((reviewLesson.steps as StepEntry[]) || [])]
     while (newSteps.length < J.length) newSteps.push(null)
-    newSteps[stepIdx] = { score, date: today }
+    newSteps[reviewStepIdx] = { score, date: today }
 
-    await supabase.from('lessons').update({ steps: newSteps }).eq('id', lesson.id)
+    await supabase.from('lessons').update({ steps: newSteps }).eq('id', reviewLesson.id)
 
-    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, steps: newSteps } as Lesson : l))
-    setReviewResults(prev => [...prev, { lessonId: lesson.id, score }])
+    const updated = { ...reviewLesson, steps: newSteps } as Lesson
+    setLessons(prev => prev.map(l => l.id === updated.id ? updated : l))
+    setReviewLesson(updated)
     setReviewLoading(false)
-
-    if (reviewIdx + 1 >= reviewLessons.length) setReviewDone(true)
-    else setReviewIdx(i => i + 1)
+    setJustRated({ idx: reviewStepIdx, score })
+    setReviewStepIdx(null) // retour au picker, état à jour
   }
 
   // ---- Dérivées ----
   const selectedSystem = semSystems.find(s => s.id === selectedSystemId) ?? null
 
-  // Matière ⇒ couleur
   const colorOfSystem = useMemo(() => {
     const map = new Map<string, string>()
     semSystems.forEach((s, idx) => {
@@ -290,7 +291,6 @@ export default function FichesPage() {
     return map
   }, [semSystems])
 
-  // Compteurs par matière (pour les onglets)
   const countsBySystem = useMemo(() => {
     const counts = new Map<string, { total: number; due: number }>()
     semSystems.forEach(s => {
@@ -301,11 +301,11 @@ export default function FichesPage() {
     return counts
   }, [semSystems, lessons, today])
 
-  // Fiches visibles dans la grille selon l'onglet et filtre
   const visibleLessons = useMemo(() => {
     let pool: Lesson[]
-    if (filter === 'due') {
-      pool = lessonsToReview() // toutes matières du semestre
+    if (showDueOnly) {
+      pool = lessons.filter(l => semSystems.find(s => s.id === l.system_id))
+      pool = pool.filter(l => getDueStepIndex(l, today) !== -1)
     } else {
       if (!selectedSystem) return []
       pool = lessons.filter(l => l.system_id === selectedSystem.id)
@@ -314,17 +314,17 @@ export default function FichesPage() {
       const q = search.toLowerCase()
       pool = pool.filter(l => l.name.toLowerCase().includes(q))
     }
-    if (filter !== 'all' && filter !== 'due') {
-      pool = pool.filter(l => {
-        const st = cardStatus(l)
-        return st.cls === filter
-      })
+    if (filterNote !== 'all') {
+      pool = pool.filter(l => cardStatus(l).cls === filterNote)
+    }
+    if (filterProgress !== 'all') {
+      pool = pool.filter(l => progressKind(l) === filterProgress)
     }
     return pool
-  }, [lessons, selectedSystem, filter, search, semSystems])
+  }, [lessons, selectedSystem, filterNote, filterProgress, showDueOnly, search, semSystems, today])
 
   const dueTodayCount = useMemo(
-    () => lessonsToReview().length,
+    () => lessons.filter(l => semSystems.find(s => s.id === l.system_id) && getDueStepIndex(l, today) !== -1).length,
     [lessons, semSystems, today]
   )
 
@@ -333,11 +333,8 @@ export default function FichesPage() {
     [lessons, semSystems]
   )
 
-  // Review session helpers
-  const currentReviewLesson = reviewLessons?.[reviewIdx] ?? null
-  const currentStepIdx = currentReviewLesson ? getDueStepIndex(currentReviewLesson, today) : -1
-  const reviewSystemName = currentReviewLesson
-    ? (systems.find(s => s.id === currentReviewLesson.system_id)?.name || '')
+  const reviewSystemName = reviewLesson
+    ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
 
   return (
@@ -373,18 +370,18 @@ export default function FichesPage() {
           </div>
         </div>
 
-        {/* Matière tabs — horizontal, dot colorée */}
+        {/* Matière tabs */}
         {semSystems.length > 0 && (
           <div className="mtabs">
             {semSystems.map(sys => {
               const c = colorOfSystem.get(sys.id) || SUBJ_COLORS[0]
               const counts = countsBySystem.get(sys.id) || { total: 0, due: 0 }
-              const active = filter !== 'due' && selectedSystemId === sys.id
+              const active = !showDueOnly && selectedSystemId === sys.id
               return (
                 <button
                   key={sys.id}
                   className={`mtab${active ? ' active' : ''}`}
-                  onClick={() => { setSelectedSystemId(sys.id); setFilter('all') }}
+                  onClick={() => { setSelectedSystemId(sys.id); setShowDueOnly(false) }}
                 >
                   <span className="mdot" style={{ background: c }} />
                   <span className="nm">{sys.name}</span>
@@ -396,8 +393,8 @@ export default function FichesPage() {
 
             {dueTodayCount > 0 && (
               <button
-                className={`mtab-review${filter === 'due' ? ' active' : ''}`}
-                onClick={() => setFilter('due')}
+                className={`mtab-review${showDueOnly ? ' active' : ''}`}
+                onClick={() => setShowDueOnly(v => !v)}
               >
                 À réviser
                 <span className="ct">{dueTodayCount}</span>
@@ -410,43 +407,65 @@ export default function FichesPage() {
         {semSystems.length === 0 && (
           <div className="fi-empty">
             <h2 className="fi-empty-title">Aucune matière pour le semestre {semester}</h2>
-            <p className="fi-empty-text">
-              Commence par ajouter une matière, puis crée tes fiches dedans.
-            </p>
+            <p className="fi-empty-text">Commence par ajouter une matière, puis crée tes fiches dedans.</p>
             <button className="fi-btn-g" onClick={() => { setNewSysSemestre(semester); setShowNewSystem(true) }}>
               + Créer une matière
             </button>
           </div>
         )}
 
-        {/* Filtres + stats */}
+        {/* Filtres dropdowns + stats */}
         {semSystems.length > 0 && (
           <div className="filter-row">
             <div className="filter-group">
-              <span className="filter-label">Dernière note</span>
-              <button className={`pill${filter === 'all' ? ' active' : ''}`} onClick={() => setFilter('all')}>Toutes</button>
-              <button className={`pill${filter === 's1' ? ' active' : ''}`} onClick={() => setFilter('s1')}>
-                <span className="dot" style={{ background: 'var(--s1)' }} />Rouge
-              </button>
-              <button className={`pill${filter === 's2' ? ' active' : ''}`} onClick={() => setFilter('s2')}>
-                <span className="dot" style={{ background: 'var(--s2)' }} />Orange
-              </button>
-              <button className={`pill${filter === 's3' ? ' active' : ''}`} onClick={() => setFilter('s3')}>
-                <span className="dot" style={{ background: 'var(--s3)' }} />Jaune
-              </button>
-              <button className={`pill${filter === 's4' ? ' active' : ''}`} onClick={() => setFilter('s4')}>
-                <span className="dot" style={{ background: 'var(--s4)' }} />Vert clair
-              </button>
-              <button className={`pill${filter === 's5' ? ' active' : ''}`} onClick={() => setFilter('s5')}>
-                <span className="dot" style={{ background: 'var(--s5)' }} />Vert foncé
-              </button>
-              <button className={`pill${filter === 'new' ? ' active' : ''}`} onClick={() => setFilter('new')}>
-                <span className="ring" />Non commencées
-              </button>
+              <label className="filter-block">
+                <span className="filter-label">Dernière note</span>
+                <div className="filter-select-wrap">
+                  <span className={`filter-select-dot ${filterNote === 'all' ? 'empty' : filterNote}`} />
+                  <select
+                    className="filter-select"
+                    value={filterNote}
+                    onChange={e => setFilterNote(e.target.value as FilterNote)}
+                  >
+                    <option value="all">Toutes</option>
+                    <option value="s1">Rouge — à revoir</option>
+                    <option value="s2">Orange — faible</option>
+                    <option value="s3">Jaune — moyen</option>
+                    <option value="s4">Vert clair — bien</option>
+                    <option value="s5">Vert foncé — maîtrisée</option>
+                  </select>
+                </div>
+              </label>
+
+              <label className="filter-block">
+                <span className="filter-label">Progression</span>
+                <div className="filter-select-wrap">
+                  <span className={`filter-select-glyph ${filterProgress}`} />
+                  <select
+                    className="filter-select"
+                    value={filterProgress}
+                    onChange={e => setFilterProgress(e.target.value as FilterProgress)}
+                  >
+                    <option value="all">Toutes</option>
+                    <option value="new">Non commencées</option>
+                    <option value="inprogress">En cours</option>
+                    <option value="done">Terminées</option>
+                  </select>
+                </div>
+              </label>
+
+              {(filterNote !== 'all' || filterProgress !== 'all') && (
+                <button
+                  className="filter-reset"
+                  onClick={() => { setFilterNote('all'); setFilterProgress('all') }}
+                >
+                  Réinitialiser
+                </button>
+              )}
             </div>
             <div className="filter-stats">
               <strong>{visibleLessons.length}</strong> fiche{visibleLessons.length > 1 ? 's' : ''}
-              {filter !== 'due' && dueTodayCount > 0 && (
+              {!showDueOnly && dueTodayCount > 0 && (
                 <> · <strong>{dueTodayCount}</strong> à réviser aujourd'hui</>
               )}
             </div>
@@ -454,14 +473,20 @@ export default function FichesPage() {
         )}
 
         {/* Grille de cartes */}
-        {semSystems.length > 0 && (
+        {semSystems.length > 0 && visibleLessons.length > 0 && (
           <div className="fi-grid">
             {visibleLessons.map(lesson => {
               const st = cardStatus(lesson)
               const nr = nextRevLabel(lesson, today)
-              const isDue = getDueStepIndex(lesson, today) !== -1
               return (
-                <div key={lesson.id} className={`card st-${st.cls}`}>
+                <div
+                  key={lesson.id}
+                  className={`card st-${st.cls} clickable`}
+                  onClick={() => openReview(lesson)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(lesson) }}
+                >
                   <div className="card-accent" />
                   <div className="card-body">
                     <div className="card-head">
@@ -471,7 +496,13 @@ export default function FichesPage() {
                     <div className="stamps">
                       {J.map((_, i) => {
                         const s = getStampState(lesson, i, today)
-                        if (s.kind === 'score') return <span key={i} className={`stamp s${s.score}`} title={`J+${J[i]} · note ${s.score}/5`} />
+                        if (s.kind === 'score') {
+                          return (
+                            <span key={i} className={`stamp s${s.score}`} title={`J+${J[i]} · note ${s.score}/5`}>
+                              {s.score === 5 && <span className="stamp-star" aria-hidden="true">★</span>}
+                            </span>
+                          )
+                        }
                         if (s.kind === 'today') return <span key={i} className="stamp today" title={`J+${J[i]} · aujourd'hui`} />
                         if (s.kind === 'missed') return <span key={i} className="stamp missed" title={`J+${J[i]} · manqué`} />
                         return <span key={i} className="stamp future" title={`J+${J[i]} · à venir`} />
@@ -479,17 +510,9 @@ export default function FichesPage() {
                     </div>
                     <div className="card-foot">
                       <span className="next-text" dangerouslySetInnerHTML={{ __html: nr.html }} />
-                      <button
-                        className={`cta ${nr.urgent ? 'urgent' : nr.start ? 'start' : 'calm'}`}
-                        disabled={!isDue && !nr.start}
-                        onClick={() => {
-                          if (isDue) openReview([lesson], lesson.name)
-                          // "Démarrer" (nr.start) pourra ouvrir un futur formulaire d'édition
-                        }}
-                        style={!isDue && !nr.start ? { opacity: .55, cursor: 'default' } : undefined}
-                      >
+                      <span className={`cta ${nr.urgent ? 'urgent' : nr.start ? 'start' : 'calm'}`}>
                         {nr.urgent ? 'Réviser' : nr.start ? 'Démarrer' : 'Voir'}
-                      </button>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -502,13 +525,15 @@ export default function FichesPage() {
         {semSystems.length > 0 && visibleLessons.length === 0 && (
           <div className="fi-empty">
             <p className="fi-empty-text">
-              {filter === 'due'
+              {showDueOnly
                 ? "Aucune fiche à réviser aujourd'hui dans ce semestre — bravo !"
                 : search
                   ? "Aucune fiche ne correspond à ta recherche."
-                  : "Aucune fiche pour ce filtre."}
+                  : (filterNote !== 'all' || filterProgress !== 'all')
+                    ? "Aucune fiche pour ces filtres."
+                    : "Aucune fiche dans cette matière."}
             </p>
-            {filter !== 'due' && !search && selectedSystem && (
+            {!showDueOnly && !search && filterNote === 'all' && filterProgress === 'all' && selectedSystem && (
               <button className="fi-btn-g" onClick={() => {
                 setNewLesSysId(selectedSystem.id); setNewLesDate(today); setShowNewLesson(true)
               }}>
@@ -520,63 +545,87 @@ export default function FichesPage() {
       </div>
 
       {/* ---- REVIEW SESSION OVERLAY ---- */}
-      {reviewLessons && (
-        <div className="fi-overlay" onClick={() => setReviewLessons(null)}>
+      {reviewLesson && (
+        <div className="fi-overlay" onClick={closeReview}>
           <div className="rev-card" onClick={e => e.stopPropagation()}>
 
             <div className="rev-header">
               <div>
-                <div className="rev-kicker">Session de révision</div>
-                <div className="rev-title">{reviewTitle}</div>
+                <div className="rev-kicker">
+                  {reviewStepIdx === null ? 'Choisis un J à noter' : 'Session de révision'}
+                </div>
+                <div className="rev-title">{reviewLesson.name}</div>
+                <div className="rev-meta">
+                  {reviewSystemName}
+                  {reviewLesson.learn_date && <> · appris le {frenchDate(reviewLesson.learn_date)}</>}
+                </div>
               </div>
-              <button className="rev-close" onClick={() => setReviewLessons(null)}>×</button>
+              <button className="rev-close" onClick={closeReview} aria-label="Fermer">×</button>
             </div>
 
-            {reviewLessons.length === 0 && (
-              <div className="rev-empty">
-                <p className="rev-empty-title">Tout est à jour !</p>
-                <p className="rev-empty-text">Aucune fiche à réviser ici aujourd'hui.</p>
-                <button className="fi-btn-g" onClick={() => setReviewLessons(null)}>Fermer</button>
-              </div>
-            )}
+            {/* ---- ÉTAPE 1 : Picker J ---- */}
+            {reviewStepIdx === null && (
+              <>
+                {justRated && (
+                  <div className="rev-toast">
+                    <span className={`rev-toast-dot s${justRated.score}`} />
+                    Note {justRated.score}/5 enregistrée pour J+{J[justRated.idx]}
+                  </div>
+                )}
 
-            {reviewLessons.length > 0 && reviewDone && (
-              <div className="rev-results">
-                <p className="rev-done-title">Session terminée !</p>
-                <div className="rev-done-grid">
-                  {[1, 2, 3, 4, 5].map(n => {
-                    const c = reviewResults.filter(r => r.score === n).length
+                <div className="jpicker">
+                  {J.map((jVal, i) => {
+                    const s = getStampState(reviewLesson, i, today)
+                    const ds = reviewLesson.learn_date ? stepDate(reviewLesson, i) : ''
+                    const isFuture = s.kind === 'future' && ds && ds > today
+                    const isLocked = isFuture || !reviewLesson.learn_date
+                    let statusText = ''
+                    if (s.kind === 'score') statusText = `Fait · ${s.score}/5`
+                    else if (s.kind === 'today') statusText = "Aujourd'hui"
+                    else if (s.kind === 'missed') statusText = 'Manqué'
+                    else if (ds) {
+                      const diff = Math.round((new Date(ds).getTime() - new Date(today).getTime()) / 86400000)
+                      statusText = diff === 1 ? 'Demain' : `Dans ${diff} j`
+                    } else {
+                      statusText = 'À planifier'
+                    }
+
                     return (
-                      <div key={n} className="rev-done-cell">
-                        <span className={`rev-done-dot s${n}`} />
-                        <span className="rev-done-num">{c}</span>
-                      </div>
+                      <button
+                        key={i}
+                        className={`jpicker-step${isLocked ? ' locked' : ''}`}
+                        disabled={isLocked}
+                        onClick={() => selectStep(i)}
+                        title={isLocked ? 'Révision future — verrouillée' : `Noter J+${jVal}`}
+                      >
+                        <span className="jlbl">J+{jVal}</span>
+                        <span className={`jbig stamp ${
+                          s.kind === 'score' ? `s${s.score}` :
+                          s.kind === 'today' ? 'today' :
+                          s.kind === 'missed' ? 'missed' : 'future'
+                        }`}>
+                          {s.kind === 'score' && s.score === 5 && <span className="stamp-star" aria-hidden="true">★</span>}
+                        </span>
+                        <span className="jstatus">{statusText}</span>
+                      </button>
                     )
                   })}
                 </div>
-                <button className="fi-btn-g" style={{ width: '100%' }} onClick={() => setReviewLessons(null)}>Fermer</button>
-              </div>
+
+                <div className="rev-hint">
+                  Clique sur un J pour le noter. Les J futurs sont verrouillés — ils se débloqueront à la bonne date.
+                </div>
+              </>
             )}
 
-            {reviewLessons.length > 0 && !reviewDone && currentReviewLesson && (
+            {/* ---- ÉTAPE 2 : Notation ---- */}
+            {reviewStepIdx !== null && (
               <>
-                <div className="rev-progress">
-                  <div
-                    className="rev-progress-bar"
-                    style={{ width: `${(reviewIdx / reviewLessons.length) * 100}%` }}
-                  />
-                </div>
-                <div className="rev-step">
-                  {reviewIdx + 1} / {reviewLessons.length} · J+{J[currentStepIdx]}
-                </div>
-
                 <div className="rev-lesson">
-                  <div className="rev-lesson-kicker">Révision J+{J[currentStepIdx]}</div>
-                  <div className="rev-lesson-name">{currentReviewLesson.name}</div>
+                  <div className="rev-lesson-kicker">Révision J+{J[reviewStepIdx]}</div>
+                  <div className="rev-lesson-name">{reviewLesson.name}</div>
                   <div className="rev-lesson-meta">
-                    {reviewSystemName} · appris le {currentReviewLesson.learn_date
-                      ? new Date(currentReviewLesson.learn_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-                      : '—'}
+                    {reviewSystemName} · prévue le {reviewLesson.learn_date ? frenchDate(stepDate(reviewLesson, reviewStepIdx)) : '—'}
                   </div>
                 </div>
 
@@ -596,6 +645,10 @@ export default function FichesPage() {
                     </button>
                   ))}
                 </div>
+
+                <button className="rev-back" onClick={() => setReviewStepIdx(null)}>
+                  ← Retour aux J
+                </button>
               </>
             )}
           </div>
