@@ -155,12 +155,12 @@
 }
 
 .cal-day-head {
-  padding: 11px 12px 9px;
+  padding: 14px 14px 11px;
   border-bottom: 1px dashed var(--cal-border);
   flex-shrink: 0;
 }
 .cal-day-name {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .12em;
@@ -171,11 +171,11 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .cal-day-num {
   font-family: 'Fraunces', serif;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 500;
   letter-spacing: -.02em;
   color: var(--cal-dark);
@@ -184,11 +184,11 @@
 .cal-day.cal-today .cal-day-num { color: var(--cal-green); }
 .cal-day.cal-past .cal-day-num { color: var(--cal-gray); font-weight: 400; }
 .cal-day-count {
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--cal-gray);
-  font-weight: 600;
+  font-weight: 700;
   background: var(--cal-soft);
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
   border: 1px solid var(--cal-border);
   font-variant-numeric: tabular-nums;
@@ -205,10 +205,10 @@
 }
 
 .cal-day-list {
-  padding: 8px 8px 10px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   flex: 1;
   overflow: hidden;
   min-height: 0;
@@ -217,23 +217,30 @@
   display: grid;
   grid-template-columns: 10px 1fr auto;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
   cursor: pointer;
   background: none;
   border: none;
   text-align: left;
   font-family: inherit;
-  transition: background .12s;
+  transition: background .12s, transform .08s;
   min-width: 0;
+  /* Les rows s'étirent pour remplir la hauteur dispo, avec un cap raisonnable */
+  flex: 1 1 0;
+  min-height: 44px;
+  max-height: 72px;
 }
 .cal-fiche:hover {
   background: var(--cal-soft);
 }
+.cal-fiche:active {
+  transform: translateY(1px);
+}
 .cal-day.cal-today .cal-fiche:hover { background: #E5F0EA; }
 .cal-fiche-dot {
-  width: 7px; height: 7px;
+  width: 8px; height: 8px;
   border-radius: 50%;
   background: var(--cal-neutral);
   flex-shrink: 0;
@@ -246,32 +253,32 @@
 .cal-fiche-dot.cal-scored {
   border: 2px solid white;
   box-shadow: 0 0 0 1px var(--cal-border);
-  width: 9px; height: 9px;
+  width: 10px; height: 10px;
 }
 .cal-fiche-name {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--cal-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: 'Fraunces', serif;
-  line-height: 1.2;
+  line-height: 1.25;
   min-width: 0;
 }
 .cal-day.cal-past .cal-fiche-name { color: var(--cal-gray); }
 .cal-fiche-j {
-  font-size: 9.5px;
+  font-size: 10px;
   color: var(--cal-gray);
-  font-weight: 600;
-  letter-spacing: .03em;
+  font-weight: 700;
+  letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
-  padding: 1px 6px;
+  padding: 3px 9px;
   background: var(--cal-soft);
-  border-radius: 10px;
+  border-radius: 20px;
   flex-shrink: 0;
 }
-.cal-day.cal-today .cal-fiche-j { background: #E5F0EA; }
+.cal-day.cal-today .cal-fiche-j { background: #E5F0EA; color: var(--cal-gm); }
 .cal-day.cal-past .cal-fiche-j { background: #EFECE4; }
 .cal-fiche.cal-done {
   opacity: .55;
@@ -281,19 +288,20 @@
 }
 
 .cal-day-more {
-  margin: 4px 8px 8px;
-  padding: 6px 8px;
-  font-size: 10.5px;
+  margin: 5px 10px 10px;
+  padding: 8px 10px;
+  font-size: 11px;
   color: var(--cal-gm);
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   background: var(--cal-soft);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   letter-spacing: .02em;
   border: none;
   font-family: inherit;
   transition: background .12s;
+  flex-shrink: 0;
 }
 .cal-day-more:hover { background: var(--cal-gl); }
 .cal-day.cal-today .cal-day-more { background: #E5F0EA; }
