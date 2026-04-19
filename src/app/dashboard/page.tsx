@@ -542,8 +542,8 @@ export default function DashboardPage() {
         <div className="dash-row">
 
           {/* ZONE 2 : POINT FAIBLE */}
-          <div className="card">
-            <div className="card-title with-action">
+          <div className="dash-card">
+            <div className="dash-card-title with-action">
               Point faible
               {matiereStats.length > 0 && (
                 <button className="see-more" onClick={() => setShowWeakModal(true)}>
@@ -615,8 +615,8 @@ export default function DashboardPage() {
           </div>
 
           {/* ZONE 3 : RÉGULARITÉ */}
-          <div className="card">
-            <div className="card-title">Régularité</div>
+          <div className="dash-card">
+            <div className="dash-card-title">Régularité</div>
 
             <div className="reg-num-wrap">
               <div className="reg-num">{streak}</div>
@@ -657,8 +657,8 @@ export default function DashboardPage() {
           </div>
 
           {/* ZONE 4 : CHARGE À VENIR */}
-          <div className="card">
-            <div className="card-title">Charge à venir</div>
+          <div className="dash-card">
+            <div className="dash-card-title">Charge à venir</div>
 
             <div className="load-rows">
               {upcomingLoad.map((w, i) => {
