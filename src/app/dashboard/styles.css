@@ -30,7 +30,10 @@
 
 /* =========== PAGE WRAPPER (no scroll) =========== */
 .dash-page {
-  height: 100vh;
+  height: 100vh;           /* fallback */
+  height: 100dvh;          /* dynamic viewport height, insensible aux changements */
+  max-height: 100vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -42,6 +45,8 @@
   color: var(--dark);
   font-size: 13px;
   line-height: 1.5;
+  /* Isole les recalculs de layout pour éviter les débordements transitoires */
+  contain: layout style;
 }
 
 /* =========== TOP BAR =========== */
