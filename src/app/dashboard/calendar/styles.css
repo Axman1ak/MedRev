@@ -205,10 +205,10 @@
 }
 
 .cal-day-list {
-  padding: 10px;
+  padding: 10px 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
   flex: 1;
   overflow: hidden;
   min-height: 0;
@@ -218,7 +218,7 @@
   grid-template-columns: 10px 1fr auto;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 7px 12px;
   border-radius: 8px;
   cursor: pointer;
   background: none;
@@ -227,10 +227,7 @@
   font-family: inherit;
   transition: background .12s, transform .08s;
   min-width: 0;
-  /* Les rows s'étirent pour remplir la hauteur dispo, avec un cap raisonnable */
-  flex: 1 1 0;
-  min-height: 44px;
-  max-height: 72px;
+  flex-shrink: 0;
 }
 .cal-fiche:hover {
   background: var(--cal-soft);
