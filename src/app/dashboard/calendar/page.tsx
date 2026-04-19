@@ -357,7 +357,7 @@ export default function CalendarPage() {
               if (arr) arr.push(o)
               else groupsMap.set(o.lesson.system_id, [o])
             })
-            const visibleGroups: { systemId: string; systemName: string; occs: FicheOccurrence[] }[] = []
+            const visibleGroups: { systemId: string; systemName: string; systemColor: string; occs: FicheOccurrence[] }[] = []
             let visibleCount = 0
             groupsMap.forEach((groupOccs, sysId) => {
               if (visibleCount >= MAX_PER_DAY) return
@@ -365,9 +365,11 @@ export default function CalendarPage() {
               const take = groupOccs.slice(0, remaining)
               visibleCount += take.length
               const sys = systemsById.get(sysId)
+              const sysColor = (sys as { color?: string } | undefined)?.color ?? ''
               visibleGroups.push({
                 systemId: sysId,
                 systemName: sys?.name ?? 'Matière',
+                systemColor: sysColor,
                 occs: take,
               })
             })
@@ -399,8 +401,15 @@ export default function CalendarPage() {
                   <>
                     <div className="cal-day-list">
                       {visibleGroups.map(g => (
-                        <div key={g.systemId} className="cal-group">
+                        <div
+                          key={g.systemId}
+                          className="cal-group"
+                          style={g.systemColor ? { borderLeftColor: g.systemColor } : undefined}
+                        >
                           <div className="cal-group-head" title={g.systemName}>
+                            {g.systemColor && (
+                              <span className="cal-group-dot" style={{ background: g.systemColor }} />
+                            )}
                             {g.systemName}
                           </div>
                           {g.occs.map(occ => {
@@ -543,18 +552,29 @@ export default function CalendarPage() {
                     if (arr) arr.push(o)
                     else groupsMap.set(o.lesson.system_id, [o])
                   })
-                  const groups: { systemId: string; systemName: string; occs: FicheOccurrence[] }[] = []
+                  const groups: { systemId: string; systemName: string; systemColor: string; occs: FicheOccurrence[] }[] = []
                   groupsMap.forEach((groupOccs, sysId) => {
                     const sys = systemsById.get(sysId)
+                    const sysColor = (sys as { color?: string } | undefined)?.color ?? ''
                     groups.push({
                       systemId: sysId,
                       systemName: sys?.name ?? 'Matière',
+                      systemColor: sysColor,
                       occs: groupOccs,
                     })
                   })
                   return groups.map(g => (
-                    <div key={g.systemId} className="cal-group">
-                      <div className="cal-group-head">{g.systemName}</div>
+                    <div
+                      key={g.systemId}
+                      className="cal-group"
+                      style={g.systemColor ? { borderLeftColor: g.systemColor } : undefined}
+                    >
+                      <div className="cal-group-head">
+                        {g.systemColor && (
+                          <span className="cal-group-dot" style={{ background: g.systemColor }} />
+                        )}
+                        {g.systemName}
+                      </div>
                       {g.occs.map(occ => {
                         const done = occ.scoreForThisJ !== null
                         const displayScore = done ? occ.scoreForThisJ : occ.lastScore
