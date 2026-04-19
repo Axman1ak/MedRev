@@ -889,6 +889,116 @@
   letter-spacing: .04em;
 }
 
+/* ============ MENU CONTEXTUEL (â‹¯) ============ */
+.fi-menu-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: .5;
+  transition: opacity .15s, background .15s, color .15s;
+}
+/* Version spÃ©cifique dans la carte (top-right) */
+.fi-menu-btn-card {
+  top: 10px;
+  right: 10px;
+  transform: none;
+}
+.fi-menu-btn:hover,
+.mtab:hover .fi-menu-btn,
+.card:hover .fi-menu-btn {
+  opacity: 1;
+  background: rgba(17, 19, 16, .08);
+  color: var(--dark);
+}
+/* Sur le tab, laisse de la place au bouton â‹¯ Ã  droite pour qu'il ne
+   chevauche pas le badge count */
+.mtab { padding-right: 32px; }
+.card .card-head { padding-right: 34px; }
+
+/* Tab actif (fond vert) : couleur claire pour le â‹¯ */
+.mtab.active .fi-menu-btn {
+  color: rgba(255, 255, 255, .7);
+}
+.mtab.active .fi-menu-btn:hover {
+  background: rgba(255, 255, 255, .15);
+  color: white;
+}
+
+.fi-menu {
+  position: absolute;
+  top: 100%;
+  right: 4px;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  padding: 4px;
+  min-width: 140px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: fi-menu-in .12s ease-out;
+}
+@keyframes fi-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fi-menu-item {
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--dark);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .12s;
+  white-space: nowrap;
+}
+.fi-menu-item:hover {
+  background: var(--soft);
+}
+.fi-menu-item-danger {
+  color: var(--s1);
+}
+.fi-menu-item-danger:hover {
+  background: var(--s1-soft);
+}
+
+/* Bouton danger (confirmation de suppression) */
+.fi-btn-danger {
+  background: var(--s1);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter .12s;
+}
+.fi-btn-danger:hover { filter: brightness(.92); }
+.fi-btn-danger:disabled { opacity: .5; cursor: wait; }
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 720px) {
   .fi-main { padding: 18px 16px; }
