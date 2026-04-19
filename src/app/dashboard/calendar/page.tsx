@@ -350,7 +350,7 @@ export default function CalendarPage() {
             const isPast = dateStr < today
             // Groupement par matière, dans l'ordre d'apparition (tri parent conservé).
             // Plafond total de 8 fiches visibles sur le jour, réparties sur les groupes.
-            const MAX_PER_DAY = 8
+            const MAX_PER_DAY = 9
             const groupsMap = new Map<string, FicheOccurrence[]>()
             occs.forEach(o => {
               const arr = groupsMap.get(o.lesson.system_id)
