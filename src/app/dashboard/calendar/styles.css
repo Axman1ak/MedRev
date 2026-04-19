@@ -218,11 +218,10 @@
   min-height: 0;
 }
 .cal-fiche {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px 10px;
   border-radius: 8px;
   cursor: pointer;
   background: none;
@@ -240,6 +239,45 @@
   transform: translateY(1px);
 }
 .cal-day.cal-today .cal-fiche:hover { background: #E5F0EA; }
+
+/* Ligne 1 : matière en kicker */
+.cal-fiche-matiere {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--cal-gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.cal-day.cal-today .cal-fiche-matiere { color: var(--cal-gm); }
+
+/* Ligne 2 : nom de la fiche (jusqu'à 2 lignes) */
+.cal-fiche-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--cal-dark);
+  font-family: 'Fraunces', serif;
+  line-height: 1.25;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.cal-day.cal-past .cal-fiche-name { color: var(--cal-gray); }
+
+/* Ligne 3 : dot + badge J+X */
+.cal-fiche-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
 .cal-fiche-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -256,29 +294,13 @@
   box-shadow: 0 0 0 1px var(--cal-border);
   width: 10px; height: 10px;
 }
-.cal-fiche-name {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--cal-dark);
-  font-family: 'Fraunces', serif;
-  line-height: 1.25;
-  min-width: 0;
-  /* Jusqu'à 2 lignes, ellipsis au bout de la 2e */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.cal-day.cal-past .cal-fiche-name { color: var(--cal-gray); }
 .cal-fiche-j {
   font-size: 10px;
   color: var(--cal-gray);
   font-weight: 700;
   letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
-  padding: 3px 9px;
+  padding: 2px 8px;
   background: var(--cal-soft);
   border-radius: 20px;
   flex-shrink: 0;
