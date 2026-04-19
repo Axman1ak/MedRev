@@ -348,7 +348,7 @@ export default function CalendarPage() {
             const occs = byDate.get(dateStr) ?? []
             const isToday = dateStr === today
             const isPast = dateStr < today
-            const visible = occs.slice(0, 5)
+            const visible = occs.slice(0, 8)
             const overflow = occs.length - visible.length
 
             const classes = [
