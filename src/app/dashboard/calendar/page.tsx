@@ -348,8 +348,30 @@ export default function CalendarPage() {
             const occs = byDate.get(dateStr) ?? []
             const isToday = dateStr === today
             const isPast = dateStr < today
-            const visible = occs.slice(0, 8)
-            const overflow = occs.length - visible.length
+            // Groupement par matière, dans l'ordre d'apparition (tri parent conservé).
+            // Plafond total de 8 fiches visibles sur le jour, réparties sur les groupes.
+            const MAX_PER_DAY = 8
+            const groupsMap = new Map<string, FicheOccurrence[]>()
+            occs.forEach(o => {
+              const arr = groupsMap.get(o.lesson.system_id)
+              if (arr) arr.push(o)
+              else groupsMap.set(o.lesson.system_id, [o])
+            })
+            const visibleGroups: { systemId: string; systemName: string; occs: FicheOccurrence[] }[] = []
+            let visibleCount = 0
+            groupsMap.forEach((groupOccs, sysId) => {
+              if (visibleCount >= MAX_PER_DAY) return
+              const remaining = MAX_PER_DAY - visibleCount
+              const take = groupOccs.slice(0, remaining)
+              visibleCount += take.length
+              const sys = systemsById.get(sysId)
+              visibleGroups.push({
+                systemId: sysId,
+                systemName: sys?.name ?? 'Matière',
+                occs: take,
+              })
+            })
+            const overflow = occs.length - visibleCount
 
             const classes = [
               'cal-day',
@@ -376,29 +398,32 @@ export default function CalendarPage() {
                 ) : (
                   <>
                     <div className="cal-day-list">
-                      {visible.map(occ => {
-                        const done = occ.scoreForThisJ !== null
-                        // Point = score de cette révision si notée, sinon dernière note de la fiche
-                        const displayScore = done ? occ.scoreForThisJ : occ.lastScore
-                        const cls = scoreClass(displayScore)
-                        const sys = systemsById.get(occ.lesson.system_id)
-                        const sysName = sys?.name ?? 'Matière'
-                        return (
-                          <button
-                            key={`${occ.lesson.id}-${occ.stepIndex}`}
-                            className={`cal-fiche${done ? ' cal-done' : ''}`}
-                            onClick={() => openReview(occ)}
-                            title={`${sysName} · ${occ.lesson.name} · J+${J[occ.stepIndex]}`}
-                          >
-                            <span className="cal-fiche-matiere">{sysName}</span>
-                            <span className="cal-fiche-name">{occ.lesson.name}</span>
-                            <span className="cal-fiche-foot">
-                              <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                              <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
-                            </span>
-                          </button>
-                        )
-                      })}
+                      {visibleGroups.map(g => (
+                        <div key={g.systemId} className="cal-group">
+                          <div className="cal-group-head" title={g.systemName}>
+                            {g.systemName}
+                          </div>
+                          {g.occs.map(occ => {
+                            const done = occ.scoreForThisJ !== null
+                            const displayScore = done ? occ.scoreForThisJ : occ.lastScore
+                            const cls = scoreClass(displayScore)
+                            return (
+                              <button
+                                key={`${occ.lesson.id}-${occ.stepIndex}`}
+                                className={`cal-fiche${done ? ' cal-done' : ''}`}
+                                onClick={() => openReview(occ)}
+                                title={`${g.systemName} · ${occ.lesson.name} · J+${J[occ.stepIndex]}`}
+                              >
+                                <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                                <span className="cal-fiche-body">
+                                  <span className="cal-fiche-name">{occ.lesson.name}</span>
+                                  <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ))}
                     </div>
                     {overflow > 0 && (
                       <button
@@ -511,27 +536,46 @@ export default function CalendarPage() {
                 >{'\u00D7'}</button>
               </div>
               <div className="cal-overflow-list">
-                {occs.map(occ => {
-                  const done = occ.scoreForThisJ !== null
-                  const displayScore = done ? occ.scoreForThisJ : occ.lastScore
-                  const cls = scoreClass(displayScore)
-                  const sys = systemsById.get(occ.lesson.system_id)
-                  const sysName = sys?.name ?? 'Matière'
-                  return (
-                    <button
-                      key={`${occ.lesson.id}-${occ.stepIndex}`}
-                      className={`cal-fiche${done ? ' cal-done' : ''}`}
-                      onClick={() => openReview(occ)}
-                    >
-                      <span className="cal-fiche-matiere">{sysName}</span>
-                      <span className="cal-fiche-name">{occ.lesson.name}</span>
-                      <span className="cal-fiche-foot">
-                        <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                        <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
-                      </span>
-                    </button>
-                  )
-                })}
+                {(() => {
+                  const groupsMap = new Map<string, FicheOccurrence[]>()
+                  occs.forEach(o => {
+                    const arr = groupsMap.get(o.lesson.system_id)
+                    if (arr) arr.push(o)
+                    else groupsMap.set(o.lesson.system_id, [o])
+                  })
+                  const groups: { systemId: string; systemName: string; occs: FicheOccurrence[] }[] = []
+                  groupsMap.forEach((groupOccs, sysId) => {
+                    const sys = systemsById.get(sysId)
+                    groups.push({
+                      systemId: sysId,
+                      systemName: sys?.name ?? 'Matière',
+                      occs: groupOccs,
+                    })
+                  })
+                  return groups.map(g => (
+                    <div key={g.systemId} className="cal-group">
+                      <div className="cal-group-head">{g.systemName}</div>
+                      {g.occs.map(occ => {
+                        const done = occ.scoreForThisJ !== null
+                        const displayScore = done ? occ.scoreForThisJ : occ.lastScore
+                        const cls = scoreClass(displayScore)
+                        return (
+                          <button
+                            key={`${occ.lesson.id}-${occ.stepIndex}`}
+                            className={`cal-fiche${done ? ' cal-done' : ''}`}
+                            onClick={() => openReview(occ)}
+                          >
+                            <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                            <span className="cal-fiche-body">
+                              <span className="cal-fiche-name">{occ.lesson.name}</span>
+                              <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ))
+                })()}
               </div>
             </div>
           </div>
