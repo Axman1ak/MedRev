@@ -955,6 +955,14 @@
   gap: 1px;
   animation: fi-menu-in .12s ease-out;
 }
+
+/* Cas spÃ©cial : menu dans une fiche card (qui a overflow:hidden pour son accent).
+   On repositionne le menu Ã  l'intÃ©rieur, juste sous le bouton â‹¯. */
+.fi-menu-btn-card + .fi-menu {
+  top: 38px;
+  right: 10px;
+  margin-top: 0;
+}
 @keyframes fi-menu-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
