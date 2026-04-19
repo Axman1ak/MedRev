@@ -132,8 +132,12 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 10px;
-  flex: 1;
+  /* La grille prend la hauteur du jour le plus rempli, pas tout le viewport.
+     Les 7 cellules d'une même row grid s'alignent automatiquement sur la plus haute.
+     Si le contenu déborderait de l'écran, on cappe à 100% et on tronque. */
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: 100%;
   overflow: hidden;
 }
 .cal-day {
