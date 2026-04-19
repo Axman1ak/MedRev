@@ -164,6 +164,16 @@ export default function FichesPage() {
   const [reviewLoading, setReviewLoading] = useState(false)
   const [justRated, setJustRated] = useState<{ idx: number; score: Score } | null>(null)
 
+  // Menu contextuel (⋯) + éditer / supprimer
+  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string } | null
+  type DeleteTarget = { type: 'system' | 'lesson'; id: string; name: string; childCount?: number } | null
+  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
+  const [editing, setEditing] = useState<EditTarget>(null)
+  const [editName, setEditName] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [deleting, setDeleting] = useState<DeleteTarget>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
   const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
@@ -206,6 +216,19 @@ export default function FichesPage() {
       setSelectedSystemId(semSystems[0].id)
     }
   }, [semSystems, selectedSystemId])
+
+  // Ferme le menu contextuel (⋯) quand on clique ailleurs
+  useEffect(() => {
+    if (!menuOpenFor) return
+    function onClick(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (!target.closest('.fi-menu') && !target.closest('.fi-menu-btn')) {
+        setMenuOpenFor(null)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [menuOpenFor])
 
   // ---- Create functions ----
   async function createSystem() {
@@ -277,6 +300,57 @@ export default function FichesPage() {
     setReviewLoading(false)
     setJustRated({ idx: reviewStepIdx, score })
     setReviewStepIdx(null) // retour au picker, état à jour
+  }
+
+  // ---- Menu ⋯ : éditer / supprimer matière ou fiche ----
+  function openEdit(type: 'system' | 'lesson', id: string, name: string) {
+    setEditing({ type, id, name })
+    setEditName(name)
+    setMenuOpenFor(null)
+  }
+  function openDelete(type: 'system' | 'lesson', id: string, name: string) {
+    let childCount: number | undefined
+    if (type === 'system') {
+      childCount = lessons.filter(l => l.system_id === id).length
+    }
+    setDeleting({ type, id, name, childCount })
+    setMenuOpenFor(null)
+  }
+  async function saveEdit() {
+    if (!editing) return
+    const trimmed = editName.trim()
+    if (!trimmed) return
+    setEditLoading(true)
+    const table = editing.type === 'system' ? 'systems' : 'lessons'
+    await supabase.from(table).update({ name: trimmed }).eq('id', editing.id)
+    if (editing.type === 'system') {
+      setSystems(prev => prev.map(s => s.id === editing.id ? ({ ...s, name: trimmed } as System) : s))
+    } else {
+      setLessons(prev => prev.map(l => l.id === editing.id ? ({ ...l, name: trimmed } as Lesson) : l))
+    }
+    setEditLoading(false)
+    setEditing(null)
+  }
+  async function confirmDelete() {
+    if (!deleting) return
+    setDeleteLoading(true)
+    if (deleting.type === 'system') {
+      const sysLessons = lessons.filter(l => l.system_id === deleting.id)
+      const lessonIds = sysLessons.map(l => l.id)
+      if (lessonIds.length > 0) {
+        await supabase.from('voyage_checks').delete().in('lesson_id', lessonIds)
+        await supabase.from('lessons').delete().eq('system_id', deleting.id)
+      }
+      await supabase.from('systems').delete().eq('id', deleting.id)
+      setLessons(prev => prev.filter(l => l.system_id !== deleting.id))
+      setSystems(prev => prev.filter(s => s.id !== deleting.id))
+    } else {
+      await supabase.from('voyage_checks').delete().eq('lesson_id', deleting.id)
+      await supabase.from('lessons').delete().eq('id', deleting.id)
+      setLessons(prev => prev.filter(l => l.id !== deleting.id))
+    }
+    setDeleteLoading(false)
+    setDeleting(null)
   }
 
   // ---- Dérivées ----
@@ -377,17 +451,41 @@ export default function FichesPage() {
               const c = colorOfSystem.get(sys.id) || SUBJ_COLORS[0]
               const counts = countsBySystem.get(sys.id) || { total: 0, due: 0 }
               const active = !showDueOnly && selectedSystemId === sys.id
+              const menuKey = `sys-${sys.id}`
               return (
-                <button
+                <div
                   key={sys.id}
                   className={`mtab${active ? ' active' : ''}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => { setSelectedSystemId(sys.id); setShowDueOnly(false) }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelectedSystemId(sys.id); setShowDueOnly(false) } }}
+                  style={{ position: 'relative' }}
                 >
                   <span className="mdot" style={{ background: c }} />
                   <span className="nm">{sys.name}</span>
                   <span className="ct">{counts.total}</span>
                   {counts.due > 0 && <span className="urg" />}
-                </button>
+                  <button
+                    type="button"
+                    className="fi-menu-btn"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setMenuOpenFor(menuOpenFor === menuKey ? null : menuKey)
+                    }}
+                    aria-label="Options de la matière"
+                  >{'\u22EF'}</button>
+                  {menuOpenFor === menuKey && (
+                    <div className="fi-menu" onClick={e => e.stopPropagation()}>
+                      <button type="button" className="fi-menu-item" onClick={() => openEdit('system', sys.id, sys.name)}>
+                        Renommer
+                      </button>
+                      <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('system', sys.id, sys.name)}>
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
               )
             })}
 
@@ -486,6 +584,7 @@ export default function FichesPage() {
                   role="button"
                   tabIndex={0}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(lesson) }}
+                  style={{ position: 'relative' }}
                 >
                   <div className="card-accent" />
                   <div className="card-body">
@@ -493,6 +592,25 @@ export default function FichesPage() {
                       <div className="card-name">{lesson.name}</div>
                       <span className={`card-status ${st.cls}`}>{st.label}</span>
                     </div>
+                    <button
+                      type="button"
+                      className="fi-menu-btn fi-menu-btn-card"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setMenuOpenFor(menuOpenFor === `les-${lesson.id}` ? null : `les-${lesson.id}`)
+                      }}
+                      aria-label="Options de la fiche"
+                    >{'\u22EF'}</button>
+                    {menuOpenFor === `les-${lesson.id}` && (
+                      <div className="fi-menu" onClick={e => e.stopPropagation()}>
+                        <button type="button" className="fi-menu-item" onClick={() => openEdit('lesson', lesson.id, lesson.name)}>
+                          Renommer
+                        </button>
+                        <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('lesson', lesson.id, lesson.name)}>
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
                     <div className="stamps">
                       {J.map((_, i) => {
                         const s = getStampState(lesson, i, today)
@@ -736,6 +854,72 @@ export default function FichesPage() {
               <button className="fi-btn-g" onClick={createLesson} disabled={!newLesName.trim() || !newLesSysId || lesLoading}
                 style={{ opacity: (!newLesName.trim() || !newLesSysId) ? .5 : 1 }}>
                 {lesLoading ? 'Création…' : 'Créer la fiche'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- MODAL : Renommer ---- */}
+      {editing && (
+        <div className="fi-overlay" onClick={() => setEditing(null)}>
+          <div className="fi-modal" onClick={e => e.stopPropagation()}>
+            <div className="fi-modal-title">
+              Renommer {editing.type === 'system' ? 'la matière' : 'la fiche'}
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <label className="fi-label">Nouveau nom</label>
+              <input
+                className="fi-input"
+                type="text"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter' && editName.trim()) saveEdit() }}
+              />
+            </div>
+            <div className="fi-modal-actions">
+              <button className="fi-btn-o" onClick={() => setEditing(null)}>Annuler</button>
+              <button
+                className="fi-btn-g"
+                onClick={saveEdit}
+                disabled={!editName.trim() || editName.trim() === editing.name || editLoading}
+                style={{ opacity: (!editName.trim() || editName.trim() === editing.name) ? .5 : 1 }}
+              >
+                {editLoading ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- MODAL : Confirmation de suppression ---- */}
+      {deleting && (
+        <div className="fi-overlay" onClick={() => setDeleting(null)}>
+          <div className="fi-modal" onClick={e => e.stopPropagation()}>
+            <div className="fi-modal-title">
+              Supprimer {deleting.type === 'system' ? 'cette matière' : 'cette fiche'} ?
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--gray)', lineHeight: 1.5, marginBottom: 14 }}>
+              <strong style={{ color: 'var(--dark)' }}>{deleting.name}</strong>
+              {deleting.type === 'system' && deleting.childCount !== undefined && deleting.childCount > 0 && (
+                <> — {deleting.childCount} fiche{deleting.childCount > 1 ? 's' : ''} et leurs révisions seront aussi supprimées.</>
+              )}
+              {deleting.type === 'lesson' && (
+                <> — toutes les notes et révisions enregistrées seront perdues.</>
+              )}
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--gray)', fontStyle: 'italic' }}>
+              Cette action est irréversible.
+            </p>
+            <div className="fi-modal-actions">
+              <button className="fi-btn-o" onClick={() => setDeleting(null)}>Annuler</button>
+              <button
+                className="fi-btn-danger"
+                onClick={confirmDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? 'Suppression…' : 'Supprimer'}
               </button>
             </div>
           </div>
