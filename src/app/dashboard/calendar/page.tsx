@@ -99,20 +99,20 @@ function computeOccurrences(lessons: Lesson[]): FicheOccurrence[] {
 
 function groupByDate(occs: FicheOccurrence[]): Map<string, FicheOccurrence[]> {
   const map = new Map<string, FicheOccurrence[]>()
-  for (const o of occs) {
+  occs.forEach(o => {
     const list = map.get(o.date)
     if (list) list.push(o)
     else map.set(o.date, [o])
-  }
+  })
   // Tri dans chaque jour : non notées d'abord (à traiter), puis notées
-  for (const list of map.values()) {
+  map.forEach(list => {
     list.sort((a, b) => {
       const aDone = a.scoreForThisJ !== null ? 1 : 0
       const bDone = b.scoreForThisJ !== null ? 1 : 0
       if (aDone !== bDone) return aDone - bDone
       return a.lesson.name.localeCompare(b.lesson.name)
     })
-  }
+  })
   return map
 }
 
