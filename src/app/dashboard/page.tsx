@@ -395,6 +395,15 @@ export default function DashboardPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Reset du scroll à chaque entrée sur le dashboard (évite le décalage
+  // hérité d'une autre page comme /dashboard/fiches qui scrolle le <main>)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    const main = document.querySelector('main')
+    if (main) main.scrollTop = 0
+  }, [])
+
   // ================= DONNÉES DÉRIVÉES =================
   const semSystems = useMemo(() => systems.filter(s => s.semestre === semester), [systems, semester])
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
