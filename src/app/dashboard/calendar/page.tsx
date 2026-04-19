@@ -381,16 +381,21 @@ export default function CalendarPage() {
                         // Point = score de cette révision si notée, sinon dernière note de la fiche
                         const displayScore = done ? occ.scoreForThisJ : occ.lastScore
                         const cls = scoreClass(displayScore)
+                        const sys = systemsById.get(occ.lesson.system_id)
+                        const sysName = sys?.name ?? 'Matière'
                         return (
                           <button
                             key={`${occ.lesson.id}-${occ.stepIndex}`}
                             className={`cal-fiche${done ? ' cal-done' : ''}`}
                             onClick={() => openReview(occ)}
-                            title={`${occ.lesson.name} · J+${J[occ.stepIndex]}`}
+                            title={`${sysName} · ${occ.lesson.name} · J+${J[occ.stepIndex]}`}
                           >
-                            <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                            <span className="cal-fiche-matiere">{sysName}</span>
                             <span className="cal-fiche-name">{occ.lesson.name}</span>
-                            <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                            <span className="cal-fiche-foot">
+                              <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                              <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                            </span>
                           </button>
                         )
                       })}
@@ -511,18 +516,19 @@ export default function CalendarPage() {
                   const displayScore = done ? occ.scoreForThisJ : occ.lastScore
                   const cls = scoreClass(displayScore)
                   const sys = systemsById.get(occ.lesson.system_id)
+                  const sysName = sys?.name ?? 'Matière'
                   return (
                     <button
                       key={`${occ.lesson.id}-${occ.stepIndex}`}
                       className={`cal-fiche${done ? ' cal-done' : ''}`}
                       onClick={() => openReview(occ)}
                     >
-                      <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                      <span className="cal-fiche-name">
-                        {occ.lesson.name}
-                        {sys ? <span style={{ color: 'var(--cal-gray)', fontWeight: 400, fontSize: '0.9em' }}> · {sys.name}</span> : null}
+                      <span className="cal-fiche-matiere">{sysName}</span>
+                      <span className="cal-fiche-name">{occ.lesson.name}</span>
+                      <span className="cal-fiche-foot">
+                        <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                        <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
                       </span>
-                      <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
                     </button>
                   )
                 })}
