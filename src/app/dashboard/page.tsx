@@ -494,7 +494,7 @@ export default function DashboardPage() {
                               : meta.text}
                           </div>
                         </div>
-                        <div className="today-item-arrow">→</div>
+                        <div className="today-item-arrow">{'\u2192'}</div>
                       </div>
                     )
                   })}
@@ -757,13 +757,13 @@ function TodayModal({
 
         <div className="full-header">
           <div className="full-title-wrap">
-            <div className="full-title-ic">●</div>
+            <div className="full-title-ic">{'\u25CF'}</div>
             <div>
               <h2 className="full-title">Révisions du jour</h2>
               <div className="full-sub">{todayLabel}</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">×</button>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
         </div>
 
         <div className="full-today-stats">
@@ -871,13 +871,13 @@ function WeakModal({
 
         <div className="full-header">
           <div className="full-title-wrap">
-            <div className="full-title-ic rose">◆</div>
+            <div className="full-title-ic rose">{'\u25C6'}</div>
             <div>
               <h2 className="full-title">Toutes tes matières</h2>
               <div className="full-sub">Classées par moyenne, du plus faible au plus maîtrisé</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">×</button>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
         </div>
 
         {stats.length > 0 && (
