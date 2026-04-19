@@ -209,20 +209,44 @@
 }
 
 .cal-day-list {
-  padding: 10px 10px 12px;
+  padding: 8px 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex: 1;
   overflow: hidden;
   min-height: 0;
 }
-.cal-fiche {
+/* =========== Group par matière =========== */
+.cal-group {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 9px 12px 10px;
-  border-radius: 8px;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+.cal-group:last-child { margin-bottom: 0; }
+.cal-group-head {
+  padding: 3px 10px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--cal-dark);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-day.cal-today .cal-group-head { color: var(--cal-green); }
+.cal-day.cal-past .cal-group-head { color: var(--cal-gray); }
+
+/* =========== Row fiche (dot à gauche + nom 2 lignes + J compact dessous) =========== */
+.cal-fiche {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px 7px 14px;
+  border-radius: 6px;
   cursor: pointer;
   background: none;
   border: none;
@@ -231,6 +255,7 @@
   transition: background .12s, transform .08s;
   min-width: 0;
   flex-shrink: 0;
+  width: 100%;
 }
 .cal-fiche:hover {
   background: var(--cal-soft);
@@ -240,51 +265,12 @@
 }
 .cal-day.cal-today .cal-fiche:hover { background: #E5F0EA; }
 
-/* Ligne 1 : matière (élément principal, bold uppercase) */
-.cal-fiche-matiere {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--cal-dark);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-.cal-day.cal-today .cal-fiche-matiere { color: var(--cal-green); }
-.cal-day.cal-past .cal-fiche-matiere { color: var(--cal-gray); }
-
-/* Ligne 2 : nom de la fiche (sans-serif, petit, dense — fait tenir un max de texte) */
-.cal-fiche-name {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--cal-gray);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  line-height: 1.3;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.cal-day.cal-past .cal-fiche-name { color: var(--cal-dim); }
-
-/* Ligne 3 : dot + badge J+X */
-.cal-fiche-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 3px;
-}
 .cal-fiche-dot {
-  width: 8px; height: 8px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   background: var(--cal-neutral);
   flex-shrink: 0;
+  margin-top: 6px; /* aligne visuellement avec la 1re ligne du nom */
 }
 .cal-fiche-dot.s1 { background: var(--cal-s1); }
 .cal-fiche-dot.s2 { background: var(--cal-s2); }
@@ -292,17 +278,47 @@
 .cal-fiche-dot.s4 { background: var(--cal-s4); }
 .cal-fiche-dot.s5 { background: var(--cal-s5); }
 .cal-fiche-dot.cal-scored {
-  border: 2px solid white;
+  border: 1.5px solid white;
   box-shadow: 0 0 0 1px var(--cal-border);
-  width: 10px; height: 10px;
+  width: 9px; height: 9px;
+  margin-top: 5px;
 }
+
+.cal-fiche-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cal-fiche-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--cal-gray);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1.25;
+  min-width: 0;
+  width: 100%;
+  /* 2 lignes max avec ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.cal-day.cal-today .cal-fiche-name { color: var(--cal-dark); }
+.cal-day.cal-past .cal-fiche-name { color: var(--cal-dim); }
+
 .cal-fiche-j {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--cal-gray);
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: .03em;
   font-variant-numeric: tabular-nums;
-  padding: 2px 8px;
+  padding: 1px 7px;
   background: var(--cal-soft);
   border-radius: 20px;
   flex-shrink: 0;
