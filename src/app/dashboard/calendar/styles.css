@@ -253,15 +253,19 @@
   width: 10px; height: 10px;
 }
 .cal-fiche-name {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--cal-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-family: 'Fraunces', serif;
   line-height: 1.25;
   min-width: 0;
+  /* Jusqu'à 2 lignes, ellipsis au bout de la 2e */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .cal-day.cal-past .cal-fiche-name { color: var(--cal-gray); }
 .cal-fiche-j {
