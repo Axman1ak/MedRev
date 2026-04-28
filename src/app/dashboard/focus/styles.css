@@ -225,6 +225,14 @@
 }
 .focus-kicker-status {
   white-space: nowrap;
+  /* Défense contre les overlays d'extensions browser (Translate, etc.) qui
+     parfois injectent un fond blanc plein-largeur derrière les chips de statut
+     contenant des identifiants type "J+0". */
+  background: transparent !important;
+  background-color: transparent !important;
+  display: inline-block;
+  width: auto !important;
+  max-width: max-content;
 }
 .focus-kicker-dot {
   width: 6px; height: 6px;
