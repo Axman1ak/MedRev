@@ -1980,7 +1980,11 @@ function FocusPageBody() {
               <span className="focus-kicker-dot" style={{ background: sysColor }} />
               <span className="focus-kicker-sys">{currentSystemName}</span>
             </div>
-            <span className={`focus-kicker-status ${statusCls}`}>{statusLabel}</span>
+            <span
+              className={`focus-kicker-status ${statusCls}`}
+              translate="no"
+              data-no-translate
+            >{statusLabel}</span>
           </div>
 
           <h1 className="focus-name">{current.lesson.name}</h1>
@@ -2071,7 +2075,3 @@ function FocusPageBody() {
           <span className="focus-hint-sep">{'·'}</span>
           <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
         </div>
-      </div>
-    </div>
-  )
-}
