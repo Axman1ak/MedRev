@@ -11,6 +11,9 @@ import './styles.css'
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
 
+// Jardin Focus : pleine maturité de l'arbre à 100h cumulées (synchro avec la page focus)
+const GARDEN_TIME_TO_FULL_MS = 100 * 60 * 60 * 1000
+
 // ======================= TYPES =======================
 type Score = 1 | 2 | 3 | 4 | 5
 type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
@@ -326,6 +329,237 @@ function buildMetaForDue(due: DueInfo, systemName: string, lastScore: Score | nu
   return { text: parts.join(' · '), withOverdue: due.status === 'missed' }
 }
 
+// ======================= MINI JARDIN (lecture du state Focus) =======================
+// On ne fait QUE lire l'état du jardin (localStorage prioritaire, Supabase optionnel).
+// Le jardin est cultivé sur la page /dashboard/focus — ici on l'expose en aperçu.
+type GardenKind =
+  | 'flower' | 'tulip' | 'sunflower' | 'mushroom'
+  | 'butterfly' | 'rabbit' | 'squirrel' | 'owl' | 'deer' | 'fox'
+  | 'pond' | 'sapling' | 'log'
+type GardenElement = { kind: GardenKind; x: number; y: number; variant?: string }
+type GardenSnapshot = { elapsedMs: number; fichesCount: number; elements: GardenElement[] }
+
+function readGardenLocal(userId: string): GardenSnapshot {
+  if (typeof window === 'undefined') return { elapsedMs: 0, fichesCount: 0, elements: [] }
+  try {
+    const raw = localStorage.getItem('medrev-garden-' + userId)
+    if (!raw) return { elapsedMs: 0, fichesCount: 0, elements: [] }
+    const parsed = JSON.parse(raw)
+    return {
+      elapsedMs: Number(parsed.elapsedMs ?? 0),
+      fichesCount: Number(parsed.fichesCount ?? 0),
+      elements: (parsed.elements as GardenElement[]) ?? [],
+    }
+  } catch {
+    return { elapsedMs: 0, fichesCount: 0, elements: [] }
+  }
+}
+
+type GardenCounts = { flowers: number; butterflies: number; animals: number; rares: number }
+function countGardenElements(els: GardenElement[]): GardenCounts {
+  const c: GardenCounts = { flowers: 0, butterflies: 0, animals: 0, rares: 0 }
+  for (const e of els) {
+    if (e.kind === 'flower' || e.kind === 'tulip' || e.kind === 'sunflower') c.flowers++
+    else if (e.kind === 'butterfly') c.butterflies++
+    else if (e.kind === 'rabbit' || e.kind === 'mushroom' || e.kind === 'sapling') c.animals++
+    else if (e.kind === 'owl' || e.kind === 'deer' || e.kind === 'fox' || e.kind === 'squirrel' || e.kind === 'pond' || e.kind === 'log') c.rares++
+  }
+  return c
+}
+
+const FLOWER_COLOR: Record<string, string> = {
+  red: '#C75050', yellow: '#FBD56B', pink: '#F4B5C9',
+  orange: '#E89A4F', purple: '#9C68B0', white: '#FFE5DD',
+}
+const BUTTERFLY_COLOR: Record<string, [string, string]> = {
+  amber: ['#E89A4F', '#FBD56B'],
+  blue:  ['#7AA8E0', '#A8C8E8'],
+  purple:['#9C68B0', '#D5B0E0'],
+}
+
+// ======================= MINI JARDIN COMPONENT =======================
+// Aperçu compact du jardin annuel : ciel + arbre + fleurs/papillons.
+// Ne fait QUE lire le state — toute culture du jardin se fait sur /dashboard/focus.
+function DashGarden({
+  userId, queueLength, startHref,
+}: { userId: string | null; queueLength: number; startHref: string }) {
+  const supabase = createClient()
+  const [garden, setGarden] = useState<GardenSnapshot | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+    setGarden(readGardenLocal(userId))
+    // Pull cloud (best-effort) si plus à jour que local
+    supabase
+      .from('gardens')
+      .select('elapsed_ms, fiches_count, elements')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        setGarden(prev => {
+          const local = prev ?? { elapsedMs: 0, fichesCount: 0, elements: [] }
+          const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
+          const cloudFiches = Number((data as any).fiches_count ?? 0)
+          const cloudElements = ((data as any).elements as GardenElement[]) ?? []
+          // On garde le max et l'union (jamais de régression)
+          const seen = new Set<string>()
+          const merged: GardenElement[] = []
+          for (const e of [...local.elements, ...cloudElements]) {
+            const k = e.kind + '|' + e.x + '|' + e.y + '|' + (e.variant ?? '')
+            if (seen.has(k)) continue
+            seen.add(k); merged.push(e)
+          }
+          return {
+            elapsedMs: Math.max(local.elapsedMs, cloudElapsed),
+            fichesCount: Math.max(local.fichesCount, cloudFiches),
+            elements: merged,
+          }
+        })
+      }, () => { /* swallow */ })
+
+    // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert
+    function onStorage(e: StorageEvent) {
+      if (e.key === 'medrev-garden-' + userId) setGarden(readGardenLocal(userId))
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [userId, supabase])
+
+  const treeProgress = garden ? Math.max(0, Math.min(1, garden.elapsedMs / GARDEN_TIME_TO_FULL_MS)) : 0
+  const counts = garden ? countGardenElements(garden.elements) : { flowers: 0, butterflies: 0, animals: 0, rares: 0 }
+  const elements = garden?.elements ?? []
+
+  // Heure réelle pour l'ambiance ciel (jour ou nuit, sans tous les keyframes du focus)
+  const hour = new Date().getHours()
+  const isDay = hour >= 7 && hour < 19
+  const skyTop = isDay ? '#7AA0B8' : '#1F2A4A'
+  const skyMid = isDay ? '#B6CFD8' : '#3D3A6A'
+
+  // Branches de l'arbre (apparaissent à des paliers de progression)
+  const branches = [
+    { progress: 0.18, x1: 200, y1: 138, x2: 156, y2: 116, w: 5 },
+    { progress: 0.36, x1: 200, y1: 124, x2: 246, y2: 100, w: 5 },
+    { progress: 0.54, x1: 200, y1: 110, x2: 168, y2: 86, w: 4 },
+    { progress: 0.72, x1: 200, y1: 100, x2: 234, y2: 78, w: 4 },
+  ]
+
+  // Échelle des positions du focus (1600x1000) → mini (400x260)
+  // sol focus = y 800-1000 → sol mini = y 220-260
+  const SCALE_X = 0.25
+  const SCALE_Y = 0.26
+
+  return (
+    <div className="dash-garden">
+      <svg
+        viewBox="0 0 400 260"
+        preserveAspectRatio="xMidYMax slice"
+        className="dash-garden-svg"
+      >
+        <defs>
+          <linearGradient id="dgSky" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor={skyTop} />
+            <stop offset="1" stopColor={skyMid} />
+          </linearGradient>
+          <linearGradient id="dgGround" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#7AA56B" />
+            <stop offset="1" stopColor="#5A8A4A" />
+          </linearGradient>
+        </defs>
+
+        {/* Ciel */}
+        <rect x="0" y="0" width="400" height="220" fill="url(#dgSky)" />
+        {/* Soleil ou lune */}
+        {isDay ? (
+          <circle cx={60 + ((hour - 7) / 12) * 280} cy={80 - Math.sin(((hour - 7) / 12) * Math.PI) * 50} r="14" fill="#FBD56B" opacity=".9" />
+        ) : (
+          <circle cx="320" cy="60" r="11" fill="#E8E4D0" />
+        )}
+        {/* Nuages */}
+        <ellipse cx="80" cy="50" rx="28" ry="6" fill="white" opacity={isDay ? .7 : .25} />
+        <ellipse cx="280" cy="36" rx="22" ry="5" fill="white" opacity={isDay ? .6 : .2} />
+        {/* Sol */}
+        <rect x="0" y="220" width="400" height="40" fill="url(#dgGround)" />
+
+        {/* Arbre central — pousse avec elapsedMs */}
+        <g style={{ transform: `scale(${0.45 + treeProgress * 0.55})`, transformOrigin: '200px 220px', transformBox: 'view-box' }}>
+          {/* Tronc */}
+          <rect x="195" y="160" width="10" height="60" fill="#6B4F35" />
+          <rect x="195" y="160" width="10" height="60" fill="#5A4128" opacity=".5" />
+          {/* Branches selon progression */}
+          {branches.map((b, i) => treeProgress >= b.progress && (
+            <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke="#6B4F35" strokeWidth={b.w} strokeLinecap="round" />
+          ))}
+          {/* Canopée — 3 couches qui apparaissent avec les branches */}
+          {treeProgress >= 0.10 && <ellipse cx="200" cy="148" rx="40" ry="36" fill="#3B6D11" />}
+          {treeProgress >= 0.40 && <ellipse cx="174" cy="144" rx="22" ry="20" fill="#4A8A1F" />}
+          {treeProgress >= 0.60 && <ellipse cx="226" cy="144" rx="22" ry="20" fill="#4A8A1F" />}
+          {treeProgress >= 0.80 && <ellipse cx="200" cy="124" rx="24" ry="18" fill="#5AA02A" />}
+        </g>
+
+        {/* Fleurs — positions exactes scalées depuis le focus garden */}
+        {elements.map((el, i) => {
+          const x = el.x * SCALE_X
+          const y = el.y * SCALE_Y
+          if (el.kind === 'flower' || el.kind === 'tulip' || el.kind === 'sunflower') {
+            const color = FLOWER_COLOR[el.variant ?? 'red'] ?? '#C75050'
+            const r = el.kind === 'sunflower' ? 4 : el.kind === 'tulip' ? 3 : 2.6
+            return <circle key={i} cx={x} cy={y} r={r} fill={color} />
+          }
+          if (el.kind === 'butterfly') {
+            const cols = BUTTERFLY_COLOR[el.variant ?? 'amber'] ?? BUTTERFLY_COLOR.amber
+            return (
+              <g key={i}>
+                <ellipse cx={x - 2} cy={y} rx="2.2" ry="1.6" fill={cols[0]} />
+                <ellipse cx={x + 2} cy={y} rx="2.2" ry="1.6" fill={cols[1]} />
+                <line x1={x} y1={y - 1} x2={x} y2={y + 1.4} stroke="#3D2A1F" strokeWidth=".7" />
+              </g>
+            )
+          }
+          if (el.kind === 'mushroom') {
+            return <g key={i}>
+              <rect x={x - 0.8} y={y - 1} width="1.6" height="2.5" fill="#E8DDC4" />
+              <ellipse cx={x} cy={y - 1.5} rx="2.4" ry="1.6" fill={el.variant === 'orange' ? '#E89A4F' : '#C75050'} />
+            </g>
+          }
+          if (el.kind === 'rabbit') {
+            return <ellipse key={i} cx={x} cy={y} rx="3" ry="2.2" fill="#E0D5C0" />
+          }
+          if (el.kind === 'pond') {
+            return <ellipse key={i} cx={x} cy={y} rx="14" ry="4" fill="#5B8ED4" opacity=".75" />
+          }
+          // Animaux rares + sapling : petit dot sombre, lecture rapide
+          return <circle key={i} cx={x} cy={y} r={2.5} fill="#3B2F1F" />
+        })}
+      </svg>
+
+      <div className="dash-garden-overlay">
+        <div className="dash-garden-stats">
+          <div className="dash-garden-stat"><span className="dash-garden-num">{counts.flowers}</span><span className="dash-garden-lbl">fleurs</span></div>
+          <div className="dash-garden-stat"><span className="dash-garden-num">{counts.butterflies}</span><span className="dash-garden-lbl">papillons</span></div>
+          {counts.rares > 0 && (
+            <div className="dash-garden-stat"><span className="dash-garden-num">{counts.rares}</span><span className="dash-garden-lbl">rares</span></div>
+          )}
+        </div>
+        <div className="dash-garden-cta-wrap">
+          <div className="dash-garden-queue">
+            {queueLength === 0
+              ? <>Aucune révision aujourd&apos;hui</>
+              : <><strong>{queueLength}</strong> {queueLength === 1 ? 'fiche' : 'fiches'} · ~{queueLength * 8} min</>}
+          </div>
+          <Link
+            href={startHref}
+            className="dash-garden-cta"
+            style={queueLength === 0 ? { pointerEvents: 'none', opacity: .55 } : undefined}
+          >
+            {queueLength === 0 ? 'Voir le jardin' : 'Démarrer'}
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ======================= MAIN COMPONENT =======================
 export default function DashboardPage() {
   const supabase = createClient()
@@ -510,30 +744,13 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="today-cta">
-            <div className="today-cta-top">
-              <div className="today-cta-label">Session focus</div>
-              <div className="today-cta-num">{todayQueue.length}</div>
-              <div className="today-cta-unit">
-                {todayQueue.length === 0 ? 'aucune fiche' : todayQueue.length === 1 ? 'fiche à revoir' : 'fiches à enchaîner'}
-              </div>
-              {todayQueue.length > 0 && (
-                <div className="today-cta-time">
-                  <strong>~{todayQueue.length * 8} min</strong> · ton rythme habituel
-                </div>
-              )}
-            </div>
-            <div className="today-cta-bottom">
-              <Link
-                href={startSessionHref}
-                className="btn-focus"
-                style={todayQueue.length === 0 ? { pointerEvents: 'none', opacity: .5 } : undefined}
-              >
-                {todayQueue.length === 0 ? 'Rien à démarrer' : 'Démarrer maintenant'}
-              </Link>
-              <div className="btn-focus-hint">skip ou reporter possible à tout moment</div>
-            </div>
-          </div>
+          {/* Mini-jardin remplace le side panel CTA. La session focus se lance
+              depuis le bouton intégré au jardin. */}
+          <DashGarden
+            userId={userId}
+            queueLength={todayQueue.length}
+            startHref={startSessionHref}
+          />
         </div>
 
         {/* ZONES 2, 3, 4 */}
@@ -770,220 +987,3 @@ function TodayModal({
               <div className="full-sub">{todayLabel}</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
-        </div>
-
-        <div className="full-today-stats">
-          <div>
-            <div className="full-stat-label">Total</div>
-            <div className="full-stat-val"><em>{queue.length}</em> révision{queue.length > 1 ? 's' : ''}</div>
-          </div>
-          <div>
-            <div className="full-stat-label">Temps estimé</div>
-            <div className="full-stat-val">~ {totalMin} <span className="small">min</span></div>
-          </div>
-          <Link href={startHref} className="btn-focus-lg" onClick={onClose}>
-            Démarrer la session focus
-          </Link>
-        </div>
-
-        <div className="full-filters">
-          <span className="full-filters-label">Trier par</span>
-          <button
-            className={`pill${sort === 'priority' ? ' active' : ''}`}
-            onClick={() => setSort('priority')}
-          >Priorité</button>
-          <button
-            className={`pill${sort === 'subject' ? ' active' : ''}`}
-            onClick={() => setSort('subject')}
-          >Matière</button>
-          <button
-            className={`pill${sort === 'j' ? ' active' : ''}`}
-            onClick={() => setSort('j')}
-          >Palier J</button>
-          <span style={{ flex: 1 }} />
-          <span className="full-filters-label">Matière</span>
-          <select
-            value={subjectFilter}
-            onChange={e => setSubjectFilter(e.target.value)}
-            style={{
-              padding: '5px 10px', border: '1px solid var(--border)',
-              borderRadius: 20, background: 'white', fontSize: 11,
-              fontFamily: 'inherit', color: 'var(--gray)', cursor: 'pointer',
-            }}
-          >
-            <option value="all">Toutes</option>
-            {subjectsInQueue.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="modal-scroll">
-          <div className="full-today-list">
-            {sortedFiltered.length === 0 ? (
-              <div className="full-empty">Aucune fiche ne correspond.</div>
-            ) : sortedFiltered.map((p, idx) => {
-              const sys = systems.find(s => s.id === p.lesson.system_id)
-              const sysName = sys?.name ?? 'Matière'
-              const highlight = sort === 'priority' && idx === 0
-              const minTime = 8
-              return (
-                <div key={p.lesson.id} className={`full-row${highlight ? ' highlight' : ''}`}>
-                  <div className="full-row-num">{highlight ? '!' : idx + 1}</div>
-                  <div>
-                    <div className="full-row-name">{p.lesson.name}</div>
-                    <div className="full-row-meta">
-                      {p.due.status === 'missed'
-                        ? <><strong>J+{J[p.due.stepIndex]} manqué depuis {p.due.overdueDays} j</strong> · {sysName} · ~{minTime} min</>
-                        : <>J+{J[p.due.stepIndex]} dû aujourd&apos;hui · {sysName} · ~{minTime} min</>}
-                    </div>
-                  </div>
-                  <div className={p.lastScore ? `score-chip s${p.lastScore}` : 'score-chip none'}>
-                    {p.lastScore ?? '—'}
-                  </div>
-                  <div className="full-row-actions">
-                    <Link
-                      href={`/dashboard/focus?lesson=${p.lesson.id}`}
-                      className="row-btn go"
-                      onClick={onClose}
-                    >
-                      Faire
-                    </Link>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  )
-}
-
-// ======================= WEAK MODAL =======================
-function WeakModal({
-  stats, onClose,
-}: {
-  stats: MatiereStat[]
-  onClose: () => void
-}) {
-  const maxAvg = 5
-  const chartCols = Math.max(1, stats.length)
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-
-        <div className="full-header">
-          <div className="full-title-wrap">
-            <div className="full-title-ic rose">{'\u25C6'}</div>
-            <div>
-              <h2 className="full-title">Toutes tes matières</h2>
-              <div className="full-sub">Classées par moyenne, du plus faible au plus maîtrisé</div>
-            </div>
-          </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
-        </div>
-
-        {stats.length > 0 && (
-          <div className="full-weak-chart">
-            <div className="chart-label">Vue d&apos;ensemble · moyenne par matière</div>
-            <div className="chart-bars" style={{ gridTemplateColumns: `repeat(${chartCols}, 1fr)` }}>
-              {stats.map(m => {
-                const avg = m.avgScore ?? 0
-                const pct = Math.max(18, Math.round((avg / maxAvg) * 100))
-                const cls = scoreClass(m.avgScore)
-                return (
-                  <div key={m.system.id} className="chart-col">
-                    <div className={`chart-bar ${cls}`} style={{ height: `${pct}%` }}>
-                      <div className="chart-bar-v">{avg.toFixed(1)}</div>
-                    </div>
-                    <div className="chart-name">{m.system.name}</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="modal-scroll">
-          <div className="full-weak-list">
-            {stats.length === 0 ? (
-              <div className="full-empty">Pas encore assez de notes pour classer les matières.</div>
-            ) : stats.map((m, idx) => {
-              const cls = scoreClass(m.avgScore)
-              const dotColor = `var(--${cls})`
-              return (
-                <div key={m.system.id} className="mat-card">
-                  <div className="mat-head">
-                    <div className="mat-rank">{idx + 1}</div>
-                    <div className="mat-name-wrap">
-                      <div className="mat-dot" style={{ background: dotColor }} />
-                      <div>
-                        <div className="mat-name">{m.system.name}</div>
-                        <div className="mat-counts">
-                          <strong>{m.totalFiches}</strong> fiche{m.totalFiches > 1 ? 's' : ''}
-                          {m.fragile.length > 0 ? (
-                            <> · <strong className={cls === 's1' ? 's1' : 's2'}>{m.fragile.length} fragile{m.fragile.length > 1 ? 's' : ''}</strong></>
-                          ) : (
-                            <> · <strong className="s4">0 fragile</strong></>
-                          )}
-                          {' · '}{m.okCount} OK
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`mat-avg ${cls}`}>
-                      <span className="mat-avg-n">{m.avgScore !== null ? m.avgScore.toFixed(1) : '—'}</span>
-                      <span className="mat-avg-x">/ 5</span>
-                    </div>
-                  </div>
-
-                  {m.fragile.length > 0 && (
-                    <div className="mat-body">
-                      {m.fragile.map(f => {
-                        const fCls = scoreClass(f.avg)
-                        const nextLabel = f.nextRevDate
-                          ? (f.nextRevDate === new Date().toISOString().split('T')[0]
-                              ? "aujourd'hui"
-                              : `prochaine ${formatDateFR(f.nextRevDate)}`)
-                          : ''
-                        return (
-                          <div key={f.lesson.id} className="mat-fiche">
-                            <div className={`mat-fiche-bullet ${fCls}`} />
-                            <div>
-                              <div className="mat-fiche-name">{f.lesson.name}</div>
-                              <div className="mat-fiche-meta">
-                                {f.last3.length > 0 ? `3 dernières · ${f.last3.join(' · ')}` : 'Pas encore notée'}
-                                {nextLabel ? ` · ${nextLabel}` : ''}
-                              </div>
-                            </div>
-                            <div className={`mat-fiche-avg ${fCls}`}>{f.avg.toFixed(1)}</div>
-                            <Link
-                              href={`/dashboard/focus?lesson=${f.lesson.id}`}
-                              className="mat-fiche-cta"
-                              onClick={onClose}
-                            >
-                              Retravailler
-                            </Link>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {m.fragile.length === 0 && m.totalFiches > 0 && (
-                    <div className="mat-body">
-                      <div className="mat-note">Aucune fiche fragile à signaler.</div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  )
-}
