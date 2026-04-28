@@ -818,7 +818,7 @@ function FocusPageBody() {
   const ratedScore = alreadyRated ? (currentResult.outcome as { score: Score }).score : null
 
   const canPrev = currentIdx > 0
-  const canNext = currentIdx < queue.length - 1
+  const canNext = currentIdx + 1 !== queue.length
 
   return (
     <div className="focus-root">
