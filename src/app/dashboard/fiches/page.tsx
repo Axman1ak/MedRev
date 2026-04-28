@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import ReviewModal from '@/components/ReviewModal'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -122,10 +123,6 @@ function cardStatus(lesson: Lesson): { cls: string; label: string } {
   return { cls: 's5', label: 'Maîtrisée' }
 }
 
-function frenchDate(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-}
-
 type FilterNote = 'all' | 's1' | 's2' | 's3' | 's4' | 's5'
 type FilterProgress = 'all' | 'new' | 'inprogress' | 'done'
 
@@ -158,11 +155,9 @@ export default function FichesPage() {
   const [newLesSysId, setNewLesSysId] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
 
-  // Review session : 2 étapes (picker J → notation)
+  // Review session : on délègue tout au composant partagé ReviewModal.
+  // On ne garde que la fiche en cours (null = modal fermé).
   const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
-  const [reviewStepIdx, setReviewStepIdx] = useState<number | null>(null) // null = picker, number = rating
-  const [reviewLoading, setReviewLoading] = useState(false)
-  const [justRated, setJustRated] = useState<{ idx: number; score: Score } | null>(null)
 
   // Menu contextuel (⋯) + éditer / supprimer
   type EditTarget = { type: 'system' | 'lesson'; id: string; name: string } | null
@@ -262,45 +257,22 @@ export default function FichesPage() {
     setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
   }
 
-  // ---- Review session ----
+  // ---- Review session : ouverture / mise à jour / fermeture ----
   function openReview(lesson: Lesson) {
     setReviewLesson(lesson)
-    setReviewStepIdx(null)
-    setJustRated(null)
   }
 
   function closeReview() {
     setReviewLesson(null)
-    setReviewStepIdx(null)
-    setJustRated(null)
   }
 
-  function selectStep(idx: number) {
-    if (!reviewLesson) return
-    // On n'autorise que passé + aujourd'hui (pas de futur)
-    if (!reviewLesson.learn_date) return
-    const ds = stepDate(reviewLesson, idx)
-    if (ds > today) return
-    setReviewStepIdx(idx)
-    setJustRated(null)
-  }
-
-  async function rateLesson(score: Score) {
-    if (!reviewLesson || reviewStepIdx === null) return
-    setReviewLoading(true)
-    const newSteps = [...((reviewLesson.steps as StepEntry[]) || [])]
-    while (newSteps.length < J.length) newSteps.push(null)
-    newSteps[reviewStepIdx] = { score, date: today }
-
-    await supabase.from('lessons').update({ steps: newSteps }).eq('id', reviewLesson.id)
-
-    const updated = { ...reviewLesson, steps: newSteps } as Lesson
+  // Callback du ReviewModal partagé : on met à jour à la fois la lesson
+  // affichée dans la grille ET la lesson active dans le modal (pour que les
+  // tampons J se rafraîchissent en direct).
+  const handleReviewUpdated = useCallback((updated: Lesson) => {
     setLessons(prev => prev.map(l => l.id === updated.id ? updated : l))
-    setReviewLesson(updated)
-    setReviewLoading(false)
-    setJustRated({ idx: reviewStepIdx, score })
-    setReviewStepIdx(null) // retour au picker, état à jour
-  }
+    setReviewLesson(prev => (prev && prev.id === updated.id ? updated : prev))
+  }, [])
 
   // ---- Menu ⋯ : éditer / supprimer matière ou fiche ----
   function openEdit(type: 'system' | 'lesson', id: string, name: string) {
@@ -474,7 +446,7 @@ export default function FichesPage() {
                       setMenuOpenFor(menuOpenFor === menuKey ? null : menuKey)
                     }}
                     aria-label="Options de la matière"
-                  >{'\u22EF'}</button>
+                  >{'⋯'}</button>
                   {menuOpenFor === menuKey && (
                     <div className="fi-menu" onClick={e => e.stopPropagation()}>
                       <button type="button" className="fi-menu-item" onClick={() => openEdit('system', sys.id, sys.name)}>
@@ -600,7 +572,7 @@ export default function FichesPage() {
                         setMenuOpenFor(menuOpenFor === `les-${lesson.id}` ? null : `les-${lesson.id}`)
                       }}
                       aria-label="Options de la fiche"
-                    >{'\u22EF'}</button>
+                    >{'⋯'}</button>
                     {menuOpenFor === `les-${lesson.id}` && (
                       <div className="fi-menu" onClick={e => e.stopPropagation()}>
                         <button type="button" className="fi-menu-item" onClick={() => openEdit('lesson', lesson.id, lesson.name)}>
@@ -662,115 +634,15 @@ export default function FichesPage() {
         )}
       </div>
 
-      {/* ---- REVIEW SESSION OVERLAY ---- */}
+      {/* ---- REVIEW SESSION (composant partagé) ---- */}
       {reviewLesson && (
-        <div className="fi-overlay" onClick={closeReview}>
-          <div className="rev-card" onClick={e => e.stopPropagation()}>
-
-            <div className="rev-header">
-              <div>
-                <div className="rev-kicker">
-                  {reviewStepIdx === null ? 'Choisis un J à noter' : 'Session de révision'}
-                </div>
-                <div className="rev-title">{reviewLesson.name}</div>
-                <div className="rev-meta">
-                  {reviewSystemName}
-                  {reviewLesson.learn_date && <> · appris le {frenchDate(reviewLesson.learn_date)}</>}
-                </div>
-              </div>
-              <button className="rev-close" onClick={closeReview} aria-label="Fermer">×</button>
-            </div>
-
-            {/* ---- ÉTAPE 1 : Picker J ---- */}
-            {reviewStepIdx === null && (
-              <>
-                {justRated && (
-                  <div className="rev-toast">
-                    <span className={`rev-toast-dot s${justRated.score}`} />
-                    Note {justRated.score}/5 enregistrée pour J+{J[justRated.idx]}
-                  </div>
-                )}
-
-                <div className="jpicker">
-                  {J.map((jVal, i) => {
-                    const s = getStampState(reviewLesson, i, today)
-                    const ds = reviewLesson.learn_date ? stepDate(reviewLesson, i) : ''
-                    const isFuture = s.kind === 'future' && ds && ds > today
-                    const isLocked = isFuture || !reviewLesson.learn_date
-                    let statusText = ''
-                    if (s.kind === 'score') statusText = `Fait · ${s.score}/5`
-                    else if (s.kind === 'today') statusText = "Aujourd'hui"
-                    else if (s.kind === 'missed') statusText = 'Manqué'
-                    else if (ds) {
-                      const diff = Math.round((new Date(ds).getTime() - new Date(today).getTime()) / 86400000)
-                      statusText = diff === 1 ? 'Demain' : `Dans ${diff} j`
-                    } else {
-                      statusText = 'À planifier'
-                    }
-
-                    return (
-                      <button
-                        key={i}
-                        className={`jpicker-step${isLocked ? ' locked' : ''}`}
-                        disabled={isLocked}
-                        onClick={() => selectStep(i)}
-                        title={isLocked ? 'Révision future — verrouillée' : `Noter J+${jVal}`}
-                      >
-                        <span className="jlbl">J+{jVal}</span>
-                        <span className={`jbig stamp ${
-                          s.kind === 'score' ? `s${s.score}` :
-                          s.kind === 'today' ? 'today' :
-                          s.kind === 'missed' ? 'missed' : 'future'
-                        }`}>
-                          {s.kind === 'score' && s.score === 5 && <span className="stamp-star" aria-hidden="true">★</span>}
-                        </span>
-                        <span className="jstatus">{statusText}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div className="rev-hint">
-                  Clique sur un J pour le noter. Les J futurs sont verrouillés — ils se débloqueront à la bonne date.
-                </div>
-              </>
-            )}
-
-            {/* ---- ÉTAPE 2 : Notation ---- */}
-            {reviewStepIdx !== null && (
-              <>
-                <div className="rev-lesson">
-                  <div className="rev-lesson-kicker">Révision J+{J[reviewStepIdx]}</div>
-                  <div className="rev-lesson-name">{reviewLesson.name}</div>
-                  <div className="rev-lesson-meta">
-                    {reviewSystemName} · prévue le {reviewLesson.learn_date ? frenchDate(stepDate(reviewLesson, reviewStepIdx)) : '—'}
-                  </div>
-                </div>
-
-                <div className="rev-ask">Quelle note ?</div>
-                <div className="rev-scores">
-                  {([1, 2, 3, 4, 5] as Score[]).map(n => (
-                    <button
-                      key={n}
-                      className={`rev-score s${n}`}
-                      onClick={() => rateLesson(n)}
-                      disabled={reviewLoading}
-                    >
-                      <span className="num">{n}</span>
-                      <span className="lbl">
-                        {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                <button className="rev-back" onClick={() => setReviewStepIdx(null)}>
-                  ← Retour aux J
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <ReviewModal
+          lesson={reviewLesson}
+          systemName={reviewSystemName}
+          initialStepIdx={null}
+          onClose={closeReview}
+          onUpdated={handleReviewUpdated}
+        />
       )}
 
       {/* ---- MODAL : Nouvelle matière ---- */}
