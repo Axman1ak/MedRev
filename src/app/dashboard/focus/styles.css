@@ -101,24 +101,61 @@
   color: #111310;
 }
 
-/* ============ STAGE (zone centrale) ============ */
+/* ============ STAGE : 2 zones (jardin + card) ============ */
 .focus-stage {
   position: relative;
   flex: 1;
   display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ---- Zone JARDIN (gauche) ---- */
+.focus-garden {
+  flex: 0 0 44%;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: linear-gradient(
+    180deg,
+    #F8F2E5 0%,
+    #F2EAD3 35%,
+    #E8E0C6 60%,
+    #D8E4CD 100%
+  );
+  border-right: 1px solid #E1DDD3;
+  overflow: hidden;
+  min-height: 0;
+}
+.focus-garden-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---- Zone CARD (droite) ---- */
+.focus-card-zone {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 24px;
+  padding: 32px 28px;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .focus-card {
   background: white;
   border: 1px solid #E1DDD3;
   border-radius: 18px;
-  padding: 36px 40px;
+  padding: 32px 36px;
   width: 100%;
-  max-width: 600px;
+  max-width: 540px;
   box-shadow: 0 24px 60px rgba(17, 19, 16, .08);
 }
 
@@ -482,6 +519,32 @@
 .focus-plant-stem-group {
   transition: transform 1s ease-out;
 }
+
+/* Balancement léger de toute la plante (tige + feuilles + fleur) */
+.focus-plant-sway-group {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: focus-plant-sway 5s ease-in-out infinite alternate;
+}
+@keyframes focus-plant-sway {
+  from { transform: rotate(-1.4deg); }
+  to   { transform: rotate(1.4deg); }
+}
+
+/* Soleil avec petite pulsation */
+.focus-sun {
+  transition: cy 1.5s ease-out;
+}
+.focus-sun-halo {
+  transition: cy 1.5s ease-out;
+  animation: focus-sun-pulse 6s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+@keyframes focus-sun-pulse {
+  from { opacity: .14; transform: scale(.95); }
+  to   { opacity: .26; transform: scale(1.08); }
+}
 .focus-plant-leaf {
   transform-origin: center;
   animation: focus-plant-leaf-in .45s ease-out both;
@@ -621,14 +684,33 @@
 }
 
 /* ============ RESPONSIVE ============ */
+
+/* Tablette / petit desktop : on garde les 2 zones mais on réduit le jardin */
+@media (max-width: 1024px) {
+  .focus-garden { flex: 0 0 38%; }
+  .focus-card { max-width: 480px; padding: 28px 28px; }
+  .focus-card-zone { padding: 24px 20px; }
+}
+
+/* Mobile : empilement vertical, jardin en bandeau du haut */
 @media (max-width: 720px) {
+  .focus-stage { flex-direction: column; }
+  .focus-garden {
+    flex: 0 0 32vh;
+    min-height: 240px;
+    max-height: 320px;
+    border-right: none;
+    border-bottom: 1px solid #E1DDD3;
+  }
+  .focus-card-zone { padding: 20px 16px; }
+  .focus-card { max-width: 540px; padding: 22px 20px; }
+
   .focus-topbar { padding: 12px 16px; gap: 12px; }
   .focus-brand { font-size: 14px; }
-  .focus-card { padding: 24px 20px; }
-  .focus-name { font-size: 24px; }
+  .focus-name { font-size: 22px; }
   .focus-scores { gap: 4px; }
-  .focus-score { padding: 16px 4px 10px; }
-  .focus-score-num { font-size: 22px; }
+  .focus-score { padding: 14px 4px 10px; }
+  .focus-score-num { font-size: 20px; }
   .focus-score-lbl { font-size: 9px; }
   .focus-score-key { font-size: 8px; }
   .focus-progress-wrap { gap: 10px; }
@@ -646,6 +728,7 @@
 }
 
 @media (max-width: 480px) {
+  .focus-garden { flex: 0 0 26vh; min-height: 180px; }
   /* Sur très petit écran on cache les arrows latérales — l'utilisateur navigue
      via l'inline "Suivante" et le clavier. */
   .focus-nav-arrow { display: none; }
