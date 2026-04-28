@@ -390,25 +390,26 @@ function DashGarden({
     if (!userId) return
     setGarden(readGardenLocal(userId))
     // Pull cloud (best-effort) si plus à jour que local
-    supabase
-      .from('gardens')
-      .select('elapsed_ms, fiches_count, elements')
-      .eq('user_id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('gardens')
+          .select('elapsed_ms, fiches_count, elements')
+          .eq('user_id', userId)
+          .maybeSingle()
         if (!data) return
+        const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
+        const cloudFiches = Number((data as any).fiches_count ?? 0)
+        const cloudElements = ((data as any).elements as GardenElement[]) ?? []
         setGarden(prev => {
           const local = prev ?? { elapsedMs: 0, fichesCount: 0, elements: [] }
-          const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
-          const cloudFiches = Number((data as any).fiches_count ?? 0)
-          const cloudElements = ((data as any).elements as GardenElement[]) ?? []
-          // On garde le max et l'union (jamais de régression)
           const seen = new Set<string>()
           const merged: GardenElement[] = []
           for (const e of [...local.elements, ...cloudElements]) {
             const k = e.kind + '|' + e.x + '|' + e.y + '|' + (e.variant ?? '')
             if (seen.has(k)) continue
-            seen.add(k); merged.push(e)
+            seen.add(k)
+            merged.push(e)
           }
           return {
             elapsedMs: Math.max(local.elapsedMs, cloudElapsed),
@@ -416,7 +417,10 @@ function DashGarden({
             elements: merged,
           }
         })
-      }, () => { /* swallow */ })
+      } catch {
+        // swallow
+      }
+    })()
 
     // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert
     function onStorage(e: StorageEvent) {
@@ -481,21 +485,30 @@ function DashGarden({
         {/* Sol */}
         <rect x="0" y="220" width="400" height="40" fill="url(#dgGround)" />
 
-        {/* Arbre central — pousse avec elapsedMs */}
-        <g style={{ transform: `scale(${0.45 + treeProgress * 0.55})`, transformOrigin: '200px 220px', transformBox: 'view-box' }}>
-          {/* Tronc */}
-          <rect x="195" y="160" width="10" height="60" fill="#6B4F35" />
-          <rect x="195" y="160" width="10" height="60" fill="#5A4128" opacity=".5" />
-          {/* Branches selon progression */}
-          {branches.map((b, i) => treeProgress >= b.progress && (
-            <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke="#6B4F35" strokeWidth={b.w} strokeLinecap="round" />
-          ))}
-          {/* Canopée — 3 couches qui apparaissent avec les branches */}
-          {treeProgress >= 0.10 && <ellipse cx="200" cy="148" rx="40" ry="36" fill="#3B6D11" />}
-          {treeProgress >= 0.40 && <ellipse cx="174" cy="144" rx="22" ry="20" fill="#4A8A1F" />}
-          {treeProgress >= 0.60 && <ellipse cx="226" cy="144" rx="22" ry="20" fill="#4A8A1F" />}
-          {treeProgress >= 0.80 && <ellipse cx="200" cy="124" rx="24" ry="18" fill="#5AA02A" />}
-        </g>
+        {/* Arbre central — pousse avec elapsedMs (transform sur attribut SVG plutôt
+            que sur style pour éviter les soucis de transformBox sur certains parsers). */}
+        {(() => {
+          const scale = 0.45 + treeProgress * 0.55
+          // pivot au pied de l'arbre (200, 220)
+          const tx = 200 * (1 - scale)
+          const ty = 220 * (1 - scale)
+          return (
+            <g transform={`translate(${tx}, ${ty}) scale(${scale})`}>
+              <rect x="195" y="160" width="10" height="60" fill="#6B4F35" />
+              <rect x="195" y="160" width="10" height="60" fill="#5A4128" opacity=".5" />
+              {branches.map((b, i) => {
+                if (treeProgress < b.progress) return null
+                return (
+                  <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke="#6B4F35" strokeWidth={b.w} strokeLinecap="round" />
+                )
+              })}
+              {treeProgress >= 0.10 ? <ellipse cx="200" cy="148" rx="40" ry="36" fill="#3B6D11" /> : null}
+              {treeProgress >= 0.40 ? <ellipse cx="174" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
+              {treeProgress >= 0.60 ? <ellipse cx="226" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
+              {treeProgress >= 0.80 ? <ellipse cx="200" cy="124" rx="24" ry="18" fill="#5AA02A" /> : null}
+            </g>
+          )
+        })()}
 
         {/* Fleurs — positions exactes scalées depuis le focus garden */}
         {elements.map((el, i) => {
@@ -517,10 +530,12 @@ function DashGarden({
             )
           }
           if (el.kind === 'mushroom') {
-            return <g key={i}>
-              <rect x={x - 0.8} y={y - 1} width="1.6" height="2.5" fill="#E8DDC4" />
-              <ellipse cx={x} cy={y - 1.5} rx="2.4" ry="1.6" fill={el.variant === 'orange' ? '#E89A4F' : '#C75050'} />
-            </g>
+            return (
+              <g key={i}>
+                <rect x={x - 0.8} y={y - 1} width="1.6" height="2.5" fill="#E8DDC4" />
+                <ellipse cx={x} cy={y - 1.5} rx="2.4" ry="1.6" fill={el.variant === 'orange' ? '#E89A4F' : '#C75050'} />
+              </g>
+            )
           }
           if (el.kind === 'rabbit') {
             return <ellipse key={i} cx={x} cy={y} rx="3" ry="2.2" fill="#E0D5C0" />
@@ -543,9 +558,13 @@ function DashGarden({
         </div>
         <div className="dash-garden-cta-wrap">
           <div className="dash-garden-queue">
-            {queueLength === 0
-              ? <>Aucune révision aujourd&apos;hui</>
-              : <><strong>{queueLength}</strong> {queueLength === 1 ? 'fiche' : 'fiches'} · ~{queueLength * 8} min</>}
+            {queueLength === 0 ? (
+              <span>Aucune révision aujourd&apos;hui</span>
+            ) : (
+              <span>
+                <strong>{queueLength}</strong> {queueLength === 1 ? 'fiche' : 'fiches'} · ~{queueLength * 8} min
+              </span>
+            )}
           </div>
           <Link
             href={startHref}
