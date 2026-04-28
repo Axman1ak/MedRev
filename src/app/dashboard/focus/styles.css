@@ -689,6 +689,50 @@
   to { transform: translate(var(--ff-dx), var(--ff-dy)); }
 }
 
+/* ============ GARDEN STATS (overlay bottom-left, glass) ============ */
+.focus-garden-stats {
+  position: absolute;
+  left: 28px;
+  bottom: 22px;
+  z-index: 5;
+  color: white;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  user-select: none;
+}
+.focus-garden-stats-kicker {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+.focus-garden-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.focus-garden-stats-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.focus-garden-stats-num {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+}
+.focus-garden-stats-lbl {
+  font-size: 10.5px;
+  opacity: 0.85;
+}
+.focus-garden-stats-sep {
+  opacity: 0.4;
+}
+
 /* ============ NAVIGATION FLÈCHES ============ */
 .focus-nav-arrow {
   position: absolute;
