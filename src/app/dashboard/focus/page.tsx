@@ -217,7 +217,7 @@ function buildQueue(
 // (clusters bas = session rapide, étalées = session lente).
 
 type PlantProps = {
-  results: Array<Result | null>
+  results: (Result | null)[]
   elapsedMs: number
   timeToFullMs: number
   /** Si true (écran bilan), tige forcée au max et fleur affichée si au moins une note. */
@@ -229,7 +229,7 @@ const POT_Y = 110
 const STEM_TOP_MIN_Y = 30 // hauteur la plus haute atteignable
 
 function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: PlantProps) {
-  const ratedLeaves: Array<{ idx: number; score: Score; atMs: number }> = []
+  const ratedLeaves: { idx: number; score: Score; atMs: number }[] = []
   results.forEach((r, idx) => {
     if (r && r.outcome.kind === 'rated') {
       ratedLeaves.push({ idx, score: r.outcome.score, atMs: r.outcome.atMs })
@@ -368,7 +368,7 @@ const HERO_STEM_TOP_MIN_Y = 80
 const HERO_STEM_RANGE = HERO_POT_TOP_Y - HERO_STEM_TOP_MIN_Y // 250
 
 function FocusPlantHero({ results, elapsedMs, timeToFullMs }: PlantProps) {
-  const ratedLeaves: Array<{ idx: number; score: Score; atMs: number }> = []
+  const ratedLeaves: { idx: number; score: Score; atMs: number }[] = []
   results.forEach((r, idx) => {
     if (r && r.outcome.kind === 'rated') {
       ratedLeaves.push({ idx, score: r.outcome.score, atMs: r.outcome.atMs })
@@ -531,7 +531,7 @@ function FocusPageBody() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [results, setResults] = useState<Array<Result | null>>([])
+  const [results, setResults] = useState<(Result | null)[]>([])
   const [loading, setLoading] = useState(false)
   const [startedAt, setStartedAt] = useState<number>(0)
   const [now, setNow] = useState<number>(0)
@@ -586,7 +586,7 @@ function FocusPageBody() {
   const currentResult = results[currentIdx] ?? null
 
   // ============ Helpers d'avancement ============
-  function findNextEmptyIdx(arr: Array<Result | null>, fromIdx: number): number {
+  function findNextEmptyIdx(arr: (Result | null)[], fromIdx: number): number {
     // Cherche d'abord en avant
     for (let i = fromIdx + 1; i < arr.length; i++) if (arr[i] === null) return i
     // Sinon en arrière
