@@ -2070,3 +2070,8 @@ function FocusPageBody() {
           <span><kbd>R</kbd> reporter</span>
           <span className="focus-hint-sep">{'·'}</span>
           <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
+        </div>
+      </div>
+    </div>
+  )
+}
