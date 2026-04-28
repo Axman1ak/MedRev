@@ -26,10 +26,13 @@ const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   5: '#1B4332',
 }
 
-// Durée CUMULÉE sur la journée jusqu'à pleine maturité de l'arbre central.
-// 3h = durée moyenne quotidienne d'études focus en PASS (1-3 sessions de ~1-2h).
-// L'elapsed est persisté en localStorage et reset chaque nouveau jour.
-const TIME_TO_FULL_MS = 3 * 60 * 60 * 1000
+// L'arbre pousse TRÈS doucement, sur toute l'année.
+// 100h cumulées = pleine maturité (≈ 33 jours à 3h/jour). Au-delà, l'arbre reste à son max
+// et continue à se peupler de feuilles via le système de récompenses.
+const TIME_TO_FULL_MS = 100 * 60 * 60 * 1000
+
+// Hauteur "réelle" de l'arbre à pleine maturité, pour le recap "L'arbre a poussé de X cm".
+const MAX_TREE_CM = 300
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -385,171 +388,124 @@ const ANIMAL_POOL: GardenElement[] = [
   { kind: 'sapling',  x: 280,  y: 710 },
 ]
 
-// Événements rares : cap 1 par type par jour
+// Événements rares : positions multiples pour certaines espèces (deer, owl, fox, squirrel
+// peuvent apparaître plusieurs fois sur l'année). Pond et log restent uniques (1 seul logique).
 const RARE_POOL: GardenElement[] = [
-  { kind: 'pond',     x: 1180, y: 820 },
+  { kind: 'pond',     x: 1180, y: 820 },        // unique (1 étang dans le jardin)
+  { kind: 'log',      x: 880,  y: 700 },        // unique (1 tronc tombé)
+  // Daims : 3 spots possibles dans la prairie/colline
   { kind: 'deer',     x: 880,  y: 712 },
+  { kind: 'deer',     x: 1120, y: 700 },
+  { kind: 'deer',     x: 760,  y: 720 },
+  // Hiboux : 2 spots sur les branches hautes
   { kind: 'owl',      x: 660,  y: 542 },
+  { kind: 'owl',      x: 540,  y: 460 },
+  // Renards : 2 spots dans les bords
   { kind: 'fox',      x: 100,  y: 850 },
+  { kind: 'fox',      x: 1500, y: 870 },
+  // Écureuils : 3 spots dans/sur l'arbre central
   { kind: 'squirrel', x: 620,  y: 542 },
-  { kind: 'log',      x: 880,  y: 700 },
+  { kind: 'squirrel', x: 360,  y: 600 },
+  { kind: 'squirrel', x: 720,  y: 480 },
 ]
 const RARE_KIND_SET = new Set(RARE_POOL.map(p => p.kind))
 
-// ============ Tirage d'une RÉCOMPENSE (grappe d'éléments) ============
-// Chaque fiche notée déclenche une grappe : pas un seul élément mais 4-12 éléments
-// pour que l'effet visuel soit nourrissant — un étudiant ne fait que ~10 fiches/jour
-// donc chaque tirage doit faire évoluer le jardin de manière nette.
+// ============ Tirage d'un seul élément (jardin annuel : doit rester clairsemé) ============
+// Chaque fiche notée a une probabilité de faire apparaître UN nouvel élément.
+// Sur l'année (~2000 fiches), on veut un jardin riche mais pas saturé.
+//
+// Probabilités par fiche notée :
+//    50% : RIEN (juste l'arbre qui pousse un peu)
+//    30% : une fleur
+//    12% : un insecte
+//     6% : un animal courant
+//     2% : un événement rare (cap par positions disponibles)
 
-const FLOWER_VARIANTS = ['red', 'pink', 'white', 'yellow', 'orange', 'purple']
-const INSECT_VARIANTS: ('amber' | 'blue' | 'purple')[] = ['amber', 'blue', 'purple']
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v))
-}
-
-function randFlower(cx: number, cy: number, jitterX = 100, jitterY = 30): GardenElement {
-  return {
-    kind: Math.random() < 0.85 ? 'flower' : 'tulip',
-    x: clamp(cx + (Math.random() - 0.5) * jitterX, 80, 1520),
-    y: clamp(cy + (Math.random() - 0.5) * jitterY, 800, 960),
-    variant: FLOWER_VARIANTS[Math.floor(Math.random() * FLOWER_VARIANTS.length)],
-  }
-}
-
-function randButterfly(cx: number, cy: number, jitterX = 220, jitterY = 180): GardenElement {
-  return {
-    kind: 'butterfly',
-    x: clamp(cx + (Math.random() - 0.5) * jitterX, 150, 1500),
-    y: clamp(cy + (Math.random() - 0.5) * jitterY, 200, 620),
-    variant: INSECT_VARIANTS[Math.floor(Math.random() * INSECT_VARIANTS.length)],
-  }
-}
-
-function randMushroom(cx: number, cy: number, jitterX = 80, jitterY = 30): GardenElement {
-  return {
-    kind: 'mushroom',
-    x: clamp(cx + (Math.random() - 0.5) * jitterX, 80, 1520),
-    y: clamp(cy + (Math.random() - 0.5) * jitterY, 880, 960),
-    variant: Math.random() < 0.7 ? 'red' : 'orange',
-  }
-}
-
-// 50% : grappe de fleurs (4-7 fleurs + occasionnellement 1 tournesol)
-function rewardFlowerCluster(): GardenElement[] {
-  const cx = 120 + Math.random() * 1380
-  const cy = 870 + Math.random() * 80
-  const count = 4 + Math.floor(Math.random() * 4) // 4-7
-  const out: GardenElement[] = []
-  for (let i = 0; i < count; i++) out.push(randFlower(cx, cy, 130, 35))
-  // 20% chance d'un tournesol au centre du parterre
-  if (Math.random() < 0.20) {
-    out.push({ kind: 'sunflower', x: clamp(cx, 100, 1500), y: clamp(cy + 5, 880, 950) })
-  }
-  return out
-}
-
-// 25% : essaim de papillons (2-4) + 1-2 fleurs au sol
-function rewardInsectSwarm(): GardenElement[] {
-  const cx = 350 + Math.random() * 1000
-  const cy = 250 + Math.random() * 350
-  const count = 2 + Math.floor(Math.random() * 3) // 2-4
-  const out: GardenElement[] = []
-  for (let i = 0; i < count; i++) out.push(randButterfly(cx, cy, 280, 220))
-  // Fleurs au sol qui les ont attirés
-  const fc = 1 + Math.floor(Math.random() * 2) // 1-2 fleurs
-  const fcx = 200 + Math.random() * 1200
-  const fcy = 920 + Math.random() * 30
-  for (let i = 0; i < fc; i++) out.push(randFlower(fcx, fcy, 80, 20))
-  return out
-}
-
-// 17% : un animal apparaît avec son décor (3-5 éléments autour : fleurs, champignons, sapling)
-function rewardAnimalSpot(existing: GardenElement[]): GardenElement[] {
+function pickFromPool(pool: GardenElement[], existing: GardenElement[]): GardenElement | null {
   const taken = new Set(existing.map(e => `${e.kind}:${e.x},${e.y}`))
-  const avail = ANIMAL_POOL.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
-  const animal = avail.length > 0
-    ? avail[Math.floor(Math.random() * avail.length)]
-    : ANIMAL_POOL[Math.floor(Math.random() * ANIMAL_POOL.length)]
-  const out: GardenElement[] = [animal]
-  // 3-5 éléments décoratifs autour
-  const count = 3 + Math.floor(Math.random() * 3)
-  for (let i = 0; i < count; i++) {
-    const r = Math.random()
-    if (r < 0.65) {
-      out.push(randFlower(animal.x, animal.y + 30, 220, 30))
-    } else if (r < 0.85) {
-      out.push(randMushroom(animal.x, animal.y + 30, 180, 25))
-    } else {
-      out.push(randButterfly(animal.x - 80, animal.y - 240, 200, 100))
-    }
+  const available = pool.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
+  if (available.length > 0) {
+    return available[Math.floor(Math.random() * available.length)]
   }
-  return out
+  // Pool plein : on jitter une position aléatoire pour densifier sans collision parfaite
+  const p = pool[Math.floor(Math.random() * pool.length)]
+  return {
+    ...p,
+    x: p.x + (Math.random() - 0.5) * 24,
+    y: p.y + (Math.random() - 0.5) * 10,
+  }
 }
 
-// 8% : ÉVÉNEMENT RARE (cap 1 par jour de chaque type). L'événement seul + 5-8 éléments
-// supports tout autour pour un vrai "wow" moment.
-function rewardRareEvent(existing: GardenElement[]): GardenElement[] {
-  const rareKindsUsed = new Set(existing.filter(e => RARE_KIND_SET.has(e.kind)).map(e => e.kind))
-  const avail = RARE_POOL.filter(p => !rareKindsUsed.has(p.kind))
-  if (avail.length === 0) {
-    // Tous les rares déjà tirés : grosse grappe de fleurs en compensation
-    return [...rewardFlowerCluster(), ...rewardFlowerCluster()]
-  }
-  const rare = avail[Math.floor(Math.random() * avail.length)]
-  const out: GardenElement[] = [rare]
-  // 5-8 éléments support pour faire de l'événement un vrai moment
-  const count = 5 + Math.floor(Math.random() * 4)
-  for (let i = 0; i < count; i++) {
-    const r = Math.random()
-    if (r < 0.50) {
-      out.push(randFlower(100 + Math.random() * 1400, 900 + Math.random() * 50, 60, 20))
-    } else if (r < 0.78) {
-      out.push(randButterfly(200 + Math.random() * 1200, 250 + Math.random() * 350, 180, 150))
-    } else if (r < 0.92) {
-      out.push(randMushroom(100 + Math.random() * 1400, 900 + Math.random() * 50, 50, 20))
-    } else {
-      // Petit sapling bonus
-      out.push({ kind: 'sapling', x: clamp(100 + Math.random() * 1400, 100, 1500), y: 700 + Math.random() * 30 })
-    }
-  }
-  return out
-}
-
-// Tirage principal : choisit une catégorie selon les probabilités
-// et retourne une GRAPPE d'éléments à ajouter au jardin.
-function pickReward(existing: GardenElement[]): GardenElement[] {
+function pickElement(existing: GardenElement[]): GardenElement | null {
   const r = Math.random()
-  if (r < 0.50) return rewardFlowerCluster()
-  if (r < 0.75) return rewardInsectSwarm()
-  if (r < 0.92) return rewardAnimalSpot(existing)
-  return rewardRareEvent(existing)
+  // 50% : RIEN — la fiche n'apporte que la croissance silencieuse de l'arbre
+  if (r < 0.50) return null
+  // 30% : fleur
+  if (r < 0.80) {
+    return pickFromPool(FLOWER_POOL, existing)
+  }
+  // 12% : insecte
+  if (r < 0.92) {
+    return pickFromPool(INSECT_POOL, existing)
+  }
+  // 6% : animal courant
+  if (r < 0.98) {
+    return pickFromPool(ANIMAL_POOL, existing)
+  }
+  // 2% : événement rare (positions multiples par espèce, on filtre ce qui est pris)
+  const taken = new Set(existing.map(e => `${e.kind}:${e.x},${e.y}`))
+  const availRares = RARE_POOL.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
+  if (availRares.length > 0) {
+    return availRares[Math.floor(Math.random() * availRares.length)]
+  }
+  // Toutes les positions rares prises : fallback fleur
+  return pickFromPool(FLOWER_POOL, existing)
 }
 
-// ============ Persistance jour (localStorage, clé date-suffixée) ============
+// ============ Persistance ANNUELLE (jardin cultivé sur toute l'année) ============
+// Single key 'medrev-garden' — jamais reset. Le jardin grandit avec le temps.
 type DayGardenState = {
-  date: string
-  elapsedMs: number
-  fichesCount: number  // nombre de fiches notées aujourd'hui (pour stats)
-  elements: GardenElement[]
+  startedDate?: string       // date de la première session (info)
+  elapsedMs: number          // temps cumulé total (sur l'année)
+  fichesCount: number        // nombre total de fiches notées (sur l'année)
+  elements: GardenElement[]  // tous les éléments accumulés
 }
+
+const GARDEN_KEY = 'medrev-garden'
+const LEGACY_KEY_PREFIX = 'medrev-garden-' // ancien format date-suffixé
 
 function loadDayGarden(today: string): DayGardenState {
-  const empty: DayGardenState = { date: today, elapsedMs: 0, fichesCount: 0, elements: [] }
+  const empty: DayGardenState = { startedDate: today, elapsedMs: 0, fichesCount: 0, elements: [] }
   if (typeof window === 'undefined') return empty
-  const key = 'medrev-garden-' + today
   try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return empty
-    const parsed = JSON.parse(raw) as Partial<DayGardenState>
-    if (parsed.date !== today) return empty
-    // Backward-compat : si fichesCount manque, on l'estime à partir de elements.length / 6
-    return {
-      date: today,
-      elapsedMs: parsed.elapsedMs ?? 0,
-      fichesCount: parsed.fichesCount ?? Math.max(0, Math.round((parsed.elements?.length ?? 0) / 6)),
-      elements: parsed.elements ?? [],
+    const raw = localStorage.getItem(GARDEN_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<DayGardenState>
+      return {
+        startedDate: parsed.startedDate ?? today,
+        elapsedMs: parsed.elapsedMs ?? 0,
+        fichesCount: parsed.fichesCount ?? 0,
+        elements: parsed.elements ?? [],
+      }
     }
+    // Migration douce : si une ancienne clé date-suffixée existe, on récupère son contenu
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(LEGACY_KEY_PREFIX) && k !== GARDEN_KEY) {
+        try {
+          const legacy = JSON.parse(localStorage.getItem(k) ?? '{}') as Partial<DayGardenState>
+          if (legacy.elements && legacy.elements.length > 0) {
+            return {
+              startedDate: today,
+              elapsedMs: legacy.elapsedMs ?? 0,
+              fichesCount: legacy.fichesCount ?? 0,
+              elements: legacy.elements,
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    return empty
   } catch {
     return empty
   }
@@ -557,13 +513,12 @@ function loadDayGarden(today: string): DayGardenState {
 
 function saveDayGarden(state: DayGardenState) {
   if (typeof window === 'undefined') return
-  const key = 'medrev-garden-' + state.date
   try {
-    localStorage.setItem(key, JSON.stringify(state))
-    // Cleanup des anciennes clés (jardins des jours précédents)
+    localStorage.setItem(GARDEN_KEY, JSON.stringify(state))
+    // Cleanup des anciennes clés date-suffixées (legacy)
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i)
-      if (k && k.startsWith('medrev-garden-') && k !== key) {
+      if (k && k.startsWith(LEGACY_KEY_PREFIX) && k !== GARDEN_KEY) {
         localStorage.removeItem(k)
       }
     }
@@ -1273,11 +1228,14 @@ function FocusPageBody() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  // ============ ÉTAT JARDIN PERSISTANT (jour) ============
-  // Persisté en localStorage avec clé 'medrev-garden-YYYY-MM-DD'.
-  // Reset chaque nouveau jour. elapsedMs cumulé sur la journée à travers les sessions.
-  const [dayGarden, setDayGarden] = useState<DayGardenState>({ date: today, elapsedMs: 0, fichesCount: 0, elements: [] })
+  // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
+  // Persisté en localStorage avec clé 'medrev-garden' (sans date). Cultivé toute l'année.
+  // elapsedMs cumulé sur l'ensemble de l'année. Jamais reset.
+  const [dayGarden, setDayGarden] = useState<DayGardenState>({ startedDate: today, elapsedMs: 0, fichesCount: 0, elements: [] })
   const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
+  // Stocke le nombre d'éléments dans le jardin AU DÉMARRAGE de la session courante.
+  // Utilisé pour le recap de fin : permet de calculer ce qui a été ajouté pendant cette session.
+  const [sessionStartElementCount, setSessionStartElementCount] = useState(0)
   const dayGardenRef = useRef<DayGardenState>(dayGarden)
   useEffect(() => { dayGardenRef.current = dayGarden }, [dayGarden])
 
@@ -1289,15 +1247,16 @@ function FocusPageBody() {
     if (main) main.scrollTop = 0
   }, [])
 
-  // Chargement initial : auth + data + queue + jardin du jour
+  // Chargement initial : auth + data + queue + jardin annuel
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      // 1) Restaure le jardin persisté du jour (avant toute autre logique)
+      // 1) Restaure le jardin persisté (annuel)
       const loadedGarden = loadDayGarden(today)
       if (!cancelled) {
         setDayGarden(loadedGarden)
         setCumElapsedAtStart(loadedGarden.elapsedMs)
+        setSessionStartElementCount(loadedGarden.elements.length)
       }
 
       // 2) Auth Supabase
@@ -1332,19 +1291,19 @@ function FocusPageBody() {
     if (phase !== 'session') return
     const intv = setInterval(() => {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const next: DayGardenState = { ...dayGardenRef.current, elapsedMs: totalElapsed, date: today }
+      const next: DayGardenState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
       dayGardenRef.current = next
       saveDayGarden(next)
     }, 30000)
     return () => clearInterval(intv)
-  }, [phase, cumElapsedAtStart, startedAt, today])
+  }, [phase, cumElapsedAtStart, startedAt])
 
   // Sauvegarde finale au démontage de la page
   useEffect(() => {
     return () => {
       if (startedAt === 0) return
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      saveDayGarden({ ...dayGardenRef.current, elapsedMs: totalElapsed, date: today })
+      saveDayGarden({ ...dayGardenRef.current, elapsedMs: totalElapsed })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1400,19 +1359,19 @@ function FocusPageBody() {
     // Le score n'a pas d'incidence visuelle.
     setParticleBurst({ ts: Date.now() })
 
-    // Sur PREMIÈRE notation de la fiche : tirage d'une GRAPPE d'éléments pour le jardin
-    // (cluster de fleurs 50% / essaim papillons 25% / spot animalier 17% / événement rare 8%).
-    // Chaque grappe contient 4-12 éléments selon la catégorie pour que la progression
-    // soit nettement visible (un étudiant fait ~10 fiches/jour).
-    // Persisté immédiatement en localStorage. Re-rating ne déclenche pas (pas de farming).
+    // Sur PREMIÈRE notation : 50% de chance que rien n'apparaisse (juste l'arbre pousse),
+    // sinon tirage d'UN seul élément (fleur 30% / insecte 12% / animal 6% / rare 2%).
+    // Re-rating ne déclenche pas (pas de farming).
     if (wasEmpty) {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const newElements = pickReward(dayGardenRef.current.elements)
+      const newEl = pickElement(dayGardenRef.current.elements)
       const updatedGarden: DayGardenState = {
-        date: today,
+        ...dayGardenRef.current,
         elapsedMs: totalElapsed,
         fichesCount: dayGardenRef.current.fichesCount + 1,
-        elements: [...dayGardenRef.current.elements, ...newElements],
+        elements: newEl
+          ? [...dayGardenRef.current.elements, newEl]
+          : dayGardenRef.current.elements,
       }
       dayGardenRef.current = updatedGarden
       setDayGarden(updatedGarden)
@@ -1536,6 +1495,18 @@ function FocusPageBody() {
       ? null
       : rated.reduce((s, r) => s + (r.outcome as { score: Score }).score, 0) / rated.length
 
+    // ============ Recap session ============
+    // Croissance "physique" de l'arbre cette session (en cm)
+    const sessionElapsedMs = Math.max(0, now - startedAt)
+    const sessionGrowthCm = (sessionElapsedMs / TIME_TO_FULL_MS) * MAX_TREE_CM
+    // Éléments ajoutés au jardin pendant cette session (slice depuis le mark de début)
+    const sessionGains = dayGarden.elements.slice(sessionStartElementCount)
+    // Décomposition : fleurs / papillons / animaux courants / événements rares
+    const sessionFlowers = sessionGains.filter(e => e.kind === 'flower' || e.kind === 'tulip' || e.kind === 'sunflower').length
+    const sessionButterflies = sessionGains.filter(e => e.kind === 'butterfly').length
+    const sessionRareCount = sessionGains.filter(e => RARE_KIND_SET.has(e.kind)).length
+    const sessionCommonAnimals = sessionGains.length - sessionFlowers - sessionButterflies - sessionRareCount
+
     return (
       <div className="focus-root">
         {/* TOP BAR (overlay glass sur le ciel) */}
@@ -1576,6 +1547,37 @@ function FocusPageBody() {
                 {avg !== null && <> {'·'} moyenne <strong>{avg.toFixed(1)}/5</strong></>}
               </div>
 
+              {/* Recap croissance arbre + gains du jardin pendant la session */}
+              <div className="focus-done-recap">
+                <div className="focus-done-recap-row">
+                  <span className="focus-done-recap-icon" aria-hidden="true">{'\u{1F33F}'}</span>
+                  <span className="focus-done-recap-text">
+                    L&apos;arbre a poussé de <strong>{sessionGrowthCm.toFixed(1)} cm</strong>
+                  </span>
+                </div>
+                {sessionGains.length > 0 ? (
+                  <div className="focus-done-recap-gains">
+                    <div className="focus-done-recap-gains-lbl">Ajouté à ton jardin</div>
+                    <div className="focus-done-recap-gains-row">
+                      {sessionFlowers > 0 && (
+                        <span className="focus-done-recap-pill"><strong>{sessionFlowers}</strong> {sessionFlowers > 1 ? 'fleurs' : 'fleur'}</span>
+                      )}
+                      {sessionButterflies > 0 && (
+                        <span className="focus-done-recap-pill"><strong>{sessionButterflies}</strong> {sessionButterflies > 1 ? 'papillons' : 'papillon'}</span>
+                      )}
+                      {sessionCommonAnimals > 0 && (
+                        <span className="focus-done-recap-pill"><strong>{sessionCommonAnimals}</strong> {sessionCommonAnimals > 1 ? 'animaux' : 'animal'}</span>
+                      )}
+                      {sessionRareCount > 0 && (
+                        <span className="focus-done-recap-pill rare"><strong>{sessionRareCount}</strong> {sessionRareCount > 1 ? 'événements rares' : 'événement rare'}</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="focus-done-recap-empty">Pas de nouvel élément cette fois — l&apos;arbre a quand même profité de la session.</div>
+                )}
+              </div>
+
               <div className="focus-done-list">
                 {filled.map((r, i) => (
                   <div key={`${r.lessonId}-${i}`} className="focus-done-row">
@@ -1595,9 +1597,9 @@ function FocusPageBody() {
             </div>
           </div>
 
-          {/* Stats du jardin du jour, gardées visibles en bas-droite cette fois */}
+          {/* Stats du jardin annuel, gardées visibles en bas-droite */}
           <div className="focus-garden-stats focus-garden-stats-right" aria-live="polite">
-            <div className="focus-garden-stats-kicker">Ton jardin du jour</div>
+            <div className="focus-garden-stats-kicker">Ton jardin (cumulé)</div>
             <div className="focus-garden-stats-row">
               <span className="focus-garden-stats-item">
                 <span className="focus-garden-stats-num">{dayGarden.fichesCount}</span>
