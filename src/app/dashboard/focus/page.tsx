@@ -547,10 +547,12 @@ const HERO_GROUND_Y = 750
 function FocusGarden({ elapsedMs, timeToFullMs, ratedCount, particleBurst, forceFull = false }: GardenProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
-  // Soleil arc : x de 200 à 1400, y suit une sinusoïde (zénith au milieu de la session).
+  // Soleil arc : x de 200 à 1400, y suit une sinusoïde.
+  // Arc abaissé (y ~440 horizon, ~220 zénith) pour rester dans la zone safe
+  // après crop "slice" sur les aspects écran larges.
   const sunArcT = treeProgress
   const sunX = 200 + sunArcT * 1200
-  const sunY = 400 - Math.sin(sunArcT * Math.PI) * 280
+  const sunY = 440 - Math.sin(sunArcT * Math.PI) * 220
 
   const unlocked = UNLOCK_SEQUENCE.slice(0, Math.min(ratedCount, UNLOCK_SEQUENCE.length))
 
