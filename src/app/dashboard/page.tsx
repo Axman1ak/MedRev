@@ -377,6 +377,72 @@ const BUTTERFLY_COLOR: Record<string, [string, string]> = {
   purple:['#9C68B0', '#D5B0E0'],
 }
 
+// Helpers de rendu SVG sortis du composant pour rester simples côté parser.
+function renderTree(treeProgress: number) {
+  const scale = 0.45 + treeProgress * 0.55
+  const tx = 200 * (1 - scale)
+  const ty = 220 * (1 - scale)
+  const branches: Array<{ progress: number; x1: number; y1: number; x2: number; y2: number; w: number }> = [
+    { progress: 0.18, x1: 200, y1: 138, x2: 156, y2: 116, w: 5 },
+    { progress: 0.36, x1: 200, y1: 124, x2: 246, y2: 100, w: 5 },
+    { progress: 0.54, x1: 200, y1: 110, x2: 168, y2: 86, w: 4 },
+    { progress: 0.72, x1: 200, y1: 100, x2: 234, y2: 78, w: 4 },
+  ]
+  const visibleBranches = branches.filter(b => treeProgress >= b.progress)
+  return (
+    <g transform={'translate(' + tx + ',' + ty + ') scale(' + scale + ')'}>
+      <rect x="195" y="160" width="10" height="60" fill="#6B4F35" />
+      <rect x="195" y="160" width="10" height="60" fill="#5A4128" opacity=".5" />
+      {visibleBranches.map((b, i) => (
+        <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke="#6B4F35" strokeWidth={b.w} strokeLinecap="round" />
+      ))}
+      {treeProgress >= 0.10 ? <ellipse cx="200" cy="148" rx="40" ry="36" fill="#3B6D11" /> : null}
+      {treeProgress >= 0.40 ? <ellipse cx="174" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
+      {treeProgress >= 0.60 ? <ellipse cx="226" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
+      {treeProgress >= 0.80 ? <ellipse cx="200" cy="124" rx="24" ry="18" fill="#5AA02A" /> : null}
+    </g>
+  )
+}
+
+const DG_SCALE_X = 0.25
+const DG_SCALE_Y = 0.26
+
+function renderGardenElement(el: GardenElement, i: number) {
+  const x = el.x * DG_SCALE_X
+  const y = el.y * DG_SCALE_Y
+  if (el.kind === 'flower' || el.kind === 'tulip' || el.kind === 'sunflower') {
+    const color = FLOWER_COLOR[el.variant ?? 'red'] ?? '#C75050'
+    const r = el.kind === 'sunflower' ? 4 : el.kind === 'tulip' ? 3 : 2.6
+    return <circle key={i} cx={x} cy={y} r={r} fill={color} />
+  }
+  if (el.kind === 'butterfly') {
+    const cols = BUTTERFLY_COLOR[el.variant ?? 'amber'] ?? BUTTERFLY_COLOR.amber
+    return (
+      <g key={i}>
+        <ellipse cx={x - 2} cy={y} rx="2.2" ry="1.6" fill={cols[0]} />
+        <ellipse cx={x + 2} cy={y} rx="2.2" ry="1.6" fill={cols[1]} />
+        <line x1={x} y1={y - 1} x2={x} y2={y + 1.4} stroke="#3D2A1F" strokeWidth=".7" />
+      </g>
+    )
+  }
+  if (el.kind === 'mushroom') {
+    const cap = el.variant === 'orange' ? '#E89A4F' : '#C75050'
+    return (
+      <g key={i}>
+        <rect x={x - 0.8} y={y - 1} width="1.6" height="2.5" fill="#E8DDC4" />
+        <ellipse cx={x} cy={y - 1.5} rx="2.4" ry="1.6" fill={cap} />
+      </g>
+    )
+  }
+  if (el.kind === 'rabbit') {
+    return <ellipse key={i} cx={x} cy={y} rx="3" ry="2.2" fill="#E0D5C0" />
+  }
+  if (el.kind === 'pond') {
+    return <ellipse key={i} cx={x} cy={y} rx="14" ry="4" fill="#5B8ED4" opacity=".75" />
+  }
+  return <circle key={i} cx={x} cy={y} r={2.5} fill="#3B2F1F" />
+}
+
 // ======================= MINI JARDIN COMPONENT =======================
 // Aperçu compact du jardin annuel : ciel + arbre + fleurs/papillons.
 // Ne fait QUE lire le state — toute culture du jardin se fait sur /dashboard/focus.
@@ -440,19 +506,6 @@ function DashGarden({
   const skyTop = isDay ? '#7AA0B8' : '#1F2A4A'
   const skyMid = isDay ? '#B6CFD8' : '#3D3A6A'
 
-  // Branches de l'arbre (apparaissent à des paliers de progression)
-  const branches = [
-    { progress: 0.18, x1: 200, y1: 138, x2: 156, y2: 116, w: 5 },
-    { progress: 0.36, x1: 200, y1: 124, x2: 246, y2: 100, w: 5 },
-    { progress: 0.54, x1: 200, y1: 110, x2: 168, y2: 86, w: 4 },
-    { progress: 0.72, x1: 200, y1: 100, x2: 234, y2: 78, w: 4 },
-  ]
-
-  // Échelle des positions du focus (1600x1000) → mini (400x260)
-  // sol focus = y 800-1000 → sol mini = y 220-260
-  const SCALE_X = 0.25
-  const SCALE_Y = 0.26
-
   return (
     <div className="dash-garden">
       <svg
@@ -485,67 +538,11 @@ function DashGarden({
         {/* Sol */}
         <rect x="0" y="220" width="400" height="40" fill="url(#dgGround)" />
 
-        {/* Arbre central — pousse avec elapsedMs (transform sur attribut SVG plutôt
-            que sur style pour éviter les soucis de transformBox sur certains parsers). */}
-        {(() => {
-          const scale = 0.45 + treeProgress * 0.55
-          // pivot au pied de l'arbre (200, 220)
-          const tx = 200 * (1 - scale)
-          const ty = 220 * (1 - scale)
-          return (
-            <g transform={`translate(${tx}, ${ty}) scale(${scale})`}>
-              <rect x="195" y="160" width="10" height="60" fill="#6B4F35" />
-              <rect x="195" y="160" width="10" height="60" fill="#5A4128" opacity=".5" />
-              {branches.map((b, i) => {
-                if (treeProgress < b.progress) return null
-                return (
-                  <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke="#6B4F35" strokeWidth={b.w} strokeLinecap="round" />
-                )
-              })}
-              {treeProgress >= 0.10 ? <ellipse cx="200" cy="148" rx="40" ry="36" fill="#3B6D11" /> : null}
-              {treeProgress >= 0.40 ? <ellipse cx="174" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
-              {treeProgress >= 0.60 ? <ellipse cx="226" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
-              {treeProgress >= 0.80 ? <ellipse cx="200" cy="124" rx="24" ry="18" fill="#5AA02A" /> : null}
-            </g>
-          )
-        })()}
+        {/* Arbre central — pousse avec elapsedMs */}
+        {renderTree(treeProgress)}
 
-        {/* Fleurs — positions exactes scalées depuis le focus garden */}
-        {elements.map((el, i) => {
-          const x = el.x * SCALE_X
-          const y = el.y * SCALE_Y
-          if (el.kind === 'flower' || el.kind === 'tulip' || el.kind === 'sunflower') {
-            const color = FLOWER_COLOR[el.variant ?? 'red'] ?? '#C75050'
-            const r = el.kind === 'sunflower' ? 4 : el.kind === 'tulip' ? 3 : 2.6
-            return <circle key={i} cx={x} cy={y} r={r} fill={color} />
-          }
-          if (el.kind === 'butterfly') {
-            const cols = BUTTERFLY_COLOR[el.variant ?? 'amber'] ?? BUTTERFLY_COLOR.amber
-            return (
-              <g key={i}>
-                <ellipse cx={x - 2} cy={y} rx="2.2" ry="1.6" fill={cols[0]} />
-                <ellipse cx={x + 2} cy={y} rx="2.2" ry="1.6" fill={cols[1]} />
-                <line x1={x} y1={y - 1} x2={x} y2={y + 1.4} stroke="#3D2A1F" strokeWidth=".7" />
-              </g>
-            )
-          }
-          if (el.kind === 'mushroom') {
-            return (
-              <g key={i}>
-                <rect x={x - 0.8} y={y - 1} width="1.6" height="2.5" fill="#E8DDC4" />
-                <ellipse cx={x} cy={y - 1.5} rx="2.4" ry="1.6" fill={el.variant === 'orange' ? '#E89A4F' : '#C75050'} />
-              </g>
-            )
-          }
-          if (el.kind === 'rabbit') {
-            return <ellipse key={i} cx={x} cy={y} rx="3" ry="2.2" fill="#E0D5C0" />
-          }
-          if (el.kind === 'pond') {
-            return <ellipse key={i} cx={x} cy={y} rx="14" ry="4" fill="#5B8ED4" opacity=".75" />
-          }
-          // Animaux rares + sapling : petit dot sombre, lecture rapide
-          return <circle key={i} cx={x} cy={y} r={2.5} fill="#3B2F1F" />
-        })}
+        {/* Fleurs / papillons / animaux — positions scalées depuis le focus garden */}
+        {elements.map((el, i) => renderGardenElement(el, i))}
       </svg>
 
       <div className="dash-garden-overlay">
@@ -1006,3 +1003,220 @@ function TodayModal({
               <div className="full-sub">{todayLabel}</div>
             </div>
           </div>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
+        </div>
+
+        <div className="full-today-stats">
+          <div>
+            <div className="full-stat-label">Total</div>
+            <div className="full-stat-val"><em>{queue.length}</em> révision{queue.length > 1 ? 's' : ''}</div>
+          </div>
+          <div>
+            <div className="full-stat-label">Temps estimé</div>
+            <div className="full-stat-val">~ {totalMin} <span className="small">min</span></div>
+          </div>
+          <Link href={startHref} className="btn-focus-lg" onClick={onClose}>
+            Démarrer la session focus
+          </Link>
+        </div>
+
+        <div className="full-filters">
+          <span className="full-filters-label">Trier par</span>
+          <button
+            className={`pill${sort === 'priority' ? ' active' : ''}`}
+            onClick={() => setSort('priority')}
+          >Priorité</button>
+          <button
+            className={`pill${sort === 'subject' ? ' active' : ''}`}
+            onClick={() => setSort('subject')}
+          >Matière</button>
+          <button
+            className={`pill${sort === 'j' ? ' active' : ''}`}
+            onClick={() => setSort('j')}
+          >Palier J</button>
+          <span style={{ flex: 1 }} />
+          <span className="full-filters-label">Matière</span>
+          <select
+            value={subjectFilter}
+            onChange={e => setSubjectFilter(e.target.value)}
+            style={{
+              padding: '5px 10px', border: '1px solid var(--border)',
+              borderRadius: 20, background: 'white', fontSize: 11,
+              fontFamily: 'inherit', color: 'var(--gray)', cursor: 'pointer',
+            }}
+          >
+            <option value="all">Toutes</option>
+            {subjectsInQueue.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="modal-scroll">
+          <div className="full-today-list">
+            {sortedFiltered.length === 0 ? (
+              <div className="full-empty">Aucune fiche ne correspond.</div>
+            ) : sortedFiltered.map((p, idx) => {
+              const sys = systems.find(s => s.id === p.lesson.system_id)
+              const sysName = sys?.name ?? 'Matière'
+              const highlight = sort === 'priority' && idx === 0
+              const minTime = 8
+              return (
+                <div key={p.lesson.id} className={`full-row${highlight ? ' highlight' : ''}`}>
+                  <div className="full-row-num">{highlight ? '!' : idx + 1}</div>
+                  <div>
+                    <div className="full-row-name">{p.lesson.name}</div>
+                    <div className="full-row-meta">
+                      {p.due.status === 'missed'
+                        ? <><strong>J+{J[p.due.stepIndex]} manqué depuis {p.due.overdueDays} j</strong> · {sysName} · ~{minTime} min</>
+                        : <>J+{J[p.due.stepIndex]} dû aujourd&apos;hui · {sysName} · ~{minTime} min</>}
+                    </div>
+                  </div>
+                  <div className={p.lastScore ? `score-chip s${p.lastScore}` : 'score-chip none'}>
+                    {p.lastScore ?? '—'}
+                  </div>
+                  <div className="full-row-actions">
+                    <Link
+                      href={`/dashboard/focus?lesson=${p.lesson.id}`}
+                      className="row-btn go"
+                      onClick={onClose}
+                    >
+                      Faire
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ======================= WEAK MODAL =======================
+function WeakModal({
+  stats, onClose,
+}: {
+  stats: MatiereStat[]
+  onClose: () => void
+}) {
+  const maxAvg = 5
+  const chartCols = Math.max(1, stats.length)
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+
+        <div className="full-header">
+          <div className="full-title-wrap">
+            <div className="full-title-ic rose">{'\u25C6'}</div>
+            <div>
+              <h2 className="full-title">Toutes tes matières</h2>
+              <div className="full-sub">Classées par moyenne, du plus faible au plus maîtrisé</div>
+            </div>
+          </div>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
+        </div>
+
+        {stats.length > 0 && (
+          <div className="full-weak-chart">
+            <div className="chart-label">Vue d&apos;ensemble · moyenne par matière</div>
+            <div className="chart-bars" style={{ gridTemplateColumns: `repeat(${chartCols}, 1fr)` }}>
+              {stats.map(m => {
+                const avg = m.avgScore ?? 0
+                const pct = Math.max(18, Math.round((avg / maxAvg) * 100))
+                const cls = scoreClass(m.avgScore)
+                return (
+                  <div key={m.system.id} className="chart-col">
+                    <div className={`chart-bar ${cls}`} style={{ height: `${pct}%` }}>
+                      <div className="chart-bar-v">{avg.toFixed(1)}</div>
+                    </div>
+                    <div className="chart-name">{m.system.name}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="modal-scroll">
+          <div className="full-weak-list">
+            {stats.length === 0 ? (
+              <div className="full-empty">Pas encore assez de notes pour classer les matières.</div>
+            ) : stats.map((m, idx) => {
+              const cls = scoreClass(m.avgScore)
+              const dotColor = `var(--${cls})`
+              return (
+                <div key={m.system.id} className="mat-card">
+                  <div className="mat-head">
+                    <div className="mat-rank">{idx + 1}</div>
+                    <div className="mat-name-wrap">
+                      <div className="mat-dot" style={{ background: dotColor }} />
+                      <div>
+                        <div className="mat-name">{m.system.name}</div>
+                        <div className="mat-counts">
+                          <strong>{m.totalFiches}</strong> fiche{m.totalFiches > 1 ? 's' : ''}
+                          {m.fragile.length > 0 ? (
+                            <> · <strong className={cls === 's1' ? 's1' : 's2'}>{m.fragile.length} fragile{m.fragile.length > 1 ? 's' : ''}</strong></>
+                          ) : (
+                            <> · <strong className="s4">0 fragile</strong></>
+                          )}
+                          {' · '}{m.okCount} OK
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`mat-avg ${cls}`}>
+                      <span className="mat-avg-n">{m.avgScore !== null ? m.avgScore.toFixed(1) : '—'}</span>
+                      <span className="mat-avg-x">/ 5</span>
+                    </div>
+                  </div>
+
+                  {m.fragile.length > 0 && (
+                    <div className="mat-body">
+                      {m.fragile.map(f => {
+                        const fCls = scoreClass(f.avg)
+                        const nextLabel = f.nextRevDate
+                          ? (f.nextRevDate === new Date().toISOString().split('T')[0]
+                              ? "aujourd'hui"
+                              : `prochaine ${formatDateFR(f.nextRevDate)}`)
+                          : ''
+                        return (
+                          <div key={f.lesson.id} className="mat-fiche">
+                            <div className={`mat-fiche-bullet ${fCls}`} />
+                            <div>
+                              <div className="mat-fiche-name">{f.lesson.name}</div>
+                              <div className="mat-fiche-meta">
+                                {f.last3.length > 0 ? `3 dernières · ${f.last3.join(' · ')}` : 'Pas encore notée'}
+                                {nextLabel ? ` · ${nextLabel}` : ''}
+                              </div>
+                            </div>
+                            <div className={`mat-fiche-avg ${fCls}`}>{f.avg.toFixed(1)}</div>
+                            <Link
+                              href={`/dashboard/focus?lesson=${f.lesson.id}`}
+                              className="mat-fiche-cta"
+                              onClick={onClose}
+                            >
+                              Retravailler
+                            </Link>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {m.fragile.length === 0 && m.totalFiches > 0 && (
+                    <div className="mat-body">
+                      <div className="mat-note">Aucune fiche fragile à signaler.</div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
