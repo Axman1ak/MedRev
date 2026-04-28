@@ -826,3 +826,156 @@ function FocusPageBody() {
   return (
     <div className="focus-root">
       {/* TOP BAR */}
+      <div className="focus-topbar">
+        <div className="focus-brand">
+          MedRev <span className="focus-brand-mode">focus</span>
+        </div>
+        <div className="focus-progress-wrap">
+          <div className="focus-progress-bar" aria-hidden="true">
+            <div className="focus-progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+          <div className="focus-progress-text">
+            <strong>{currentIdx + 1}</strong> / {total}
+            <span className="focus-progress-sep">{'·'}</span>
+            <span className="focus-progress-time">{min}:{sec.toString().padStart(2, '0')}</span>
+          </div>
+        </div>
+        {allFilled && (
+          <button
+            type="button"
+            className="focus-bilan-cta"
+            onClick={() => setPhase('done')}
+          >
+            Voir le bilan
+          </button>
+        )}
+        <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
+      </div>
+
+      {/* STAGE : jardin (gauche) + zone card avec flèches (droite) */}
+      <div className="focus-stage">
+
+        {/* Zone JARDIN — plante hero XL avec paysage */}
+        <div className="focus-garden">
+          <FocusPlantHero
+            results={results}
+            elapsedMs={Math.max(0, now - startedAt)}
+            timeToFullMs={TIME_TO_FULL_MS}
+          />
+        </div>
+
+        {/* Zone CARD avec flèches latérales */}
+        <div className="focus-card-zone">
+          <button
+            type="button"
+            className="focus-nav-arrow focus-nav-prev"
+            onClick={goPrev}
+            disabled={!canPrev}
+            aria-label="Fiche précédente"
+            title="Fiche précédente (←)"
+          >
+            {'‹'}
+          </button>
+
+          <div className="focus-card">
+
+            <div className="focus-kicker">
+            <span className="focus-kicker-dot" style={{ background: sysColor }} />
+            <span className="focus-kicker-sys">{currentSystemName}</span>
+            <span className="focus-kicker-sep">{'•'}</span>
+            <span className={`focus-kicker-status ${statusCls}`}>{statusLabel}</span>
+          </div>
+
+          <h1 className="focus-name">{current.lesson.name}</h1>
+
+          {current.lastScore !== null && !alreadyRated && !alreadyReported && (
+            <div className="focus-last">
+              Dernière note&nbsp;: <span className={`focus-last-pill s${current.lastScore}`}>{current.lastScore}/5</span>
+            </div>
+          )}
+
+          {/* Badge re-action si déjà notée/reportée dans cette session */}
+          {alreadyRated && ratedScore !== null && (
+            <div className="focus-rated-badge">
+              <span className={`focus-rated-pill s${ratedScore}`}>Notée {ratedScore}/5</span>
+              <span className="focus-rated-hint">Tu peux changer si besoin, ou passer à la suivante.</span>
+            </div>
+          )}
+          {alreadyReported && (
+            <div className="focus-reported-badge">
+              <span className="focus-reported-pill">Reportée à demain</span>
+              <span className="focus-rated-hint">Tu peux la noter maintenant si tu changes d’avis.</span>
+            </div>
+          )}
+
+          {!alreadyRated && !alreadyReported && (
+            <div className="focus-ask">Quelle note&nbsp;?</div>
+          )}
+          <div className="focus-scores">
+            {([1, 2, 3, 4, 5] as Score[]).map(n => (
+              <button
+                key={n}
+                type="button"
+                className={`focus-score s${n}${alreadyRated && ratedScore === n ? ' selected' : ''}`}
+                onClick={() => rate(n)}
+                disabled={loading}
+                title={`Note ${n}/5 — raccourci ${n}`}
+              >
+                <span className="focus-score-num">{n}</span>
+                <span className="focus-score-lbl">
+                  {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
+                </span>
+                <span className="focus-score-key" aria-hidden="true">{n}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="focus-actions">
+            <button
+              type="button"
+              className="focus-report"
+              onClick={report}
+              disabled={loading || alreadyReported}
+              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
+            >
+              {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
+            </button>
+            {canNext && (
+              <button
+                type="button"
+                className="focus-next-inline"
+                onClick={goNext}
+                title="Fiche suivante (→)"
+              >
+                Suivante {'›'}
+              </button>
+            )}
+          </div>
+          </div>
+
+          <button
+            type="button"
+            className="focus-nav-arrow focus-nav-next"
+            onClick={goNext}
+            disabled={!canNext}
+            aria-label="Fiche suivante"
+            title="Fiche suivante (→)"
+          >
+            {'›'}
+          </button>
+        </div>
+      </div>
+
+      {/* HINT */}
+      <div className="focus-hint">
+        <span><kbd>1</kbd>–<kbd>5</kbd> noter</span>
+        <span className="focus-hint-sep">{'·'}</span>
+        <span><kbd>R</kbd> reporter</span>
+        <span className="focus-hint-sep">{'·'}</span>
+        <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
+        <span className="focus-hint-sep">{'·'}</span>
+        <span><kbd>Esc</kbd> quitter</span>
+      </div>
+    </div>
+  )
+}
