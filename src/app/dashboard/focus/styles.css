@@ -16,89 +16,114 @@
   overflow: hidden;
 }
 
-/* ============ TOP BAR ============ */
+/* ============ TOP BAR (overlay glass sur le ciel) ============ */
 .focus-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 16px 28px;
-  background: white;
-  border-bottom: 1px solid #E1DDD3;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 28px;
+  background: transparent;
+  pointer-events: none;
 }
+.focus-topbar > * { pointer-events: auto; }
+
 .focus-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 700;
   font-size: 16px;
-  color: #111310;
+  color: white;
   white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.focus-brand-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #FBD56B;
+  box-shadow: 0 0 10px #FBD56B;
 }
 .focus-brand-mode {
-  color: #2D6A4F;
-  font-weight: 500;
+  color: #FBD56B;
+  font-weight: 400;
   font-style: italic;
-  margin-left: 4px;
   font-size: 14px;
 }
 
-.focus-progress-wrap {
-  flex: 1;
+.focus-topbar-right {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-.focus-progress-bar {
-  flex: 1;
-  height: 6px;
-  background: #FAF8F2;
-  border: 1px solid #E1DDD3;
-  border-radius: 4px;
-  overflow: hidden;
-  max-width: 480px;
-}
-.focus-progress-fill {
-  height: 100%;
-  background: #2D6A4F;
-  border-radius: 4px;
-  transition: width .25s ease-out;
-}
-.focus-progress-text {
-  font-size: 12px;
-  color: #6B6F6A;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.focus-progress-text strong {
-  color: #111310;
-  font-weight: 700;
-}
-.focus-progress-sep {
-  margin: 0 6px;
-  color: #D0CCC0;
+  gap: 12px;
 }
 
+/* Chip glass de progression */
+.focus-progress-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 20px;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+.focus-progress-chip-lbl { opacity: 0.85; }
+.focus-progress-chip-num {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 500;
+  font-size: 13px;
+}
+.focus-progress-chip-slash { opacity: 0.6; }
+.focus-progress-chip-tot { opacity: 0.85; }
+.focus-progress-chip-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.3);
+}
+.focus-progress-chip-time {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
+}
+
+/* Bouton quitter glass circle */
 .focus-quit {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; height: 36px;
-  border-radius: 8px;
-  color: #6B6F6A;
-  background: transparent;
-  border: 1px solid transparent;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  color: white;
+  background: rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   text-decoration: none;
-  font-size: 22px;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
   font-family: inherit;
   flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: background .15s, transform .12s;
+  padding-bottom: 2px;
 }
 .focus-quit:hover {
-  background: #FAF8F2;
-  border-color: #E1DDD3;
-  color: #111310;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 /* ============ STAGE : jardin en fond + card flottante ============ */
@@ -143,24 +168,27 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 28px 40px 28px 24px;
+  /* padding-top élevé pour ne pas que la card passe sous le topbar overlay */
+  padding: 80px 40px 28px 24px;
   overflow-y: auto;
   min-width: 0;
   z-index: 2;
 }
 
 .focus-card {
-  background: rgba(255, 255, 255, 0.97);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  backdrop-filter: blur(10px) saturate(140%);
-  border: 1px solid rgba(225, 221, 211, 0.65);
-  border-radius: 18px;
-  padding: 30px 34px;
+  /* Verre dépoli 16% — on regarde le jardin à travers une vitre dépolie posée sur la scène */
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  padding: 22px 22px 18px;
   width: 100%;
-  max-width: 480px;
+  max-width: 380px;
   box-shadow:
-    0 24px 60px rgba(17, 19, 16, 0.14),
-    0 6px 16px rgba(17, 19, 16, 0.06);
+    0 20px 50px rgba(17, 19, 16, 0.18),
+    0 4px 12px rgba(17, 19, 16, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   position: relative;
 }
 
@@ -168,51 +196,53 @@
 .focus-kicker {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .04em;
+  gap: 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  color: #6B6F6A;
-  margin-bottom: 16px;
+  color: #3D2410;
+  margin-bottom: 11px;
   flex-wrap: wrap;
 }
 .focus-kicker-dot {
-  width: 8px; height: 8px;
+  width: 6px; height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.focus-kicker-sys { color: #111310; }
-.focus-kicker-sep { color: #D0CCC0; font-weight: 400; }
-.focus-kicker-status.missed { color: #C75050; }
-.focus-kicker-status.today { color: #2D6A4F; }
-.focus-kicker-status.fresh { color: #C47B2B; }
+.focus-kicker-sys { color: #1A1A0F; }
+.focus-kicker-sep { color: rgba(61, 36, 16, 0.4); font-weight: 400; }
+.focus-kicker-status.missed { color: #A53B3B; }
+.focus-kicker-status.today { color: #1B4332; }
+.focus-kicker-status.fresh { color: #A55E1A; }
 
 /* ============ NOM DE LA FICHE ============ */
 .focus-name {
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 500;
-  font-size: 32px;
-  line-height: 1.2;
-  color: #111310;
-  margin: 0 0 18px;
+  font-size: 20px;
+  line-height: 1.18;
+  color: #1A1A0F;
+  margin: 0 0 11px;
   letter-spacing: -.005em;
 }
 
 .focus-last {
-  font-size: 12.5px;
-  color: #6B6F6A;
-  margin-bottom: 24px;
+  font-size: 10.5px;
+  color: #3D3D2A;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .focus-last-pill {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
-  border-radius: 20px;
+  padding: 1.5px 8px;
+  border-radius: 12px;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 9.5px;
   color: white;
-  margin-left: 6px;
 }
 .focus-last-pill.s1 { background: #C75050; }
 .focus-last-pill.s2 { background: #E08B3C; }
@@ -222,29 +252,29 @@
 
 /* ============ NOTATION ============ */
 .focus-ask {
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .12em;
-  color: #6B6F6A;
+  letter-spacing: .14em;
+  color: #3D3D2A;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .focus-scores {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 18px;
+  gap: 5px;
+  margin-bottom: 12px;
 }
 .focus-score {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 20px 8px 14px;
+  gap: 3px;
+  padding: 12px 4px 8px;
   border: 1.5px solid transparent;
-  border-radius: 12px;
+  border-radius: 10px;
   font-family: inherit;
   cursor: pointer;
   color: white;
@@ -260,16 +290,27 @@
 .focus-score.s1 { background: #C75050; }
 .focus-score.s2 { background: #E08B3C; }
 .focus-score.s3 { background: #D9B24A; color: #4A3C10; }
-.focus-score.s4 { background: #7AA56B; }
+.focus-score.s4 {
+  background: #7AA56B;
+  /* Halo vert pour signaler la "bonne note attendue" si on enchaîne */
+  box-shadow:
+    0 6px 14px rgba(122, 165, 107, 0.45),
+    0 0 0 2px rgba(122, 165, 107, 0.25);
+}
+.focus-score.s4:hover:not(:disabled) {
+  box-shadow:
+    0 10px 22px rgba(122, 165, 107, 0.55),
+    0 0 0 3px rgba(122, 165, 107, 0.35);
+}
 .focus-score.s5 { background: #1B4332; }
 .focus-score-num {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 500;
   line-height: 1;
 }
 .focus-score-lbl {
-  font-size: 10.5px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: .04em;
 }
@@ -283,76 +324,105 @@
   font-family: inherit;
 }
 
-/* ============ ACTIONS SECONDAIRES ============ */
+/* ============ ACTIONS (pied de card : reporter + nav prev/next) ============ */
 .focus-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(61, 36, 16, 0.12);
 }
 .focus-report {
   background: transparent;
-  border: 1px solid #E1DDD3;
-  border-radius: 24px;
-  padding: 8px 18px;
+  border: 1px solid rgba(61, 36, 16, 0.25);
+  border-radius: 16px;
+  padding: 5px 12px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
-  color: #6B6F6A;
+  color: #3D2410;
   cursor: pointer;
   transition: border-color .15s, color .15s, background .15s;
 }
 .focus-report:hover:not(:disabled) {
   border-color: #C47B2B;
   color: #C47B2B;
-  background: #FAF6EE;
+  background: rgba(196, 123, 43, 0.08);
 }
 .focus-report:disabled { opacity: .5; cursor: not-allowed; }
 
-.focus-next-inline {
-  background: transparent;
-  border: none;
-  color: #2D6A4F;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 8px 6px;
-  letter-spacing: .02em;
-  transition: color .15s, transform .12s;
+/* Navigation discrète prev/next, cercles 25px en pied de card */
+.focus-nav-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.focus-next-inline:hover {
-  color: #1B4332;
-  transform: translateX(2px);
+.focus-nav-dot {
+  width: 25px; height: 25px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(61, 36, 16, 0.18);
+  font-size: 13px;
+  font-weight: 600;
+  color: #3D2410;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  line-height: 1;
+  padding: 0;
+  transition: background .15s, color .15s, border-color .15s, transform .1s;
+}
+.focus-nav-dot:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(61, 36, 16, 0.4);
+}
+.focus-nav-dot:disabled { opacity: .35; cursor: not-allowed; }
+.focus-nav-dot-next {
+  background: rgba(27, 67, 50, 0.92);
+  color: white;
+  border-color: transparent;
+  font-weight: 700;
+}
+.focus-nav-dot-next:hover:not(:disabled) {
+  background: #1B4332;
+  color: white;
 }
 
-/* ============ HINT ============ */
+/* ============ HINT clavier — flotte au bas-droite sur le ciel ============ */
 .focus-hint {
+  position: absolute;
+  bottom: 18px;
+  right: 28px;
+  z-index: 5;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 14px 24px 22px;
-  font-size: 11px;
-  color: #6B6F6A;
-  flex-shrink: 0;
+  gap: 12px;
+  font-size: 9.5px;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  letter-spacing: .04em;
+  opacity: 0.78;
+  pointer-events: none;
+  user-select: none;
 }
 .focus-hint kbd {
   display: inline-block;
-  padding: 1px 6px;
-  background: white;
-  border: 1px solid #E1DDD3;
-  border-bottom-width: 2px;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 4px;
   font-family: 'SF Mono', Menlo, monospace;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  color: #111310;
+  color: white;
   margin: 0 1px;
   line-height: 1.4;
+  text-shadow: none;
 }
-.focus-hint-sep { color: #D0CCC0; }
+.focus-hint-sep { opacity: 0.5; }
 
 /* ============ ÉTATS ============ */
 .focus-loading {
@@ -817,23 +887,26 @@
   outline-offset: 2px;
 }
 
-/* ============ BOUTON BILAN (topbar quand tout fait) ============ */
+/* ============ BOUTON BILAN (topbar glass quand tout fait) ============ */
 .focus-bilan-cta {
-  background: #1B4332;
+  background: rgba(27, 67, 50, 0.85);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
-  padding: 7px 16px;
+  padding: 6px 14px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s, transform .12s;
   white-space: nowrap;
   flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .focus-bilan-cta:hover {
-  background: #2D6A4F;
+  background: rgba(27, 67, 50, 0.98);
   transform: translateY(-1px);
 }
 
