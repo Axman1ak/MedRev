@@ -479,8 +479,8 @@
   height: 110px;
   display: block;
 }
-.focus-plant-stem {
-  transition: d .35s ease-out;
+.focus-plant-stem-group {
+  transition: transform 1s ease-out;
 }
 .focus-plant-leaf {
   transform-origin: center;
