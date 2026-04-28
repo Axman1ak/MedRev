@@ -9,7 +9,7 @@
 // Visuel : plante qui pousse au sommet de la card — 1 feuille colorée par fiche notée,
 // fleur quand tout est terminé.
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -26,9 +26,10 @@ const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   5: '#1B4332',
 }
 
-// Durée jusqu'à pleine maturité de l'arbre central (croissance temporelle).
-// 50 min = durée typique d'une session focus PASS (40-60 min).
-const TIME_TO_FULL_MS = 50 * 60 * 1000
+// Durée CUMULÉE sur la journée jusqu'à pleine maturité de l'arbre central.
+// 3h = durée moyenne quotidienne d'études focus en PASS (1-3 sessions de ~1-2h).
+// L'elapsed est persisté en localStorage et reset chaque nouveau jour.
+const TIME_TO_FULL_MS = 3 * 60 * 60 * 1000
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -311,50 +312,179 @@ type GardenElement = {
   variant?: string
 }
 
-// Position en viewBox 1600x1000 du jardin hero.
-// Tier 1 (1-5) : fleurs basiques + 1er papillon
-// Tier 2 (6-12) : variétés + 1er animal
-// Tier 3 (13-18) : étang apparaît
-// Tier 4 (19-25) : animaux rares
-// Tier 5 (26+) : bonus
-const UNLOCK_SEQUENCE: GardenElement[] = [
-  { kind: 'flower',    x: 200,  y: 940, variant: 'red' },
-  { kind: 'butterfly', x: 640,  y: 400, variant: 'amber' },
-  { kind: 'flower',    x: 1380, y: 880, variant: 'orange' },
-  { kind: 'mushroom',  x: 140,  y: 905, variant: 'red' },
-  { kind: 'flower',    x: 580,  y: 925, variant: 'red' },
-  { kind: 'butterfly', x: 820,  y: 520, variant: 'blue' },
-  { kind: 'flower',    x: 540,  y: 825, variant: 'yellow' },
-  { kind: 'rabbit',    x: 200,  y: 870 },
-  { kind: 'tulip',     x: 220,  y: 800, variant: 'red' },
-  { kind: 'mushroom',  x: 1380, y: 920, variant: 'orange' },
-  { kind: 'flower',    x: 350,  y: 920, variant: 'pink' },
-  { kind: 'butterfly', x: 1000, y: 300, variant: 'purple' },
-  { kind: 'pond',      x: 1180, y: 820 },
+// ============ POOLS de positions (système quotidien) ============
+// Chaque fiche notée déclenche un tirage aléatoire selon des probabilités.
+// Les éléments s'accumulent dans le jardin du jour (persistance localStorage).
+// Le jardin se RESET chaque nouveau jour (clé date-suffixée).
+//
+// Probabilités par fiche notée :
+//   60% : fleur (multiples positions/couleurs)
+//   25% : insecte (papillons multi-positions)
+//   12% : animal (rabbit/squirrel/bird, plusieurs positions chacun)
+//    3% : événement rare (pond/deer/owl/fox/big_bloom — cap 1 par jour chacun)
+
+const FLOWER_POOL: GardenElement[] = [
+  // Marguerites/wildflowers en foreground (y ~920-945)
+  { kind: 'flower', x: 160,  y: 938, variant: 'red' },
+  { kind: 'flower', x: 240,  y: 945, variant: 'pink' },
+  { kind: 'flower', x: 320,  y: 925, variant: 'white' },
+  { kind: 'flower', x: 410,  y: 935, variant: 'yellow' },
+  { kind: 'flower', x: 540,  y: 940, variant: 'red' },
+  { kind: 'flower', x: 620,  y: 925, variant: 'pink' },
+  { kind: 'flower', x: 720,  y: 940, variant: 'orange' },
+  { kind: 'flower', x: 820,  y: 925, variant: 'purple' },
+  { kind: 'flower', x: 920,  y: 935, variant: 'white' },
+  { kind: 'flower', x: 1010, y: 925, variant: 'yellow' },
+  { kind: 'flower', x: 1100, y: 940, variant: 'pink' },
+  { kind: 'flower', x: 1200, y: 925, variant: 'white' },
+  { kind: 'flower', x: 1290, y: 945, variant: 'red' },
+  { kind: 'flower', x: 1370, y: 925, variant: 'orange' },
+  { kind: 'flower', x: 1450, y: 940, variant: 'purple' },
+  { kind: 'flower', x: 1540, y: 935, variant: 'pink' },
+  // Cherry-blossoms / fleurs hautes près du grass top (y ~870-885)
+  { kind: 'flower', x: 200,  y: 870, variant: 'pink' },
+  { kind: 'flower', x: 350,  y: 880, variant: 'white' },
+  { kind: 'flower', x: 950,  y: 880, variant: 'pink' },
+  { kind: 'flower', x: 1140, y: 875, variant: 'red' },
+  // Tulipes (taller stems)
+  { kind: 'tulip',  x: 220,  y: 800, variant: 'red' },
+  { kind: 'tulip',  x: 540,  y: 825, variant: 'yellow' },
+  { kind: 'tulip',  x: 1140, y: 800, variant: 'purple' },
+  { kind: 'tulip',  x: 480,  y: 945, variant: 'red' },
+  // Tournesols
   { kind: 'sunflower', x: 580,  y: 920 },
-  { kind: 'sapling',   x: 720,  y: 700 },
-  { kind: 'squirrel',  x: 620,  y: 542 },
-  { kind: 'flower',    x: 1140, y: 800, variant: 'purple' },
-  { kind: 'mushroom',  x: 1480, y: 870, variant: 'red' },
-  { kind: 'log',       x: 880,  y: 700 },
-  { kind: 'owl',       x: 660,  y: 542 },
-  { kind: 'flower',    x: 950,  y: 880, variant: 'pink' },
-  { kind: 'deer',      x: 880,  y: 712 },
-  { kind: 'butterfly', x: 1100, y: 600, variant: 'amber' },
-  { kind: 'fox',       x: 100,  y: 850 },
-  { kind: 'flower',    x: 720,  y: 875, variant: 'yellow' },
-  { kind: 'mushroom',  x: 250,  y: 950, variant: 'red' },
-  { kind: 'butterfly', x: 380,  y: 600, variant: 'amber' },
-  { kind: 'flower',    x: 1300, y: 905, variant: 'red' },
-  { kind: 'tulip',     x: 1140, y: 870, variant: 'purple' },
-  { kind: 'flower',    x: 480,  y: 945, variant: 'white' },
+  { kind: 'sunflower', x: 1280, y: 935 },
 ]
 
-// Stats agrégées dérivées d'une slice de la séquence
+const INSECT_POOL: GardenElement[] = [
+  { kind: 'butterfly', x: 640,  y: 400, variant: 'amber' },
+  { kind: 'butterfly', x: 820,  y: 520, variant: 'blue' },
+  { kind: 'butterfly', x: 1000, y: 300, variant: 'purple' },
+  { kind: 'butterfly', x: 380,  y: 600, variant: 'amber' },
+  { kind: 'butterfly', x: 1100, y: 600, variant: 'amber' },
+  { kind: 'butterfly', x: 550,  y: 350, variant: 'blue' },
+  { kind: 'butterfly', x: 720,  y: 480, variant: 'purple' },
+  { kind: 'butterfly', x: 900,  y: 380, variant: 'amber' },
+  { kind: 'butterfly', x: 280,  y: 480, variant: 'blue' },
+  { kind: 'butterfly', x: 1180, y: 460, variant: 'purple' },
+]
+
+// Animaux : plusieurs positions de la MÊME espèce sont autorisées (lapins multiples OK)
+const ANIMAL_POOL: GardenElement[] = [
+  { kind: 'rabbit',   x: 200,  y: 870 },
+  { kind: 'rabbit',   x: 1280, y: 870 },
+  { kind: 'rabbit',   x: 450,  y: 880 },
+  { kind: 'rabbit',   x: 1500, y: 875 },
+  { kind: 'mushroom', x: 140,  y: 905, variant: 'red' },
+  { kind: 'mushroom', x: 1380, y: 920, variant: 'orange' },
+  { kind: 'mushroom', x: 250,  y: 950, variant: 'red' },
+  { kind: 'mushroom', x: 1480, y: 870, variant: 'red' },
+  { kind: 'mushroom', x: 980,  y: 945, variant: 'orange' },
+  { kind: 'sapling',  x: 720,  y: 700 },
+  { kind: 'sapling',  x: 1340, y: 720 },
+  { kind: 'sapling',  x: 280,  y: 710 },
+]
+
+// Événements rares : cap 1 par type par jour
+const RARE_POOL: GardenElement[] = [
+  { kind: 'pond',     x: 1180, y: 820 },
+  { kind: 'deer',     x: 880,  y: 712 },
+  { kind: 'owl',      x: 660,  y: 542 },
+  { kind: 'fox',      x: 100,  y: 850 },
+  { kind: 'squirrel', x: 620,  y: 542 },
+  { kind: 'log',      x: 880,  y: 700 },
+]
+const RARE_KIND_SET = new Set(RARE_POOL.map(p => p.kind))
+
+// ============ Tirage d'un élément avec probabilités ============
+function pickFromPool(pool: GardenElement[], existing: GardenElement[]): GardenElement | null {
+  // Filtre les positions déjà prises (même kind + même x,y exact)
+  const taken = new Set(existing.map(e => `${e.kind}:${e.x},${e.y}`))
+  const available = pool.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
+  if (available.length > 0) {
+    return available[Math.floor(Math.random() * available.length)]
+  }
+  // Pool plein : on jitter une position aléatoire pour densifier sans collision parfaite
+  const p = pool[Math.floor(Math.random() * pool.length)]
+  return {
+    ...p,
+    x: p.x + (Math.random() - 0.5) * 24,
+    y: p.y + (Math.random() - 0.5) * 10,
+  }
+}
+
+function pickElement(existing: GardenElement[]): GardenElement {
+  const r = Math.random()
+  // 60% fleur
+  if (r < 0.60) {
+    const p = pickFromPool(FLOWER_POOL, existing)
+    if (p) return p
+  }
+  // 25% insecte
+  if (r < 0.85) {
+    const p = pickFromPool(INSECT_POOL, existing)
+    if (p) return p
+  }
+  // 12% animal (rabbit/sapling/mushroom — éléments de jardin courants)
+  if (r < 0.97) {
+    const p = pickFromPool(ANIMAL_POOL, existing)
+    if (p) return p
+  }
+  // 3% événement rare (cap 1 par type par jour)
+  const rareKindsUsed = new Set(existing.filter(e => RARE_KIND_SET.has(e.kind)).map(e => e.kind))
+  const availRares = RARE_POOL.filter(p => !rareKindsUsed.has(p.kind))
+  if (availRares.length > 0) {
+    return availRares[Math.floor(Math.random() * availRares.length)]
+  }
+  // Fallback : tous les rares utilisés → fleur bonus
+  const fallback = pickFromPool(FLOWER_POOL, existing)
+  return fallback ?? FLOWER_POOL[0]
+}
+
+// ============ Persistance jour (localStorage, clé date-suffixée) ============
+type DayGardenState = {
+  date: string
+  elapsedMs: number
+  elements: GardenElement[]
+}
+
+function loadDayGarden(today: string): DayGardenState {
+  if (typeof window === 'undefined') return { date: today, elapsedMs: 0, elements: [] }
+  const key = 'medrev-garden-' + today
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return { date: today, elapsedMs: 0, elements: [] }
+    const parsed = JSON.parse(raw) as DayGardenState
+    if (parsed.date !== today) return { date: today, elapsedMs: 0, elements: [] }
+    return parsed
+  } catch {
+    return { date: today, elapsedMs: 0, elements: [] }
+  }
+}
+
+function saveDayGarden(state: DayGardenState) {
+  if (typeof window === 'undefined') return
+  const key = 'medrev-garden-' + state.date
+  try {
+    localStorage.setItem(key, JSON.stringify(state))
+    // Cleanup des anciennes clés (jardins des jours précédents)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith('medrev-garden-') && k !== key) {
+        localStorage.removeItem(k)
+      }
+    }
+  } catch {
+    // ignore quota errors
+  }
+}
+
+// Stats agrégées dérivées d'une slice de la séquence (ignore les null)
 type GardenStats = { fleurs: number; animaux: number; papillons: number }
-function statsFor(unlocked: GardenElement[]): GardenStats {
+function statsFor(unlocked: (GardenElement | null)[]): GardenStats {
   let fleurs = 0, animaux = 0, papillons = 0
   unlocked.forEach(e => {
+    if (!e) return
     if (e.kind === 'flower' || e.kind === 'sunflower' || e.kind === 'tulip') fleurs++
     else if (e.kind === 'butterfly') papillons++
     else if (e.kind === 'rabbit' || e.kind === 'squirrel' || e.kind === 'owl' || e.kind === 'deer' || e.kind === 'fox') animaux++
@@ -532,9 +662,9 @@ const HERO_FOLIAGE: FoliageCluster[] = [
 
 // ============ Composant FocusGarden ============
 type GardenProps = {
+  elements: GardenElement[]
   elapsedMs: number
   timeToFullMs: number
-  ratedCount: number
   particleBurst?: { ts: number; x?: number; y?: number } | null
   forceFull?: boolean
 }
@@ -544,7 +674,7 @@ const HERO_TRUNK_X = 440
 const HERO_GROUND_Y = 750
 
 // Calcul d'un point sur une courbe de Bézier quadratique
-function FocusGarden({ elapsedMs, timeToFullMs, ratedCount, particleBurst, forceFull = false }: GardenProps) {
+function FocusGarden({ elements, elapsedMs, timeToFullMs, particleBurst, forceFull = false }: GardenProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
   // Soleil arc : x de 200 à 1400, y suit une sinusoïde.
@@ -554,7 +684,7 @@ function FocusGarden({ elapsedMs, timeToFullMs, ratedCount, particleBurst, force
   const sunX = 200 + sunArcT * 1200
   const sunY = 440 - Math.sin(sunArcT * Math.PI) * 220
 
-  const unlocked = UNLOCK_SEQUENCE.slice(0, Math.min(ratedCount, UNLOCK_SEQUENCE.length))
+  const unlocked = elements
 
   // Helper de rendu d'un élément du jardin (switch sur kind)
   function renderEl(el: GardenElement, idx: number) {
@@ -1050,6 +1180,14 @@ function FocusPageBody() {
 
   const today = new Date().toISOString().split('T')[0]
 
+  // ============ ÉTAT JARDIN PERSISTANT (jour) ============
+  // Persisté en localStorage avec clé 'medrev-garden-YYYY-MM-DD'.
+  // Reset chaque nouveau jour. elapsedMs cumulé sur la journée à travers les sessions.
+  const [dayGarden, setDayGarden] = useState<DayGardenState>({ date: today, elapsedMs: 0, elements: [] })
+  const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
+  const dayGardenRef = useRef<DayGardenState>(dayGarden)
+  useEffect(() => { dayGardenRef.current = dayGarden }, [dayGarden])
+
   // Reset scroll au montage
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1058,14 +1196,24 @@ function FocusPageBody() {
     if (main) main.scrollTop = 0
   }, [])
 
-  // Chargement initial : auth + data + queue
+  // Chargement initial : auth + data + queue + jardin du jour
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      // 1) Restaure le jardin persisté du jour (avant toute autre logique)
+      const loadedGarden = loadDayGarden(today)
+      if (!cancelled) {
+        setDayGarden(loadedGarden)
+        setCumElapsedAtStart(loadedGarden.elapsedMs)
+      }
+
+      // 2) Auth Supabase
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       if (cancelled) return
       setUserId(user.id)
+
+      // 3) Données fiches/matières
       const [{ data: sys }, { data: les }] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id),
         supabase.from('lessons').select('*').eq('user_id', user.id),
@@ -1085,6 +1233,29 @@ function FocusPageBody() {
     return () => { cancelled = true }
   }, [supabase, router, lessonParam, systemParam, today])
 
+  // Sauvegarde périodique de l'elapsed cumul (toutes les 30s) pour ne pas perdre
+  // le temps écoulé si l'utilisateur ferme l'onglet
+  useEffect(() => {
+    if (phase !== 'session') return
+    const intv = setInterval(() => {
+      const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
+      const next: DayGardenState = { ...dayGardenRef.current, elapsedMs: totalElapsed, date: today }
+      dayGardenRef.current = next
+      saveDayGarden(next)
+    }, 30000)
+    return () => clearInterval(intv)
+  }, [phase, cumElapsedAtStart, startedAt, today])
+
+  // Sauvegarde finale au démontage de la page
+  useEffect(() => {
+    return () => {
+      if (startedAt === 0) return
+      const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
+      saveDayGarden({ ...dayGardenRef.current, elapsedMs: totalElapsed, date: today })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Tick chrono en mode session
   useEffect(() => {
     if (phase !== 'session') return
@@ -1097,9 +1268,10 @@ function FocusPageBody() {
   const currentSystemName = currentSystem?.name ?? 'Matière'
   const currentResult = results[currentIdx] ?? null
 
-  // Nombre de fiches notées (pas reportées) — détermine combien d'éléments du jardin sont débloqués.
-  const ratedCount = results.filter(r => r !== null && r.outcome.kind === 'rated').length
-  const gardenStats = statsFor(UNLOCK_SEQUENCE.slice(0, Math.min(ratedCount, UNLOCK_SEQUENCE.length)))
+  // Stats agrégées dérivées du jardin du jour (cumulatif sur la journée)
+  const dayFichesCount = dayGarden.elements.length
+  const sessionRatedCount = results.filter(r => r !== null && r.outcome.kind === 'rated').length
+  const gardenStats = statsFor(dayGarden.elements)
 
   // ============ Helpers d'avancement ============
   function findNextEmptyIdx(arr: (Result | null)[], fromIdx: number): number {
@@ -1136,6 +1308,22 @@ function FocusPageBody() {
     // Le score n'a pas d'incidence visuelle.
     setParticleBurst({ ts: Date.now() })
 
+    // Sur PREMIÈRE notation de la fiche : tirage aléatoire d'un nouvel élément
+    // pour le jardin du jour (fleur 60% / insecte 25% / animal 12% / rare 3%).
+    // Persisté immédiatement en localStorage. Re-rating ne déclenche pas (pas de farming).
+    if (wasEmpty) {
+      const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
+      const newElement = pickElement(dayGardenRef.current.elements)
+      const updatedGarden: DayGardenState = {
+        date: today,
+        elapsedMs: totalElapsed,
+        elements: [...dayGardenRef.current.elements, newElement],
+      }
+      dayGardenRef.current = updatedGarden
+      setDayGarden(updatedGarden)
+      saveDayGarden(updatedGarden)
+    }
+
     // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
     if (wasEmpty) {
       const next = findNextEmptyIdx(newResults, currentIdx)
@@ -1145,7 +1333,7 @@ function FocusPageBody() {
     // Si re-rating : on reste sur la fiche, l'utilisateur peut vérifier ou naviguer.
 
     setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt])
+  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, cumElapsedAtStart])
 
   // ============ Actions : report ============
   const report = useCallback(async () => {
@@ -1344,31 +1532,32 @@ function FocusPageBody() {
 
   return (
     <div className="focus-root">
-      {/* TOP BAR */}
+      {/* TOP BAR (overlay glass sur le ciel) */}
       <div className="focus-topbar">
         <div className="focus-brand">
+          <span className="focus-brand-dot" aria-hidden="true" />
           MedRev <span className="focus-brand-mode">focus</span>
         </div>
-        <div className="focus-progress-wrap">
-          <div className="focus-progress-bar" aria-hidden="true">
-            <div className="focus-progress-fill" style={{ width: `${progressPct}%` }} />
+        <div className="focus-topbar-right">
+          <div className="focus-progress-chip" aria-label={`Fiche ${currentIdx + 1} sur ${total}`}>
+            <span className="focus-progress-chip-lbl">Fiche</span>
+            <strong className="focus-progress-chip-num">{currentIdx + 1}</strong>
+            <span className="focus-progress-chip-slash">/</span>
+            <span className="focus-progress-chip-tot">{total}</span>
+            <span className="focus-progress-chip-divider" aria-hidden="true" />
+            <span className="focus-progress-chip-time">{min}:{sec.toString().padStart(2, '0')}</span>
           </div>
-          <div className="focus-progress-text">
-            <strong>{currentIdx + 1}</strong> / {total}
-            <span className="focus-progress-sep">{'·'}</span>
-            <span className="focus-progress-time">{min}:{sec.toString().padStart(2, '0')}</span>
-          </div>
+          {allFilled && (
+            <button
+              type="button"
+              className="focus-bilan-cta"
+              onClick={() => setPhase('done')}
+            >
+              Voir le bilan
+            </button>
+          )}
+          <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
         </div>
-        {allFilled && (
-          <button
-            type="button"
-            className="focus-bilan-cta"
-            onClick={() => setPhase('done')}
-          >
-            Voir le bilan
-          </button>
-        )}
-        <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
       </div>
 
       {/* STAGE : jardin (gauche) + zone card avec flèches (droite) */}
@@ -1377,20 +1566,20 @@ function FocusPageBody() {
         {/* Zone JARDIN — écosystème vivant qui se peuple par fiches notées */}
         <div className="focus-garden">
           <FocusGarden
-            elapsedMs={Math.max(0, now - startedAt)}
+            elements={dayGarden.elements}
+            elapsedMs={cumElapsedAtStart + Math.max(0, now - startedAt)}
             timeToFullMs={TIME_TO_FULL_MS}
-            ratedCount={ratedCount}
             particleBurst={particleBurst}
           />
         </div>
 
         {/* Stats du jardin (bottom-left, glass) — montre l'écosystème qui se peuple */}
         <div className="focus-garden-stats" aria-live="polite">
-          <div className="focus-garden-stats-kicker">Ton jardin se peuple</div>
+          <div className="focus-garden-stats-kicker">Ton jardin du jour</div>
           <div className="focus-garden-stats-row">
             <span className="focus-garden-stats-item">
-              <span className="focus-garden-stats-num">{ratedCount}</span>
-              <span className="focus-garden-stats-lbl">{ratedCount > 1 ? 'fiches' : 'fiche'}</span>
+              <span className="focus-garden-stats-num">{dayFichesCount}</span>
+              <span className="focus-garden-stats-lbl">{dayFichesCount > 1 ? 'fiches' : 'fiche'}</span>
             </span>
             <span className="focus-garden-stats-sep">·</span>
             <span className="focus-garden-stats-item">
@@ -1408,19 +1597,8 @@ function FocusPageBody() {
           </div>
         </div>
 
-        {/* Zone CARD avec flèches latérales */}
+        {/* Zone CARD : la card flotte en glass, navigation discrète en pied de card */}
         <div className="focus-card-zone">
-
-          <button
-            type="button"
-            className="focus-nav-arrow focus-nav-prev"
-            onClick={goPrev}
-            disabled={!canPrev}
-            aria-label="Fiche précédente"
-            title="Fiche précédente (←)"
-          >
-            {'‹'}
-          </button>
 
           <div className="focus-card">
 
@@ -1485,41 +1663,40 @@ function FocusPageBody() {
             >
               {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
             </button>
-            {canNext && (
+            <div className="focus-nav-inline">
               <button
                 type="button"
-                className="focus-next-inline"
+                className="focus-nav-dot"
+                onClick={goPrev}
+                disabled={!canPrev}
+                aria-label="Fiche précédente"
+                title="Fiche précédente (←)"
+              >
+                {'‹'}
+              </button>
+              <button
+                type="button"
+                className="focus-nav-dot focus-nav-dot-next"
                 onClick={goNext}
+                disabled={!canNext}
+                aria-label="Fiche suivante"
                 title="Fiche suivante (→)"
               >
-                Suivante {'›'}
+                {'›'}
               </button>
-            )}
+            </div>
           </div>
           </div>
-
-          <button
-            type="button"
-            className="focus-nav-arrow focus-nav-next"
-            onClick={goNext}
-            disabled={!canNext}
-            aria-label="Fiche suivante"
-            title="Fiche suivante (→)"
-          >
-            {'›'}
-          </button>
         </div>
-      </div>
 
-      {/* HINT */}
-      <div className="focus-hint">
-        <span><kbd>1</kbd>–<kbd>5</kbd> noter</span>
-        <span className="focus-hint-sep">{'·'}</span>
-        <span><kbd>R</kbd> reporter</span>
-        <span className="focus-hint-sep">{'·'}</span>
-        <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
-        <span className="focus-hint-sep">{'·'}</span>
-        <span><kbd>Esc</kbd> quitter</span>
+        {/* HINT clavier — flotte sur le ciel, bas-droite, non-intrusif */}
+        <div className="focus-hint">
+          <span><kbd>1</kbd>–<kbd>5</kbd> noter</span>
+          <span className="focus-hint-sep">{'·'}</span>
+          <span><kbd>R</kbd> reporter</span>
+          <span className="focus-hint-sep">{'·'}</span>
+          <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
+        </div>
       </div>
     </div>
   )
