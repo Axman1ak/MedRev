@@ -34,6 +34,53 @@ const TIME_TO_FULL_MS = 100 * 60 * 60 * 1000
 // Hauteur "réelle" de l'arbre à pleine maturité, pour le recap "L'arbre a poussé de X cm".
 const MAX_TREE_CM = 300
 
+// ============ Cycle jour/nuit ============
+// Le ciel évolue selon l'heure RÉELLE (pas la durée de session).
+// Pendant une session de 1-3h, le soleil/la lune se déplacent visiblement,
+// la couleur du ciel change progressivement. Sensation d'être "dans le temps".
+
+type SkyColors = { top: string; upMid: string; loMid: string; bottom: string }
+
+const SKY_KEYFRAMES: Array<{ hour: number } & SkyColors> = [
+  { hour: 0,    top: '#0E1828', upMid: '#1A2438', loMid: '#2A3450', bottom: '#1A2438' },
+  { hour: 5,    top: '#1F2A4A', upMid: '#3D3A6A', loMid: '#7A4F6A', bottom: '#9A5E68' },
+  { hour: 6.5,  top: '#7AA0B8', upMid: '#E8B89C', loMid: '#F0B58C', bottom: '#E5A07C' },
+  { hour: 9,    top: '#7AA0B8', upMid: '#B0CCD8', loMid: '#E5D5B0', bottom: '#D8C492' },
+  { hour: 13,   top: '#5E94C0', upMid: '#9DC4D8', loMid: '#D5E0C0', bottom: '#C8DCB0' },
+  { hour: 17,   top: '#7AA0B8', upMid: '#E5C088', loMid: '#F0B888', bottom: '#D89070' },
+  { hour: 18.5, top: '#5A5078', upMid: '#E89A4F', loMid: '#F0CC95', bottom: '#D49080' },
+  { hour: 20,   top: '#3A3A60', upMid: '#5A4A7A', loMid: '#7A5A6A', bottom: '#5A4860' },
+  { hour: 22,   top: '#1A2438', upMid: '#2A3450', loMid: '#3A4868', bottom: '#2A3450' },
+  { hour: 24,   top: '#0E1828', upMid: '#1A2438', loMid: '#2A3450', bottom: '#1A2438' },
+]
+
+function lerpHex(a: string, b: string, t: number): string {
+  const ar = parseInt(a.slice(1, 3), 16), ag = parseInt(a.slice(3, 5), 16), ab = parseInt(a.slice(5, 7), 16)
+  const br = parseInt(b.slice(1, 3), 16), bg = parseInt(b.slice(3, 5), 16), bb = parseInt(b.slice(5, 7), 16)
+  const r = Math.round(ar + (br - ar) * t)
+  const g = Math.round(ag + (bg - ag) * t)
+  const bl = Math.round(ab + (bb - ab) * t)
+  const toHex = (n: number) => n.toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(bl)}`
+}
+
+function skyAtHour(hour: number): SkyColors {
+  const h = ((hour % 24) + 24) % 24
+  for (let i = 0; i < SKY_KEYFRAMES.length - 1; i++) {
+    const a = SKY_KEYFRAMES[i], b = SKY_KEYFRAMES[i + 1]
+    if (h >= a.hour && h < b.hour) {
+      const t = (h - a.hour) / (b.hour - a.hour)
+      return {
+        top: lerpHex(a.top, b.top, t),
+        upMid: lerpHex(a.upMid, b.upMid, t),
+        loMid: lerpHex(a.loMid, b.loMid, t),
+        bottom: lerpHex(a.bottom, b.bottom, t),
+      }
+    }
+  }
+  return SKY_KEYFRAMES[0]
+}
+
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
 type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
@@ -488,21 +535,12 @@ function loadDayGarden(today: string): DayGardenState {
         elements: parsed.elements ?? [],
       }
     }
-    // Migration douce : si une ancienne clé date-suffixée existe, on récupère son contenu
-    for (let i = 0; i < localStorage.length; i++) {
+    // Pas de jardin existant → nouveau utilisateur, on commence avec un jardin vide.
+    // (On nettoie aussi les éventuelles anciennes clés date-suffixées pour repartir propre.)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i)
       if (k && k.startsWith(LEGACY_KEY_PREFIX) && k !== GARDEN_KEY) {
-        try {
-          const legacy = JSON.parse(localStorage.getItem(k) ?? '{}') as Partial<DayGardenState>
-          if (legacy.elements && legacy.elements.length > 0) {
-            return {
-              startedDate: today,
-              elapsedMs: legacy.elapsedMs ?? 0,
-              fichesCount: legacy.fichesCount ?? 0,
-              elements: legacy.elements,
-            }
-          }
-        } catch { /* ignore */ }
+        localStorage.removeItem(k)
       }
     }
     return empty
@@ -713,6 +751,8 @@ type GardenProps = {
   elements: GardenElement[]
   elapsedMs: number
   timeToFullMs: number
+  /** Timestamp courant pour calculer l'heure du jour (cycle jour/nuit). */
+  nowMs?: number
   particleBurst?: { ts: number; x?: number; y?: number } | null
   forceFull?: boolean
 }
@@ -722,15 +762,32 @@ const HERO_TRUNK_X = 440
 const HERO_GROUND_Y = 750
 
 // Calcul d'un point sur une courbe de Bézier quadratique
-function FocusGarden({ elements, elapsedMs, timeToFullMs, particleBurst, forceFull = false }: GardenProps) {
+function FocusGarden({ elements, elapsedMs, timeToFullMs, nowMs, particleBurst, forceFull = false }: GardenProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
-  // Soleil arc : x de 200 à 1400, y suit une sinusoïde.
-  // Arc abaissé (y ~440 horizon, ~220 zénith) pour rester dans la zone safe
-  // après crop "slice" sur les aspects écran larges.
-  const sunArcT = treeProgress
+  // ============ Heure réelle pour le cycle jour/nuit ============
+  const nowDate = new Date(nowMs ?? Date.now())
+  const hour = nowDate.getHours() + nowDate.getMinutes() / 60
+  const sky = skyAtHour(hour)
+
+  // Soleil visible 6h-19h (arc sinusoïdal)
+  const isDaytime = hour >= 6 && hour <= 19
+  const sunArcT = isDaytime ? (hour - 6) / 13 : -1
   const sunX = 200 + sunArcT * 1200
-  const sunY = 440 - Math.sin(sunArcT * Math.PI) * 220
+  const sunY = 440 - Math.sin(Math.max(0, sunArcT) * Math.PI) * 220
+
+  // Lune visible 19h-6h (le matin), arc continu de 19h à 30h (= 6h next day)
+  const moonHourAdj = hour < 6 ? hour + 24 : hour
+  const isNight = hour >= 19 || hour < 6
+  const moonArcT = isNight ? (moonHourAdj - 19) / 11 : -1
+  const moonX = 200 + moonArcT * 1200
+  const moonY = 440 - Math.sin(Math.max(0, moonArcT) * Math.PI) * 220
+
+  // Étoiles : opacité fade in au crépuscule, fade out à l'aube
+  let starsOpacity = 0
+  if (hour < 5 || hour > 22) starsOpacity = 1
+  else if (hour >= 20 && hour <= 22) starsOpacity = (hour - 20) / 2
+  else if (hour >= 5 && hour < 7) starsOpacity = (7 - hour) / 2
 
   const unlocked = elements
 
@@ -791,12 +848,17 @@ function FocusGarden({ elements, elapsedMs, timeToFullMs, particleBurst, forceFu
       }
       case 'butterfly': {
         const [body, wing] = BUTTERFLY_COLORS[el.variant ?? 'amber']
+        const flapDelay = (idx % 7) * 50
         return (
           <g key={k} transform={`translate(${el.x} ${el.y}) rotate(-15)`}>
-            <ellipse cx={-7} cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
-            <ellipse cx={7}  cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
-            <ellipse cx={-6} cy={-3} rx={4} ry={2} fill={wing} />
-            <ellipse cx={6}  cy={-3} rx={4} ry={2} fill={wing} />
+            {/* Ailes — battent en continu via animation CSS */}
+            <g className="focus-butterfly-wings" style={{ animationDelay: `${flapDelay}ms` }}>
+              <ellipse cx={-7} cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
+              <ellipse cx={7}  cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
+              <ellipse cx={-6} cy={-3} rx={4} ry={2} fill={wing} />
+              <ellipse cx={6}  cy={-3} rx={4} ry={2} fill={wing} />
+            </g>
+            {/* Corps */}
             <line x1={0} y1={-4} x2={0} y2={4} stroke="#3D2C20" strokeWidth={1.5} />
           </g>
         )
@@ -968,12 +1030,12 @@ function FocusGarden({ elements, elapsedMs, timeToFullMs, particleBurst, forceFu
       <title>Ton jardin de session</title>
 
       <defs>
+        {/* Ciel — couleurs interpolées selon l'heure du jour */}
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#7AA0B8" />
-          <stop offset="25%" stopColor="#B0CCD8" />
-          <stop offset="55%" stopColor="#E5D5B0" />
-          <stop offset="80%" stopColor="#F0CC95" />
-          <stop offset="100%" stopColor="#D8C492" />
+          <stop offset="0%"   stopColor={sky.top} />
+          <stop offset="35%"  stopColor={sky.upMid} />
+          <stop offset="70%"  stopColor={sky.loMid} />
+          <stop offset="100%" stopColor={sky.bottom} />
         </linearGradient>
         <radialGradient id="sungod" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#FFEFB8" stopOpacity="0.95" />
@@ -1021,16 +1083,64 @@ function FocusGarden({ elements, elapsedMs, timeToFullMs, particleBurst, forceFu
       {/* CIEL */}
       <rect width="1600" height="1000" fill="url(#sky)" />
 
-      {/* SOLEIL avec halo qui suit l'arc temporel */}
-      <circle cx={sunX} cy={sunY} r={240} fill="url(#sungod)" />
-      <circle cx={sunX} cy={sunY} r={90}  fill="#FFE5A0" opacity={0.95} />
-      <circle cx={sunX} cy={sunY} r={64}  fill="#FDF4D5" />
+      {/* SOLEIL avec halo — visible 6h-19h, arc sinusoïdal */}
+      {isDaytime && (
+        <g>
+          <circle cx={sunX} cy={sunY} r={240} fill="url(#sungod)" />
+          <circle cx={sunX} cy={sunY} r={90}  fill="#FFE5A0" opacity={0.95} />
+          <circle cx={sunX} cy={sunY} r={64}  fill="#FDF4D5" />
+        </g>
+      )}
 
-      {/* NUAGES */}
-      <ellipse cx={220}  cy={180} rx={58} ry={5} fill="white" opacity={0.45} />
-      <ellipse cx={250}  cy={170} rx={35} ry={4} fill="white" opacity={0.5}  />
-      <ellipse cx={780}  cy={140} rx={50} ry={4} fill="white" opacity={0.4}  />
-      <ellipse cx={1430} cy={160} rx={42} ry={4} fill="white" opacity={0.45} />
+      {/* LUNE — visible 19h-6h, même arc */}
+      {isNight && (
+        <g>
+          <circle cx={moonX} cy={moonY} r={140} fill="#E5E8F0" opacity={0.12} />
+          <circle cx={moonX} cy={moonY} r={56}  fill="#F5F2E0" opacity={0.95} />
+          <circle cx={moonX} cy={moonY} r={48}  fill="#FFFEF8" />
+          {/* Cratères subtils */}
+          <circle cx={moonX - 14} cy={moonY - 8}  r={5} fill="rgba(180,180,200,0.35)" />
+          <circle cx={moonX + 10} cy={moonY + 6}  r={6} fill="rgba(180,180,200,0.32)" />
+          <circle cx={moonX + 4}  cy={moonY - 14} r={3} fill="rgba(180,180,200,0.28)" />
+        </g>
+      )}
+
+      {/* ÉTOILES — fade in au crépuscule, fade out à l'aube */}
+      {starsOpacity > 0 && (
+        <g opacity={starsOpacity}>
+          {[
+            { x: 120,  y: 80,  r: 1.4 }, { x: 280, y: 140, r: 1.6 },
+            { x: 460,  y: 60,  r: 1.2 }, { x: 640, y: 180, r: 1.8 },
+            { x: 820,  y: 100, r: 1.3 }, { x: 1000, y: 50, r: 1.5 },
+            { x: 1180, y: 170, r: 1.4 }, { x: 1340, y: 90, r: 1.7 },
+            { x: 1480, y: 200, r: 1.2 }, { x: 200, y: 220, r: 1.3 },
+            { x: 380,  y: 280, r: 1.5 }, { x: 580, y: 310, r: 1.2 },
+            { x: 760,  y: 240, r: 1.4 }, { x: 940, y: 290, r: 1.6 },
+            { x: 1120, y: 330, r: 1.3 }, { x: 1280, y: 260, r: 1.5 },
+            { x: 1440, y: 320, r: 1.4 },
+          ].map((s, i) => (
+            <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#FFFEF0"
+                    className="focus-star" style={{ animationDelay: `${(i % 5) * 0.6}s` }} />
+          ))}
+        </g>
+      )}
+
+      {/* NUAGES — dérivent lentement à travers le ciel */}
+      <g className="focus-cloud focus-cloud-1">
+        <ellipse cx={220} cy={180} rx={58} ry={5} fill="white" opacity={0.45} />
+        <ellipse cx={250} cy={170} rx={35} ry={4} fill="white" opacity={0.5} />
+      </g>
+      <g className="focus-cloud focus-cloud-2">
+        <ellipse cx={780} cy={140} rx={50} ry={4} fill="white" opacity={0.4} />
+        <ellipse cx={810} cy={148} rx={28} ry={3} fill="white" opacity={0.35} />
+      </g>
+      <g className="focus-cloud focus-cloud-3">
+        <ellipse cx={1430} cy={160} rx={42} ry={4} fill="white" opacity={0.45} />
+        <ellipse cx={1460} cy={168} rx={24} ry={3} fill="white" opacity={0.4} />
+      </g>
+      <g className="focus-cloud focus-cloud-4">
+        <ellipse cx={520} cy={100} rx={36} ry={3} fill="white" opacity={0.35} />
+      </g>
 
       {/* OISEAUX silhouettes lointaines */}
       <g opacity={0.7}>
@@ -1085,9 +1195,9 @@ function FocusGarden({ elements, elapsedMs, timeToFullMs, particleBurst, forceFu
       <g transform={`translate(${HERO_TRUNK_X} ${HERO_GROUND_Y})`}>
         <ellipse cx={0} cy={-8} rx={64} ry={16} fill="rgba(0,0,0,0.22)" />
 
-        {/* Tronc — toujours visible, scale légèrement avec le temps */}
+        {/* Tronc — vraie pousse au début (15%), grandit fortement avec le temps */}
         <g style={{
-          transform: `scale(${0.62 + treeProgress * 0.38})`,
+          transform: `scale(${0.15 + treeProgress * 0.85})`,
           transformOrigin: '0px 0px',
         }}>
           <path d="M -22 0 Q -26 -90 -18 -180 Q -12 -270 -10 -360 Q -8 -420 -6 -460 L 6 -460 Q 8 -420 10 -360 Q 12 -270 18 -180 Q 26 -90 22 0 Z" fill="url(#trunkbody)" />
@@ -1528,6 +1638,7 @@ function FocusPageBody() {
               elements={dayGarden.elements}
               elapsedMs={cumElapsedAtStart + Math.max(0, now - startedAt)}
               timeToFullMs={TIME_TO_FULL_MS}
+              nowMs={now}
               forceFull
             />
           </div>
@@ -1701,6 +1812,7 @@ function FocusPageBody() {
             elements={dayGarden.elements}
             elapsedMs={cumElapsedAtStart + Math.max(0, now - startedAt)}
             timeToFullMs={TIME_TO_FULL_MS}
+            nowMs={now}
             particleBurst={particleBurst}
           />
         </div>
@@ -1735,9 +1847,10 @@ function FocusPageBody() {
           <div className="focus-card">
 
             <div className="focus-kicker">
-            <span className="focus-kicker-dot" style={{ background: sysColor }} />
-            <span className="focus-kicker-sys">{currentSystemName}</span>
-            <span className="focus-kicker-sep">{'•'}</span>
+            <div className="focus-kicker-line">
+              <span className="focus-kicker-dot" style={{ background: sysColor }} />
+              <span className="focus-kicker-sys">{currentSystemName}</span>
+            </div>
             <span className={`focus-kicker-status ${statusCls}`}>{statusLabel}</span>
           </div>
 
