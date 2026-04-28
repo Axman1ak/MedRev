@@ -1983,8 +1983,9 @@ function FocusPageBody() {
             <span
               className={`focus-kicker-status ${statusCls}`}
               translate="no"
-              data-no-translate
-            >{statusLabel}</span>
+            >
+              {statusLabel}
+            </span>
           </div>
 
           <h1 className="focus-name">{current.lesson.name}</h1>
@@ -2074,4 +2075,3 @@ function FocusPageBody() {
           <span><kbd>R</kbd> reporter</span>
           <span className="focus-hint-sep">{'·'}</span>
           <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
-        </div>
