@@ -1645,14 +1645,14 @@ function FocusPageBody() {
 
         <div className="focus-stage">
 
-          {/* JARDIN visible en fond — l'arbre est forcé en pleine maturité */}
+          {/* JARDIN visible en fond — montre le VRAI progrès cumulé du user
+              (l'arbre apparaît à sa taille réelle, pas forcée en pleine maturité) */}
           <div className="focus-garden">
             <FocusGarden
               elements={dayGarden.elements}
               elapsedMs={cumElapsedAtStart + Math.max(0, now - startedAt)}
               timeToFullMs={TIME_TO_FULL_MS}
               nowMs={now}
-              forceFull
             />
           </div>
 
