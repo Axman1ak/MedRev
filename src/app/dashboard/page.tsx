@@ -1,7 +1,7 @@
 'use client'
 // src/app/dashboard/page.tsx
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -377,51 +377,64 @@ const BUTTERFLY_COLOR: Record<string, [string, string]> = {
   purple:['#9C68B0', '#D5B0E0'],
 }
 
-// Helpers de rendu SVG sortis du composant pour rester simples côté parser.
-function renderTree(treeProgress: number) {
-  const scale = 0.45 + treeProgress * 0.55
-  const tx = 200 * (1 - scale)
-  const ty = 220 * (1 - scale)
-  const branches: Array<{ progress: number; x1: number; y1: number; x2: number; y2: number; w: number }> = [
-    { progress: 0.18, x1: 200, y1: 138, x2: 156, y2: 116, w: 5 },
-    { progress: 0.36, x1: 200, y1: 124, x2: 246, y2: 100, w: 5 },
-    { progress: 0.54, x1: 200, y1: 110, x2: 168, y2: 86, w: 4 },
-    { progress: 0.72, x1: 200, y1: 100, x2: 234, y2: 78, w: 4 },
-  ]
-  const visibleBranches = branches.filter(b => treeProgress >= b.progress)
+// ---- Helpers SVG du mini-jardin (sortis hors composant, pas de hooks). ----
+// Échelle des positions du focus (1600x1000) → mini-jardin (400x240).
+// On rabat les fleurs sur la zone visible pour ne PAS perdre d'éléments si
+// le viewBox du focus est plus large que celui du dashboard.
+const DG_VW = 400
+const DG_VH = 240
+const DG_SOIL_TOP = 170 // y où commence l'herbe
+const DG_SOIL_BOT = 240 // y du bas du SVG
+
+function dgScalePos(x: number, y: number): { x: number; y: number; band: 'sky' | 'soil' } {
+  const sx = (x / 1600) * DG_VW
+  if (y >= 700) {
+    // élément au sol → réparti sur la bande d'herbe
+    const t = Math.min(1, Math.max(0, (y - 700) / 300))
+    return { x: sx, y: DG_SOIL_TOP + t * (DG_SOIL_BOT - DG_SOIL_TOP - 6) + 4, band: 'soil' }
+  }
+  // élément en l'air (papillon, etc.) → réparti dans le ciel
+  const t = Math.min(1, Math.max(0, y / 700))
+  return { x: sx, y: 30 + t * (DG_SOIL_TOP - 50), band: 'sky' }
+}
+
+function renderTree(p: number) {
+  // Tronc + canopée. Pas de scale group : on dessine directement à la bonne taille.
+  // p = 0 : juste un sapling visible. p = 1 : grand arbre.
+  const trunkH = 28 + p * 50  // 28 → 78
+  const trunkW = 5 + p * 5    // 5 → 10
+  const canR = 18 + p * 26    // 18 → 44
+  const cx = 200
+  const groundY = DG_SOIL_TOP + 4
+  const trunkTop = groundY - trunkH
   return (
-    <g transform={'translate(' + tx + ',' + ty + ') scale(' + scale + ')'}>
-      <rect x="195" y="160" width="10" height="60" fill="#6B4F35" />
-      <rect x="195" y="160" width="10" height="60" fill="#5A4128" opacity=".5" />
-      {visibleBranches.map((b, i) => (
-        <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke="#6B4F35" strokeWidth={b.w} strokeLinecap="round" />
-      ))}
-      {treeProgress >= 0.10 ? <ellipse cx="200" cy="148" rx="40" ry="36" fill="#3B6D11" /> : null}
-      {treeProgress >= 0.40 ? <ellipse cx="174" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
-      {treeProgress >= 0.60 ? <ellipse cx="226" cy="144" rx="22" ry="20" fill="#4A8A1F" /> : null}
-      {treeProgress >= 0.80 ? <ellipse cx="200" cy="124" rx="24" ry="18" fill="#5AA02A" /> : null}
+    <g>
+      <rect x={cx - trunkW / 2} y={trunkTop} width={trunkW} height={trunkH} fill="#6B4F35" />
+      <rect x={cx - trunkW / 2} y={trunkTop} width={trunkW / 2} height={trunkH} fill="#5A4128" opacity=".4" />
+      <ellipse cx={cx} cy={trunkTop - 4} rx={canR} ry={canR * 0.85} fill="#3B6D11" />
+      {p >= 0.4 ? <ellipse cx={cx - canR * 0.5} cy={trunkTop - 2} rx={canR * 0.6} ry={canR * 0.55} fill="#4A8A1F" /> : null}
+      {p >= 0.6 ? <ellipse cx={cx + canR * 0.5} cy={trunkTop - 2} rx={canR * 0.6} ry={canR * 0.55} fill="#4A8A1F" /> : null}
+      {p >= 0.8 ? <ellipse cx={cx} cy={trunkTop - canR * 0.6} rx={canR * 0.7} ry={canR * 0.5} fill="#5AA02A" /> : null}
     </g>
   )
 }
 
-const DG_SCALE_X = 0.25
-const DG_SCALE_Y = 0.26
-
 function renderGardenElement(el: GardenElement, i: number) {
-  const x = el.x * DG_SCALE_X
-  const y = el.y * DG_SCALE_Y
+  const pos = dgScalePos(el.x, el.y)
+  const x = pos.x
+  const y = pos.y
   if (el.kind === 'flower' || el.kind === 'tulip' || el.kind === 'sunflower') {
     const color = FLOWER_COLOR[el.variant ?? 'red'] ?? '#C75050'
-    const r = el.kind === 'sunflower' ? 4 : el.kind === 'tulip' ? 3 : 2.6
-    return <circle key={i} cx={x} cy={y} r={r} fill={color} />
+    const r = el.kind === 'sunflower' ? 4.5 : el.kind === 'tulip' ? 3.5 : 3
+    return <circle key={i} cx={x} cy={y} r={r} fill={color} stroke="white" strokeWidth=".5" opacity=".95" />
   }
   if (el.kind === 'butterfly') {
     const cols = BUTTERFLY_COLOR[el.variant ?? 'amber'] ?? BUTTERFLY_COLOR.amber
     return (
       <g key={i}>
-        <ellipse cx={x - 2} cy={y} rx="2.2" ry="1.6" fill={cols[0]} />
-        <ellipse cx={x + 2} cy={y} rx="2.2" ry="1.6" fill={cols[1]} />
-        <line x1={x} y1={y - 1} x2={x} y2={y + 1.4} stroke="#3D2A1F" strokeWidth=".7" />
+        <ellipse cx={x - 2.4} cy={y} rx="2.6" ry="1.9" fill={cols[0]} />
+        <ellipse cx={x + 2.4} cy={y} rx="2.6" ry="1.9" fill={cols[1]} />
+        <line x1={x} y1={y - 1.4} x2={x} y2={y + 1.6} stroke="#3D2A1F" strokeWidth=".8" />
       </g>
     )
   }
@@ -429,18 +442,14 @@ function renderGardenElement(el: GardenElement, i: number) {
     const cap = el.variant === 'orange' ? '#E89A4F' : '#C75050'
     return (
       <g key={i}>
-        <rect x={x - 0.8} y={y - 1} width="1.6" height="2.5" fill="#E8DDC4" />
-        <ellipse cx={x} cy={y - 1.5} rx="2.4" ry="1.6" fill={cap} />
+        <rect x={x - 1} y={y - 1} width="2" height="3" fill="#E8DDC4" />
+        <ellipse cx={x} cy={y - 1.5} rx="3" ry="2" fill={cap} />
       </g>
     )
   }
-  if (el.kind === 'rabbit') {
-    return <ellipse key={i} cx={x} cy={y} rx="3" ry="2.2" fill="#E0D5C0" />
-  }
-  if (el.kind === 'pond') {
-    return <ellipse key={i} cx={x} cy={y} rx="14" ry="4" fill="#5B8ED4" opacity=".75" />
-  }
-  return <circle key={i} cx={x} cy={y} r={2.5} fill="#3B2F1F" />
+  if (el.kind === 'rabbit') return <ellipse key={i} cx={x} cy={y} rx="3.5" ry="2.6" fill="#E0D5C0" stroke="#9C8E70" strokeWidth=".4" />
+  if (el.kind === 'pond')   return <ellipse key={i} cx={x} cy={y} rx="16" ry="4.5" fill="#5B8ED4" opacity=".8" />
+  return <circle key={i} cx={x} cy={y} r="3" fill="#3B2F1F" />
 }
 
 // ======================= MINI JARDIN COMPONENT =======================
@@ -510,12 +519,43 @@ function DashGarden({
   const skyTop = isDay ? '#7AA0B8' : '#1F2A4A'
   const skyMid = isDay ? '#B6CFD8' : '#3D3A6A'
 
+  // Styles inline : on veut que le mini-jardin reste visible même si le CSS
+  // .dash-garden-* n'est pas encore chargé (snapshot CSS pas pushé, cache, etc.).
+  const wrapStyle: CSSProperties = {
+    position: 'relative',
+    overflow: 'hidden',
+    width: '100%',
+    height: '100%',
+    minHeight: 220,
+    display: 'flex',
+    flexDirection: 'column',
+    background: skyTop,
+  }
+  const svgStyle: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    display: 'block',
+  }
+  const overlayStyle: CSSProperties = {
+    position: 'relative',
+    zIndex: 1,
+    marginTop: 'auto',
+    padding: '14px 16px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    background: 'linear-gradient(to top, rgba(11,25,18,.55) 0%, rgba(11,25,18,.25) 60%, transparent 100%)',
+  }
+
   return (
-    <div className="dash-garden">
+    <div className="dash-garden" style={wrapStyle}>
       <svg
-        viewBox="0 0 400 260"
+        viewBox={`0 0 ${DG_VW} ${DG_VH}`}
         preserveAspectRatio="xMidYMax slice"
-        className="dash-garden-svg"
+        style={svgStyle}
+        aria-hidden="true"
       >
         <defs>
           <linearGradient id="dgSky" x1="0" x2="0" y1="0" y2="1">
@@ -528,49 +568,64 @@ function DashGarden({
           </linearGradient>
         </defs>
 
-        {/* Ciel */}
-        <rect x="0" y="0" width="400" height="220" fill="url(#dgSky)" />
-        {/* Soleil ou lune */}
+        <rect x="0" y="0" width={DG_VW} height={DG_SOIL_TOP} fill="url(#dgSky)" />
         {isDay ? (
-          <circle cx={60 + ((hour - 7) / 12) * 280} cy={80 - Math.sin(((hour - 7) / 12) * Math.PI) * 50} r="14" fill="#FBD56B" opacity=".9" />
+          <circle cx={60 + ((hour - 7) / 12) * 280} cy={70 - Math.sin(((hour - 7) / 12) * Math.PI) * 40} r="13" fill="#FBD56B" opacity=".9" />
         ) : (
-          <circle cx="320" cy="60" r="11" fill="#E8E4D0" />
+          <circle cx="320" cy="50" r="10" fill="#E8E4D0" />
         )}
-        {/* Nuages */}
-        <ellipse cx="80" cy="50" rx="28" ry="6" fill="white" opacity={isDay ? .7 : .25} />
-        <ellipse cx="280" cy="36" rx="22" ry="5" fill="white" opacity={isDay ? .6 : .2} />
-        {/* Sol */}
-        <rect x="0" y="220" width="400" height="40" fill="url(#dgGround)" />
+        <ellipse cx="80" cy="44" rx="28" ry="6" fill="white" opacity={isDay ? .7 : .25} />
+        <ellipse cx="280" cy="32" rx="22" ry="5" fill="white" opacity={isDay ? .6 : .2} />
+        <rect x="0" y={DG_SOIL_TOP} width={DG_VW} height={DG_VH - DG_SOIL_TOP} fill="url(#dgGround)" />
 
-        {/* Arbre central — pousse avec elapsedMs */}
         {renderTree(treeProgress)}
-
-        {/* Fleurs / papillons / animaux — positions scalées depuis le focus garden */}
         {elements.map((el, i) => renderGardenElement(el, i))}
       </svg>
 
-      <div className="dash-garden-overlay">
-        <div className="dash-garden-stats">
-          <div className="dash-garden-stat"><span className="dash-garden-num">{counts.flowers}</span><span className="dash-garden-lbl">fleurs</span></div>
-          <div className="dash-garden-stat"><span className="dash-garden-num">{counts.butterflies}</span><span className="dash-garden-lbl">papillons</span></div>
+      <div className="dash-garden-overlay" style={overlayStyle}>
+        <div className="dash-garden-stats" style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
+            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{counts.flowers}</span>
+            <span style={{ fontSize: 10.5, opacity: .9 }}>fleurs</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
+            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{counts.butterflies}</span>
+            <span style={{ fontSize: 10.5, opacity: .9 }}>papillons</span>
+          </div>
           {counts.rares > 0 && (
-            <div className="dash-garden-stat"><span className="dash-garden-num">{counts.rares}</span><span className="dash-garden-lbl">rares</span></div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
+              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{counts.rares}</span>
+              <span style={{ fontSize: 10.5, opacity: .9 }}>rares</span>
+            </div>
           )}
         </div>
-        <div className="dash-garden-cta-wrap">
-          <div className="dash-garden-queue">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.92)', textShadow: '0 1px 3px rgba(0,0,0,.4)', lineHeight: 1.3, flex: 1, minWidth: 0 }}>
             {queueLength === 0 ? (
               <span>Aucune révision aujourd&apos;hui</span>
             ) : (
               <span>
-                <strong>{queueLength}</strong> {queueLength === 1 ? 'fiche' : 'fiches'} · ~{queueLength * 8} min
+                <strong style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 500, color: 'white', fontSize: 14 }}>{queueLength}</strong>
+                {' '}{queueLength === 1 ? 'fiche' : 'fiches'} · ~{queueLength * 8} min
               </span>
             )}
           </div>
           <Link
             href={startHref}
-            className="dash-garden-cta"
-            style={queueLength === 0 ? { pointerEvents: 'none', opacity: .55 } : undefined}
+            style={{
+              background: 'white',
+              color: '#1B4332',
+              padding: '8px 14px',
+              borderRadius: 8,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: 12,
+              fontWeight: 700,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(0,0,0,.2)',
+              ...(queueLength === 0 ? { pointerEvents: 'none', opacity: .55 } : null),
+            }}
           >
             {queueLength === 0 ? 'Voir le jardin' : 'Démarrer'}
           </Link>
@@ -776,13 +831,15 @@ export default function DashboardPage() {
         {/* ZONES 2, 3, 4 */}
         <div className="dash-row">
 
-          {/* ZONE 2 : POINT FAIBLE */}
-          <div className="dash-card">
+          {/* ZONE 2 : POINT FAIBLE — refonte lisibilité.
+              1 chiffre dominant (le score moyen, 44px), 1 visualisation (5 dots du score),
+              max 2 fiches fragiles avec leur score, CTA en bas. */}
+          <div className="dash-card weak-card">
             <div className="dash-card-title with-action">
               Point faible
               {matiereStats.length > 0 && (
                 <button className="see-more" onClick={() => setShowWeakModal(true)}>
-                  Toutes les matières
+                  Tout voir
                 </button>
               )}
             </div>
@@ -793,49 +850,34 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                <h3 className="weak-matiere">
-                  <span className={`weak-dot ${scoreClass(weakest.avgScore)}`} />
-                  {weakest.system.name}
-                </h3>
-                <div className="weak-score">
-                  <span className={`weak-score-num ${scoreClass(weakest.avgScore)}`}>
-                    {weakest.avgScore !== null ? weakest.avgScore.toFixed(1) : '—'}
-                  </span>
-                  <span className="weak-score-max">/ 5</span>
-                  <span className={`weak-score-label ${scoreClass(weakest.avgScore)}`}>
-                    {scoreLabel(weakest.avgScore)}
-                  </span>
+                <div className="weak-hero">
+                  <div className="weak-hero-left">
+                    <div className="weak-hero-matiere">{weakest.system.name}</div>
+                    <div className="weak-hero-label">{scoreLabel(weakest.avgScore)}</div>
+                  </div>
+                  <div className={`weak-hero-num ${scoreClass(weakest.avgScore)}`}>
+                    <span className="weak-hero-num-val">{weakest.avgScore !== null ? weakest.avgScore.toFixed(1) : '—'}</span>
+                    <span className="weak-hero-num-max">/5</span>
+                  </div>
                 </div>
 
                 {weakestFragile.length > 0 ? (
-                  <>
-                    <div className="weak-sub">
-                      {weakestFragile.length} fiche{weakestFragile.length > 1 ? 's' : ''} fragile{weakestFragile.length > 1 ? 's' : ''}
-                    </div>
-                    <div className="weak-list">
-                      {weakestFragile.map(f => {
-                        const cls = scoreClass(f.avg)
-                        return (
-                          <div key={f.lesson.id} className="weak-item">
-                            <div>
-                              <div className="weak-item-name">{f.lesson.name}</div>
-                              <div className="weak-item-meta">
-                                {f.last3.length > 0
-                                  ? `3 dernières · ${f.last3.join(' · ')}`
-                                  : 'Pas encore notée'}
-                              </div>
-                            </div>
-                            <div className="weak-item-score">
-                              <span className={`weak-item-num ${cls}`}>{f.avg.toFixed(1)}</span>
-                              <span className={`weak-chip ${cls}`}>{Math.round(f.avg)}</span>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </>
+                  <div className="weak-list">
+                    {weakestFragile.slice(0, 2).map(f => {
+                      const cls = scoreClass(f.avg)
+                      return (
+                        <div key={f.lesson.id} className="weak-item">
+                          <div className="weak-item-name">{f.lesson.name}</div>
+                          <span className={`weak-chip ${cls}`}>{f.avg.toFixed(1)}</span>
+                        </div>
+                      )
+                    })}
+                    {weakestFragile.length > 2 && (
+                      <div className="weak-more">+ {weakestFragile.length - 2} autre{weakestFragile.length - 2 > 1 ? 's' : ''}</div>
+                    )}
+                  </div>
                 ) : (
-                  <div className="weak-sub" style={{ marginTop: 8 }}>Aucune fiche fragile — tu gères.</div>
+                  <div className="weak-noframe">Aucune fiche fragile — tu gères.</div>
                 )}
 
                 <Link
@@ -849,30 +891,25 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* ZONE 3 : RÉGULARITÉ */}
-          <div className="dash-card">
+          {/* ZONE 3 : RÉGULARITÉ — refonte lisibilité.
+              1 streak ÉNORME au centre, contexte fusionné, grille 7 jours plus grosse. */}
+          <div className="dash-card reg-card">
             <div className="dash-card-title">Régularité</div>
 
-            <div className="reg-num-wrap">
-              <div className="reg-num">{streak}</div>
-              <div className="reg-num-unit">jours<br />d&apos;affilée</div>
+            <div className="reg-hero">
+              <div className="reg-hero-num">{streak}</div>
+              <div className="reg-hero-unit">
+                {streak <= 1 ? 'jour' : 'jours'}<br />
+                <span className="reg-hero-unit-soft">d&apos;affilée</span>
+              </div>
             </div>
-            <div className="reg-sub">
+            <div className="reg-context">
               {streak === 0
-                ? 'Reprends le rythme aujourd\u2019hui.'
-                : <>Tu tiens depuis le <strong>{formatDateFR(dateStrFromOffset(today, -(streak - 1)))}</strong>.</>}
-            </div>
-
-            <div className="reg-record">
-              <span className="reg-record-label">Record perso</span>
-              <strong>{recordStreak} jour{recordStreak > 1 ? 's' : ''}</strong>
+                ? <>Reprends le rythme \u2014 record <strong>{recordStreak} j</strong>.</>
+                : <>Record <strong>{recordStreak} j</strong> \u00b7 cette sem. <strong>{weekDone}/{weekTotal}</strong></>}
             </div>
 
             <div className="reg-week">
-              <div className="reg-week-label">
-                <span>Cette semaine</span>
-                <strong>{weekDone} / {weekTotal}</strong>
-              </div>
               <div className="reg-strip">
                 {weekDays.map((d, i) => {
                   const cls = [
@@ -891,43 +928,53 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ZONE 4 : CHARGE À VENIR */}
-          <div className="dash-card">
+          {/* ZONE 4 : CHARGE À VENIR — refonte lisibilité.
+              1 total dominant (44px), 4 barres verticales pour les semaines, pic en couleur. */}
+          <div className="dash-card load-card">
             <div className="dash-card-title">Charge à venir</div>
 
-            <div className="load-rows">
-              {upcomingLoad.map((w, i) => {
-                const showPeak = loadMax > 10
-                const isPeak = showPeak && i === peakIdx && w.count === loadMax
-                const pct = loadMax > 0 ? Math.max(6, Math.round((w.count / loadMax) * 100)) : 0
-                return (
-                  <div key={w.label} className="load-row">
-                    <span className="load-week">{w.label}</span>
-                    <div className="load-bar">
-                      <div
-                        className={`load-bar-f${isPeak ? ' peak' : ''}`}
-                        style={{ width: `${w.count > 0 ? pct : 0}%` }}
-                      />
+            {(() => {
+              const total = upcomingLoad.reduce((acc, w) => acc + w.count, 0)
+              const showPeak = loadMax > 10
+              return (
+                <>
+                  <div className="load-hero">
+                    <div className="load-hero-num">{total}</div>
+                    <div className="load-hero-unit">
+                      {total <= 1 ? 'fiche' : 'fiches'}<br />
+                      <span className="load-hero-unit-soft">sur 4 semaines</span>
                     </div>
-                    <span className={`load-count${isPeak ? ' peak' : ''}`}>{w.count}</span>
                   </div>
-                )
-              })}
-            </div>
 
-            {loadMax === 0 ? (
-              <div className="load-note calm">
-                <strong>Aucune révision</strong> prévue dans les 4 prochaines semaines.
-              </div>
-            ) : peakIdx >= 0 && loadMax > 10 ? (
-              <div className="load-note">
-                <strong>Pic en {upcomingLoad[peakIdx].label}</strong> — pense à étaler tes nouvelles fiches.
-              </div>
-            ) : (
-              <div className="load-note calm">
-                <strong>Charge équilibrée</strong> sur les 4 prochaines semaines.
-              </div>
-            )}
+                  <div className="load-bars">
+                    {upcomingLoad.map((w, i) => {
+                      const isPeak = showPeak && i === peakIdx && w.count === loadMax
+                      const pct = loadMax > 0 ? Math.max(8, Math.round((w.count / loadMax) * 100)) : 0
+                      return (
+                        <div key={w.label} className={`load-col${isPeak ? ' peak' : ''}`}>
+                          <div className="load-col-bar-wrap">
+                            <div
+                              className={`load-col-bar${isPeak ? ' peak' : ''}`}
+                              style={{ height: w.count > 0 ? `${pct}%` : '6%' }}
+                            />
+                          </div>
+                          <div className="load-col-count">{w.count}</div>
+                          <div className="load-col-label">{w.label}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {total === 0 ? (
+                    <div className="load-note calm"><strong>Aucune révision</strong> prévue.</div>
+                  ) : showPeak && peakIdx >= 0 ? (
+                    <div className="load-note"><strong>Pic en {upcomingLoad[peakIdx].label}</strong> — pense à étaler.</div>
+                  ) : (
+                    <div className="load-note calm"><strong>Charge équilibrée</strong> sur 4 sem.</div>
+                  )}
+                </>
+              )
+            })()}
           </div>
 
         </div>
