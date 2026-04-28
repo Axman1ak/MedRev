@@ -813,9 +813,12 @@ function FocusPageBody() {
   }
 
   // Détection re-action : la fiche courante est déjà actionnée dans cette session
-  const alreadyRated = currentResult?.outcome.kind === 'rated'
-  const alreadyReported = currentResult?.outcome.kind === 'reported'
-  const ratedScore = alreadyRated ? (currentResult.outcome as { score: Score }).score : null
+  const alreadyRated = currentResult !== null && currentResult.outcome.kind === 'rated'
+  const alreadyReported = currentResult !== null && currentResult.outcome.kind === 'reported'
+  let ratedScore: Score | null = null
+  if (currentResult !== null && currentResult.outcome.kind === 'rated') {
+    ratedScore = currentResult.outcome.score
+  }
 
   const canPrev = currentIdx > 0
   const canNext = currentIdx + 1 !== queue.length
