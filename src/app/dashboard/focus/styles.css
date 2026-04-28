@@ -1,0 +1,461 @@
+@charset "UTF-8";
+/* src/app/dashboard/focus/styles.css — Session focus plein écran.
+   Toutes les classes sont préfixées .focus- pour éviter les collisions
+   inter-pages dans Next.js App Router. Voir feedback_css_naming. */
+
+/* ============ ROOT (overlay plein écran qui couvre la sidebar) ============ */
+.focus-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #EDEAE3;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #111310;
+  overflow: hidden;
+}
+
+/* ============ TOP BAR ============ */
+.focus-topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 28px;
+  background: white;
+  border-bottom: 1px solid #E1DDD3;
+  flex-shrink: 0;
+}
+.focus-brand {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #111310;
+  white-space: nowrap;
+}
+.focus-brand-mode {
+  color: #2D6A4F;
+  font-weight: 500;
+  font-style: italic;
+  margin-left: 4px;
+  font-size: 14px;
+}
+
+.focus-progress-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.focus-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #FAF8F2;
+  border: 1px solid #E1DDD3;
+  border-radius: 4px;
+  overflow: hidden;
+  max-width: 480px;
+}
+.focus-progress-fill {
+  height: 100%;
+  background: #2D6A4F;
+  border-radius: 4px;
+  transition: width .25s ease-out;
+}
+.focus-progress-text {
+  font-size: 12px;
+  color: #6B6F6A;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.focus-progress-text strong {
+  color: #111310;
+  font-weight: 700;
+}
+.focus-progress-sep {
+  margin: 0 6px;
+  color: #D0CCC0;
+}
+
+.focus-quit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  color: #6B6F6A;
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.focus-quit:hover {
+  background: #FAF8F2;
+  border-color: #E1DDD3;
+  color: #111310;
+}
+
+/* ============ STAGE (zone centrale) ============ */
+.focus-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  overflow-y: auto;
+}
+
+.focus-card {
+  background: white;
+  border: 1px solid #E1DDD3;
+  border-radius: 18px;
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 24px 60px rgba(17, 19, 16, .08);
+}
+
+/* ============ KICKER (matière + statut) ============ */
+.focus-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #6B6F6A;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.focus-kicker-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.focus-kicker-sys { color: #111310; }
+.focus-kicker-sep { color: #D0CCC0; font-weight: 400; }
+.focus-kicker-status.missed { color: #C75050; }
+.focus-kicker-status.today { color: #2D6A4F; }
+.focus-kicker-status.fresh { color: #C47B2B; }
+
+/* ============ NOM DE LA FICHE ============ */
+.focus-name {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 1.2;
+  color: #111310;
+  margin: 0 0 18px;
+  letter-spacing: -.005em;
+}
+
+.focus-last {
+  font-size: 12.5px;
+  color: #6B6F6A;
+  margin-bottom: 24px;
+}
+.focus-last-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 11px;
+  color: white;
+  margin-left: 6px;
+}
+.focus-last-pill.s1 { background: #C75050; }
+.focus-last-pill.s2 { background: #E08B3C; }
+.focus-last-pill.s3 { background: #D9B24A; color: #4A3C10; }
+.focus-last-pill.s4 { background: #7AA56B; }
+.focus-last-pill.s5 { background: #1B4332; }
+
+/* ============ NOTATION ============ */
+.focus-ask {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: #6B6F6A;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.focus-scores {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.focus-score {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 8px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  color: white;
+  transition: transform .1s ease-out, filter .15s, box-shadow .15s;
+}
+.focus-score:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 8px 18px rgba(17, 19, 16, .15);
+}
+.focus-score:active:not(:disabled) { transform: translateY(0); }
+.focus-score:disabled { opacity: .55; cursor: wait; }
+.focus-score.s1 { background: #C75050; }
+.focus-score.s2 { background: #E08B3C; }
+.focus-score.s3 { background: #D9B24A; color: #4A3C10; }
+.focus-score.s4 { background: #7AA56B; }
+.focus-score.s5 { background: #1B4332; }
+.focus-score-num {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1;
+}
+.focus-score-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.focus-score-key {
+  position: absolute;
+  top: 6px; right: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: .55;
+  letter-spacing: 0;
+  font-family: inherit;
+}
+
+/* ============ ACTIONS SECONDAIRES ============ */
+.focus-actions {
+  display: flex;
+  justify-content: center;
+}
+.focus-report {
+  background: transparent;
+  border: 1px solid #E1DDD3;
+  border-radius: 24px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B6F6A;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.focus-report:hover:not(:disabled) {
+  border-color: #C47B2B;
+  color: #C47B2B;
+  background: #FAF6EE;
+}
+.focus-report:disabled { opacity: .5; cursor: wait; }
+
+/* ============ HINT ============ */
+.focus-hint {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px 22px;
+  font-size: 11px;
+  color: #6B6F6A;
+  flex-shrink: 0;
+}
+.focus-hint kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: white;
+  border: 1px solid #E1DDD3;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #111310;
+  margin: 0 1px;
+  line-height: 1.4;
+}
+.focus-hint-sep { color: #D0CCC0; }
+
+/* ============ ÉTATS ============ */
+.focus-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #6B6F6A;
+}
+
+/* ---- Empty ---- */
+.focus-empty-card {
+  text-align: center;
+  padding: 48px 40px;
+}
+.focus-empty-mark {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #D8EAE0;
+  color: #1B4332;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+.focus-empty-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 500;
+  font-size: 24px;
+  margin: 0 0 8px;
+  color: #111310;
+}
+.focus-empty-sub {
+  font-size: 13px;
+  color: #6B6F6A;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+.focus-empty-cta {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #1B4332;
+  color: white;
+  border-radius: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s;
+}
+.focus-empty-cta:hover { background: #2D6A4F; }
+
+/* ---- Done ---- */
+.focus-done-card {
+  padding: 36px 40px;
+}
+.focus-done-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: #2D6A4F;
+  margin-bottom: 8px;
+}
+.focus-done-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 500;
+  font-size: 26px;
+  line-height: 1.25;
+  color: #111310;
+  margin: 0 0 6px;
+}
+.focus-done-sep { color: #D0CCC0; margin: 0 2px; }
+.focus-done-reported {
+  color: #C47B2B;
+  font-style: italic;
+}
+.focus-done-meta {
+  font-size: 13px;
+  color: #6B6F6A;
+  margin-bottom: 22px;
+}
+.focus-done-meta strong { color: #111310; }
+.focus-done-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 2px 4px 0;
+  margin-bottom: 22px;
+}
+.focus-done-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #FAF8F2;
+  border: 1px solid #E1DDD3;
+  border-radius: 10px;
+}
+.focus-done-row-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B6F6A;
+  text-align: center;
+}
+.focus-done-row-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111310;
+  line-height: 1.3;
+}
+.focus-done-row-sys {
+  font-size: 10.5px;
+  color: #6B6F6A;
+  margin-top: 2px;
+}
+.focus-done-chip {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+}
+.focus-done-chip.s1 { background: #C75050; }
+.focus-done-chip.s2 { background: #E08B3C; }
+.focus-done-chip.s3 { background: #D9B24A; color: #4A3C10; }
+.focus-done-chip.s4 { background: #7AA56B; }
+.focus-done-chip.s5 { background: #1B4332; }
+.focus-done-chip.reported {
+  background: white;
+  border: 1px solid #C47B2B;
+  color: #C47B2B;
+}
+.focus-done-cta {
+  display: block;
+  text-align: center;
+  padding: 12px 24px;
+  background: #1B4332;
+  color: white;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s;
+}
+.focus-done-cta:hover { background: #2D6A4F; }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 720px) {
+  .focus-topbar { padding: 12px 16px; gap: 14px; }
+  .focus-brand { font-size: 14px; }
+  .focus-card { padding: 24px 20px; }
+  .focus-name { font-size: 24px; }
+  .focus-scores { gap: 4px; }
+  .focus-score { padding: 16px 4px 10px; }
+  .focus-score-num { font-size: 22px; }
+  .focus-score-lbl { font-size: 9px; }
+  .focus-score-key { font-size: 8px; }
+  .focus-progress-wrap { gap: 10px; }
+  .focus-hint { padding: 10px 12px 14px; font-size: 10px; }
+  .focus-empty-card,
+  .focus-done-card { padding: 28px 20px; }
+}
