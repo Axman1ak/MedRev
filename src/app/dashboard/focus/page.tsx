@@ -1538,50 +1538,85 @@ function FocusPageBody() {
 
     return (
       <div className="focus-root">
+        {/* TOP BAR (overlay glass sur le ciel) */}
         <div className="focus-topbar">
-          <div className="focus-brand">MedRev <span className="focus-brand-mode">focus</span></div>
-          <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+          <div className="focus-brand">
+            <span className="focus-brand-dot" aria-hidden="true" />
+            MedRev <span className="focus-brand-mode">focus</span>
+          </div>
+          <div className="focus-topbar-right">
+            <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+          </div>
         </div>
+
         <div className="focus-stage">
-          <div className="focus-card focus-done-card">
 
-            {/* Plante en pleine floraison (tige forcée au max + fleur) */}
-            <div className="focus-done-plant">
-              <FocusPlant
-                elapsedMs={Math.max(0, now - startedAt)}
-                timeToFullMs={TIME_TO_FULL_MS}
-                forceFull
-              />
-            </div>
+          {/* JARDIN visible en fond — l'arbre est forcé en pleine maturité */}
+          <div className="focus-garden">
+            <FocusGarden
+              elements={dayGarden.elements}
+              elapsedMs={cumElapsedAtStart + Math.max(0, now - startedAt)}
+              timeToFullMs={TIME_TO_FULL_MS}
+              forceFull
+            />
+          </div>
 
-            <div className="focus-done-kicker">Session terminée</div>
-            <h2 className="focus-done-title">
-              {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
-              {reported > 0 && (
-                <> <span className="focus-done-sep">{'·'}</span> <span className="focus-done-reported">{reported} reportée{reported > 1 ? 's' : ''}</span></>
-              )}
-            </h2>
-            <div className="focus-done-meta">
-              en {min} min {sec.toString().padStart(2, '0')} s
-              {avg !== null && <> {'·'} moyenne <strong>{avg.toFixed(1)}/5</strong></>}
-            </div>
+          {/* CARD bilan à GAUCHE pour laisser le jardin visible à droite */}
+          <div className="focus-card-zone focus-card-zone-bilan">
+            <div className="focus-card focus-done-card">
+              <div className="focus-done-kicker">Session terminée</div>
+              <h2 className="focus-done-title">
+                {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
+                {reported > 0 && (
+                  <> <span className="focus-done-sep">{'·'}</span> <span className="focus-done-reported">{reported} reportée{reported > 1 ? 's' : ''}</span></>
+                )}
+              </h2>
+              <div className="focus-done-meta">
+                en {min} min {sec.toString().padStart(2, '0')} s
+                {avg !== null && <> {'·'} moyenne <strong>{avg.toFixed(1)}/5</strong></>}
+              </div>
 
-            <div className="focus-done-list">
-              {filled.map((r, i) => (
-                <div key={`${r.lessonId}-${i}`} className="focus-done-row">
-                  <div className="focus-done-row-num">{i + 1}</div>
-                  <div className="focus-done-row-main">
-                    <div className="focus-done-row-name">{r.lessonName}</div>
-                    <div className="focus-done-row-sys">{r.systemName}</div>
+              <div className="focus-done-list">
+                {filled.map((r, i) => (
+                  <div key={`${r.lessonId}-${i}`} className="focus-done-row">
+                    <div className="focus-done-row-num">{i + 1}</div>
+                    <div className="focus-done-row-main">
+                      <div className="focus-done-row-name">{r.lessonName}</div>
+                      <div className="focus-done-row-sys">{r.systemName}</div>
+                    </div>
+                    {r.outcome.kind === 'rated'
+                      ? <div className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</div>
+                      : <div className="focus-done-chip reported">Reportée</div>}
                   </div>
-                  {r.outcome.kind === 'rated'
-                    ? <div className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</div>
-                    : <div className="focus-done-chip reported">Reportée</div>}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <Link href="/dashboard" className="focus-done-cta">Retour au tableau de bord</Link>
+              <Link href="/dashboard" className="focus-done-cta">Retour au tableau de bord</Link>
+            </div>
+          </div>
+
+          {/* Stats du jardin du jour, gardées visibles en bas-droite cette fois */}
+          <div className="focus-garden-stats focus-garden-stats-right" aria-live="polite">
+            <div className="focus-garden-stats-kicker">Ton jardin du jour</div>
+            <div className="focus-garden-stats-row">
+              <span className="focus-garden-stats-item">
+                <span className="focus-garden-stats-num">{dayGarden.fichesCount}</span>
+                <span className="focus-garden-stats-lbl">{dayGarden.fichesCount > 1 ? 'fiches' : 'fiche'}</span>
+              </span>
+              <span className="focus-garden-stats-sep">·</span>
+              <span className="focus-garden-stats-item">
+                <span className="focus-garden-stats-num">{gardenStats.fleurs}</span>
+                <span className="focus-garden-stats-lbl">{gardenStats.fleurs > 1 ? 'fleurs' : 'fleur'}</span>
+              </span>
+              <span className="focus-garden-stats-item">
+                <span className="focus-garden-stats-num">{gardenStats.animaux}</span>
+                <span className="focus-garden-stats-lbl">{gardenStats.animaux > 1 ? 'animaux' : 'animal'}</span>
+              </span>
+              <span className="focus-garden-stats-item">
+                <span className="focus-garden-stats-num">{gardenStats.papillons}</span>
+                <span className="focus-garden-stats-lbl">{gardenStats.papillons > 1 ? 'papillons' : 'papillon'}</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
