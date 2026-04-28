@@ -26,9 +26,9 @@ const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   5: '#1B4332',
 }
 
-// Durée jusqu'à floraison complète de la tige (la plante grandit avec le temps).
-// 15 min = palier raisonnable pour une session focus PASS.
-const TIME_TO_FULL_MS = 15 * 60 * 1000
+// Durée jusqu'à pleine maturité de l'arbre central (croissance temporelle).
+// 50 min = durée typique d'une session focus PASS (40-60 min).
+const TIME_TO_FULL_MS = 50 * 60 * 1000
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -217,49 +217,23 @@ function buildQueue(
 // (clusters bas = session rapide, étalées = session lente).
 
 type PlantProps = {
-  results: (Result | null)[]
   elapsedMs: number
   timeToFullMs: number
-  /** Si true (écran bilan), tige forcée au max et fleur affichée si au moins une note. */
+  /** Si true (écran bilan), tige forcée au max et fleur affichée. */
   forceFull?: boolean
-  /** Burst de particules courant (déclenche l'anim au moment d'un rate). */
-  particleBurst?: { ts: number; idx: number; score: Score } | null
-  /** Niveau de combo courant (influence la vivacité du jardin). */
-  comboLevel?: number
 }
 
-// Géométrie SVG (viewBox 120x130)
+// Géométrie SVG compacte (viewBox 120x130)
 const POT_Y = 110
-const STEM_TOP_MIN_Y = 30 // hauteur la plus haute atteignable
+const STEM_TOP_MIN_Y = 30
 
-function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: PlantProps) {
-  const ratedLeaves: { idx: number; score: Score; atMs: number }[] = []
-  results.forEach((r, idx) => {
-    if (r && r.outcome.kind === 'rated') {
-      ratedLeaves.push({ idx, score: r.outcome.score, atMs: r.outcome.atMs })
-    }
-  })
-  const hasRated = ratedLeaves.length > 0
-  const avg = hasRated
-    ? ratedLeaves.reduce((s, x) => s + x.score, 0) / ratedLeaves.length
-    : 0
-
-  // Progression temporelle de la tige
+// Composant compact utilisé sur l'écran bilan : petite plante générique en pot
+// qui grandit avec le temps. La fleur s'ouvre quand forceFull. Pas de feuilles
+// liées aux notes — le score n'est plus encodé visuellement.
+function FocusPlant({ elapsedMs, timeToFullMs, forceFull = false }: PlantProps) {
   const stemProgress = forceFull
     ? 1
     : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
-
-  // Couleur de la fleur basée sur la moyenne
-  let flowerColor = SCORE_COLORS[4]
-  if (avg > 0) {
-    if (avg < 2) flowerColor = SCORE_COLORS[1]
-    else if (avg < 3) flowerColor = SCORE_COLORS[2]
-    else if (avg < 4) flowerColor = SCORE_COLORS[3]
-    else if (avg < 4.5) flowerColor = SCORE_COLORS[4]
-    else flowerColor = SCORE_COLORS[5]
-  }
-
-  // Position du sommet de la tige (uniquement pour la fleur)
   const stemTopY = POT_Y - stemProgress * (POT_Y - STEM_TOP_MIN_Y)
 
   return (
@@ -272,8 +246,7 @@ function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: Pla
         <path d="M 50 110 L 70 110 L 68 108 L 52 108 Z" fill="#7E5630" />
         <ellipse cx="60" cy="108" rx="9" ry="1.5" fill="#5C3A21" />
 
-        {/* Tige : on dessine la tige pleine, et on la met à l'échelle verticalement
-             via transform scaleY pour avoir une transition CSS fluide. */}
+        {/* Tige */}
         <g
           className="focus-plant-stem-group"
           style={{
@@ -281,78 +254,35 @@ function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: Pla
             transformOrigin: `60px ${POT_Y}px`,
           }}
         >
-          <line
-            x1={60}
-            y1={POT_Y}
-            x2={60}
-            y2={STEM_TOP_MIN_Y}
-            stroke="#2D6A4F"
-            strokeWidth={2.2}
-            strokeLinecap="round"
-          />
+          <line x1={60} y1={POT_Y} x2={60} y2={STEM_TOP_MIN_Y}
+                stroke="#2D6A4F" strokeWidth={2.6} strokeLinecap="round" />
         </g>
 
-        {/* Feuilles : positionnées à la hauteur correspondant à leur atMs.
-             Position fixe une fois posée — ne suit pas la tige qui continue de pousser. */}
-        {ratedLeaves.map(({ idx, score, atMs }, n) => {
-          const leafProgress = Math.max(0, Math.min(1, atMs / timeToFullMs))
-          const yPos = POT_Y - leafProgress * (POT_Y - STEM_TOP_MIN_Y)
-          const side = n % 2 === 0 ? -1 : 1
-          const cx = 60 + side * 9
-          const color = SCORE_COLORS[score]
+        {/* Petites feuilles décoratives le long de la tige (apparaissent avec la croissance) */}
+        {[0.35, 0.55, 0.75].map((t, i) => {
+          if (stemProgress < t) return null
+          const yPos = POT_Y - t * (POT_Y - STEM_TOP_MIN_Y)
+          const side = i % 2 === 0 ? -1 : 1
+          const cx = 60 + side * 8
           return (
-            <g key={`leaf-${idx}`} className="focus-plant-leaf">
-              <ellipse
-                cx={cx}
-                cy={yPos}
-                rx={7}
-                ry={3}
-                transform={`rotate(${side * 25} ${cx} ${yPos})`}
-                fill={color}
-              />
-              <ellipse
-                cx={cx}
-                cy={yPos}
-                rx={3}
-                ry={1}
-                transform={`rotate(${side * 25} ${cx} ${yPos})`}
-                fill="rgba(255,255,255,0.18)"
-              />
+            <g key={`leaf-${i}`} className="focus-plant-leaf">
+              <ellipse cx={cx} cy={yPos} rx={7} ry={3} fill="#7AA56B"
+                       transform={`rotate(${side * 25} ${cx} ${yPos})`} />
+              <ellipse cx={cx} cy={yPos - 0.6} rx={3} ry={1}
+                       fill="rgba(255,255,255,0.28)"
+                       transform={`rotate(${side * 25} ${cx} ${yPos})`} />
             </g>
           )
         })}
 
-        {/* Marqueurs reportés (petites pierres au pied du pot) */}
-        {results.map((r, idx) => {
-          if (!r || r.outcome.kind !== 'reported') return null
-          const offset = (idx * 7) % 18 - 9
-          return (
-            <ellipse
-              key={`stone-${idx}`}
-              cx={60 + offset}
-              cy={127}
-              rx={2.2}
-              ry={1.2}
-              fill="#B8B0A0"
-              opacity={0.7}
-            />
-          )
-        })}
-
-        {/* Fleur au sommet : uniquement à l'écran bilan (forceFull) */}
-        {forceFull && hasRated && (
+        {/* Fleur au sommet (bilan) */}
+        {forceFull && (
           <g className="focus-plant-flower">
             {[0, 72, 144, 216, 288].map(angle => (
-              <ellipse
-                key={angle}
-                cx={60}
-                cy={stemTopY - 7}
-                rx={4.2}
-                ry={2.4}
-                transform={`rotate(${angle} 60 ${stemTopY})`}
-                fill={flowerColor}
-                opacity={0.92}
-              />
+              <ellipse key={angle} cx={60} cy={stemTopY - 7}
+                       rx={4.2} ry={2.4}
+                       transform={`rotate(${angle} 60 ${stemTopY})`}
+                       fill="#F4B5C9" opacity={0.92} />
             ))}
             <circle cx={60} cy={stemTopY} r={2.6} fill="#F3D88A" />
           </g>
@@ -362,328 +292,720 @@ function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: Pla
   )
 }
 
-// ===================== PLANT HERO (arbuste avec branches) =====================
-// ViewBox 320x420 (portrait élargi pour accueillir les branches).
-// Tronc qui grandit avec le temps + 5 branches qui sprouting à des paliers + feuilles
-// attachées aux branches. Plus organique qu'une simple tige avec feuilles alignées.
+// ===================== GARDEN HERO (écosystème vivant) =====================
+// L'arbre central grandit avec le TEMPS écoulé.
+// Les éléments du jardin (fleurs, animaux, papillons, étang) se débloquent
+// progressivement avec chaque fiche notée — peu importe le score, la complétion
+// récompense seule. La séquence est déterministe (UNLOCK_SEQUENCE).
 
-const HERO_TRUNK_X = 160
-const HERO_POT_TOP_Y = 350
-const HERO_TRUNK_TOP_MIN_Y = 70
-const HERO_TRUNK_RANGE = HERO_POT_TOP_Y - HERO_TRUNK_TOP_MIN_Y // 280
+// ============ Définition de la séquence de déblocage ============
+type GardenKind =
+  | 'flower' | 'sunflower' | 'tulip' | 'mushroom'
+  | 'butterfly' | 'rabbit' | 'squirrel' | 'owl' | 'deer' | 'fox'
+  | 'pond' | 'sapling' | 'log'
 
-// Définition des branches (apparaissent quand stemProgress >= threshold)
-type BranchDef = {
-  threshold: number
-  fromY: number
-  midX: number; midY: number
-  tipX: number; tipY: number
+type GardenElement = {
+  kind: GardenKind
+  x: number
+  y: number
+  variant?: string
 }
-const BRANCHES: BranchDef[] = [
-  { threshold: 0.18, fromY: 295, midX: 130, midY: 290, tipX: 95,  tipY: 278 },
-  { threshold: 0.34, fromY: 255, midX: 198, midY: 250, tipX: 232, tipY: 240 },
-  { threshold: 0.50, fromY: 210, midX: 122, midY: 205, tipX: 88,  tipY: 192 },
-  { threshold: 0.66, fromY: 160, midX: 200, midY: 156, tipX: 235, tipY: 144 },
-  { threshold: 0.82, fromY: 110, midX: 130, midY: 105, tipX: 100, tipY: 92  },
+
+// Position en viewBox 1600x1000 du jardin hero.
+// Tier 1 (1-5) : fleurs basiques + 1er papillon
+// Tier 2 (6-12) : variétés + 1er animal
+// Tier 3 (13-18) : étang apparaît
+// Tier 4 (19-25) : animaux rares
+// Tier 5 (26+) : bonus
+const UNLOCK_SEQUENCE: GardenElement[] = [
+  { kind: 'flower',    x: 200,  y: 940, variant: 'red' },
+  { kind: 'butterfly', x: 640,  y: 400, variant: 'amber' },
+  { kind: 'flower',    x: 1380, y: 880, variant: 'orange' },
+  { kind: 'mushroom',  x: 140,  y: 905, variant: 'red' },
+  { kind: 'flower',    x: 580,  y: 925, variant: 'red' },
+  { kind: 'butterfly', x: 820,  y: 520, variant: 'blue' },
+  { kind: 'flower',    x: 540,  y: 825, variant: 'yellow' },
+  { kind: 'rabbit',    x: 200,  y: 870 },
+  { kind: 'tulip',     x: 220,  y: 800, variant: 'red' },
+  { kind: 'mushroom',  x: 1380, y: 920, variant: 'orange' },
+  { kind: 'flower',    x: 350,  y: 920, variant: 'pink' },
+  { kind: 'butterfly', x: 1000, y: 300, variant: 'purple' },
+  { kind: 'pond',      x: 1180, y: 820 },
+  { kind: 'sunflower', x: 580,  y: 920 },
+  { kind: 'sapling',   x: 720,  y: 700 },
+  { kind: 'squirrel',  x: 620,  y: 542 },
+  { kind: 'flower',    x: 1140, y: 800, variant: 'purple' },
+  { kind: 'mushroom',  x: 1480, y: 870, variant: 'red' },
+  { kind: 'log',       x: 880,  y: 700 },
+  { kind: 'owl',       x: 660,  y: 542 },
+  { kind: 'flower',    x: 950,  y: 880, variant: 'pink' },
+  { kind: 'deer',      x: 880,  y: 712 },
+  { kind: 'butterfly', x: 1100, y: 600, variant: 'amber' },
+  { kind: 'fox',       x: 100,  y: 850 },
+  { kind: 'flower',    x: 720,  y: 875, variant: 'yellow' },
+  { kind: 'mushroom',  x: 250,  y: 950, variant: 'red' },
+  { kind: 'butterfly', x: 380,  y: 600, variant: 'amber' },
+  { kind: 'flower',    x: 1300, y: 905, variant: 'red' },
+  { kind: 'tulip',     x: 1140, y: 870, variant: 'purple' },
+  { kind: 'flower',    x: 480,  y: 945, variant: 'white' },
 ]
 
-const LEAF_SLOT_TS = [0.50, 0.78, 1.0] // 3 emplacements le long de la branche
+// Stats agrégées dérivées d'une slice de la séquence
+type GardenStats = { fleurs: number; animaux: number; papillons: number }
+function statsFor(unlocked: GardenElement[]): GardenStats {
+  let fleurs = 0, animaux = 0, papillons = 0
+  unlocked.forEach(e => {
+    if (e.kind === 'flower' || e.kind === 'sunflower' || e.kind === 'tulip') fleurs++
+    else if (e.kind === 'butterfly') papillons++
+    else if (e.kind === 'rabbit' || e.kind === 'squirrel' || e.kind === 'owl' || e.kind === 'deer' || e.kind === 'fox') animaux++
+  })
+  return { fleurs, animaux, papillons }
+}
+
+const FLOWER_COLORS: Record<string, string> = {
+  red: '#C75050', yellow: '#FBD56B', pink: '#F4B5C9',
+  orange: '#E89A4F', purple: '#9C68B0', white: '#FFE5DD',
+}
+const BUTTERFLY_COLORS: Record<string, [string, string]> = {
+  amber: ['#E89A4F', '#FBD56B'],
+  blue:  ['#7AA8E0', '#A8C8E8'],
+  purple:['#9C68B0', '#D5B0E0'],
+}
+
+// Branches du tronc principal (apparaissent à des paliers de progression temporelle)
+type HeroBranch = {
+  threshold: number
+  thickPath: string  // path "outer" épais
+  innerPath: string  // path "inner" plus clair par-dessus
+  subPaths?: string[]  // sub-branches plus fines
+}
+
+// Toutes les coordonnées sont en repère local de l'arbre (origine = base du tronc).
+const HERO_BRANCHES: HeroBranch[] = [
+  {
+    threshold: 0.18,
+    thickPath: 'M -12 -180 Q -90 -210 -180 -200 Q -235 -195 -270 -185',
+    innerPath: 'M -12 -180 Q -90 -210 -180 -200 Q -235 -195 -270 -185',
+    subPaths: ['M -180 -200 Q -220 -240 -260 -250', 'M -220 -195 Q -260 -180 -300 -160', 'M -180 -200 Q -180 -160 -195 -130'],
+  },
+  {
+    threshold: 0.34,
+    thickPath: 'M 14 -250 Q 90 -240 180 -210 Q 240 -185 280 -160',
+    innerPath: 'M 14 -250 Q 90 -240 180 -210 Q 240 -185 280 -160',
+    subPaths: ['M 180 -210 Q 235 -255 280 -290', 'M 240 -185 Q 295 -195 340 -195', 'M 250 -180 Q 260 -130 280 -90'],
+  },
+  {
+    threshold: 0.50,
+    thickPath: 'M -10 -340 Q -70 -360 -150 -345 Q -200 -335 -240 -320',
+    innerPath: 'M -10 -340 Q -70 -360 -150 -345 Q -200 -335 -240 -320',
+    subPaths: ['M -150 -345 Q -185 -395 -210 -440', 'M -200 -335 Q -260 -355 -300 -360'],
+  },
+  {
+    threshold: 0.66,
+    thickPath: 'M 11 -400 Q 70 -420 150 -440 Q 200 -455 240 -465',
+    innerPath: 'M 11 -400 Q 70 -420 150 -440 Q 200 -455 240 -465',
+    subPaths: ['M 150 -440 Q 190 -480 220 -510', 'M 210 -460 Q 260 -475 295 -490'],
+  },
+  {
+    threshold: 0.82,
+    thickPath: 'M 0 -460 Q -30 -510 -85 -540 Q -130 -565 -160 -575',
+    innerPath: 'M 0 -460 Q -30 -510 -85 -540 Q -130 -565 -160 -575',
+    subPaths: ['M -85 -540 Q -95 -580 -110 -610', 'M 0 -460 Q 40 -490 80 -540', 'M 80 -540 Q 120 -555 160 -560'],
+  },
+]
+
+// Foliage clusters (un par branche, mêmes seuils)
+type FoliageCluster = {
+  threshold: number
+  back: { cx: number; cy: number; rx: number; ry: number; fill: string }[]
+  mid: { cx: number; cy: number; rx: number; ry: number }[]
+  front: { cx: number; cy: number; rx: number; ry: number }[]
+}
+const HERO_FOLIAGE: FoliageCluster[] = [
+  {
+    threshold: 0.18,
+    back: [
+      { cx: -220, cy: -200, rx: 84, ry: 68, fill: '#2F4438' },
+      { cx: -260, cy: -180, rx: 64, ry: 52, fill: '#3F5E4A' },
+      { cx: -280, cy: -220, rx: 58, ry: 46, fill: '#3F5E4A' },
+      { cx: -200, cy: -160, rx: 52, ry: 44, fill: '#4A6E55' },
+      { cx: -300, cy: -160, rx: 46, ry: 40, fill: '#3F5E4A' },
+    ],
+    mid: [
+      { cx: -205, cy: -205, rx: 70, ry: 54 },
+      { cx: -245, cy: -185, rx: 52, ry: 42 },
+      { cx: -265, cy: -225, rx: 46, ry: 36 },
+      { cx: -185, cy: -165, rx: 42, ry: 34 },
+    ],
+    front: [
+      { cx: -195, cy: -215, rx: 40, ry: 30 },
+      { cx: -235, cy: -200, rx: 32, ry: 24 },
+      { cx: -265, cy: -235, rx: 28, ry: 22 },
+    ],
+  },
+  {
+    threshold: 0.34,
+    back: [
+      { cx: 220, cy: -220, rx: 98, ry: 78, fill: '#2F4438' },
+      { cx: 280, cy: -180, rx: 74, ry: 58, fill: '#3F5E4A' },
+      { cx: 280, cy: -260, rx: 64, ry: 52, fill: '#4A6E55' },
+      { cx: 340, cy: -220, rx: 56, ry: 46, fill: '#3F5E4A' },
+      { cx: 200, cy: -160, rx: 54, ry: 46, fill: '#4A6E55' },
+    ],
+    mid: [
+      { cx: 225, cy: -225, rx: 80, ry: 62 },
+      { cx: 285, cy: -185, rx: 60, ry: 48 },
+      { cx: 285, cy: -265, rx: 52, ry: 42 },
+      { cx: 345, cy: -225, rx: 46, ry: 38 },
+      { cx: 205, cy: -165, rx: 44, ry: 36 },
+    ],
+    front: [
+      { cx: 215, cy: -235, rx: 48, ry: 36 },
+      { cx: 275, cy: -200, rx: 36, ry: 28 },
+      { cx: 280, cy: -275, rx: 32, ry: 24 },
+      { cx: 345, cy: -235, rx: 28, ry: 22 },
+    ],
+  },
+  {
+    threshold: 0.50,
+    back: [
+      { cx: -200, cy: -360, rx: 92, ry: 72, fill: '#2F4438' },
+      { cx: -260, cy: -340, rx: 66, ry: 56, fill: '#3F5E4A' },
+      { cx: -260, cy: -400, rx: 58, ry: 48, fill: '#4A6E55' },
+      { cx: -310, cy: -360, rx: 52, ry: 44, fill: '#3F5E4A' },
+    ],
+    mid: [
+      { cx: -185, cy: -365, rx: 76, ry: 58 },
+      { cx: -245, cy: -345, rx: 54, ry: 44 },
+      { cx: -245, cy: -405, rx: 48, ry: 38 },
+      { cx: -295, cy: -365, rx: 42, ry: 34 },
+    ],
+    front: [
+      { cx: -175, cy: -375, rx: 44, ry: 32 },
+      { cx: -235, cy: -355, rx: 32, ry: 26 },
+      { cx: -245, cy: -415, rx: 28, ry: 22 },
+    ],
+  },
+  {
+    threshold: 0.66,
+    back: [
+      { cx: 220, cy: -460, rx: 88, ry: 72, fill: '#2F4438' },
+      { cx: 280, cy: -490, rx: 62, ry: 54, fill: '#3F5E4A' },
+      { cx: 270, cy: -440, rx: 58, ry: 48, fill: '#4A6E55' },
+      { cx: 180, cy: -510, rx: 54, ry: 46, fill: '#3F5E4A' },
+    ],
+    mid: [
+      { cx: 225, cy: -465, rx: 72, ry: 58 },
+      { cx: 285, cy: -495, rx: 50, ry: 44 },
+      { cx: 275, cy: -445, rx: 46, ry: 40 },
+      { cx: 185, cy: -515, rx: 44, ry: 36 },
+    ],
+    front: [
+      { cx: 215, cy: -475, rx: 42, ry: 32 },
+      { cx: 285, cy: -505, rx: 30, ry: 24 },
+      { cx: 275, cy: -455, rx: 28, ry: 22 },
+    ],
+  },
+  {
+    threshold: 0.82,
+    back: [
+      { cx: -130, cy: -580, rx: 74, ry: 62, fill: '#2F4438' },
+      { cx: -170, cy: -610, rx: 54, ry: 46, fill: '#4A6E55' },
+      { cx: -90, cy: -620, rx: 50, ry: 42, fill: '#3F5E4A' },
+      { cx: 80, cy: -560, rx: 64, ry: 54, fill: '#3F5E4A' },
+      { cx: 140, cy: -580, rx: 50, ry: 44, fill: '#4A6E55' },
+    ],
+    mid: [
+      { cx: -115, cy: -585, rx: 60, ry: 50 },
+      { cx: -155, cy: -615, rx: 44, ry: 38 },
+      { cx: -75, cy: -625, rx: 40, ry: 34 },
+      { cx: 95, cy: -565, rx: 52, ry: 44 },
+      { cx: 155, cy: -585, rx: 42, ry: 36 },
+    ],
+    front: [
+      { cx: -105, cy: -595, rx: 36, ry: 28 },
+      { cx: -155, cy: -625, rx: 26, ry: 22 },
+      { cx: 105, cy: -575, rx: 32, ry: 26 },
+    ],
+  },
+]
+
+// ============ Composant FocusGarden ============
+type GardenProps = {
+  elapsedMs: number
+  timeToFullMs: number
+  ratedCount: number
+  particleBurst?: { ts: number; x?: number; y?: number } | null
+  forceFull?: boolean
+}
+
+// Coordonnées de l'arbre central dans le viewBox 1600x1000
+const HERO_TRUNK_X = 440
+const HERO_GROUND_Y = 750
 
 // Calcul d'un point sur une courbe de Bézier quadratique
-function bezierPoint(
-  p0x: number, p0y: number,
-  p1x: number, p1y: number,
-  p2x: number, p2y: number,
-  t: number
-): { x: number; y: number } {
-  const it = 1 - t
-  return {
-    x: it * it * p0x + 2 * it * t * p1x + t * t * p2x,
-    y: it * it * p0y + 2 * it * t * p1y + t * t * p2y,
+function FocusGarden({ elapsedMs, timeToFullMs, ratedCount, particleBurst, forceFull = false }: GardenProps) {
+  const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
+
+  // Soleil arc : x de 200 à 1400, y suit une sinusoïde (zénith au milieu de la session).
+  const sunArcT = treeProgress
+  const sunX = 200 + sunArcT * 1200
+  const sunY = 400 - Math.sin(sunArcT * Math.PI) * 280
+
+  const unlocked = UNLOCK_SEQUENCE.slice(0, Math.min(ratedCount, UNLOCK_SEQUENCE.length))
+
+  // Helper de rendu d'un élément du jardin (switch sur kind)
+  function renderEl(el: GardenElement, idx: number) {
+    const k = `el-${idx}`
+    switch (el.kind) {
+      case 'flower': {
+        const c = FLOWER_COLORS[el.variant ?? 'red']
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <line x1={0} y1={0} x2={0} y2={-22} stroke="#5E8954" strokeWidth={1.6} />
+            <ellipse cx={0} cy={-22} rx={5} ry={3} fill={c} transform="rotate(-30 0 -22)" />
+            <ellipse cx={0} cy={-22} rx={5} ry={3} fill={c} transform="rotate(30 0 -22)" />
+            <ellipse cx={0} cy={-25} rx={4} ry={2.5} fill={c} />
+            <circle cx={0} cy={-23} r={1.6} fill="#FBD56B" />
+          </g>
+        )
+      }
+      case 'sunflower': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <line x1={0} y1={0} x2={-6} y2={-32} stroke="#5E8954" strokeWidth={2.2} />
+            <line x1={-6} y1={-32} x2={-12} y2={-50} stroke="#5E8954" strokeWidth={1.7} />
+            <line x1={-6} y1={-32} x2={0} y2={-48} stroke="#5E8954" strokeWidth={1.7} />
+            <line x1={-6} y1={-32} x2={-2} y2={-58} stroke="#5E8954" strokeWidth={1.7} />
+            <ellipse cx={-12} cy={-52} rx={6} ry={4} fill="#FBD56B" />
+            <ellipse cx={0} cy={-50} rx={6} ry={4} fill="#FBD56B" />
+            <ellipse cx={-2} cy={-60} rx={6} ry={4} fill="#FBD56B" />
+            <circle cx={-12} cy={-52} r={2} fill="#A8741E" />
+            <circle cx={0} cy={-50} r={2} fill="#A8741E" />
+            <circle cx={-2} cy={-60} r={2} fill="#A8741E" />
+          </g>
+        )
+      }
+      case 'tulip': {
+        const c = FLOWER_COLORS[el.variant ?? 'red']
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <line x1={0} y1={0} x2={0} y2={-30} stroke="#5E8954" strokeWidth={2} />
+            <line x1={0} y1={-12} x2={-7} y2={-22} stroke="#5E8954" strokeWidth={1.2} />
+            <line x1={0} y1={-12} x2={7} y2={-22} stroke="#5E8954" strokeWidth={1.2} />
+            <ellipse cx={0} cy={-32} rx={4.5} ry={7} fill={c} />
+            <circle cx={0} cy={-30} r={1.4} fill="#FBD56B" />
+          </g>
+        )
+      }
+      case 'mushroom': {
+        const isRed = el.variant !== 'orange'
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={0} rx={14} ry={10} fill={isRed ? '#C75050' : '#C58040'} />
+            <ellipse cx={0} cy={-3} rx={6} ry={2} fill="rgba(255,255,255,0.35)" />
+            <ellipse cx={-5} cy={-4} rx={3} ry={2} fill="rgba(255,255,255,0.5)" />
+            <rect x={-3} y={-2} width={6} height={10} rx={1.5} fill="#FFFFFF" opacity={0.85} />
+          </g>
+        )
+      }
+      case 'butterfly': {
+        const [body, wing] = BUTTERFLY_COLORS[el.variant ?? 'amber']
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y}) rotate(-15)`}>
+            <ellipse cx={-7} cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
+            <ellipse cx={7}  cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
+            <ellipse cx={-6} cy={-3} rx={4} ry={2} fill={wing} />
+            <ellipse cx={6}  cy={-3} rx={4} ry={2} fill={wing} />
+            <line x1={0} y1={-4} x2={0} y2={4} stroke="#3D2C20" strokeWidth={1.5} />
+          </g>
+        )
+      }
+      case 'rabbit': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={14} rx={22} ry={5} fill="rgba(0,0,0,0.18)" />
+            <ellipse cx={0} cy={0}  rx={18} ry={14} fill="#D8C4A8" />
+            <ellipse cx={-3} cy={-2} rx={12} ry={9} fill="#E8D4B8" />
+            <ellipse cx={14} cy={-3} rx={9} ry={7} fill="#D8C4A8" />
+            <ellipse cx={11} cy={-4} rx={5} ry={4} fill="#E8D4B8" />
+            <ellipse cx={-12} cy={-12} rx={4} ry={9} fill="#D8C4A8" />
+            <ellipse cx={-6}  cy={-13} rx={4} ry={9} fill="#D8C4A8" />
+            <ellipse cx={-12} cy={-14} rx={2} ry={6} fill="#F0DCC0" />
+            <ellipse cx={-6}  cy={-15} rx={2} ry={6} fill="#F0DCC0" />
+            <circle cx={14} cy={-5} r={1.5} fill="#1A1A0F" />
+            <circle cx={14} cy={-5} r={0.5} fill="white" />
+            <ellipse cx={18} cy={-1} rx={1.5} ry={1} fill="#C75050" />
+            <path d="M-18 8 Q-22 6 -23 10 Q-20 12 -16 10" fill="#D8C4A8" />
+          </g>
+        )
+      }
+      case 'squirrel': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={0} rx={14} ry={8} fill="#7C5A3A" />
+            <ellipse cx={-3} cy={-1} rx={9} ry={6} fill="#9C7B5A" />
+            <ellipse cx={-7} cy={0} rx={6} ry={6} fill="#7C5A3A" />
+            <ellipse cx={-9} cy={-1} rx={2.5} ry={2.5} fill="#9C7B5A" />
+            <circle cx={-9} cy={-2} r={0.8} fill="#1A1A0F" />
+            <ellipse cx={-9} cy={0} rx={0.7} ry={0.5} fill="#1A1A0F" />
+            <path d="M-7 -3 L-9 -7 M-5 -3 L-6 -7" stroke="#7C5A3A" strokeWidth={1.2} fill="none" />
+            <path d="M12 -2 Q22 -10 26 0 Q20 0 12 1 Z" fill="#9C7B5A" />
+            <path d="M14 -1 Q20 -7 24 -1" stroke="#7C5A3A" strokeWidth={0.8} fill="none" />
+          </g>
+        )
+      }
+      case 'owl': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={0} rx={20} ry={10} fill="#3D2C20" />
+            <ellipse cx={-3} cy={-2} rx={12} ry={8} fill="#5A4438" />
+            <circle cx={-7} cy={-3} r={2} fill="white" />
+            <circle cx={-7} cy={-3} r={1} fill="#1A1A0F" />
+            <path d="M-12 -3 L-17 -5 L-14 -1 Z" fill="#E08B3C" />
+            <path d="M5 -2 Q14 -10 22 -4 Q14 0 5 -1 Z" fill="#5A4438" />
+            <path d="M-2 8 L-2 14" stroke="#3D2C20" strokeWidth={1.5} />
+            <path d="M2 8 L2 14" stroke="#3D2C20" strokeWidth={1.5} />
+          </g>
+        )
+      }
+      case 'deer': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`} opacity={0.95}>
+            <ellipse cx={0} cy={6} rx={35} ry={5} fill="rgba(0,0,0,0.22)" />
+            <ellipse cx={0} cy={-6} rx={25} ry={14} fill="#A8755A" />
+            <ellipse cx={-2} cy={-8} rx={20} ry={11} fill="#C49080" />
+            <path d="M-22 -3 Q-30 0 -28 6 Q-22 6 -20 4" fill="#A8755A" />
+            <ellipse cx={22} cy={-12} rx={11} ry={14} fill="#A8755A" />
+            <ellipse cx={22} cy={-14} rx={8} ry={10} fill="#C49080" />
+            <path d="M22 -25 L18 -38 M22 -25 L26 -38 M22 -25 L19 -36 M22 -25 L25 -36" stroke="#FFFFFF" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+            <path d="M19 -38 L17 -42 M26 -38 L28 -42" stroke="#FFFFFF" strokeWidth={1.2} fill="none" strokeLinecap="round" />
+            <circle cx={20} cy={-12} r={1.2} fill="#1A1A0F" />
+            <ellipse cx={28} cy={-9} rx={1.5} ry={1} fill="#1A1A0F" />
+            <line x1={-20} y1={6} x2={-20} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
+            <line x1={-12} y1={6} x2={-12} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
+            <line x1={12} y1={2} x2={12} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
+            <line x1={20} y1={2} x2={20} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
+          </g>
+        )
+      }
+      case 'fox': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={6} rx={20} ry={4} fill="rgba(0,0,0,0.2)" />
+            <ellipse cx={0} cy={-2} rx={16} ry={9} fill="#C75A2A" />
+            <ellipse cx={-3} cy={-3} rx={11} ry={6} fill="#E07840" />
+            <path d="M14 -4 L24 -10 L26 -2 L20 0 Z" fill="#C75A2A" />
+            <path d="M-14 -3 L-18 -10 L-13 -10 Z" fill="#C75A2A" />
+            <path d="M-10 -3 L-14 -8 L-9 -8 Z" fill="#C75A2A" />
+            <ellipse cx={20} cy={-6} rx={3} ry={2} fill="#FFFFFF" />
+            <circle cx={22} cy={-5} r={0.8} fill="#1A1A0F" />
+            <path d="M14 4 Q26 10 32 4 Q34 -6 28 -8 Q22 -2 18 6 Z" fill="#C75A2A" />
+            <path d="M28 -6 Q32 -2 30 2" stroke="#FFFFFF" strokeWidth={1} fill="none" />
+          </g>
+        )
+      }
+      case 'pond': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={50} rx={220} ry={55} fill="rgba(255,255,255,0.32)" />
+            <ellipse cx={0} cy={40} rx={200} ry={45} fill="url(#pondGrad)" />
+            <ellipse cx={0} cy={30} rx={190} ry={38} fill="url(#pondHi)" />
+            <path d="M-160 28 Q-100 20 -40 28 M40 30 Q100 22 160 30" stroke="rgba(255,255,255,0.4)" strokeWidth={1.2} fill="none" />
+            <g transform="translate(-110,28)">
+              <ellipse cx={0} cy={0} rx={18} ry={6} fill="#5E8954" />
+              <ellipse cx={-2} cy={-1} rx={14} ry={4} fill="#7AA56B" />
+              <ellipse cx={-2} cy={-2} rx={3} ry={2} fill="#F4B5C9" />
+              <circle cx={-2} cy={-2} r={0.8} fill="#FBD56B" />
+            </g>
+            <g transform="translate(80,40)">
+              <ellipse cx={0} cy={0} rx={22} ry={7} fill="#5E8954" />
+              <ellipse cx={2} cy={-1} rx={18} ry={5} fill="#7AA56B" />
+              <ellipse cx={3} cy={-3} rx={3.5} ry={2.5} fill="#FFE5DD" />
+              <circle cx={3} cy={-3} r={1} fill="#FBD56B" />
+            </g>
+            <g transform="translate(140,55)">
+              <ellipse cx={0} cy={0} rx={14} ry={5} fill="#5E8954" />
+              <ellipse cx={-1} cy={-1} rx={11} ry={3.5} fill="#7AA56B" />
+            </g>
+            <g transform="translate(-180,15)">
+              <line x1={0} y1={0} x2={0}  y2={-40} stroke="#5E8954" strokeWidth={2} />
+              <line x1={-3} y1={-2} x2={-5} y2={-30} stroke="#5E8954" strokeWidth={2} />
+              <line x1={3}  y1={-2} x2={5}  y2={-32} stroke="#5E8954" strokeWidth={2} />
+              <ellipse cx={0}  cy={-42} rx={4} ry={10} fill="#9C7B3A" />
+              <ellipse cx={-5} cy={-32} rx={3} ry={7}  fill="#9C7B3A" />
+              <ellipse cx={5}  cy={-34} rx={3} ry={8}  fill="#9C7B3A" />
+            </g>
+            <g transform="translate(-50,52)">
+              <ellipse cx={0} cy={0} rx={9} ry={6} fill="#5E8954" />
+              <ellipse cx={-3} cy={-2} rx={3} ry={2.5} fill="#7AA56B" />
+              <circle cx={-3} cy={-3} r={1.5} fill="#1A1A0F" />
+              <circle cx={3}  cy={-3} r={1.5} fill="#1A1A0F" />
+              <circle cx={-3} cy={-3} r={0.5} fill="white" />
+              <circle cx={3}  cy={-3} r={0.5} fill="white" />
+            </g>
+          </g>
+        )
+      }
+      case 'sapling': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`}>
+            <ellipse cx={0} cy={4} rx={18} ry={4} fill="rgba(0,0,0,0.18)" />
+            <line x1={0} y1={0} x2={0} y2={-30} stroke="#5A4031" strokeWidth={2.5} strokeLinecap="round" />
+            <ellipse cx={0} cy={-32} rx={20} ry={14} fill="#3F5E4A" />
+            <ellipse cx={-6} cy={-28} rx={12} ry={9} fill="#4A6E55" />
+            <ellipse cx={6}  cy={-30} rx={11} ry={9} fill="#5E8954" />
+            <ellipse cx={-2} cy={-36} rx={9} ry={7}  fill="url(#bushHi)" />
+          </g>
+        )
+      }
+      case 'log': {
+        return (
+          <g key={k} transform={`translate(${el.x} ${el.y})`} opacity={0.95}>
+            <ellipse cx={0}  cy={0} rx={32} ry={14} fill="#7C5A3A" />
+            <ellipse cx={-2} cy={-3} rx={22} ry={10} fill="#8C6A48" />
+            <path d="M28 -2 Q42 -8 48 -10 L46 0 L36 4 Z" fill="#7C5A3A" />
+            <ellipse cx={-30} cy={2} rx={3} ry={6} fill="#FFFFFF" />
+            <line x1={-12} y1={14} x2={-13} y2={32} stroke="#7C5A3A" strokeWidth={3} strokeLinecap="round" />
+            <line x1={-2}  y1={14} x2={-3}  y2={32} stroke="#7C5A3A" strokeWidth={3} strokeLinecap="round" />
+            <line x1={20}  y1={12} x2={22}  y2={32} stroke="#7C5A3A" strokeWidth={3} strokeLinecap="round" />
+            <line x1={10}  y1={12} x2={12}  y2={32} stroke="#7C5A3A" strokeWidth={3} strokeLinecap="round" />
+          </g>
+        )
+      }
+      default:
+        return null
+    }
   }
-}
-
-type LeafPlacement = {
-  x: number; y: number
-  rot: number
-  score: Score
-  idx: number
-}
-
-function placeLeavesOnTree(
-  rated: { idx: number; score: Score; atMs: number }[],
-  timeToFullMs: number
-): LeafPlacement[] {
-  const placements: LeafPlacement[] = []
-  const branchUsed: number[] = BRANCHES.map(() => 0)
-  let trunkLeafCount = 0
-
-  rated.forEach((leaf) => {
-    const lp = Math.max(0, Math.min(1, leaf.atMs / timeToFullMs))
-
-    // Trouve la dernière branche dont le seuil est atteint à lp
-    let branchIdx = -1
-    for (let i = BRANCHES.length - 1; i >= 0; i--) {
-      if (lp >= BRANCHES[i].threshold) { branchIdx = i; break }
-    }
-
-    if (branchIdx === -1) {
-      // Avant la première branche : feuille sur le tronc
-      const y = HERO_POT_TOP_Y - lp * HERO_TRUNK_RANGE
-      const side = trunkLeafCount % 2 === 0 ? -1 : 1
-      trunkLeafCount++
-      placements.push({
-        x: HERO_TRUNK_X + side * 9,
-        y,
-        rot: side * 28,
-        score: leaf.score,
-        idx: leaf.idx,
-      })
-      return
-    }
-
-    // Placement sur une branche
-    const branch = BRANCHES[branchIdx]
-    const slotIdx = branchUsed[branchIdx] % LEAF_SLOT_TS.length
-    branchUsed[branchIdx]++
-    const t = LEAF_SLOT_TS[slotIdx]
-    const p = bezierPoint(
-      HERO_TRUNK_X, branch.fromY,
-      branch.midX, branch.midY,
-      branch.tipX, branch.tipY,
-      t
-    )
-    const side = branch.tipX < HERO_TRUNK_X ? -1 : 1
-    // Léger décalage perpendiculaire à la branche pour ne pas se chevaucher
-    const perpOffset = (slotIdx - 1) * 6
-    placements.push({
-      x: p.x + perpOffset * side * 0.3,
-      y: p.y + perpOffset * 0.7,
-      rot: side * 22 + (slotIdx - 1) * 12,
-      score: leaf.score,
-      idx: leaf.idx,
-    })
-  })
-
-  return placements
-}
-
-function FocusPlantHero({ results, elapsedMs, timeToFullMs, particleBurst, comboLevel = 0 }: PlantProps) {
-  const ratedLeaves: { idx: number; score: Score; atMs: number }[] = []
-  results.forEach((r, idx) => {
-    if (r && r.outcome.kind === 'rated') {
-      ratedLeaves.push({ idx, score: r.outcome.score, atMs: r.outcome.atMs })
-    }
-  })
-
-  const stemProgress = Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
-
-  // Soleil monte de y=170 (horizon) à y=50 (zenith) avec la progression
-  const sunY = 170 - stemProgress * 120
-  const sunX = 252
-
-  // Brins d'herbe répartis sur tout le sol
-  const grassBlades = [12, 30, 50, 72, 96, 122, 198, 218, 238, 258, 278, 298]
-
-  // Placements des feuilles sur l'arbre
-  const leafPlacements = placeLeavesOnTree(ratedLeaves, timeToFullMs)
 
   return (
     <svg
-      viewBox="0 0 320 420"
+      viewBox="0 0 1600 1000"
       className="focus-garden-svg"
       role="img"
-      preserveAspectRatio="xMidYMax meet"
+      preserveAspectRatio="xMidYMax slice"
     >
       <title>Ton jardin de session</title>
 
-      {/* Soleil avec halo */}
-      <circle cx={sunX} cy={sunY} r={42} fill="#F3D88A" opacity={0.16} className="focus-sun-halo" />
-      <circle cx={sunX} cy={sunY} r={26} fill="#F8E5A0" opacity={0.95} className="focus-sun" />
-      <circle cx={sunX} cy={sunY} r={18} fill="#F3D88A" opacity={1} />
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#7AA0B8" />
+          <stop offset="25%" stopColor="#B0CCD8" />
+          <stop offset="55%" stopColor="#E5D5B0" />
+          <stop offset="80%" stopColor="#F0CC95" />
+          <stop offset="100%" stopColor="#D8C492" />
+        </linearGradient>
+        <radialGradient id="sungod" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFEFB8" stopOpacity="0.95" />
+          <stop offset="35%" stopColor="#F8D880" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#F8D880" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#A8C088" />
+          <stop offset="60%" stopColor="#86A56A" />
+          <stop offset="100%" stopColor="#6B8A52" />
+        </linearGradient>
+        <linearGradient id="trunkbody" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#2D1F15" />
+          <stop offset="40%" stopColor="#5A4031" />
+          <stop offset="55%" stopColor="#6B4C3A" />
+          <stop offset="100%" stopColor="#2D1F15" />
+        </linearGradient>
+        <radialGradient id="foliageMid" cx="40%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#7AA56B" />
+          <stop offset="100%" stopColor="#5E8954" />
+        </radialGradient>
+        <radialGradient id="foliageFront" cx="35%" cy="30%" r="55%">
+          <stop offset="0%" stopColor="#A8C088" />
+          <stop offset="100%" stopColor="#7AA56B" />
+        </radialGradient>
+        <radialGradient id="pondGrad" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#A8CDD8" />
+          <stop offset="60%" stopColor="#6E9AAA" />
+          <stop offset="100%" stopColor="#4A7585" />
+        </radialGradient>
+        <linearGradient id="pondHi" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0.1)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+        <radialGradient id="bushHi" cx="35%" cy="30%" r="55%">
+          <stop offset="0%" stopColor="#9DBC78" />
+          <stop offset="100%" stopColor="#6F8D52" />
+        </radialGradient>
+        <pattern id="bark" width="10" height="20" patternUnits="userSpaceOnUse">
+          <path d="M2 0 Q1 10 3 20 M7 0 Q9 10 6 20" stroke="#1F1410" strokeWidth="0.8" fill="none" opacity="0.6" />
+        </pattern>
+      </defs>
 
-      {/* Nuages décoratifs */}
-      <ellipse cx={70} cy={70} rx={28} ry={6} fill="white" opacity={0.55} />
-      <ellipse cx={85} cy={66} rx={18} ry={5} fill="white" opacity={0.55} />
-      <ellipse cx={195} cy={45} rx={22} ry={5} fill="white" opacity={0.45} />
+      {/* CIEL */}
+      <rect width="1600" height="1000" fill="url(#sky)" />
 
-      {/* Lucioles : petits points lumineux qui flottent. Plus actives quand combo monte. */}
-      {[
-        { x: 50,  y: 180, dx: 22, dy: -14, dur: 7.2 },
-        { x: 250, y: 220, dx: -18, dy: -22, dur: 8.5 },
-        { x: 90,  y: 280, dx: 28, dy: -10, dur: 6.8 },
-        { x: 220, y: 130, dx: -14, dy: 18, dur: 9.1 },
-        { x: 160, y: 180, dx: 16, dy: 14, dur: 7.7 },
-      ].map((f, i) => {
-        const speedMul = comboLevel >= 3 ? 0.55 : comboLevel >= 1 ? 0.78 : 1
-        return (
-          <circle
-            key={`firefly-${i}`}
-            cx={f.x}
-            cy={f.y}
-            r={1.6}
-            fill="#F8E5A0"
-            className="focus-firefly"
-            style={{
-              animationDuration: `${f.dur * speedMul}s, ${(f.dur * speedMul) / 1.7}s`,
-              animationDelay: `${i * 0.6}s, ${i * 0.4}s`,
-              ['--ff-dx' as string]: `${f.dx}px`,
-              ['--ff-dy' as string]: `${f.dy}px`,
-            } as React.CSSProperties}
-          />
-        )
-      })}
+      {/* SOLEIL avec halo qui suit l'arc temporel */}
+      <circle cx={sunX} cy={sunY} r={240} fill="url(#sungod)" />
+      <circle cx={sunX} cy={sunY} r={90}  fill="#FFE5A0" opacity={0.95} />
+      <circle cx={sunX} cy={sunY} r={64}  fill="#FDF4D5" />
 
-      {/* Collines distantes (deux couches) */}
-      <path
-        d="M 0 360 Q 80 326 160 348 Q 240 366 320 338 L 320 400 L 0 400 Z"
-        fill="#C9D8B5" opacity={0.55}
-      />
-      <path
-        d="M 0 380 Q 100 368 200 380 Q 270 388 320 376 L 320 400 L 0 400 Z"
-        fill="#A8C088" opacity={0.85}
-      />
+      {/* NUAGES */}
+      <ellipse cx={220}  cy={180} rx={58} ry={5} fill="white" opacity={0.45} />
+      <ellipse cx={250}  cy={170} rx={35} ry={4} fill="white" opacity={0.5}  />
+      <ellipse cx={780}  cy={140} rx={50} ry={4} fill="white" opacity={0.4}  />
+      <ellipse cx={1430} cy={160} rx={42} ry={4} fill="white" opacity={0.45} />
 
-      {/* Sol */}
-      <rect x={0} y={388} width={320} height={32} fill="#9DB87E" />
-
-      {/* Brins d'herbe */}
-      {grassBlades.map((x, i) => (
-        <g key={`grass-${i}`}>
-          <path d={`M ${x} 392 L ${x + 1.6} 384 L ${x + 3.2} 392`}
-                stroke="#6E8A58" strokeWidth={0.9} fill="none" />
-          <path d={`M ${x + 5} 394 L ${x + 6.6} 386 L ${x + 8.2} 394`}
-                stroke="#6E8A58" strokeWidth={0.9} fill="none" opacity={0.75} />
-        </g>
-      ))}
-
-      {/* Petite plante d'arrière-plan à droite */}
-      <g opacity={0.6}>
-        <line x1={278} y1={388} x2={278} y2={368} stroke="#5A8550" strokeWidth={1.2} strokeLinecap="round" />
-        <ellipse cx={272} cy={373} rx={5} ry={2} fill="#7AA56B" transform="rotate(-25 272 373)" />
-        <ellipse cx={284} cy={371} rx={5} ry={2} fill="#7AA56B" transform="rotate(28 284 371)" />
-        <ellipse cx={278} cy={365} rx={4} ry={1.8} fill="#9BC086" />
+      {/* OISEAUX silhouettes lointaines */}
+      <g opacity={0.7}>
+        <path d="M780 200 Q790 195 800 200 L795 205 Z" fill="#3D2C20" />
+        <path d="M810 230 Q820 225 830 230 L825 235 Z" fill="#3D2C20" />
+        <path d="M860 220 Q870 215 880 220 L875 225 Z" fill="#3D2C20" />
+        <path d="M920 210 Q930 205 940 210 L935 215 Z" fill="#3D2C20" />
       </g>
 
-      {/* Petit caillou décoratif */}
-      <ellipse cx={50} cy={394} rx={8} ry={3.5} fill="#C9C3B5" opacity={0.7} />
-      <ellipse cx={52} cy={392.5} rx={3} ry={1.5} fill="rgba(255,255,255,0.4)" />
+      {/* MONTAGNES & forêt lointaine */}
+      <path d="M0 600 Q200 540 380 580 Q540 615 700 575 Q840 540 1000 590 Q1180 640 1380 580 Q1500 545 1600 590 L1600 700 L0 700 Z" fill="#9DB3C8" opacity={0.55} />
+      <path d="M0 640 Q150 590 320 620 Q500 660 680 615 Q820 580 980 625 Q1150 670 1320 620 Q1450 590 1600 625 L1600 720 L0 720 Z" fill="#7E9890" opacity={0.7} />
+      <path d="M0 690 Q120 660 260 690 Q420 720 580 685 Q740 660 900 695 Q1080 730 1260 690 Q1400 660 1600 690 L1600 750 L0 750 Z" fill="#5E8059" />
 
-      {/* Pot */}
-      <path d="M 130 350 L 190 350 L 182 388 L 138 388 Z" fill="#A37147" />
-      <path d="M 130 350 L 190 350 L 188 346 L 132 346 Z" fill="#7E5630" />
-      <ellipse cx={160} cy={346} rx={28} ry={3.4} fill="#5C3A21" />
-      <path d="M 138 354 L 144 380" stroke="rgba(255,255,255,0.16)" strokeWidth={2} strokeLinecap="round" />
+      {/* ARBRES SECONDAIRES de mid-distance (toujours présents) */}
+      <g>
+        <g transform="translate(80,720)">
+          <ellipse cx={0}   cy={-95}  rx={40} ry={50} fill="#3F5E4A" />
+          <ellipse cx={-18} cy={-80}  rx={28} ry={34} fill="#3F5E4A" />
+          <ellipse cx={22}  cy={-72}  rx={30} ry={36} fill="#4A6E55" />
+          <ellipse cx={-5}  cy={-100} rx={22} ry={28} fill="#5E8954" />
+          <path d="M0 0 L-3 -50 L-5 -85 L0 -100 L5 -85 L3 -50 Z" fill="#2D1F15" />
+        </g>
+        <g transform="translate(180,725)">
+          <ellipse cx={0}   cy={-72} rx={26} ry={32} fill="#3F5E4A" />
+          <ellipse cx={-10} cy={-58} rx={18} ry={22} fill="#4A6E55" />
+          <path d="M0 0 L-2 -35 L0 -75 L2 -35 Z" fill="#2D1F15" />
+        </g>
+        <g transform="translate(1280,728)">
+          <ellipse cx={0}  cy={-58} rx={22} ry={28} fill="#4A6E55" />
+          <path d="M0 0 L-2 -28 L0 -60 L2 -28 Z" fill="#2D1F15" />
+        </g>
+        <g transform="translate(1450,720)">
+          <ellipse cx={0}   cy={-105} rx={44} ry={54} fill="#3F5E4A" />
+          <ellipse cx={-22} cy={-85}  rx={30} ry={36} fill="#3F5E4A" />
+          <ellipse cx={24}  cy={-80}  rx={32} ry={38} fill="#4A6E55" />
+          <ellipse cx={-3}  cy={-115} rx={24} ry={30} fill="#5E8954" />
+          <path d="M0 0 L-3 -55 L-5 -95 L0 -110 L5 -95 L3 -55 Z" fill="#2D1F15" />
+        </g>
+      </g>
 
-      {/* Pierres pour les fiches reportées */}
-      {results.map((r, idx) => {
-        if (!r || r.outcome.kind !== 'reported') return null
-        const offset = (idx * 13) % 56 - 28
-        const yJitter = (idx % 3) * 1.5
-        return (
-          <ellipse
-            key={`stone-${idx}`}
-            cx={160 + offset}
-            cy={392 + yJitter}
-            rx={4}
-            ry={2.3}
-            fill="#B8B0A0"
-            opacity={0.78}
-          />
-        )
-      })}
+      {/* SOL */}
+      <rect x={0} y={730} width={1600} height={270} fill="url(#grass)" />
 
-      {/* Groupe plante : tronc + branches + feuilles, avec balancement */}
-      <g className="focus-plant-sway-group">
+      {/* SENTIER subtil */}
+      <path d="M380 990 Q500 920 700 900 Q920 880 1100 920 Q1280 950 1500 970 L1600 1000 L0 1000 L0 980 Q120 970 380 990 Z" fill="rgba(196,123,43,0.18)" opacity={0.5} />
 
-        {/* Tronc : path scaleY pour grandir avec le temps */}
-        <g
-          className="focus-plant-stem-group"
-          style={{
-            transform: `scaleY(${stemProgress})`,
-            transformOrigin: `${HERO_TRUNK_X}px ${HERO_POT_TOP_Y}px`,
-          }}
-        >
-          <path
-            d={`M ${HERO_TRUNK_X} ${HERO_POT_TOP_Y} Q ${HERO_TRUNK_X - 3} ${(HERO_POT_TOP_Y + HERO_TRUNK_TOP_MIN_Y) / 2} ${HERO_TRUNK_X} ${HERO_TRUNK_TOP_MIN_Y}`}
-            stroke="#5A4438"
-            strokeWidth={4.5}
-            fill="none"
-            strokeLinecap="round"
-          />
-          {/* Highlight tronc */}
-          <path
-            d={`M ${HERO_TRUNK_X - 1.5} ${HERO_POT_TOP_Y - 5} Q ${HERO_TRUNK_X - 4.5} ${(HERO_POT_TOP_Y + HERO_TRUNK_TOP_MIN_Y) / 2} ${HERO_TRUNK_X - 1.5} ${HERO_TRUNK_TOP_MIN_Y + 5}`}
-            stroke="rgba(255,255,255,0.18)"
-            strokeWidth={1.2}
-            fill="none"
-            strokeLinecap="round"
-          />
+      {/* ÉLÉMENTS DÉBLOQUÉS placés AVANT l'arbre central pour passer derrière les feuilles bas */}
+      {unlocked.filter(e => e.kind === 'pond' || e.kind === 'log' || e.kind === 'sapling' || e.kind === 'deer').map(renderEl)}
+
+      {/* ARBRE CENTRAL : tronc + branches + canopée */}
+      <g transform={`translate(${HERO_TRUNK_X} ${HERO_GROUND_Y})`}>
+        <ellipse cx={0} cy={-8} rx={64} ry={16} fill="rgba(0,0,0,0.22)" />
+
+        {/* Tronc — toujours visible, scale légèrement avec le temps */}
+        <g style={{
+          transform: `scale(${0.62 + treeProgress * 0.38})`,
+          transformOrigin: '0px 0px',
+        }}>
+          <path d="M -22 0 Q -26 -90 -18 -180 Q -12 -270 -10 -360 Q -8 -420 -6 -460 L 6 -460 Q 8 -420 10 -360 Q 12 -270 18 -180 Q 26 -90 22 0 Z" fill="url(#trunkbody)" />
+          <path d="M -22 0 Q -26 -90 -18 -180 Q -12 -270 -10 -360 Q -8 -420 -6 -460 L 6 -460 Q 8 -420 10 -360 Q 12 -270 18 -180 Q 26 -90 22 0 Z" fill="url(#bark)" opacity={0.55} />
+          <path d="M -14 -30 Q -18 -130 -12 -240 Q -8 -340 -7 -420" stroke="rgba(255,255,255,0.16)" strokeWidth={3} fill="none" />
+          <ellipse cx={-9}  cy={-110} rx={6} ry={9} fill="#1F1410" opacity={0.65} />
+          <ellipse cx={11}  cy={-220} rx={5} ry={7} fill="#1F1410" opacity={0.6} />
+          <ellipse cx={-12} cy={-330} rx={4} ry={6} fill="#1F1410" opacity={0.55} />
         </g>
 
-        {/* Branches : visibles uniquement quand le tronc les a atteintes */}
-        {BRANCHES.map((b, i) => {
-          if (stemProgress < b.threshold) return null
-          // Fade-in/grow progress sur 8% supplémentaires après le seuil
-          const growT = Math.max(0, Math.min(1, (stemProgress - b.threshold) / 0.08))
-          const path = `M ${HERO_TRUNK_X} ${b.fromY} Q ${b.midX} ${b.midY} ${b.tipX} ${b.tipY}`
-          return (
-            <g key={`branch-${i}`} className="focus-plant-branch" style={{ opacity: growT }}>
-              <path d={path} stroke="#6E5A4A" strokeWidth={2.2} fill="none" strokeLinecap="round" />
-            </g>
-          )
-        })}
+        {/* Branches — apparaissent à chaque seuil de croissance */}
+        <g stroke="#3D2C20" strokeLinecap="round" fill="none">
+          {HERO_BRANCHES.map((b, i) => {
+            if (treeProgress < b.threshold) return null
+            const fadeT = Math.max(0, Math.min(1, (treeProgress - b.threshold) / 0.06))
+            return (
+              <g key={`branch-${i}`} style={{ opacity: fadeT }}>
+                <path d={b.thickPath} strokeWidth={22} />
+                <path d={b.innerPath} strokeWidth={14} stroke="#5A4031" />
+                {(b.subPaths ?? []).map((sp, j) => (
+                  <path key={`sb-${j}`} d={sp} strokeWidth={9} />
+                ))}
+              </g>
+            )
+          })}
+        </g>
 
-        {/* Feuilles placées sur les branches (ou sur le tronc en début de session) */}
-        {leafPlacements.map((p) => {
-          const color = SCORE_COLORS[p.score]
-          // Forme de feuille : ovale étiré
-          return (
-            <g key={`leaf-${p.idx}`} className="focus-plant-leaf"
-               transform={`rotate(${p.rot} ${p.x} ${p.y})`}>
-              <ellipse cx={p.x} cy={p.y} rx={9} ry={4} fill={color} />
-              <line
-                x1={p.x - 8} y1={p.y}
-                x2={p.x + 8} y2={p.y}
-                stroke="rgba(0,0,0,0.18)" strokeWidth={0.6}
-              />
-              <ellipse cx={p.x - 1} cy={p.y - 1.2} rx={5} ry={1.3} fill="rgba(255,255,255,0.28)" />
-            </g>
-          )
-        })}
+        {/* Canopée 3 couches (back / mid / front) — apparaissent avec leurs branches */}
+        <g>
+          {HERO_FOLIAGE.map((cluster, i) => {
+            if (treeProgress < cluster.threshold) return null
+            const fadeT = Math.max(0, Math.min(1, (treeProgress - cluster.threshold) / 0.08))
+            return (
+              <g key={`fol-${i}`} style={{ opacity: fadeT }}>
+                {cluster.back.map((e, j) => (
+                  <ellipse key={`b-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={e.fill} />
+                ))}
+                {cluster.mid.map((e, j) => (
+                  <ellipse key={`m-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill="url(#foliageMid)" />
+                ))}
+                {cluster.front.map((e, j) => (
+                  <ellipse key={`f-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill="url(#foliageFront)" />
+                ))}
+              </g>
+            )
+          })}
+        </g>
 
-        {/* Burst de particules à la position de la feuille fraîchement notée.
-            La key={ts} force React à remonter le groupe et à re-déclencher l'anim. */}
-        {particleBurst && (() => {
-          const target = leafPlacements.find(p => p.idx === particleBurst.idx)
-          if (!target) return null
-          const color = SCORE_COLORS[particleBurst.score]
-          const angles = [0, 45, 90, 135, 180, 225, 270, 315]
-          return (
-            <g key={`burst-${particleBurst.ts}`} className="focus-particle-burst">
-              {angles.map((a, i) => {
-                const rad = (a * Math.PI) / 180
-                const dx = Math.cos(rad) * 22
-                const dy = Math.sin(rad) * 22
-                return (
-                  <circle
-                    key={i}
-                    cx={target.x}
-                    cy={target.y}
-                    r={2.2}
-                    fill={color}
-                    className="focus-particle"
-                    style={{
-                      animationDelay: `${i * 25}ms`,
-                      ['--px-dx' as string]: `${dx}px`,
-                      ['--px-dy' as string]: `${dy}px`,
-                    } as React.CSSProperties}
-                  />
-                )
-              })}
-            </g>
-          )
-        })()}
+        {/* Bloom au sommet quand forceFull (bilan) */}
+        {forceFull && (
+          <g>
+            <circle cx={0} cy={-470} r={26} fill="#FFE5DD" opacity={0.6} />
+            <ellipse cx={-6} cy={-476} rx={6} ry={4.5} fill="#F4B5C9" />
+            <ellipse cx={6}  cy={-476} rx={6} ry={4.5} fill="#F4B5C9" />
+            <ellipse cx={-6} cy={-466} rx={6} ry={4.5} fill="#F4B5C9" />
+            <ellipse cx={6}  cy={-466} rx={6} ry={4.5} fill="#F4B5C9" />
+            <circle cx={0} cy={-471} r={3} fill="#FBD56B" />
+          </g>
+        )}
+      </g>
+
+      {/* ÉLÉMENTS DÉBLOQUÉS classiques (foreground : fleurs, animaux, papillons, mushrooms, owl/squirrel sur arbre) */}
+      {unlocked.filter(e => e.kind !== 'pond' && e.kind !== 'log' && e.kind !== 'sapling' && e.kind !== 'deer').map(renderEl)}
+
+      {/* PARTICULES (sparkle gold à la notation, position arbitraire ou calée sur la card) */}
+      {particleBurst && (() => {
+        const px = particleBurst.x ?? 800
+        const py = particleBurst.y ?? 500
+        const angles = [0, 45, 90, 135, 180, 225, 270, 315]
+        return (
+          <g key={`burst-${particleBurst.ts}`} className="focus-particle-burst">
+            {angles.map((a, i) => {
+              const rad = (a * Math.PI) / 180
+              const dx = Math.cos(rad) * 38
+              const dy = Math.sin(rad) * 38
+              return (
+                <circle
+                  key={i}
+                  cx={px}
+                  cy={py}
+                  r={4}
+                  fill="#FBD56B"
+                  className="focus-particle"
+                  style={{
+                    animationDelay: `${i * 25}ms`,
+                    ['--px-dx' as string]: `${dx}px`,
+                    ['--px-dy' as string]: `${dy}px`,
+                  } as React.CSSProperties}
+                />
+              )
+            })}
+          </g>
+        )
+      })()}
+
+      {/* Arc du soleil (trace pointillée du parcours) */}
+      <g>
+        <path d="M0 70 Q400 100 800 80 Q1200 60 1600 75" stroke="rgba(255,255,255,0.4)" strokeWidth={2} strokeLinecap="round" fill="none" strokeDasharray="2 6" />
       </g>
     </svg>
   )
@@ -720,13 +1042,9 @@ function FocusPageBody() {
   const [startedAt, setStartedAt] = useState<number>(0)
   const [now, setNow] = useState<number>(0)
 
-  // Combo : compteur de scores 4-5 consécutifs (sur les premières notations).
-  // Score 1-2 reset, score 3 maintient. maxCombo garde le record de la session.
-  const [combo, setCombo] = useState(0)
-  const [maxCombo, setMaxCombo] = useState(0)
-
   // Burst de particules : ts incrémenté à chaque rate pour re-déclencher l'anim CSS.
-  const [particleBurst, setParticleBurst] = useState<{ ts: number; idx: number; score: Score } | null>(null)
+  // Position optionnelle (x, y) en coords viewBox jardin.
+  const [particleBurst, setParticleBurst] = useState<{ ts: number; x?: number; y?: number } | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -777,6 +1095,10 @@ function FocusPageBody() {
   const currentSystemName = currentSystem?.name ?? 'Matière'
   const currentResult = results[currentIdx] ?? null
 
+  // Nombre de fiches notées (pas reportées) — détermine combien d'éléments du jardin sont débloqués.
+  const ratedCount = results.filter(r => r !== null && r.outcome.kind === 'rated').length
+  const gardenStats = statsFor(UNLOCK_SEQUENCE.slice(0, Math.min(ratedCount, UNLOCK_SEQUENCE.length)))
+
   // ============ Helpers d'avancement ============
   function findNextEmptyIdx(arr: (Result | null)[], fromIdx: number): number {
     // Cherche d'abord en avant
@@ -808,18 +1130,9 @@ function FocusPageBody() {
     }
     setResults(newResults)
 
-    // Combo : seulement sur première notation (pas re-rating)
-    if (wasEmpty) {
-      let nextCombo = combo
-      if (score >= 4) nextCombo = combo + 1
-      else if (score <= 2) nextCombo = 0
-      // score === 3 : maintien
-      setCombo(nextCombo)
-      if (nextCombo > maxCombo) setMaxCombo(nextCombo)
-    }
-
-    // Burst de particules à chaque rate (re-rate compris, c'est cosmétique)
-    setParticleBurst({ ts: Date.now(), idx: currentIdx, score })
+    // Burst de particules gold à chaque rate — feedback générique de complétion.
+    // Le score n'a pas d'incidence visuelle.
+    setParticleBurst({ ts: Date.now() })
 
     // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
     if (wasEmpty) {
@@ -830,7 +1143,7 @@ function FocusPageBody() {
     // Si re-rating : on reste sur la fiche, l'utilisateur peut vérifier ou naviguer.
 
     setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, combo, maxCombo])
+  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt])
 
   // ============ Actions : report ============
   const report = useCallback(async () => {
@@ -950,7 +1263,6 @@ function FocusPageBody() {
             {/* Plante en pleine floraison (tige forcée au max + fleur) */}
             <div className="focus-done-plant">
               <FocusPlant
-                results={results}
                 elapsedMs={Math.max(0, now - startedAt)}
                 timeToFullMs={TIME_TO_FULL_MS}
                 forceFull
@@ -1060,35 +1372,42 @@ function FocusPageBody() {
       {/* STAGE : jardin (gauche) + zone card avec flèches (droite) */}
       <div className="focus-stage">
 
-        {/* Zone JARDIN — plante hero XL avec paysage */}
+        {/* Zone JARDIN — écosystème vivant qui se peuple par fiches notées */}
         <div className="focus-garden">
-          <FocusPlantHero
-            results={results}
+          <FocusGarden
             elapsedMs={Math.max(0, now - startedAt)}
             timeToFullMs={TIME_TO_FULL_MS}
+            ratedCount={ratedCount}
             particleBurst={particleBurst}
-            comboLevel={combo}
           />
+        </div>
+
+        {/* Stats du jardin (bottom-left, glass) — montre l'écosystème qui se peuple */}
+        <div className="focus-garden-stats" aria-live="polite">
+          <div className="focus-garden-stats-kicker">Ton jardin se peuple</div>
+          <div className="focus-garden-stats-row">
+            <span className="focus-garden-stats-item">
+              <span className="focus-garden-stats-num">{ratedCount}</span>
+              <span className="focus-garden-stats-lbl">{ratedCount > 1 ? 'fiches' : 'fiche'}</span>
+            </span>
+            <span className="focus-garden-stats-sep">·</span>
+            <span className="focus-garden-stats-item">
+              <span className="focus-garden-stats-num">{gardenStats.fleurs}</span>
+              <span className="focus-garden-stats-lbl">{gardenStats.fleurs > 1 ? 'fleurs' : 'fleur'}</span>
+            </span>
+            <span className="focus-garden-stats-item">
+              <span className="focus-garden-stats-num">{gardenStats.animaux}</span>
+              <span className="focus-garden-stats-lbl">{gardenStats.animaux > 1 ? 'animaux' : 'animal'}</span>
+            </span>
+            <span className="focus-garden-stats-item">
+              <span className="focus-garden-stats-num">{gardenStats.papillons}</span>
+              <span className="focus-garden-stats-lbl">{gardenStats.papillons > 1 ? 'papillons' : 'papillon'}</span>
+            </span>
+          </div>
         </div>
 
         {/* Zone CARD avec flèches latérales */}
         <div className="focus-card-zone">
-
-          {/* Compteur de combo : visible quand combo >= 2 */}
-          {combo >= 2 && (() => {
-            const tier = combo >= 10 ? 4 : combo >= 6 ? 3 : combo >= 4 ? 2 : 1
-            const label = tier === 4 ? 'LÉGENDE' : tier === 3 ? 'EN FEU' : tier === 2 ? 'Bien joué' : 'Combo'
-            return (
-              <div
-                key={`combo-${combo}`}
-                className={`focus-combo focus-combo-tier${tier}`}
-                aria-live="polite"
-              >
-                <span className="focus-combo-x">×{combo}</span>
-                <span className="focus-combo-label">{label}</span>
-              </div>
-            )
-          })()}
 
           <button
             type="button"
