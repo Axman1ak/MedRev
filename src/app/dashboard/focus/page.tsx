@@ -358,6 +358,153 @@ function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: Pla
   )
 }
 
+// ===================== PLANT HERO (variante grande taille avec paysage) =====================
+// Version XL utilisée dans le panneau .focus-garden pendant la session.
+// ViewBox 240x400 (portrait), ciel + soleil + collines + herbe + pot + plante.
+// Le soleil monte avec la progression temporelle ; la plante balance légèrement.
+
+const HERO_POT_TOP_Y = 330
+const HERO_STEM_TOP_MIN_Y = 80
+const HERO_STEM_RANGE = HERO_POT_TOP_Y - HERO_STEM_TOP_MIN_Y // 250
+
+function FocusPlantHero({ results, elapsedMs, timeToFullMs }: PlantProps) {
+  const ratedLeaves: Array<{ idx: number; score: Score; atMs: number }> = []
+  results.forEach((r, idx) => {
+    if (r && r.outcome.kind === 'rated') {
+      ratedLeaves.push({ idx, score: r.outcome.score, atMs: r.outcome.atMs })
+    }
+  })
+
+  const stemProgress = Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
+
+  // Soleil monte de y=160 (horizon) à y=55 (zenith) avec la progression.
+  const sunY = 160 - stemProgress * 105
+
+  // Brins d'herbe répartis devant le pot
+  const grassBlades = [10, 28, 48, 72, 96, 142, 168, 188, 208, 226]
+
+  return (
+    <svg
+      viewBox="0 0 240 400"
+      className="focus-garden-svg"
+      role="img"
+      preserveAspectRatio="xMidYEnd meet"
+    >
+      <title>Ton jardin de session</title>
+
+      {/* Soleil avec halo */}
+      <circle cx={195} cy={sunY} r={36} fill="#F3D88A" opacity={0.18} className="focus-sun-halo" />
+      <circle cx={195} cy={sunY} r={22} fill="#F3D88A" opacity={0.92} className="focus-sun" />
+
+      {/* Collines distantes (une couche claire, une couche sombre) */}
+      <path
+        d="M 0 340 Q 60 312 120 328 Q 180 342 240 320 L 240 380 L 0 380 Z"
+        fill="#C9D8B5"
+        opacity={0.55}
+      />
+      <path
+        d="M 0 358 Q 80 348 150 358 Q 200 366 240 355 L 240 380 L 0 380 Z"
+        fill="#A8C088"
+        opacity={0.85}
+      />
+
+      {/* Sol (herbe) */}
+      <rect x={0} y={365} width={240} height={35} fill="#9DB87E" />
+
+      {/* Brins d'herbe devant le pot */}
+      {grassBlades.map((x, i) => (
+        <g key={`grass-${i}`}>
+          <path d={`M ${x} 370 L ${x + 1.5} 362 L ${x + 3} 370`}
+                stroke="#6E8A58" strokeWidth={0.8} fill="none" />
+          <path d={`M ${x + 5} 372 L ${x + 6.5} 365 L ${x + 8} 372`}
+                stroke="#6E8A58" strokeWidth={0.8} fill="none" opacity={0.8} />
+        </g>
+      ))}
+
+      {/* Pot */}
+      <path d="M 92 330 L 148 330 L 140 368 L 100 368 Z" fill="#A37147" />
+      <path d="M 92 330 L 148 330 L 145 326 L 95 326 Z" fill="#7E5630" />
+      <ellipse cx={120} cy={326} rx={26} ry={3.2} fill="#5C3A21" />
+      {/* Reflet sur le pot */}
+      <path d="M 100 334 L 105 360" stroke="rgba(255,255,255,0.16)" strokeWidth={2} strokeLinecap="round" />
+
+      {/* Pierres devant le pot pour les fiches reportées */}
+      {results.map((r, idx) => {
+        if (!r || r.outcome.kind !== 'reported') return null
+        const offset = (idx * 13) % 50 - 25
+        const yJitter = (idx % 3) * 1.5
+        return (
+          <ellipse
+            key={`stone-${idx}`}
+            cx={120 + offset}
+            cy={372 + yJitter}
+            rx={3.8}
+            ry={2.2}
+            fill="#B8B0A0"
+            opacity={0.78}
+          />
+        )
+      })}
+
+      {/* Groupe plante avec animation de balancement */}
+      <g className="focus-plant-sway-group">
+        {/* Tige : ligne pleine mise à l'échelle verticalement */}
+        <g
+          className="focus-plant-stem-group"
+          style={{
+            transform: `scaleY(${stemProgress})`,
+            transformOrigin: `120px ${HERO_POT_TOP_Y}px`,
+          }}
+        >
+          <line
+            x1={120}
+            y1={HERO_POT_TOP_Y}
+            x2={120}
+            y2={HERO_STEM_TOP_MIN_Y}
+            stroke="#2D6A4F"
+            strokeWidth={3.5}
+            strokeLinecap="round"
+          />
+        </g>
+
+        {/* Feuilles : forme de goutte attachée à la tige, couleur = score */}
+        {ratedLeaves.map(({ idx, score, atMs }, n) => {
+          const leafProgress = Math.max(0, Math.min(1, atMs / timeToFullMs))
+          const yPos = HERO_POT_TOP_Y - leafProgress * HERO_STEM_RANGE
+          const side = n % 2 === 0 ? -1 : 1
+          const tipX = 120 + side * 22
+          const midX = 120 + side * 13
+          const color = SCORE_COLORS[score]
+          // Forme de feuille : du stem à la pointe, courbe haut puis bas
+          const leafPath = `M 120 ${yPos} Q ${midX} ${yPos - 9} ${tipX} ${yPos} Q ${midX} ${yPos + 9} 120 ${yPos} Z`
+          return (
+            <g key={`leaf-${idx}`} className="focus-plant-leaf">
+              <path d={leafPath} fill={color} />
+              {/* Nervure centrale */}
+              <line
+                x1={120}
+                y1={yPos}
+                x2={tipX}
+                y2={yPos}
+                stroke="rgba(0,0,0,0.18)"
+                strokeWidth={0.6}
+              />
+              {/* Léger reflet */}
+              <ellipse
+                cx={midX}
+                cy={yPos - 2}
+                rx={5}
+                ry={1.4}
+                fill="rgba(255,255,255,0.22)"
+              />
+            </g>
+          )
+        })}
+      </g>
+    </svg>
+  )
+}
+
 // ===================== EXPORT (Suspense wrapper requis pour useSearchParams en Next.js 14) =====================
 export default function FocusPage() {
   return (
@@ -676,150 +823,3 @@ function FocusPageBody() {
   return (
     <div className="focus-root">
       {/* TOP BAR */}
-      <div className="focus-topbar">
-        <div className="focus-brand">
-          MedRev <span className="focus-brand-mode">focus</span>
-        </div>
-        <div className="focus-progress-wrap">
-          <div className="focus-progress-bar" aria-hidden="true">
-            <div className="focus-progress-fill" style={{ width: `${progressPct}%` }} />
-          </div>
-          <div className="focus-progress-text">
-            <strong>{currentIdx + 1}</strong> / {total}
-            <span className="focus-progress-sep">{'·'}</span>
-            <span className="focus-progress-time">{min}:{sec.toString().padStart(2, '0')}</span>
-          </div>
-        </div>
-        {allFilled && (
-          <button
-            type="button"
-            className="focus-bilan-cta"
-            onClick={() => setPhase('done')}
-          >
-            Voir le bilan
-          </button>
-        )}
-        <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
-      </div>
-
-      {/* STAGE avec flèches latérales */}
-      <div className="focus-stage">
-        <button
-          type="button"
-          className="focus-nav-arrow focus-nav-prev"
-          onClick={goPrev}
-          disabled={!canPrev}
-          aria-label="Fiche précédente"
-          title="Fiche précédente (←)"
-        >
-          {'‹'}
-        </button>
-
-        <div className="focus-card">
-
-          {/* Plante (tige grandit avec le temps écoulé) */}
-          <FocusPlant
-            results={results}
-            elapsedMs={Math.max(0, now - startedAt)}
-            timeToFullMs={TIME_TO_FULL_MS}
-          />
-
-          <div className="focus-kicker">
-            <span className="focus-kicker-dot" style={{ background: sysColor }} />
-            <span className="focus-kicker-sys">{currentSystemName}</span>
-            <span className="focus-kicker-sep">{'•'}</span>
-            <span className={`focus-kicker-status ${statusCls}`}>{statusLabel}</span>
-          </div>
-
-          <h1 className="focus-name">{current.lesson.name}</h1>
-
-          {current.lastScore !== null && !alreadyRated && !alreadyReported && (
-            <div className="focus-last">
-              Dernière note&nbsp;: <span className={`focus-last-pill s${current.lastScore}`}>{current.lastScore}/5</span>
-            </div>
-          )}
-
-          {/* Badge re-action si déjà notée/reportée dans cette session */}
-          {alreadyRated && ratedScore !== null && (
-            <div className="focus-rated-badge">
-              <span className={`focus-rated-pill s${ratedScore}`}>Notée {ratedScore}/5</span>
-              <span className="focus-rated-hint">Tu peux changer si besoin, ou passer à la suivante.</span>
-            </div>
-          )}
-          {alreadyReported && (
-            <div className="focus-reported-badge">
-              <span className="focus-reported-pill">Reportée à demain</span>
-              <span className="focus-rated-hint">Tu peux la noter maintenant si tu changes d’avis.</span>
-            </div>
-          )}
-
-          {!alreadyRated && !alreadyReported && (
-            <div className="focus-ask">Quelle note&nbsp;?</div>
-          )}
-          <div className="focus-scores">
-            {([1, 2, 3, 4, 5] as Score[]).map(n => (
-              <button
-                key={n}
-                type="button"
-                className={`focus-score s${n}${alreadyRated && ratedScore === n ? ' selected' : ''}`}
-                onClick={() => rate(n)}
-                disabled={loading}
-                title={`Note ${n}/5 — raccourci ${n}`}
-              >
-                <span className="focus-score-num">{n}</span>
-                <span className="focus-score-lbl">
-                  {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
-                </span>
-                <span className="focus-score-key" aria-hidden="true">{n}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="focus-actions">
-            <button
-              type="button"
-              className="focus-report"
-              onClick={report}
-              disabled={loading || alreadyReported}
-              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
-            >
-              {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
-            </button>
-            {canNext && (
-              <button
-                type="button"
-                className="focus-next-inline"
-                onClick={goNext}
-                title="Fiche suivante (→)"
-              >
-                Suivante {'›'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="focus-nav-arrow focus-nav-next"
-          onClick={goNext}
-          disabled={!canNext}
-          aria-label="Fiche suivante"
-          title="Fiche suivante (→)"
-        >
-          {'›'}
-        </button>
-      </div>
-
-      {/* HINT */}
-      <div className="focus-hint">
-        <span><kbd>1</kbd>–<kbd>5</kbd> noter</span>
-        <span className="focus-hint-sep">{'·'}</span>
-        <span><kbd>R</kbd> reporter</span>
-        <span className="focus-hint-sep">{'·'}</span>
-        <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
-        <span className="focus-hint-sep">{'·'}</span>
-        <span><kbd>Esc</kbd> quitter</span>
-      </div>
-    </div>
-  )
-}
