@@ -110,23 +110,21 @@
   padding: 0;
   overflow: hidden;
   min-height: 0;
+  /* Fallback gradient synchronisé avec le ciel du SVG (au cas où le SVG est cropped sur des aspects extrêmes) */
   background: linear-gradient(
     180deg,
-    #F8F2E5 0%,
-    #F2EAD3 30%,
-    #E8E0C6 55%,
-    #D8E4CD 85%,
-    #C9DCB5 100%
+    #7AA0B8 0%,
+    #B0CCD8 25%,
+    #E5D5B0 55%,
+    #F0CC95 80%,
+    #D8C492 100%
   );
 }
 
-/* ---- Zone JARDIN : SVG absolute qui occupe la moitié gauche ---- */
+/* ---- Zone JARDIN : SVG en position absolute qui couvre TOUT le stage ---- */
 .focus-garden {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 56%;
+  inset: 0;
   display: flex;
   align-items: stretch;
   pointer-events: none;
@@ -138,7 +136,7 @@
   display: block;
 }
 
-/* ---- Zone CARD : flex pleine largeur, card alignée à droite avec floating ---- */
+/* ---- Zone CARD : par-dessus le jardin, alignée à droite avec floating ---- */
 .focus-card-zone {
   position: relative;
   flex: 1 1 0;
@@ -841,18 +839,18 @@
 
 /* ============ RESPONSIVE ============ */
 
-/* Tablette / petit desktop : jardin un peu réduit en width */
+/* Tablette / petit desktop : card un peu plus compacte */
 @media (max-width: 1024px) {
-  .focus-garden { width: 50%; }
   .focus-card { max-width: 440px; padding: 26px 28px; }
   .focus-card-zone { padding: 24px 28px 24px 20px; }
 }
 
-/* Mobile : layout en colonne, jardin en bandeau du haut */
+/* Mobile : layout en colonne, jardin en bandeau du haut (sort de l'overlay) */
 @media (max-width: 720px) {
   .focus-stage { flex-direction: column; }
   .focus-garden {
     position: relative;
+    inset: auto;
     width: 100%;
     height: 30vh;
     min-height: 220px;
@@ -886,6 +884,15 @@
   .focus-nav-prev { left: 8px; }
   .focus-nav-next { right: 8px; }
   .focus-bilan-cta { padding: 6px 12px; font-size: 11px; }
+
+  .focus-garden-stats {
+    left: 12px;
+    bottom: auto;
+    top: 70%;
+  }
+  .focus-garden-stats-num { font-size: 15px; }
+  .focus-garden-stats-lbl { font-size: 9.5px; }
+  .focus-garden-stats-row { gap: 10px; }
 
   .focus-combo {
     top: 6px;
