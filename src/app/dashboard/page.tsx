@@ -429,12 +429,9 @@ export default function DashboardPage() {
   const loadMax = Math.max(1, ...upcomingLoad.map(w => w.count))
   const peakIdx = upcomingLoad.findIndex(w => w.count === loadMax && loadMax > 0)
 
-  // Session focus — ouvre la nouvelle page /dashboard/focus.
-  // Sans param = queue d'aujourd'hui ; avec ?lesson= = solo sur cette fiche.
-  const firstInQueue = todayQueue[0] ?? null
-  const startSessionHref = firstInQueue
-    ? `/dashboard/focus?lesson=${firstInQueue.lesson.id}`
-    : '/dashboard/focus'
+  // Session focus — ouvre /dashboard/focus avec la queue complète.
+  // Le focus gère l'ordre suggéré ; les flèches permettent de naviguer.
+  const startSessionHref = '/dashboard/focus'
 
   // Label du jour
   const todayLabel = new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', {
