@@ -518,14 +518,23 @@ type DayGardenState = {
   elements: GardenElement[]  // tous les éléments accumulés
 }
 
-const GARDEN_KEY = 'medrev-garden'
+const GARDEN_KEY_BASE = 'medrev-garden'
 const LEGACY_KEY_PREFIX = 'medrev-garden-' // ancien format date-suffixé
 
-function loadDayGarden(today: string): DayGardenState {
+// Clé localStorage suffixée par userId pour ISOLER les jardins par compte.
+// Sans userId (avant auth) on retourne null pour ne rien écrire/lire.
+function gardenKey(userId: string | null): string | null {
+  if (!userId) return null
+  return GARDEN_KEY_BASE + '-' + userId
+}
+
+function loadDayGarden(today: string, userId: string | null): DayGardenState {
   const empty: DayGardenState = { startedDate: today, elapsedMs: 0, fichesCount: 0, elements: [] }
   if (typeof window === 'undefined') return empty
+  const key = gardenKey(userId)
+  if (!key) return empty
   try {
-    const raw = localStorage.getItem(GARDEN_KEY)
+    const raw = localStorage.getItem(key)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<DayGardenState>
       return {
@@ -535,12 +544,15 @@ function loadDayGarden(today: string): DayGardenState {
         elements: parsed.elements ?? [],
       }
     }
-    // Pas de jardin existant → nouveau utilisateur, on commence avec un jardin vide.
-    // (On nettoie aussi les éventuelles anciennes clés date-suffixées pour repartir propre.)
+    // Pas de jardin pour CE user → nouveau, on commence avec un jardin vide.
+    // Cleanup des anciennes clés non-userId au passage (héritage des tests).
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i)
-      if (k && k.startsWith(LEGACY_KEY_PREFIX) && k !== GARDEN_KEY) {
+      if (k === GARDEN_KEY_BASE) {
         localStorage.removeItem(k)
+      } else if (k && k.startsWith(LEGACY_KEY_PREFIX) && !k.endsWith('-' + userId)) {
+        // Ancienne clé date-suffixée ou clé d'un autre user — on ne touche pas (c'est leur jardin).
+        // Ici on ne supprime rien pour préserver les autres comptes.
       }
     }
     return empty
@@ -549,17 +561,12 @@ function loadDayGarden(today: string): DayGardenState {
   }
 }
 
-function saveDayGarden(state: DayGardenState) {
+function saveDayGarden(state: DayGardenState, userId: string | null) {
   if (typeof window === 'undefined') return
+  const key = gardenKey(userId)
+  if (!key) return
   try {
-    localStorage.setItem(GARDEN_KEY, JSON.stringify(state))
-    // Cleanup des anciennes clés date-suffixées (legacy)
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i)
-      if (k && k.startsWith(LEGACY_KEY_PREFIX) && k !== GARDEN_KEY) {
-        localStorage.removeItem(k)
-      }
-    }
+    localStorage.setItem(key, JSON.stringify(state))
   } catch {
     // ignore quota errors
   }
@@ -1357,23 +1364,29 @@ function FocusPageBody() {
     if (main) main.scrollTop = 0
   }, [])
 
-  // Chargement initial : auth + data + queue + jardin annuel
+  // Ref vers userId pour les saves dans des cleanups (besoin valeur courante)
+  const userIdRef = useRef<string | null>(null)
+  useEffect(() => { userIdRef.current = userId }, [userId])
+
+  // Chargement initial : auth → puis jardin du user → puis data/queue
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      // 1) Restaure le jardin persisté (annuel)
-      const loadedGarden = loadDayGarden(today)
-      if (!cancelled) {
-        setDayGarden(loadedGarden)
-        setCumElapsedAtStart(loadedGarden.elapsedMs)
-        setSessionStartElementCount(loadedGarden.elements.length)
-      }
-
-      // 2) Auth Supabase
+      // 1) Auth Supabase d'abord (pour avoir userId avant de charger le jardin)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       if (cancelled) return
       setUserId(user.id)
+      userIdRef.current = user.id
+
+      // 2) Charger le jardin persisté DE CE USER (clé localStorage suffixée par userId)
+      const loadedGarden = loadDayGarden(today, user.id)
+      if (!cancelled) {
+        setDayGarden(loadedGarden)
+        dayGardenRef.current = loadedGarden
+        setCumElapsedAtStart(loadedGarden.elapsedMs)
+        setSessionStartElementCount(loadedGarden.elements.length)
+      }
 
       // 3) Données fiches/matières
       const [{ data: sys }, { data: les }] = await Promise.all([
@@ -1403,7 +1416,7 @@ function FocusPageBody() {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
       const next: DayGardenState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
       dayGardenRef.current = next
-      saveDayGarden(next)
+      saveDayGarden(next, userIdRef.current)
     }, 30000)
     return () => clearInterval(intv)
   }, [phase, cumElapsedAtStart, startedAt])
@@ -1413,7 +1426,7 @@ function FocusPageBody() {
     return () => {
       if (startedAt === 0) return
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      saveDayGarden({ ...dayGardenRef.current, elapsedMs: totalElapsed })
+      saveDayGarden({ ...dayGardenRef.current, elapsedMs: totalElapsed }, userIdRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1485,7 +1498,7 @@ function FocusPageBody() {
       }
       dayGardenRef.current = updatedGarden
       setDayGarden(updatedGarden)
-      saveDayGarden(updatedGarden)
+      saveDayGarden(updatedGarden, userIdRef.current)
     }
 
     // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
