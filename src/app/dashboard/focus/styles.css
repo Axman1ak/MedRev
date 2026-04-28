@@ -103,6 +103,7 @@
 
 /* ============ STAGE (zone centrale) ============ */
 .focus-stage {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -243,7 +244,10 @@
 /* ============ ACTIONS SECONDAIRES ============ */
 .focus-actions {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .focus-report {
   background: transparent;
@@ -262,7 +266,24 @@
   color: #C47B2B;
   background: #FAF6EE;
 }
-.focus-report:disabled { opacity: .5; cursor: wait; }
+.focus-report:disabled { opacity: .5; cursor: not-allowed; }
+
+.focus-next-inline {
+  background: transparent;
+  border: none;
+  color: #2D6A4F;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 6px;
+  letter-spacing: .02em;
+  transition: color .15s, transform .12s;
+}
+.focus-next-inline:hover {
+  color: #1B4332;
+  transform: translateX(2px);
+}
 
 /* ============ HINT ============ */
 .focus-hint {
@@ -443,9 +464,165 @@
 }
 .focus-done-cta:hover { background: #2D6A4F; }
 
+/* ============ PLANTE (visuel évolutif) ============ */
+.focus-plant-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin: -8px 0 18px;
+  height: 110px;
+  pointer-events: none;
+  user-select: none;
+}
+.focus-plant-svg {
+  width: 130px;
+  height: 110px;
+  display: block;
+}
+.focus-plant-stem {
+  transition: d .35s ease-out;
+}
+.focus-plant-leaf {
+  transform-origin: center;
+  animation: focus-plant-leaf-in .45s ease-out both;
+}
+@keyframes focus-plant-leaf-in {
+  from { opacity: 0; transform: scale(.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.focus-plant-flower {
+  transform-origin: 60px 30px;
+  animation: focus-plant-bloom .55s ease-out both;
+}
+@keyframes focus-plant-bloom {
+  from { opacity: 0; transform: scale(.2); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Variante compacte pour l'écran de bilan */
+.focus-done-plant {
+  margin: -8px auto 14px;
+  display: flex;
+  justify-content: center;
+}
+.focus-done-plant .focus-plant-wrap {
+  margin: 0;
+  height: 130px;
+}
+.focus-done-plant .focus-plant-svg {
+  width: 160px;
+  height: 130px;
+}
+
+/* ============ NAVIGATION FLÈCHES ============ */
+.focus-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid #E1DDD3;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 600;
+  color: #6B6F6A;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: background .15s, color .15s, border-color .15s, transform .12s, box-shadow .15s;
+  z-index: 5;
+  padding: 0 0 4px;
+}
+.focus-nav-arrow:hover:not(:disabled) {
+  border-color: #2D6A4F;
+  color: #1B4332;
+  box-shadow: 0 6px 14px rgba(17, 19, 16, .1);
+}
+.focus-nav-arrow:active:not(:disabled) { transform: translateY(-50%) scale(.94); }
+.focus-nav-arrow:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+.focus-nav-prev { left: 28px; }
+.focus-nav-next { right: 28px; }
+
+/* ============ BADGES RE-ACTION ============ */
+.focus-rated-badge,
+.focus-reported-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 16px;
+  background: #FAF8F2;
+  border: 1px solid #E1DDD3;
+  border-radius: 12px;
+  margin: 0 0 18px;
+  text-align: center;
+}
+.focus-rated-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+}
+.focus-rated-pill.s1 { background: #C75050; }
+.focus-rated-pill.s2 { background: #E08B3C; }
+.focus-rated-pill.s3 { background: #D9B24A; color: #4A3C10; }
+.focus-rated-pill.s4 { background: #7AA56B; }
+.focus-rated-pill.s5 { background: #1B4332; }
+.focus-reported-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #C47B2B;
+  background: white;
+  border: 1px solid #C47B2B;
+}
+.focus-rated-hint {
+  font-size: 11px;
+  color: #6B6F6A;
+  line-height: 1.4;
+}
+
+/* Score sélectionné (lors d'une re-notation) */
+.focus-score.selected {
+  outline: 2px solid #111310;
+  outline-offset: 2px;
+}
+
+/* ============ BOUTON BILAN (topbar quand tout fait) ============ */
+.focus-bilan-cta {
+  background: #1B4332;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 7px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, transform .12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.focus-bilan-cta:hover {
+  background: #2D6A4F;
+  transform: translateY(-1px);
+}
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 720px) {
-  .focus-topbar { padding: 12px 16px; gap: 14px; }
+  .focus-topbar { padding: 12px 16px; gap: 12px; }
   .focus-brand { font-size: 14px; }
   .focus-card { padding: 24px 20px; }
   .focus-name { font-size: 24px; }
@@ -455,7 +632,21 @@
   .focus-score-lbl { font-size: 9px; }
   .focus-score-key { font-size: 8px; }
   .focus-progress-wrap { gap: 10px; }
-  .focus-hint { padding: 10px 12px 14px; font-size: 10px; }
+  .focus-hint { padding: 10px 12px 14px; font-size: 10px; flex-wrap: wrap; }
   .focus-empty-card,
   .focus-done-card { padding: 28px 20px; }
+  .focus-plant-wrap { height: 90px; margin: -4px 0 14px; }
+  .focus-plant-svg { width: 110px; height: 90px; }
+  .focus-done-plant .focus-plant-wrap { height: 110px; }
+  .focus-done-plant .focus-plant-svg { width: 140px; height: 110px; }
+  .focus-nav-arrow { width: 38px; height: 38px; font-size: 20px; }
+  .focus-nav-prev { left: 8px; }
+  .focus-nav-next { right: 8px; }
+  .focus-bilan-cta { padding: 6px 12px; font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  /* Sur très petit écran on cache les arrows latérales — l'utilisateur navigue
+     via l'inline "Suivante" et le clavier. */
+  .focus-nav-arrow { display: none; }
 }
