@@ -26,6 +26,10 @@ const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   5: '#1B4332',
 }
 
+// Durée jusqu'à floraison complète de la tige (la plante grandit avec le temps).
+// 15 min = palier raisonnable pour une session focus PASS.
+const TIME_TO_FULL_MS = 15 * 60 * 1000
+
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
 type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
@@ -48,7 +52,11 @@ type Result = {
   lessonId: string
   lessonName: string
   systemName: string
-  outcome: { kind: 'rated'; score: Score } | { kind: 'reported' }
+  // atMs = ms écoulées depuis le début de la session quand l'action a été prise.
+  // Sert à positionner la feuille à la bonne hauteur sur la tige (qui grandit avec le temps).
+  outcome:
+    | { kind: 'rated'; score: Score; atMs: number }
+    | { kind: 'reported'; atMs: number }
 }
 
 type Phase = 'loading' | 'session' | 'done' | 'empty'
@@ -145,69 +153,100 @@ function buildQueue(
   systemParam: string | null,
   today: string
 ): QueueItem[] {
-  if (lessonParam) {
-    const l = lessons.find(x => x.id === lessonParam)
-    if (!l) return []
-    let due: DueInfo | null = getDueForToday(l, today)
-    if (!due) {
-      const idx = getNextUndoneJ(l)
-      if (idx === null) return []
-      if (l.learn_date) {
-        const dd = stepDate(l, idx)
-        due = {
-          stepIndex: idx,
-          dueDate: dd,
-          status: dd <= today ? (dd === today ? 'today' : 'missed') : 'fresh',
-          overdueDays: dd < today ? daysBetween(dd, today) : 0,
-        }
-      } else {
-        due = { stepIndex: idx, dueDate: today, status: 'fresh', overdueDays: 0 }
-      }
-    }
-    return [{ lesson: l, due, lastScore: getLastScore(l), priority: 0 }]
-  }
-
+  // 1) Construit la queue de base : toutes les J du jour.
+  //    Filtre par matière si ?system= explicite ; sinon par le semestre courant.
+  let baseQueue: QueueItem[]
   if (systemParam) {
     const sysLessons = lessons.filter(l => l.system_id === systemParam)
-    return computeTodayQueue(sysLessons, today)
+    baseQueue = computeTodayQueue(sysLessons, today)
+  } else {
+    const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
+    const sem = semRaw === '1' ? 1 : 2
+    const semSystemIds = new Set(systems.filter(s => s.semestre === sem).map(s => s.id))
+    const semLessons = lessons.filter(l => semSystemIds.has(l.system_id))
+    baseQueue = computeTodayQueue(semLessons, today)
   }
 
-  const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
-  const sem = semRaw === '1' ? 1 : 2
-  const semSystemIds = new Set(systems.filter(s => s.semestre === sem).map(s => s.id))
-  const semLessons = lessons.filter(l => semSystemIds.has(l.system_id))
-  return computeTodayQueue(semLessons, today)
+  // 2) Si une fiche précise est demandée (?lesson=), on la place en première position
+  //    de la queue complète — pas de mode solo, l'utilisateur peut naviguer aux autres
+  //    via les flèches.
+  if (lessonParam) {
+    const existingIdx = baseQueue.findIndex(q => q.lesson.id === lessonParam)
+    if (existingIdx > 0) {
+      // Déjà dans la queue : on la déplace en tête.
+      const [item] = baseQueue.splice(existingIdx, 1)
+      baseQueue.unshift(item)
+    } else if (existingIdx === -1) {
+      // Pas dans la queue d'aujourd'hui (ex : fiche fragile pas encore due) :
+      // on la prepend avec un DueInfo synthétique sur le prochain J non noté.
+      const l = lessons.find(x => x.id === lessonParam)
+      if (l) {
+        let due: DueInfo | null = getDueForToday(l, today)
+        if (!due) {
+          const idx = getNextUndoneJ(l)
+          if (idx !== null) {
+            if (l.learn_date) {
+              const dd = stepDate(l, idx)
+              due = {
+                stepIndex: idx,
+                dueDate: dd,
+                status: dd <= today ? (dd === today ? 'today' : 'missed') : 'fresh',
+                overdueDays: dd < today ? daysBetween(dd, today) : 0,
+              }
+            } else {
+              due = { stepIndex: idx, dueDate: today, status: 'fresh', overdueDays: 0 }
+            }
+          }
+        }
+        if (due) {
+          baseQueue.unshift({ lesson: l, due, lastScore: getLastScore(l), priority: -1 })
+        }
+      }
+    }
+    // existingIdx === 0 : déjà en tête, rien à faire.
+  }
+
+  return baseQueue
 }
 
 // ===================== PLANT (SVG inline) =====================
+// La tige grandit avec le TEMPS (linéairement jusqu'à TIME_TO_FULL_MS).
+// Chaque fiche notée dépose une feuille à la hauteur où la tige était au moment
+// de la note (récupéré via outcome.atMs). Les feuilles ne bougent plus une fois
+// posées : à la fin, elles racontent visuellement le rythme de la session
+// (clusters bas = session rapide, étalées = session lente).
+
 type PlantProps = {
   results: Array<Result | null>
-  totalQueue: number
+  elapsedMs: number
+  timeToFullMs: number
+  /** Si true (écran bilan), tige forcée au max et fleur affichée si au moins une note. */
+  forceFull?: boolean
 }
 
-function FocusPlant({ results, totalQueue }: PlantProps) {
-  const completed = results.filter(r => r !== null).length
-  const ratedResults: Array<{ idx: number; score: Score }> = []
+// Géométrie SVG (viewBox 120x130)
+const POT_Y = 110
+const STEM_TOP_MIN_Y = 30 // hauteur la plus haute atteignable
+
+function FocusPlant({ results, elapsedMs, timeToFullMs, forceFull = false }: PlantProps) {
+  const ratedLeaves: Array<{ idx: number; score: Score; atMs: number }> = []
   results.forEach((r, idx) => {
     if (r && r.outcome.kind === 'rated') {
-      ratedResults.push({ idx, score: r.outcome.score })
+      ratedLeaves.push({ idx, score: r.outcome.score, atMs: r.outcome.atMs })
     }
   })
-  const allDone = totalQueue > 0 && completed >= totalQueue
-  const hasRated = ratedResults.length > 0
+  const hasRated = ratedLeaves.length > 0
   const avg = hasRated
-    ? ratedResults.reduce((s, x) => s + x.score, 0) / ratedResults.length
+    ? ratedLeaves.reduce((s, x) => s + x.score, 0) / ratedLeaves.length
     : 0
 
-  // Géométrie : pot à y=110, tige monte vers y=30 max.
-  const POT_Y = 110
-  const STEM_TOP_MAX = 30 // hauteur max atteinte quand 100%
-  const stemTopY = totalQueue === 0
-    ? POT_Y
-    : POT_Y - ((completed / totalQueue) * (POT_Y - STEM_TOP_MAX))
+  // Progression temporelle de la tige
+  const stemProgress = forceFull
+    ? 1
+    : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
   // Couleur de la fleur basée sur la moyenne
-  let flowerColor = '#7AA56B'
+  let flowerColor = SCORE_COLORS[4]
   if (avg > 0) {
     if (avg < 2) flowerColor = SCORE_COLORS[1]
     else if (avg < 3) flowerColor = SCORE_COLORS[2]
@@ -215,6 +254,9 @@ function FocusPlant({ results, totalQueue }: PlantProps) {
     else if (avg < 4.5) flowerColor = SCORE_COLORS[4]
     else flowerColor = SCORE_COLORS[5]
   }
+
+  // Position du sommet de la tige (uniquement pour la fleur)
+  const stemTopY = POT_Y - stemProgress * (POT_Y - STEM_TOP_MIN_Y)
 
   return (
     <div className="focus-plant-wrap" aria-hidden="true">
@@ -226,26 +268,34 @@ function FocusPlant({ results, totalQueue }: PlantProps) {
         <path d="M 50 110 L 70 110 L 68 108 L 52 108 Z" fill="#7E5630" />
         <ellipse cx="60" cy="108" rx="9" ry="1.5" fill="#5C3A21" />
 
-        {/* Tige (visible uniquement si quelque chose est complété) */}
-        {completed > 0 && (
-          <path
-            d={`M 60 ${POT_Y} Q 58 ${(POT_Y + stemTopY) / 2} 60 ${stemTopY}`}
+        {/* Tige : on dessine la tige pleine, et on la met à l'échelle verticalement
+             via transform scaleY pour avoir une transition CSS fluide. */}
+        <g
+          className="focus-plant-stem-group"
+          style={{
+            transform: `scaleY(${stemProgress})`,
+            transformOrigin: `60px ${POT_Y}px`,
+          }}
+        >
+          <line
+            x1={60}
+            y1={POT_Y}
+            x2={60}
+            y2={STEM_TOP_MIN_Y}
             stroke="#2D6A4F"
             strokeWidth={2.2}
-            fill="none"
             strokeLinecap="round"
-            className="focus-plant-stem"
           />
-        )}
+        </g>
 
-        {/* Feuilles (1 par fiche notée, alternance L/R, couleur = score) */}
-        {ratedResults.map(({ idx, score }, n) => {
-          const t = (idx + 1) / totalQueue // 0 → 1 sur la tige
-          const yPos = POT_Y - t * (POT_Y - STEM_TOP_MAX)
+        {/* Feuilles : positionnées à la hauteur correspondant à leur atMs.
+             Position fixe une fois posée — ne suit pas la tige qui continue de pousser. */}
+        {ratedLeaves.map(({ idx, score, atMs }, n) => {
+          const leafProgress = Math.max(0, Math.min(1, atMs / timeToFullMs))
+          const yPos = POT_Y - leafProgress * (POT_Y - STEM_TOP_MIN_Y)
           const side = n % 2 === 0 ? -1 : 1
           const cx = 60 + side * 9
           const color = SCORE_COLORS[score]
-          // Petite feuille en forme de goutte allongée
           return (
             <g key={`leaf-${idx}`} className="focus-plant-leaf">
               <ellipse
@@ -271,7 +321,6 @@ function FocusPlant({ results, totalQueue }: PlantProps) {
         {/* Marqueurs reportés (petites pierres au pied du pot) */}
         {results.map((r, idx) => {
           if (!r || r.outcome.kind !== 'reported') return null
-          // disperse de petites pierres devant le pot
           const offset = (idx * 7) % 18 - 9
           return (
             <ellipse
@@ -286,10 +335,9 @@ function FocusPlant({ results, totalQueue }: PlantProps) {
           )
         })}
 
-        {/* Fleur au sommet quand tout est complété */}
-        {allDone && hasRated && (
+        {/* Fleur au sommet : uniquement à l'écran bilan (forceFull) */}
+        {forceFull && hasRated && (
           <g className="focus-plant-flower">
-            {/* 5 pétales */}
             {[0, 72, 144, 216, 288].map(angle => (
               <ellipse
                 key={angle}
@@ -299,10 +347,9 @@ function FocusPlant({ results, totalQueue }: PlantProps) {
                 ry={2.4}
                 transform={`rotate(${angle} 60 ${stemTopY})`}
                 fill={flowerColor}
-                opacity={0.9}
+                opacity={0.92}
               />
             ))}
-            {/* Cœur */}
             <circle cx={60} cy={stemTopY} r={2.6} fill="#F3D88A" />
           </g>
         )}
@@ -406,6 +453,8 @@ function FocusPageBody() {
     setLoading(true)
 
     const wasEmpty = results[currentIdx] === null
+    const atMs = Math.max(0, Date.now() - startedAt)
+
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
     while (newSteps.length < J.length) newSteps.push(null)
     newSteps[current.due.stepIndex] = { score, date: today }
@@ -416,7 +465,7 @@ function FocusPageBody() {
       lessonId: current.lesson.id,
       lessonName: current.lesson.name,
       systemName: currentSystemName,
-      outcome: { kind: 'rated', score },
+      outcome: { kind: 'rated', score, atMs },
     }
     setResults(newResults)
 
@@ -429,7 +478,7 @@ function FocusPageBody() {
     // Si re-rating : on reste sur la fiche, l'utilisateur peut vérifier ou naviguer.
 
     setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName])
+  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt])
 
   // ============ Actions : report ============
   const report = useCallback(async () => {
@@ -438,6 +487,7 @@ function FocusPageBody() {
 
     const wasEmpty = results[currentIdx] === null
     const wasRated = results[currentIdx]?.outcome.kind === 'rated'
+    const atMs = Math.max(0, Date.now() - startedAt)
 
     // Si on bascule rated → reported, on efface la note en DB pour rester cohérent
     if (wasRated) {
@@ -452,7 +502,7 @@ function FocusPageBody() {
       lessonId: current.lesson.id,
       lessonName: current.lesson.name,
       systemName: currentSystemName,
-      outcome: { kind: 'reported' },
+      outcome: { kind: 'reported', atMs },
     }
     setResults(newResults)
 
@@ -463,7 +513,7 @@ function FocusPageBody() {
     }
 
     setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName])
+  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName, startedAt])
 
   // ============ Navigation ============
   const goPrev = useCallback(() => {
@@ -545,9 +595,14 @@ function FocusPageBody() {
         <div className="focus-stage">
           <div className="focus-card focus-done-card">
 
-            {/* Plante en pleine floraison */}
+            {/* Plante en pleine floraison (tige forcée au max + fleur) */}
             <div className="focus-done-plant">
-              <FocusPlant results={results} totalQueue={queue.length} />
+              <FocusPlant
+                results={results}
+                elapsedMs={Math.max(0, now - startedAt)}
+                timeToFullMs={TIME_TO_FULL_MS}
+                forceFull
+              />
             </div>
 
             <div className="focus-done-kicker">Session terminée</div>
@@ -662,8 +717,12 @@ function FocusPageBody() {
 
         <div className="focus-card">
 
-          {/* Plante */}
-          <FocusPlant results={results} totalQueue={queue.length} />
+          {/* Plante (tige grandit avec le temps écoulé) */}
+          <FocusPlant
+            results={results}
+            elapsedMs={Math.max(0, now - startedAt)}
+            timeToFullMs={TIME_TO_FULL_MS}
+          />
 
           <div className="focus-kicker">
             <span className="focus-kicker-dot" style={{ background: sysColor }} />
