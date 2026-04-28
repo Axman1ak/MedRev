@@ -603,7 +603,7 @@ function FocusPageBody() {
     const atMs = Math.max(0, Date.now() - startedAt)
 
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-    while (newSteps.length < J.length) newSteps.push(null)
+    while (J.length > newSteps.length) newSteps.push(null)
     newSteps[current.due.stepIndex] = { score, date: today }
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
 
@@ -639,7 +639,7 @@ function FocusPageBody() {
     // Si on bascule rated → reported, on efface la note en DB pour rester cohérent
     if (wasRated) {
       const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-      while (newSteps.length < J.length) newSteps.push(null)
+      while (J.length > newSteps.length) newSteps.push(null)
       newSteps[current.due.stepIndex] = null
       await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
     }
