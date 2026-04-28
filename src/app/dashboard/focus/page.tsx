@@ -396,69 +396,162 @@ const RARE_POOL: GardenElement[] = [
 ]
 const RARE_KIND_SET = new Set(RARE_POOL.map(p => p.kind))
 
-// ============ Tirage d'un élément avec probabilités ============
-function pickFromPool(pool: GardenElement[], existing: GardenElement[]): GardenElement | null {
-  // Filtre les positions déjà prises (même kind + même x,y exact)
-  const taken = new Set(existing.map(e => `${e.kind}:${e.x},${e.y}`))
-  const available = pool.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
-  if (available.length > 0) {
-    return available[Math.floor(Math.random() * available.length)]
-  }
-  // Pool plein : on jitter une position aléatoire pour densifier sans collision parfaite
-  const p = pool[Math.floor(Math.random() * pool.length)]
+// ============ Tirage d'une RÉCOMPENSE (grappe d'éléments) ============
+// Chaque fiche notée déclenche une grappe : pas un seul élément mais 4-12 éléments
+// pour que l'effet visuel soit nourrissant — un étudiant ne fait que ~10 fiches/jour
+// donc chaque tirage doit faire évoluer le jardin de manière nette.
+
+const FLOWER_VARIANTS = ['red', 'pink', 'white', 'yellow', 'orange', 'purple']
+const INSECT_VARIANTS: ('amber' | 'blue' | 'purple')[] = ['amber', 'blue', 'purple']
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v))
+}
+
+function randFlower(cx: number, cy: number, jitterX = 100, jitterY = 30): GardenElement {
   return {
-    ...p,
-    x: p.x + (Math.random() - 0.5) * 24,
-    y: p.y + (Math.random() - 0.5) * 10,
+    kind: Math.random() < 0.85 ? 'flower' : 'tulip',
+    x: clamp(cx + (Math.random() - 0.5) * jitterX, 80, 1520),
+    y: clamp(cy + (Math.random() - 0.5) * jitterY, 800, 960),
+    variant: FLOWER_VARIANTS[Math.floor(Math.random() * FLOWER_VARIANTS.length)],
   }
 }
 
-function pickElement(existing: GardenElement[]): GardenElement {
-  const r = Math.random()
-  // 60% fleur
-  if (r < 0.60) {
-    const p = pickFromPool(FLOWER_POOL, existing)
-    if (p) return p
+function randButterfly(cx: number, cy: number, jitterX = 220, jitterY = 180): GardenElement {
+  return {
+    kind: 'butterfly',
+    x: clamp(cx + (Math.random() - 0.5) * jitterX, 150, 1500),
+    y: clamp(cy + (Math.random() - 0.5) * jitterY, 200, 620),
+    variant: INSECT_VARIANTS[Math.floor(Math.random() * INSECT_VARIANTS.length)],
   }
-  // 25% insecte
-  if (r < 0.85) {
-    const p = pickFromPool(INSECT_POOL, existing)
-    if (p) return p
+}
+
+function randMushroom(cx: number, cy: number, jitterX = 80, jitterY = 30): GardenElement {
+  return {
+    kind: 'mushroom',
+    x: clamp(cx + (Math.random() - 0.5) * jitterX, 80, 1520),
+    y: clamp(cy + (Math.random() - 0.5) * jitterY, 880, 960),
+    variant: Math.random() < 0.7 ? 'red' : 'orange',
   }
-  // 12% animal (rabbit/sapling/mushroom — éléments de jardin courants)
-  if (r < 0.97) {
-    const p = pickFromPool(ANIMAL_POOL, existing)
-    if (p) return p
+}
+
+// 50% : grappe de fleurs (4-7 fleurs + occasionnellement 1 tournesol)
+function rewardFlowerCluster(): GardenElement[] {
+  const cx = 120 + Math.random() * 1380
+  const cy = 870 + Math.random() * 80
+  const count = 4 + Math.floor(Math.random() * 4) // 4-7
+  const out: GardenElement[] = []
+  for (let i = 0; i < count; i++) out.push(randFlower(cx, cy, 130, 35))
+  // 20% chance d'un tournesol au centre du parterre
+  if (Math.random() < 0.20) {
+    out.push({ kind: 'sunflower', x: clamp(cx, 100, 1500), y: clamp(cy + 5, 880, 950) })
   }
-  // 3% événement rare (cap 1 par type par jour)
+  return out
+}
+
+// 25% : essaim de papillons (2-4) + 1-2 fleurs au sol
+function rewardInsectSwarm(): GardenElement[] {
+  const cx = 350 + Math.random() * 1000
+  const cy = 250 + Math.random() * 350
+  const count = 2 + Math.floor(Math.random() * 3) // 2-4
+  const out: GardenElement[] = []
+  for (let i = 0; i < count; i++) out.push(randButterfly(cx, cy, 280, 220))
+  // Fleurs au sol qui les ont attirés
+  const fc = 1 + Math.floor(Math.random() * 2) // 1-2 fleurs
+  const fcx = 200 + Math.random() * 1200
+  const fcy = 920 + Math.random() * 30
+  for (let i = 0; i < fc; i++) out.push(randFlower(fcx, fcy, 80, 20))
+  return out
+}
+
+// 17% : un animal apparaît avec son décor (3-5 éléments autour : fleurs, champignons, sapling)
+function rewardAnimalSpot(existing: GardenElement[]): GardenElement[] {
+  const taken = new Set(existing.map(e => `${e.kind}:${e.x},${e.y}`))
+  const avail = ANIMAL_POOL.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
+  const animal = avail.length > 0
+    ? avail[Math.floor(Math.random() * avail.length)]
+    : ANIMAL_POOL[Math.floor(Math.random() * ANIMAL_POOL.length)]
+  const out: GardenElement[] = [animal]
+  // 3-5 éléments décoratifs autour
+  const count = 3 + Math.floor(Math.random() * 3)
+  for (let i = 0; i < count; i++) {
+    const r = Math.random()
+    if (r < 0.65) {
+      out.push(randFlower(animal.x, animal.y + 30, 220, 30))
+    } else if (r < 0.85) {
+      out.push(randMushroom(animal.x, animal.y + 30, 180, 25))
+    } else {
+      out.push(randButterfly(animal.x - 80, animal.y - 240, 200, 100))
+    }
+  }
+  return out
+}
+
+// 8% : ÉVÉNEMENT RARE (cap 1 par jour de chaque type). L'événement seul + 5-8 éléments
+// supports tout autour pour un vrai "wow" moment.
+function rewardRareEvent(existing: GardenElement[]): GardenElement[] {
   const rareKindsUsed = new Set(existing.filter(e => RARE_KIND_SET.has(e.kind)).map(e => e.kind))
-  const availRares = RARE_POOL.filter(p => !rareKindsUsed.has(p.kind))
-  if (availRares.length > 0) {
-    return availRares[Math.floor(Math.random() * availRares.length)]
+  const avail = RARE_POOL.filter(p => !rareKindsUsed.has(p.kind))
+  if (avail.length === 0) {
+    // Tous les rares déjà tirés : grosse grappe de fleurs en compensation
+    return [...rewardFlowerCluster(), ...rewardFlowerCluster()]
   }
-  // Fallback : tous les rares utilisés → fleur bonus
-  const fallback = pickFromPool(FLOWER_POOL, existing)
-  return fallback ?? FLOWER_POOL[0]
+  const rare = avail[Math.floor(Math.random() * avail.length)]
+  const out: GardenElement[] = [rare]
+  // 5-8 éléments support pour faire de l'événement un vrai moment
+  const count = 5 + Math.floor(Math.random() * 4)
+  for (let i = 0; i < count; i++) {
+    const r = Math.random()
+    if (r < 0.50) {
+      out.push(randFlower(100 + Math.random() * 1400, 900 + Math.random() * 50, 60, 20))
+    } else if (r < 0.78) {
+      out.push(randButterfly(200 + Math.random() * 1200, 250 + Math.random() * 350, 180, 150))
+    } else if (r < 0.92) {
+      out.push(randMushroom(100 + Math.random() * 1400, 900 + Math.random() * 50, 50, 20))
+    } else {
+      // Petit sapling bonus
+      out.push({ kind: 'sapling', x: clamp(100 + Math.random() * 1400, 100, 1500), y: 700 + Math.random() * 30 })
+    }
+  }
+  return out
+}
+
+// Tirage principal : choisit une catégorie selon les probabilités
+// et retourne une GRAPPE d'éléments à ajouter au jardin.
+function pickReward(existing: GardenElement[]): GardenElement[] {
+  const r = Math.random()
+  if (r < 0.50) return rewardFlowerCluster()
+  if (r < 0.75) return rewardInsectSwarm()
+  if (r < 0.92) return rewardAnimalSpot(existing)
+  return rewardRareEvent(existing)
 }
 
 // ============ Persistance jour (localStorage, clé date-suffixée) ============
 type DayGardenState = {
   date: string
   elapsedMs: number
+  fichesCount: number  // nombre de fiches notées aujourd'hui (pour stats)
   elements: GardenElement[]
 }
 
 function loadDayGarden(today: string): DayGardenState {
-  if (typeof window === 'undefined') return { date: today, elapsedMs: 0, elements: [] }
+  const empty: DayGardenState = { date: today, elapsedMs: 0, fichesCount: 0, elements: [] }
+  if (typeof window === 'undefined') return empty
   const key = 'medrev-garden-' + today
   try {
     const raw = localStorage.getItem(key)
-    if (!raw) return { date: today, elapsedMs: 0, elements: [] }
-    const parsed = JSON.parse(raw) as DayGardenState
-    if (parsed.date !== today) return { date: today, elapsedMs: 0, elements: [] }
-    return parsed
+    if (!raw) return empty
+    const parsed = JSON.parse(raw) as Partial<DayGardenState>
+    if (parsed.date !== today) return empty
+    // Backward-compat : si fichesCount manque, on l'estime à partir de elements.length / 6
+    return {
+      date: today,
+      elapsedMs: parsed.elapsedMs ?? 0,
+      fichesCount: parsed.fichesCount ?? Math.max(0, Math.round((parsed.elements?.length ?? 0) / 6)),
+      elements: parsed.elements ?? [],
+    }
   } catch {
-    return { date: today, elapsedMs: 0, elements: [] }
+    return empty
   }
 }
 
@@ -1183,7 +1276,7 @@ function FocusPageBody() {
   // ============ ÉTAT JARDIN PERSISTANT (jour) ============
   // Persisté en localStorage avec clé 'medrev-garden-YYYY-MM-DD'.
   // Reset chaque nouveau jour. elapsedMs cumulé sur la journée à travers les sessions.
-  const [dayGarden, setDayGarden] = useState<DayGardenState>({ date: today, elapsedMs: 0, elements: [] })
+  const [dayGarden, setDayGarden] = useState<DayGardenState>({ date: today, elapsedMs: 0, fichesCount: 0, elements: [] })
   const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
   const dayGardenRef = useRef<DayGardenState>(dayGarden)
   useEffect(() => { dayGardenRef.current = dayGarden }, [dayGarden])
@@ -1269,8 +1362,7 @@ function FocusPageBody() {
   const currentResult = results[currentIdx] ?? null
 
   // Stats agrégées dérivées du jardin du jour (cumulatif sur la journée)
-  const dayFichesCount = dayGarden.elements.length
-  const sessionRatedCount = results.filter(r => r !== null && r.outcome.kind === 'rated').length
+  const dayFichesCount = dayGarden.fichesCount
   const gardenStats = statsFor(dayGarden.elements)
 
   // ============ Helpers d'avancement ============
@@ -1308,16 +1400,19 @@ function FocusPageBody() {
     // Le score n'a pas d'incidence visuelle.
     setParticleBurst({ ts: Date.now() })
 
-    // Sur PREMIÈRE notation de la fiche : tirage aléatoire d'un nouvel élément
-    // pour le jardin du jour (fleur 60% / insecte 25% / animal 12% / rare 3%).
+    // Sur PREMIÈRE notation de la fiche : tirage d'une GRAPPE d'éléments pour le jardin
+    // (cluster de fleurs 50% / essaim papillons 25% / spot animalier 17% / événement rare 8%).
+    // Chaque grappe contient 4-12 éléments selon la catégorie pour que la progression
+    // soit nettement visible (un étudiant fait ~10 fiches/jour).
     // Persisté immédiatement en localStorage. Re-rating ne déclenche pas (pas de farming).
     if (wasEmpty) {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const newElement = pickElement(dayGardenRef.current.elements)
+      const newElements = pickReward(dayGardenRef.current.elements)
       const updatedGarden: DayGardenState = {
         date: today,
         elapsedMs: totalElapsed,
-        elements: [...dayGardenRef.current.elements, newElement],
+        fichesCount: dayGardenRef.current.fichesCount + 1,
+        elements: [...dayGardenRef.current.elements, ...newElements],
       }
       dayGardenRef.current = updatedGarden
       setDayGarden(updatedGarden)
