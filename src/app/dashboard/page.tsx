@@ -429,11 +429,12 @@ export default function DashboardPage() {
   const loadMax = Math.max(1, ...upcomingLoad.map(w => w.count))
   const peakIdx = upcomingLoad.findIndex(w => w.count === loadMax && loadMax > 0)
 
-  // Session focus — déclenche la page fiches avec la première du queue
+  // Session focus — ouvre la nouvelle page /dashboard/focus.
+  // Sans param = queue d'aujourd'hui ; avec ?lesson= = solo sur cette fiche.
   const firstInQueue = todayQueue[0] ?? null
   const startSessionHref = firstInQueue
-    ? `/dashboard/fiches?start=${firstInQueue.lesson.id}`
-    : '/dashboard/fiches'
+    ? `/dashboard/focus?lesson=${firstInQueue.lesson.id}`
+    : '/dashboard/focus'
 
   // Label du jour
   const todayLabel = new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -604,7 +605,7 @@ export default function DashboardPage() {
                 )}
 
                 <Link
-                  href={`/dashboard/fiches?system=${weakest.system.id}`}
+                  href={`/dashboard/focus?system=${weakest.system.id}`}
                   className="weak-cta"
                   style={{ textDecoration: 'none' }}
                 >
@@ -846,7 +847,7 @@ function TodayModal({
                   </div>
                   <div className="full-row-actions">
                     <Link
-                      href={`/dashboard/fiches?start=${p.lesson.id}`}
+                      href={`/dashboard/focus?lesson=${p.lesson.id}`}
                       className="row-btn go"
                       onClick={onClose}
                     >
@@ -963,7 +964,7 @@ function WeakModal({
                             </div>
                             <div className={`mat-fiche-avg ${fCls}`}>{f.avg.toFixed(1)}</div>
                             <Link
-                              href={`/dashboard/fiches?start=${f.lesson.id}`}
+                              href={`/dashboard/focus?lesson=${f.lesson.id}`}
                               className="mat-fiche-cta"
                               onClick={onClose}
                             >
