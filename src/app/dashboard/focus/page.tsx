@@ -3,6 +3,11 @@
 // Session focus plein écran : enchaîne les fiches dues dans l'ordre suggéré.
 // Lit ?lesson=<id> (mode solo) et ?system=<id> (filtre matière).
 // Sans param : queue d'aujourd'hui filtrée par le semestre courant (localStorage 'medrev-sem').
+//
+// Navigation : flèches gauche/droite (boutons + clavier). Re-rating possible
+// quand on revient sur une fiche déjà notée (overwrite DB).
+// Visuel : plante qui pousse au sommet de la card — 1 feuille colorée par fiche notée,
+// fleur quand tout est terminé.
 
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -12,6 +17,14 @@ import type { System, Lesson } from '@/types'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+
+const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: '#C75050',
+  2: '#E08B3C',
+  3: '#D9B24A',
+  4: '#7AA56B',
+  5: '#1B4332',
+}
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -132,7 +145,6 @@ function buildQueue(
   systemParam: string | null,
   today: string
 ): QueueItem[] {
-  // Mode solo : une fiche précise (peut être une fiche pas due aujourd'hui)
   if (lessonParam) {
     const l = lessons.find(x => x.id === lessonParam)
     if (!l) return []
@@ -155,18 +167,148 @@ function buildQueue(
     return [{ lesson: l, due, lastScore: getLastScore(l), priority: 0 }]
   }
 
-  // Filtre matière : queue d'aujourd'hui restreinte à un système
   if (systemParam) {
     const sysLessons = lessons.filter(l => l.system_id === systemParam)
     return computeTodayQueue(sysLessons, today)
   }
 
-  // Queue complète : on filtre par le semestre courant comme le dashboard
   const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
   const sem = semRaw === '1' ? 1 : 2
   const semSystemIds = new Set(systems.filter(s => s.semestre === sem).map(s => s.id))
   const semLessons = lessons.filter(l => semSystemIds.has(l.system_id))
   return computeTodayQueue(semLessons, today)
+}
+
+// ===================== PLANT (SVG inline) =====================
+type PlantProps = {
+  results: Array<Result | null>
+  totalQueue: number
+}
+
+function FocusPlant({ results, totalQueue }: PlantProps) {
+  const completed = results.filter(r => r !== null).length
+  const ratedResults: Array<{ idx: number; score: Score }> = []
+  results.forEach((r, idx) => {
+    if (r && r.outcome.kind === 'rated') {
+      ratedResults.push({ idx, score: r.outcome.score })
+    }
+  })
+  const allDone = totalQueue > 0 && completed >= totalQueue
+  const hasRated = ratedResults.length > 0
+  const avg = hasRated
+    ? ratedResults.reduce((s, x) => s + x.score, 0) / ratedResults.length
+    : 0
+
+  // Géométrie : pot à y=110, tige monte vers y=30 max.
+  const POT_Y = 110
+  const STEM_TOP_MAX = 30 // hauteur max atteinte quand 100%
+  const stemTopY = totalQueue === 0
+    ? POT_Y
+    : POT_Y - ((completed / totalQueue) * (POT_Y - STEM_TOP_MAX))
+
+  // Couleur de la fleur basée sur la moyenne
+  let flowerColor = '#7AA56B'
+  if (avg > 0) {
+    if (avg < 2) flowerColor = SCORE_COLORS[1]
+    else if (avg < 3) flowerColor = SCORE_COLORS[2]
+    else if (avg < 4) flowerColor = SCORE_COLORS[3]
+    else if (avg < 4.5) flowerColor = SCORE_COLORS[4]
+    else flowerColor = SCORE_COLORS[5]
+  }
+
+  return (
+    <div className="focus-plant-wrap" aria-hidden="true">
+      <svg viewBox="0 0 120 130" className="focus-plant-svg" role="img">
+        <title>Progression de la session</title>
+
+        {/* Pot */}
+        <path d="M 50 110 L 70 110 L 67 125 L 53 125 Z" fill="#A37147" />
+        <path d="M 50 110 L 70 110 L 68 108 L 52 108 Z" fill="#7E5630" />
+        <ellipse cx="60" cy="108" rx="9" ry="1.5" fill="#5C3A21" />
+
+        {/* Tige (visible uniquement si quelque chose est complété) */}
+        {completed > 0 && (
+          <path
+            d={`M 60 ${POT_Y} Q 58 ${(POT_Y + stemTopY) / 2} 60 ${stemTopY}`}
+            stroke="#2D6A4F"
+            strokeWidth={2.2}
+            fill="none"
+            strokeLinecap="round"
+            className="focus-plant-stem"
+          />
+        )}
+
+        {/* Feuilles (1 par fiche notée, alternance L/R, couleur = score) */}
+        {ratedResults.map(({ idx, score }, n) => {
+          const t = (idx + 1) / totalQueue // 0 → 1 sur la tige
+          const yPos = POT_Y - t * (POT_Y - STEM_TOP_MAX)
+          const side = n % 2 === 0 ? -1 : 1
+          const cx = 60 + side * 9
+          const color = SCORE_COLORS[score]
+          // Petite feuille en forme de goutte allongée
+          return (
+            <g key={`leaf-${idx}`} className="focus-plant-leaf">
+              <ellipse
+                cx={cx}
+                cy={yPos}
+                rx={7}
+                ry={3}
+                transform={`rotate(${side * 25} ${cx} ${yPos})`}
+                fill={color}
+              />
+              <ellipse
+                cx={cx}
+                cy={yPos}
+                rx={3}
+                ry={1}
+                transform={`rotate(${side * 25} ${cx} ${yPos})`}
+                fill="rgba(255,255,255,0.18)"
+              />
+            </g>
+          )
+        })}
+
+        {/* Marqueurs reportés (petites pierres au pied du pot) */}
+        {results.map((r, idx) => {
+          if (!r || r.outcome.kind !== 'reported') return null
+          // disperse de petites pierres devant le pot
+          const offset = (idx * 7) % 18 - 9
+          return (
+            <ellipse
+              key={`stone-${idx}`}
+              cx={60 + offset}
+              cy={127}
+              rx={2.2}
+              ry={1.2}
+              fill="#B8B0A0"
+              opacity={0.7}
+            />
+          )
+        })}
+
+        {/* Fleur au sommet quand tout est complété */}
+        {allDone && hasRated && (
+          <g className="focus-plant-flower">
+            {/* 5 pétales */}
+            {[0, 72, 144, 216, 288].map(angle => (
+              <ellipse
+                key={angle}
+                cx={60}
+                cy={stemTopY - 7}
+                rx={4.2}
+                ry={2.4}
+                transform={`rotate(${angle} 60 ${stemTopY})`}
+                fill={flowerColor}
+                opacity={0.9}
+              />
+            ))}
+            {/* Cœur */}
+            <circle cx={60} cy={stemTopY} r={2.6} fill="#F3D88A" />
+          </g>
+        )}
+      </svg>
+    </div>
+  )
 }
 
 // ===================== EXPORT (Suspense wrapper requis pour useSearchParams en Next.js 14) =====================
@@ -195,14 +337,14 @@ function FocusPageBody() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [results, setResults] = useState<Result[]>([])
+  const [results, setResults] = useState<Array<Result | null>>([])
   const [loading, setLoading] = useState(false)
   const [startedAt, setStartedAt] = useState<number>(0)
   const [now, setNow] = useState<number>(0)
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Reset scroll au montage (le <main> du layout dashboard a overflow auto)
+  // Reset scroll au montage
   useEffect(() => {
     if (typeof window === 'undefined') return
     window.scrollTo(0, 0)
@@ -210,7 +352,7 @@ function FocusPageBody() {
     if (main) main.scrollTop = 0
   }, [])
 
-  // Chargement initial : auth + data + construction queue (en une fois)
+  // Chargement initial : auth + data + queue
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -228,6 +370,7 @@ function FocusPageBody() {
       setSystems(sysList)
       const q = buildQueue(lesList, sysList, lessonParam, systemParam, today)
       setQueue(q)
+      setResults(new Array(q.length).fill(null))
       setPhase(q.length === 0 ? 'empty' : 'session')
       setCurrentIdx(0)
       setStartedAt(Date.now())
@@ -236,7 +379,7 @@ function FocusPageBody() {
     return () => { cancelled = true }
   }, [supabase, router, lessonParam, systemParam, today])
 
-  // Tick du chrono en mode session
+  // Tick chrono en mode session
   useEffect(() => {
     if (phase !== 'session') return
     const t = setInterval(() => setNow(Date.now()), 1000)
@@ -246,57 +389,107 @@ function FocusPageBody() {
   const current = queue[currentIdx]
   const currentSystem = current ? systems.find(s => s.id === current.lesson.system_id) : undefined
   const currentSystemName = currentSystem?.name ?? 'Matière'
+  const currentResult = results[currentIdx] ?? null
 
-  // ============ Actions ============
+  // ============ Helpers d'avancement ============
+  function findNextEmptyIdx(arr: Array<Result | null>, fromIdx: number): number {
+    // Cherche d'abord en avant
+    for (let i = fromIdx + 1; i < arr.length; i++) if (arr[i] === null) return i
+    // Sinon en arrière
+    for (let i = 0; i < fromIdx; i++) if (arr[i] === null) return i
+    return -1
+  }
+
+  // ============ Actions : rate ============
   const rate = useCallback(async (score: Score) => {
     if (!current || loading || phase !== 'session') return
     setLoading(true)
+
+    const wasEmpty = results[currentIdx] === null
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
     while (newSteps.length < J.length) newSteps.push(null)
     newSteps[current.due.stepIndex] = { score, date: today }
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
 
-    setResults(prev => [...prev, {
+    const newResults = [...results]
+    newResults[currentIdx] = {
       lessonId: current.lesson.id,
       lessonName: current.lesson.name,
       systemName: currentSystemName,
       outcome: { kind: 'rated', score },
-    }])
+    }
+    setResults(newResults)
 
-    const nextIdx = currentIdx + 1
-    if (nextIdx >= queue.length) setPhase('done')
-    else setCurrentIdx(nextIdx)
+    // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
+    if (wasEmpty) {
+      const next = findNextEmptyIdx(newResults, currentIdx)
+      if (next === -1) setPhase('done')
+      else setCurrentIdx(next)
+    }
+    // Si re-rating : on reste sur la fiche, l'utilisateur peut vérifier ou naviguer.
+
     setLoading(false)
-  }, [current, loading, phase, currentIdx, queue.length, supabase, today, currentSystemName])
+  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName])
 
-  const report = useCallback(() => {
+  // ============ Actions : report ============
+  const report = useCallback(async () => {
     if (!current || loading || phase !== 'session') return
-    setResults(prev => [...prev, {
+    setLoading(true)
+
+    const wasEmpty = results[currentIdx] === null
+    const wasRated = results[currentIdx]?.outcome.kind === 'rated'
+
+    // Si on bascule rated → reported, on efface la note en DB pour rester cohérent
+    if (wasRated) {
+      const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
+      while (newSteps.length < J.length) newSteps.push(null)
+      newSteps[current.due.stepIndex] = null
+      await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
+    }
+
+    const newResults = [...results]
+    newResults[currentIdx] = {
       lessonId: current.lesson.id,
       lessonName: current.lesson.name,
       systemName: currentSystemName,
       outcome: { kind: 'reported' },
-    }])
-    const nextIdx = currentIdx + 1
-    if (nextIdx >= queue.length) setPhase('done')
-    else setCurrentIdx(nextIdx)
-  }, [current, loading, phase, currentIdx, queue.length, currentSystemName])
+    }
+    setResults(newResults)
 
-  // Raccourcis clavier : 1-5 / R / Esc
+    if (wasEmpty) {
+      const next = findNextEmptyIdx(newResults, currentIdx)
+      if (next === -1) setPhase('done')
+      else setCurrentIdx(next)
+    }
+
+    setLoading(false)
+  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName])
+
+  // ============ Navigation ============
+  const goPrev = useCallback(() => {
+    if (phase !== 'session') return
+    setCurrentIdx(i => Math.max(0, i - 1))
+  }, [phase])
+
+  const goNext = useCallback(() => {
+    if (phase !== 'session') return
+    setCurrentIdx(i => Math.min(queue.length - 1, i + 1))
+  }, [phase, queue.length])
+
+  // ============ Raccourcis clavier ============
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        router.push('/dashboard')
-        return
-      }
+      if (e.key === 'Escape') { router.push('/dashboard'); return }
       if (phase !== 'session') return
+      if (e.key === 'ArrowLeft') { goPrev(); return }
+      if (e.key === 'ArrowRight') { goNext(); return }
       if (e.key === 'r' || e.key === 'R') { report(); return }
       const n = parseInt(e.key, 10)
       if (n >= 1 && n <= 5) rate(n as Score)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [rate, report, router, phase])
+  }, [rate, report, router, phase, goPrev, goNext])
 
   // ===================== RENDERS =====================
   if (!userId || phase === 'loading') {
@@ -336,8 +529,9 @@ function FocusPageBody() {
     const elapsedSec = Math.max(0, Math.round((now - startedAt) / 1000))
     const min = Math.floor(elapsedSec / 60)
     const sec = elapsedSec % 60
-    const rated = results.filter(r => r.outcome.kind === 'rated')
-    const reported = results.length - rated.length
+    const filled = results.filter((r): r is Result => r !== null)
+    const rated = filled.filter(r => r.outcome.kind === 'rated')
+    const reported = filled.length - rated.length
     const avg = rated.length === 0
       ? null
       : rated.reduce((s, r) => s + (r.outcome as { score: Score }).score, 0) / rated.length
@@ -350,6 +544,12 @@ function FocusPageBody() {
         </div>
         <div className="focus-stage">
           <div className="focus-card focus-done-card">
+
+            {/* Plante en pleine floraison */}
+            <div className="focus-done-plant">
+              <FocusPlant results={results} totalQueue={queue.length} />
+            </div>
+
             <div className="focus-done-kicker">Session terminée</div>
             <h2 className="focus-done-title">
               {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
@@ -363,7 +563,7 @@ function FocusPageBody() {
             </div>
 
             <div className="focus-done-list">
-              {results.map((r, i) => (
+              {filled.map((r, i) => (
                 <div key={`${r.lessonId}-${i}`} className="focus-done-row">
                   <div className="focus-done-row-num">{i + 1}</div>
                   <div className="focus-done-row-main">
@@ -390,8 +590,10 @@ function FocusPageBody() {
   const min = Math.floor(elapsedSec / 60)
   const sec = elapsedSec % 60
   const total = queue.length
-  const progressPct = Math.round((currentIdx / total) * 100)
+  const completedCount = results.filter(r => r !== null).length
+  const progressPct = Math.round((completedCount / total) * 100)
   const sysColor = (currentSystem as { color?: string } | undefined)?.color || '#2D6A4F'
+  const allFilled = completedCount === total
 
   let statusLabel = ''
   let statusCls: 'missed' | 'today' | 'fresh' = 'today'
@@ -407,6 +609,14 @@ function FocusPageBody() {
       : `J+${J[current.due.stepIndex]} dû aujourd’hui`
     statusCls = 'today'
   }
+
+  // Détection re-action : la fiche courante est déjà actionnée dans cette session
+  const alreadyRated = currentResult?.outcome.kind === 'rated'
+  const alreadyReported = currentResult?.outcome.kind === 'reported'
+  const ratedScore = alreadyRated ? (currentResult.outcome as { score: Score }).score : null
+
+  const canPrev = currentIdx > 0
+  const canNext = currentIdx < queue.length - 1
 
   return (
     <div className="focus-root">
@@ -425,12 +635,36 @@ function FocusPageBody() {
             <span className="focus-progress-time">{min}:{sec.toString().padStart(2, '0')}</span>
           </div>
         </div>
+        {allFilled && (
+          <button
+            type="button"
+            className="focus-bilan-cta"
+            onClick={() => setPhase('done')}
+          >
+            Voir le bilan
+          </button>
+        )}
         <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
       </div>
 
-      {/* STAGE */}
+      {/* STAGE avec flèches latérales */}
       <div className="focus-stage">
+        <button
+          type="button"
+          className="focus-nav-arrow focus-nav-prev"
+          onClick={goPrev}
+          disabled={!canPrev}
+          aria-label="Fiche précédente"
+          title="Fiche précédente (←)"
+        >
+          {'‹'}
+        </button>
+
         <div className="focus-card">
+
+          {/* Plante */}
+          <FocusPlant results={results} totalQueue={queue.length} />
+
           <div className="focus-kicker">
             <span className="focus-kicker-dot" style={{ background: sysColor }} />
             <span className="focus-kicker-sys">{currentSystemName}</span>
@@ -440,18 +674,35 @@ function FocusPageBody() {
 
           <h1 className="focus-name">{current.lesson.name}</h1>
 
-          {current.lastScore !== null && (
+          {current.lastScore !== null && !alreadyRated && !alreadyReported && (
             <div className="focus-last">
               Dernière note&nbsp;: <span className={`focus-last-pill s${current.lastScore}`}>{current.lastScore}/5</span>
             </div>
           )}
 
-          <div className="focus-ask">Quelle note&nbsp;?</div>
+          {/* Badge re-action si déjà notée/reportée dans cette session */}
+          {alreadyRated && ratedScore !== null && (
+            <div className="focus-rated-badge">
+              <span className={`focus-rated-pill s${ratedScore}`}>Notée {ratedScore}/5</span>
+              <span className="focus-rated-hint">Tu peux changer si besoin, ou passer à la suivante.</span>
+            </div>
+          )}
+          {alreadyReported && (
+            <div className="focus-reported-badge">
+              <span className="focus-reported-pill">Reportée à demain</span>
+              <span className="focus-rated-hint">Tu peux la noter maintenant si tu changes d’avis.</span>
+            </div>
+          )}
+
+          {!alreadyRated && !alreadyReported && (
+            <div className="focus-ask">Quelle note&nbsp;?</div>
+          )}
           <div className="focus-scores">
             {([1, 2, 3, 4, 5] as Score[]).map(n => (
               <button
                 key={n}
-                className={`focus-score s${n}`}
+                type="button"
+                className={`focus-score s${n}${alreadyRated && ratedScore === n ? ' selected' : ''}`}
                 onClick={() => rate(n)}
                 disabled={loading}
                 title={`Note ${n}/5 — raccourci ${n}`}
@@ -467,15 +718,37 @@ function FocusPageBody() {
 
           <div className="focus-actions">
             <button
+              type="button"
               className="focus-report"
               onClick={report}
-              disabled={loading}
-              title="Reporter à demain — raccourci R"
+              disabled={loading || alreadyReported}
+              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
             >
-              Reporter à demain
+              {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
             </button>
+            {canNext && (
+              <button
+                type="button"
+                className="focus-next-inline"
+                onClick={goNext}
+                title="Fiche suivante (→)"
+              >
+                Suivante {'›'}
+              </button>
+            )}
           </div>
         </div>
+
+        <button
+          type="button"
+          className="focus-nav-arrow focus-nav-next"
+          onClick={goNext}
+          disabled={!canNext}
+          aria-label="Fiche suivante"
+          title="Fiche suivante (→)"
+        >
+          {'›'}
+        </button>
       </div>
 
       {/* HINT */}
@@ -483,6 +756,8 @@ function FocusPageBody() {
         <span><kbd>1</kbd>–<kbd>5</kbd> noter</span>
         <span className="focus-hint-sep">{'·'}</span>
         <span><kbd>R</kbd> reporter</span>
+        <span className="focus-hint-sep">{'·'}</span>
+        <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
         <span className="focus-hint-sep">{'·'}</span>
         <span><kbd>Esc</kbd> quitter</span>
       </div>
