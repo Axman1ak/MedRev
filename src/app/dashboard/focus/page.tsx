@@ -572,6 +572,85 @@ function saveDayGarden(state: DayGardenState, userId: string | null) {
   }
 }
 
+// ============ Sync cloud (Supabase) ============
+// Cible : table `gardens` (cf. migration-garden.sql) — UNE ligne par user_id.
+// Stratégie :
+//   - Au load : on lit en parallèle localStorage + Supabase, on merge (max
+//     compteurs, union elements).
+//   - Au save : on écrit toujours localStorage (instant) + on push Supabase
+//     en best-effort (on ne bloque pas l'UI si réseau coupé).
+// Un éventuel échec réseau ne casse jamais l'UX : la prochaine sauvegarde
+// rattrape, et le user garde son jardin grâce à localStorage.
+
+type SbClient = ReturnType<typeof createClient>
+
+async function pullGardenFromSupabase(supabase: SbClient, userId: string): Promise<DayGardenState | null> {
+  try {
+    const { data, error } = await supabase
+      .from('gardens')
+      .select('started_date, elapsed_ms, fiches_count, elements')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error || !data) return null
+    return {
+      startedDate: (data as any).started_date ?? undefined,
+      elapsedMs: Number((data as any).elapsed_ms ?? 0),
+      fichesCount: Number((data as any).fiches_count ?? 0),
+      elements: ((data as any).elements as GardenElement[]) ?? [],
+    }
+  } catch {
+    return null
+  }
+}
+
+function pushGardenToSupabase(supabase: SbClient, userId: string | null, state: DayGardenState): void {
+  if (!userId) return
+  // Fire-and-forget : on ne bloque pas l'UI. Les erreurs réseau sont silencieuses.
+  void supabase
+    .from('gardens')
+    .upsert(
+      {
+        user_id: userId,
+        started_date: state.startedDate ?? null,
+        elapsed_ms: state.elapsedMs,
+        fiches_count: state.fichesCount,
+        elements: state.elements,
+      },
+      { onConflict: 'user_id' }
+    )
+    .then(() => { /* ok */ }, () => { /* swallow */ })
+}
+
+function elementKey(e: GardenElement): string {
+  return e.kind + '|' + e.x + '|' + e.y + '|' + (e.variant ?? '')
+}
+
+function mergeGardenStates(a: DayGardenState, b: DayGardenState): DayGardenState {
+  // Le jardin ne décroît jamais : on garde le max des compteurs et l'union
+  // des éléments (par tuple kind+x+y+variant).
+  const seen = new Set<string>()
+  const elements: GardenElement[] = []
+  for (const e of a.elements) {
+    const k = elementKey(e)
+    if (seen.has(k)) continue
+    seen.add(k); elements.push(e)
+  }
+  for (const e of b.elements) {
+    const k = elementKey(e)
+    if (seen.has(k)) continue
+    seen.add(k); elements.push(e)
+  }
+  let startedDate: string | undefined
+  if (a.startedDate && b.startedDate) startedDate = a.startedDate < b.startedDate ? a.startedDate : b.startedDate
+  else startedDate = a.startedDate ?? b.startedDate
+  return {
+    startedDate,
+    elapsedMs: Math.max(a.elapsedMs, b.elapsedMs),
+    fichesCount: Math.max(a.fichesCount, b.fichesCount),
+    elements,
+  }
+}
+
 // Stats agrégées dérivées d'une slice de la séquence (ignore les null)
 type GardenStats = { fleurs: number; animaux: number; papillons: number }
 function statsFor(unlocked: (GardenElement | null)[]): GardenStats {
@@ -1379,13 +1458,44 @@ function FocusPageBody() {
       setUserId(user.id)
       userIdRef.current = user.id
 
-      // 2) Charger le jardin persisté DE CE USER (clé localStorage suffixée par userId)
-      const loadedGarden = loadDayGarden(today, user.id)
+      // 2) Charger le jardin persisté DE CE USER :
+      //    - localStorage en premier (instant, hors-ligne friendly)
+      //    - puis Supabase (cloud), et on merge si la version cloud est différente.
+      //    Le merge prend le max des compteurs + l'union des éléments :
+      //    le jardin grandit toujours, jamais ne décroît.
+      const localGarden = loadDayGarden(today, user.id)
       if (!cancelled) {
-        setDayGarden(loadedGarden)
-        dayGardenRef.current = loadedGarden
-        setCumElapsedAtStart(loadedGarden.elapsedMs)
-        setSessionStartElementCount(loadedGarden.elements.length)
+        setDayGarden(localGarden)
+        dayGardenRef.current = localGarden
+        setCumElapsedAtStart(localGarden.elapsedMs)
+        setSessionStartElementCount(localGarden.elements.length)
+      }
+      // Pull cloud (best-effort) + merge. Si pas de réseau ou pas encore de
+      // ligne en DB, on reste sur le localGarden (et on pushera plus tard).
+      const cloudGarden = await pullGardenFromSupabase(supabase, user.id)
+      if (cancelled) return
+      if (cloudGarden) {
+        const merged = mergeGardenStates(localGarden, cloudGarden)
+        setDayGarden(merged)
+        dayGardenRef.current = merged
+        setCumElapsedAtStart(merged.elapsedMs)
+        setSessionStartElementCount(merged.elements.length)
+        saveDayGarden(merged, user.id)
+        // Si le merge diffère du cloud, on pousse pour que les autres devices voient
+        // tout de suite l'état le plus récent.
+        if (
+          merged.elapsedMs !== cloudGarden.elapsedMs ||
+          merged.fichesCount !== cloudGarden.fichesCount ||
+          merged.elements.length !== cloudGarden.elements.length
+        ) {
+          pushGardenToSupabase(supabase, user.id, merged)
+        }
+      } else {
+        // Aucune ligne cloud : on initialise avec le state local
+        // (utile pour les comptes existants qui n'avaient que localStorage).
+        if (localGarden.elapsedMs > 0 || localGarden.elements.length > 0 || localGarden.fichesCount > 0) {
+          pushGardenToSupabase(supabase, user.id, localGarden)
+        }
       }
 
       // 3) Données fiches/matières
@@ -1409,7 +1519,7 @@ function FocusPageBody() {
   }, [supabase, router, lessonParam, systemParam, today])
 
   // Sauvegarde périodique de l'elapsed cumul (toutes les 30s) pour ne pas perdre
-  // le temps écoulé si l'utilisateur ferme l'onglet
+  // le temps écoulé si l'utilisateur ferme l'onglet. Push aussi Supabase.
   useEffect(() => {
     if (phase !== 'session') return
     const intv = setInterval(() => {
@@ -1417,16 +1527,19 @@ function FocusPageBody() {
       const next: DayGardenState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
       dayGardenRef.current = next
       saveDayGarden(next, userIdRef.current)
+      pushGardenToSupabase(supabase, userIdRef.current, next)
     }, 30000)
     return () => clearInterval(intv)
-  }, [phase, cumElapsedAtStart, startedAt])
+  }, [phase, cumElapsedAtStart, startedAt, supabase])
 
-  // Sauvegarde finale au démontage de la page
+  // Sauvegarde finale au démontage de la page (localStorage + push cloud best-effort)
   useEffect(() => {
     return () => {
       if (startedAt === 0) return
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      saveDayGarden({ ...dayGardenRef.current, elapsedMs: totalElapsed }, userIdRef.current)
+      const finalState: DayGardenState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
+      saveDayGarden(finalState, userIdRef.current)
+      pushGardenToSupabase(supabase, userIdRef.current, finalState)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1499,6 +1612,9 @@ function FocusPageBody() {
       dayGardenRef.current = updatedGarden
       setDayGarden(updatedGarden)
       saveDayGarden(updatedGarden, userIdRef.current)
+      // Push cloud immédiat : si l'utilisateur change d'appareil juste après,
+      // il retrouve sa dernière fleur tout de suite.
+      pushGardenToSupabase(supabase, userIdRef.current, updatedGarden)
     }
 
     // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
