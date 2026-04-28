@@ -391,7 +391,7 @@ function FocusPageBody() {
   const sec = elapsedSec % 60
   const total = queue.length
   const progressPct = Math.round((currentIdx / total) * 100)
-  const sysColor = currentSystem?.color || '#2D6A4F'
+  const sysColor = (currentSystem as { color?: string } | undefined)?.color || '#2D6A4F'
 
   let statusLabel = ''
   let statusCls: 'missed' | 'today' | 'fresh' = 'today'
