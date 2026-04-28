@@ -290,105 +290,98 @@
 .today-item-arrow { color: var(--dim); font-size: 13px; }
 .today-item.highlight .today-item-arrow { color: var(--rose); }
 
-/* CTA column */
-.today-cta {
-  background: linear-gradient(160deg, #0F2F22 0%, var(--green) 55%, #234D3A 100%);
-  color: white;
-  padding: 26px 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+/* =========== ZONE 1 BIS : MINI JARDIN (remplace l'ancien side panel CTA) ===========
+   Le mini-jardin se loge dans la 2e colonne du .today grid (280px). Il sert à la fois
+   de visuel d'accueil et de point d'entrée vers la session focus. Les classes sont
+   préfixées .dash-garden- pour rester scope-isolées. */
+.dash-garden {
   position: relative;
   overflow: hidden;
+  background: #C8DCEA;
+  display: flex;
+  flex-direction: column;
 }
-.today-cta::before {
-  content: '';
+.dash-garden-svg {
   position: absolute;
-  top: -60px; right: -60px;
-  width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(216,234,224,.14) 0%, transparent 65%);
-  pointer-events: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.today-cta-top { position: relative; z-index: 1; }
-.today-cta-label {
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: .22em;
-  color: #A8C5B5;
-  font-weight: 700;
-  margin-bottom: 12px;
+.dash-garden-overlay {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding: 14px 16px 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: linear-gradient(to top, rgba(11, 25, 18, .55) 0%, rgba(11, 25, 18, .25) 60%, transparent 100%);
 }
-.today-cta-num {
+.dash-garden-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.dash-garden-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+}
+.dash-garden-num {
   font-family: 'Fraunces', serif;
-  font-size: 72px;
+  font-size: 22px;
   font-weight: 500;
-  letter-spacing: -.03em;
   line-height: 1;
-  color: #F5F2EA;
+  letter-spacing: -.02em;
 }
-.today-cta-unit {
-  font-family: 'Fraunces', serif;
-  font-size: 15px;
-  font-style: italic;
-  color: #A8C5B5;
-  margin-top: 4px;
+.dash-garden-lbl {
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  font-weight: 500;
+  opacity: .9;
 }
-.today-cta-time {
+.dash-garden-cta-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  justify-content: space-between;
+}
+.dash-garden-queue {
   font-size: 11.5px;
-  color: #C8D7CF;
-  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .92);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
 }
-.today-cta-time::before {
-  content: '';
-  width: 14px; height: 1px;
-  background: #A8C5B5;
+.dash-garden-queue strong {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  color: white;
+  font-size: 14px;
 }
-.today-cta-time strong { color: #E7E4DC; font-weight: 600; }
-
-.today-cta-bottom { position: relative; z-index: 1; }
-.btn-focus {
-  width: 100%;
-  background: #F5F2EA;
+.dash-garden-cta {
+  background: white;
   color: var(--green);
   border: none;
-  padding: 15px 20px;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13.5px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: .01em;
+  text-decoration: none;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: transform .12s, box-shadow .12s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
 }
-.btn-focus:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
-.btn-focus:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-.btn-focus::before {
-  content: '\25B6';
-  font-size: 9px;
-  background: var(--gm);
-  color: white;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn-focus-hint {
-  font-size: 10px;
-  color: #A8C5B5;
-  text-align: center;
-  letter-spacing: .04em;
-  margin-top: 10px;
-}
+.dash-garden-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); }
 
 /* =========== ZONE 2 : POINT FAIBLE =========== */
 .weak-matiere {
@@ -463,8 +456,8 @@
   border: 1px solid var(--border);
   border-radius: 9px;
 }
-.weak-item-name { font-family: 'Fraunces', serif; font-size: 13.5px; font-weight: 500; color: var(--dark); line-height: 1.2; }
-.weak-item-meta { font-size: 10px; color: var(--gray); margin-top: 2px; text-transform: uppercase; letter-spacing: .08em; }
+.weak-item-name { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 500; color: var(--dark); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.weak-item-meta { font-size: 10.5px; color: var(--gray); margin-top: 3px; text-transform: uppercase; letter-spacing: .08em; }
 .weak-item-score {
   display: flex;
   align-items: center;
@@ -599,7 +592,7 @@
 .reg-day-dot {
   width: 100%;
   aspect-ratio: 1;
-  max-width: 22px;
+  max-width: 26px;
   border-radius: 50%;
   background: #EFEBE2;
   border: 1.5px solid var(--border);
@@ -607,19 +600,19 @@
 .reg-day.done .reg-day-dot { background: var(--gm); border-color: var(--gm); box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
 .reg-day.today .reg-day-dot { background: white; border-color: var(--gm); border-width: 2px; box-shadow: 0 0 0 3px rgba(45,106,79,.15); }
 .reg-day.today.done .reg-day-dot { background: var(--gm); }
-.reg-day-label { font-size: 9.5px; color: var(--gray); font-weight: 600; letter-spacing: .04em; }
+.reg-day-label { font-size: 10.5px; color: var(--gray); font-weight: 600; letter-spacing: .04em; }
 .reg-day.today .reg-day-label { color: var(--gm); font-weight: 700; }
 
 /* =========== ZONE 4 : CHARGE À VENIR =========== */
-.load-rows { display: flex; flex-direction: column; gap: 11px; flex: 1; justify-content: center; }
+.load-rows { display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: center; }
 .load-row {
   display: grid;
-  grid-template-columns: 38px 1fr 30px;
+  grid-template-columns: 42px 1fr 36px;
   align-items: center;
   gap: 12px;
 }
 .load-week {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--gray);
   text-transform: uppercase;
   letter-spacing: .1em;
@@ -643,17 +636,17 @@
 .load-bar-f.peak { background: linear-gradient(90deg, var(--amber-soft), var(--amber)); }
 .load-count {
   font-family: 'Fraunces', serif;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 .load-count.peak { color: var(--amber); }
 .load-note {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--gray);
   line-height: 1.5;
-  margin-top: 12px;
+  margin-top: 14px;
   padding-top: 12px;
   border-top: 1px dashed var(--border);
   font-style: italic;
@@ -1137,7 +1130,7 @@
 @media (max-width: 980px) {
   .dash-row { grid-template-columns: 1fr; }
   .today { grid-template-columns: 1fr; }
-  .today-cta { padding: 22px 24px; }
+  .dash-garden { min-height: 220px; }
   .dash-page { height: auto; overflow: auto; }
   .dash { overflow: visible; }
 }
