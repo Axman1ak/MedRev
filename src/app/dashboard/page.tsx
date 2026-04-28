@@ -488,9 +488,13 @@ function DashGarden({
       }
     })()
 
-    // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert
+    // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert.
+    // On re-vérifie userId pour que TypeScript narrow dans la closure onStorage
+    // (le narrowing du if (!userId) return tout en haut ne traverse pas l'iife async).
+    if (!userId) return
+    const uid: string = userId
     function onStorage(e: StorageEvent) {
-      if (e.key === 'medrev-garden-' + userId) setGarden(readGardenLocal(userId))
+      if (e.key === 'medrev-garden-' + uid) setGarden(readGardenLocal(uid))
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
