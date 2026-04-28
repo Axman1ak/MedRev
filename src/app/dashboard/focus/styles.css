@@ -101,35 +101,36 @@
   color: #111310;
 }
 
-/* ============ STAGE : 2 zones (jardin + card) ============ */
+/* ============ STAGE : jardin en fond + card flottante ============ */
 .focus-stage {
   position: relative;
   flex: 1;
   display: flex;
   align-items: stretch;
-  justify-content: stretch;
   padding: 0;
   overflow: hidden;
   min-height: 0;
-}
-
-/* ---- Zone JARDIN (gauche) ---- */
-.focus-garden {
-  flex: 0 0 44%;
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
   background: linear-gradient(
     180deg,
     #F8F2E5 0%,
-    #F2EAD3 35%,
-    #E8E0C6 60%,
-    #D8E4CD 100%
+    #F2EAD3 30%,
+    #E8E0C6 55%,
+    #D8E4CD 85%,
+    #C9DCB5 100%
   );
-  border-right: 1px solid #E1DDD3;
-  overflow: hidden;
-  min-height: 0;
+}
+
+/* ---- Zone JARDIN : SVG absolute qui occupe la moitié gauche ---- */
+.focus-garden {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 56%;
+  display: flex;
+  align-items: stretch;
+  pointer-events: none;
+  z-index: 1;
 }
 .focus-garden-svg {
   width: 100%;
@@ -137,26 +138,32 @@
   display: block;
 }
 
-/* ---- Zone CARD (droite) ---- */
+/* ---- Zone CARD : flex pleine largeur, card alignée à droite avec floating ---- */
 .focus-card-zone {
   position: relative;
   flex: 1 1 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 32px 28px;
+  justify-content: flex-end;
+  padding: 28px 40px 28px 24px;
   overflow-y: auto;
   min-width: 0;
+  z-index: 2;
 }
 
 .focus-card {
-  background: white;
-  border: 1px solid #E1DDD3;
+  background: rgba(255, 255, 255, 0.97);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid rgba(225, 221, 211, 0.65);
   border-radius: 18px;
-  padding: 32px 36px;
+  padding: 30px 34px;
   width: 100%;
-  max-width: 540px;
-  box-shadow: 0 24px 60px rgba(17, 19, 16, .08);
+  max-width: 480px;
+  box-shadow:
+    0 24px 60px rgba(17, 19, 16, 0.14),
+    0 6px 16px rgba(17, 19, 16, 0.06);
+  position: relative;
 }
 
 /* ============ KICKER (matière + statut) ============ */
@@ -577,6 +584,111 @@
   height: 130px;
 }
 
+/* ============ COMBO CHIP (gamification) ============ */
+.focus-combo {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 9px 18px;
+  border-radius: 28px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 12;
+  background: white;
+  border: 1.5px solid #E1DDD3;
+  color: #2D6A4F;
+  box-shadow: 0 6px 16px rgba(17, 19, 16, 0.12);
+  animation: focus-combo-pulse .45s cubic-bezier(.34, 1.56, .64, 1);
+  white-space: nowrap;
+}
+.focus-combo-x {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+}
+.focus-combo-label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.focus-combo-tier1 { color: #2D6A4F; border-color: #BBD4B8; }
+.focus-combo-tier2 {
+  color: #1B4332;
+  border-color: #7AA56B;
+  background: #EAF2E2;
+}
+.focus-combo-tier3 {
+  color: #C47B2B;
+  border-color: #E08B3C;
+  background: #FBF1DE;
+  box-shadow: 0 6px 18px rgba(196, 123, 43, 0.25);
+}
+.focus-combo-tier4 {
+  color: #C75050;
+  border-color: #C75050;
+  background: linear-gradient(135deg, #FCEFEF 0%, #FBF1DE 100%);
+  box-shadow: 0 8px 22px rgba(199, 80, 80, 0.3);
+  animation: focus-combo-pulse .45s cubic-bezier(.34, 1.56, .64, 1), focus-combo-shake 1.6s ease-in-out infinite;
+}
+
+@keyframes focus-combo-pulse {
+  0% { transform: translateX(-50%) scale(1.35); opacity: 0.6; }
+  60% { transform: translateX(-50%) scale(0.96); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+@keyframes focus-combo-shake {
+  0%, 100% { transform: translateX(-50%) rotate(-1.2deg); }
+  50% { transform: translateX(-50%) rotate(1.2deg); }
+}
+
+/* ============ PARTICULES (burst à la notation) ============ */
+.focus-particle {
+  animation: focus-particle-fly .85s cubic-bezier(.22, .61, .36, 1) forwards;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+@keyframes focus-particle-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  60% {
+    opacity: 0.8;
+    transform: translate(calc(var(--px-dx) * 0.85), calc(var(--px-dy) * 0.85)) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--px-dx), var(--px-dy)) scale(0.2);
+  }
+}
+
+/* ============ LUCIOLES (ambient) ============ */
+.focus-firefly {
+  filter: drop-shadow(0 0 2px #F8E5A0);
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation:
+    focus-firefly-glow 2.4s ease-in-out infinite alternate,
+    focus-firefly-drift 8s ease-in-out infinite alternate;
+  animation-fill-mode: both;
+}
+@keyframes focus-firefly-glow {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+@keyframes focus-firefly-drift {
+  from { transform: translate(0, 0); }
+  to { transform: translate(var(--ff-dx), var(--ff-dy)); }
+}
+
 /* ============ NAVIGATION FLÈCHES ============ */
 .focus-nav-arrow {
   position: absolute;
@@ -685,24 +797,29 @@
 
 /* ============ RESPONSIVE ============ */
 
-/* Tablette / petit desktop : on garde les 2 zones mais on réduit le jardin */
+/* Tablette / petit desktop : jardin un peu réduit en width */
 @media (max-width: 1024px) {
-  .focus-garden { flex: 0 0 38%; }
-  .focus-card { max-width: 480px; padding: 28px 28px; }
-  .focus-card-zone { padding: 24px 20px; }
+  .focus-garden { width: 50%; }
+  .focus-card { max-width: 440px; padding: 26px 28px; }
+  .focus-card-zone { padding: 24px 28px 24px 20px; }
 }
 
-/* Mobile : empilement vertical, jardin en bandeau du haut */
+/* Mobile : layout en colonne, jardin en bandeau du haut */
 @media (max-width: 720px) {
   .focus-stage { flex-direction: column; }
   .focus-garden {
-    flex: 0 0 32vh;
-    min-height: 240px;
-    max-height: 320px;
-    border-right: none;
-    border-bottom: 1px solid #E1DDD3;
+    position: relative;
+    width: 100%;
+    height: 30vh;
+    min-height: 220px;
+    max-height: 300px;
+    flex: 0 0 auto;
   }
-  .focus-card-zone { padding: 20px 16px; }
+  .focus-card-zone {
+    padding: 18px 16px 20px;
+    justify-content: center;
+    align-items: flex-start;
+  }
   .focus-card { max-width: 540px; padding: 22px 20px; }
 
   .focus-topbar { padding: 12px 16px; gap: 12px; }
@@ -725,10 +842,17 @@
   .focus-nav-prev { left: 8px; }
   .focus-nav-next { right: 8px; }
   .focus-bilan-cta { padding: 6px 12px; font-size: 11px; }
+
+  .focus-combo {
+    top: 6px;
+    padding: 7px 14px;
+  }
+  .focus-combo-x { font-size: 16px; }
+  .focus-combo-label { font-size: 9.5px; }
 }
 
 @media (max-width: 480px) {
-  .focus-garden { flex: 0 0 26vh; min-height: 180px; }
+  .focus-garden { height: 24vh; min-height: 160px; }
   /* Sur très petit écran on cache les arrows latérales — l'utilisateur navigue
      via l'inline "Suivante" et le clavier. */
   .focus-nav-arrow { display: none; }
