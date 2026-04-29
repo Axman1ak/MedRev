@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'r
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import GardenSvg, { type GardenElement } from '@/components/GardenSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -331,12 +332,10 @@ function buildMetaForDue(due: DueInfo, systemName: string, lastScore: Score | nu
 
 // ======================= MINI JARDIN (lecture du state Focus) =======================
 // On ne fait QUE lire l'état du jardin (localStorage prioritaire, Supabase optionnel).
-// Le jardin est cultivé sur la page /dashboard/focus — ici on l'expose en aperçu.
-type GardenKind =
-  | 'flower' | 'tulip' | 'sunflower' | 'mushroom'
-  | 'butterfly' | 'rabbit' | 'squirrel' | 'owl' | 'deer' | 'fox'
-  | 'pond' | 'sapling' | 'log'
-type GardenElement = { kind: GardenKind; x: number; y: number; variant?: string }
+// Le jardin est cultivé sur la page /dashboard/focus — ici on l'expose en aperçu
+// via le composant <GardenSvg> partagé, ce qui garantit un rendu strictement
+// identique à celui du focus (ciel gradient horaire, soleil/lune, montagnes,
+// arbre central avec branches & feuillage, éléments détaillés).
 type GardenSnapshot = { elapsedMs: number; fichesCount: number; elements: GardenElement[] }
 
 function readGardenLocal(userId: string): GardenSnapshot {
@@ -367,99 +366,18 @@ function countGardenElements(els: GardenElement[]): GardenCounts {
   return c
 }
 
-const FLOWER_COLOR: Record<string, string> = {
-  red: '#C75050', yellow: '#FBD56B', pink: '#F4B5C9',
-  orange: '#E89A4F', purple: '#9C68B0', white: '#FFE5DD',
-}
-const BUTTERFLY_COLOR: Record<string, [string, string]> = {
-  amber: ['#E89A4F', '#FBD56B'],
-  blue:  ['#7AA8E0', '#A8C8E8'],
-  purple:['#9C68B0', '#D5B0E0'],
-}
-
-// ---- Helpers SVG du mini-jardin (sortis hors composant, pas de hooks). ----
-// Échelle des positions du focus (1600x1000) → mini-jardin (400x240).
-// On rabat les fleurs sur la zone visible pour ne PAS perdre d'éléments si
-// le viewBox du focus est plus large que celui du dashboard.
-const DG_VW = 400
-const DG_VH = 240
-const DG_SOIL_TOP = 170 // y où commence l'herbe
-const DG_SOIL_BOT = 240 // y du bas du SVG
-
-function dgScalePos(x: number, y: number): { x: number; y: number; band: 'sky' | 'soil' } {
-  const sx = (x / 1600) * DG_VW
-  if (y >= 700) {
-    // élément au sol → réparti sur la bande d'herbe
-    const t = Math.min(1, Math.max(0, (y - 700) / 300))
-    return { x: sx, y: DG_SOIL_TOP + t * (DG_SOIL_BOT - DG_SOIL_TOP - 6) + 4, band: 'soil' }
-  }
-  // élément en l'air (papillon, etc.) → réparti dans le ciel
-  const t = Math.min(1, Math.max(0, y / 700))
-  return { x: sx, y: 30 + t * (DG_SOIL_TOP - 50), band: 'sky' }
-}
-
-function renderTree(p: number) {
-  // Tronc + canopée. Pas de scale group : on dessine directement à la bonne taille.
-  // p = 0 : juste un sapling visible. p = 1 : grand arbre.
-  const trunkH = 28 + p * 50  // 28 → 78
-  const trunkW = 5 + p * 5    // 5 → 10
-  const canR = 18 + p * 26    // 18 → 44
-  const cx = 200
-  const groundY = DG_SOIL_TOP + 4
-  const trunkTop = groundY - trunkH
-  return (
-    <g>
-      <rect x={cx - trunkW / 2} y={trunkTop} width={trunkW} height={trunkH} fill="#6B4F35" />
-      <rect x={cx - trunkW / 2} y={trunkTop} width={trunkW / 2} height={trunkH} fill="#5A4128" opacity=".4" />
-      <ellipse cx={cx} cy={trunkTop - 4} rx={canR} ry={canR * 0.85} fill="#3B6D11" />
-      {p >= 0.4 ? <ellipse cx={cx - canR * 0.5} cy={trunkTop - 2} rx={canR * 0.6} ry={canR * 0.55} fill="#4A8A1F" /> : null}
-      {p >= 0.6 ? <ellipse cx={cx + canR * 0.5} cy={trunkTop - 2} rx={canR * 0.6} ry={canR * 0.55} fill="#4A8A1F" /> : null}
-      {p >= 0.8 ? <ellipse cx={cx} cy={trunkTop - canR * 0.6} rx={canR * 0.7} ry={canR * 0.5} fill="#5AA02A" /> : null}
-    </g>
-  )
-}
-
-function renderGardenElement(el: GardenElement, i: number) {
-  const pos = dgScalePos(el.x, el.y)
-  const x = pos.x
-  const y = pos.y
-  if (el.kind === 'flower' || el.kind === 'tulip' || el.kind === 'sunflower') {
-    const color = FLOWER_COLOR[el.variant ?? 'red'] ?? '#C75050'
-    const r = el.kind === 'sunflower' ? 4.5 : el.kind === 'tulip' ? 3.5 : 3
-    return <circle key={i} cx={x} cy={y} r={r} fill={color} stroke="white" strokeWidth=".5" opacity=".95" />
-  }
-  if (el.kind === 'butterfly') {
-    const cols = BUTTERFLY_COLOR[el.variant ?? 'amber'] ?? BUTTERFLY_COLOR.amber
-    return (
-      <g key={i}>
-        <ellipse cx={x - 2.4} cy={y} rx="2.6" ry="1.9" fill={cols[0]} />
-        <ellipse cx={x + 2.4} cy={y} rx="2.6" ry="1.9" fill={cols[1]} />
-        <line x1={x} y1={y - 1.4} x2={x} y2={y + 1.6} stroke="#3D2A1F" strokeWidth=".8" />
-      </g>
-    )
-  }
-  if (el.kind === 'mushroom') {
-    const cap = el.variant === 'orange' ? '#E89A4F' : '#C75050'
-    return (
-      <g key={i}>
-        <rect x={x - 1} y={y - 1} width="2" height="3" fill="#E8DDC4" />
-        <ellipse cx={x} cy={y - 1.5} rx="3" ry="2" fill={cap} />
-      </g>
-    )
-  }
-  if (el.kind === 'rabbit') return <ellipse key={i} cx={x} cy={y} rx="3.5" ry="2.6" fill="#E0D5C0" stroke="#9C8E70" strokeWidth=".4" />
-  if (el.kind === 'pond')   return <ellipse key={i} cx={x} cy={y} rx="16" ry="4.5" fill="#5B8ED4" opacity=".8" />
-  return <circle key={i} cx={x} cy={y} r="3" fill="#3B2F1F" />
-}
-
 // ======================= MINI JARDIN COMPONENT =======================
-// Aperçu compact du jardin annuel : ciel + arbre + fleurs/papillons.
-// Ne fait QUE lire le state — toute culture du jardin se fait sur /dashboard/focus.
+// Aperçu compact du jardin annuel : utilise <GardenSvg> pour un rendu identique
+// au focus, juste à plus petite échelle. Toute la culture du jardin se fait
+// sur /dashboard/focus.
 function DashGarden({
   userId, queueLength, startHref,
 }: { userId: string | null; queueLength: number; startHref: string }) {
   const supabase = createClient()
   const [garden, setGarden] = useState<GardenSnapshot | null>(null)
+  // nowMs rafraîchi périodiquement pour que le ciel évolue avec l'heure réelle
+  // (gradient interpolé selon heure, soleil/lune sur arc, étoiles au crépuscule).
+  const [nowMs, setNowMs] = useState<number>(() => Date.now())
 
   useEffect(() => {
     if (!userId) return
@@ -509,18 +427,32 @@ function DashGarden({
     return () => window.removeEventListener('storage', onStorage)
   }, [userId, supabase])
 
-  const treeProgress = garden ? Math.max(0, Math.min(1, garden.elapsedMs / GARDEN_TIME_TO_FULL_MS)) : 0
+  // Refresh visibilité du jardin si on revient sur l'onglet (ex: après une session focus
+  // dans un autre onglet). Le storage event seul ne suffit pas si tab inactif.
+  useEffect(() => {
+    if (!userId) return
+    const uid = userId
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        setGarden(readGardenLocal(uid))
+        setNowMs(Date.now())
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [userId])
+
+  // Tick du ciel toutes les 60s — l'arc du soleil/lune et le gradient évoluent
+  // avec l'heure réelle, comme sur le focus.
+  useEffect(() => {
+    const t = window.setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => window.clearInterval(t)
+  }, [])
+
   const counts = garden ? countGardenElements(garden.elements) : { flowers: 0, butterflies: 0, animals: 0, rares: 0 }
   const elements = garden?.elements ?? []
+  const elapsedMs = garden?.elapsedMs ?? 0
 
-  // Heure réelle pour l'ambiance ciel (jour ou nuit, sans tous les keyframes du focus)
-  const hour = new Date().getHours()
-  const isDay = hour >= 7 && hour < 19
-  const skyTop = isDay ? '#7AA0B8' : '#1F2A4A'
-  const skyMid = isDay ? '#B6CFD8' : '#3D3A6A'
-
-  // Styles inline : on veut que le mini-jardin reste visible même si le CSS
-  // .dash-garden-* n'est pas encore chargé (snapshot CSS pas pushé, cache, etc.).
   const wrapStyle: CSSProperties = {
     position: 'relative',
     overflow: 'hidden',
@@ -529,7 +461,7 @@ function DashGarden({
     minHeight: 220,
     display: 'flex',
     flexDirection: 'column',
-    background: skyTop,
+    background: '#1F2A4A', // fallback avant render SVG
   }
   const svgStyle: CSSProperties = {
     position: 'absolute',
@@ -551,36 +483,13 @@ function DashGarden({
 
   return (
     <div className="dash-garden" style={wrapStyle}>
-      <svg
-        viewBox={`0 0 ${DG_VW} ${DG_VH}`}
-        preserveAspectRatio="xMidYMax slice"
+      <GardenSvg
+        elements={elements}
+        elapsedMs={elapsedMs}
+        timeToFullMs={GARDEN_TIME_TO_FULL_MS}
+        nowMs={nowMs}
         style={svgStyle}
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient id="dgSky" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor={skyTop} />
-            <stop offset="1" stopColor={skyMid} />
-          </linearGradient>
-          <linearGradient id="dgGround" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#7AA56B" />
-            <stop offset="1" stopColor="#5A8A4A" />
-          </linearGradient>
-        </defs>
-
-        <rect x="0" y="0" width={DG_VW} height={DG_SOIL_TOP} fill="url(#dgSky)" />
-        {isDay ? (
-          <circle cx={60 + ((hour - 7) / 12) * 280} cy={70 - Math.sin(((hour - 7) / 12) * Math.PI) * 40} r="13" fill="#FBD56B" opacity=".9" />
-        ) : (
-          <circle cx="320" cy="50" r="10" fill="#E8E4D0" />
-        )}
-        <ellipse cx="80" cy="44" rx="28" ry="6" fill="white" opacity={isDay ? .7 : .25} />
-        <ellipse cx="280" cy="32" rx="22" ry="5" fill="white" opacity={isDay ? .6 : .2} />
-        <rect x="0" y={DG_SOIL_TOP} width={DG_VW} height={DG_VH - DG_SOIL_TOP} fill="url(#dgGround)" />
-
-        {renderTree(treeProgress)}
-        {elements.map((el, i) => renderGardenElement(el, i))}
-      </svg>
+      />
 
       <div className="dash-garden-overlay" style={overlayStyle}>
         <div className="dash-garden-stats" style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
