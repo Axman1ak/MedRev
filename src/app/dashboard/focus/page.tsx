@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { GARDEN_TIME_MULTIPLIER, GARDEN_TICK_MS } from '@/components/GardenSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -851,9 +852,11 @@ const HERO_GROUND_Y = 750
 function FocusGarden({ elements, elapsedMs, timeToFullMs, nowMs, particleBurst, forceFull = false }: GardenProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
-  // ============ Heure réelle pour le cycle jour/nuit ============
-  const nowDate = new Date(nowMs ?? Date.now())
-  const hour = nowDate.getHours() + nowDate.getMinutes() / 60
+  // ============ Cycle jour/nuit accéléré ============
+  // GARDEN_TIME_MULTIPLIER=72 → 24h simulées en 20min réelles.
+  // Même vitesse que le mini-jardin du dashboard (cf. GardenSvg.tsx).
+  const realMs = nowMs ?? Date.now()
+  const hour = (((realMs / 3_600_000) * GARDEN_TIME_MULTIPLIER) % 24 + 24) % 24
   const sky = skyAtHour(hour)
 
   // Soleil visible 6h-19h (arc sinusoïdal)
@@ -1547,7 +1550,10 @@ function FocusPageBody() {
   // Tick chrono en mode session
   useEffect(() => {
     if (phase !== 'session') return
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    // Tick GARDEN_TICK_MS=100ms pour un mouvement fluide du soleil/lune en arc
+    // de cercle (vs 1000ms qui rendait le déplacement saccadé avec le cycle
+    // accéléré). Re-render léger : SVG sans state interne.
+    const t = setInterval(() => setNow(Date.now()), GARDEN_TICK_MS)
     return () => clearInterval(t)
   }, [phase])
 
