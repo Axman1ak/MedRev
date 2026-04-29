@@ -128,8 +128,16 @@
   background: var(--gm);
   border-radius: 2px;
 }
-.dash-card-title.with-action { justify-content: space-between; width: 100%; }
-.dash-card-title.with-action .see-more { text-transform: none; letter-spacing: .02em; }
+.dash-card-title.with-action { width: 100%; }
+/* Le bouton "Tout voir" est poussé à droite via margin-auto, ce qui garde
+   le texte ("Point faible") collé au trait vert avec son gap normal.
+   On évite justify-content: space-between qui éparpillait ::before, texte
+   et button aux extrêmes (le texte se retrouvait isolé au milieu). */
+.dash-card-title.with-action .see-more {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: .02em;
+}
 
 /* =========== SEE MORE LINK =========== */
 .see-more {
