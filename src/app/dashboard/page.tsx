@@ -442,10 +442,11 @@ function DashGarden({
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [userId])
 
-  // Tick du ciel toutes les 60s — l'arc du soleil/lune et le gradient évoluent
-  // avec l'heure réelle, comme sur le focus.
+  // Tick rapide pour le cycle jour/nuit accéléré (timeMultiplier=240 → 24h en 6min).
+  // Refresh toutes les 2s pour un mouvement fluide du soleil/lune et du gradient.
+  // Le SVG est sans state interne, ce re-render reste léger.
   useEffect(() => {
-    const t = window.setInterval(() => setNowMs(Date.now()), 60_000)
+    const t = window.setInterval(() => setNowMs(Date.now()), 2_000)
     return () => window.clearInterval(t)
   }, [])
 
@@ -489,6 +490,13 @@ function DashGarden({
         timeToFullMs={GARDEN_TIME_TO_FULL_MS}
         nowMs={nowMs}
         style={svgStyle}
+        // viewBox recadré sur l'arbre central (HERO_TRUNK_X=440 dans le viewBox
+        // 40-840, centre = 440 → arbre à 50% horizontal quel que soit le ratio
+        // du container).
+        viewBox="40 0 800 1000"
+        // 24h en 6min de temps réel — l'étudiant voit passer matin/soir/nuit
+        // même pendant une session de jour. Modifier ici pour ralentir/accélérer.
+        timeMultiplier={240}
       />
 
       <div className="dash-garden-overlay" style={overlayStyle}>
