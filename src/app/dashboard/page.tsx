@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'r
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import GardenSvg, { type GardenElement } from '@/components/GardenSvg'
+import GardenSvg, { type GardenElement, GARDEN_TIME_MULTIPLIER, GARDEN_TICK_MS } from '@/components/GardenSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -442,11 +442,11 @@ function DashGarden({
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [userId])
 
-  // Tick rapide pour le cycle jour/nuit accéléré (timeMultiplier=240 → 24h en 6min).
-  // Refresh toutes les 2s pour un mouvement fluide du soleil/lune et du gradient.
-  // Le SVG est sans state interne, ce re-render reste léger.
+  // Tick rapide pour le cycle jour/nuit accéléré. À GARDEN_TICK_MS=100ms (10fps),
+  // le soleil/lune se déplacent de manière lisse en arc de cercle plutôt que par
+  // sauts. Le SVG est sans state interne, ce re-render reste léger.
   useEffect(() => {
-    const t = window.setInterval(() => setNowMs(Date.now()), 2_000)
+    const t = window.setInterval(() => setNowMs(Date.now()), GARDEN_TICK_MS)
     return () => window.clearInterval(t)
   }, [])
 
@@ -494,9 +494,8 @@ function DashGarden({
         // 40-840, centre = 440 → arbre à 50% horizontal quel que soit le ratio
         // du container).
         viewBox="40 0 800 1000"
-        // 24h en 6min de temps réel — l'étudiant voit passer matin/soir/nuit
-        // même pendant une session de jour. Modifier ici pour ralentir/accélérer.
-        timeMultiplier={240}
+        // Cycle jour/nuit : même multiplier que le focus (cf. GardenSvg.tsx).
+        timeMultiplier={GARDEN_TIME_MULTIPLIER}
       />
 
       <div className="dash-garden-overlay" style={overlayStyle}>
