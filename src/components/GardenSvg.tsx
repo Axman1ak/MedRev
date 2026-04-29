@@ -279,6 +279,9 @@ type GardenSvgProps = {
    *  Utilisé sur le mini-jardin pour que l'étudiant voie passer la nuit même
    *  pendant des sessions de jour. */
   timeMultiplier?: number
+  /** Burst de particules dorées (utilisé sur le focus à chaque notation).
+   *  ts incrémenté pour re-déclencher l'animation CSS focus-particle-fly. */
+  particleBurst?: { ts: number; x?: number; y?: number } | null
 }
 
 // ============ COMPOSANT ============
@@ -293,6 +296,7 @@ export default function GardenSvg({
   injectStyles = true,
   viewBox = '0 0 1600 1000',
   timeMultiplier = 1,
+  particleBurst = null,
 }: GardenSvgProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
@@ -331,152 +335,360 @@ export default function GardenSvg({
     const k = `el-${idx}`
     switch (el.kind) {
       case 'flower': {
+        // 5 pétales en éventail + tige courbée + petite feuille latérale.
+        // Centre avec pistil et highlight pour la profondeur.
         const c = FLOWER_COLORS[el.variant ?? 'red']
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <line x1={0} y1={0} x2={0} y2={-22} stroke="#5E8954" strokeWidth={1.6} />
-            <ellipse cx={0} cy={-22} rx={5} ry={3} fill={c} transform="rotate(-30 0 -22)" />
-            <ellipse cx={0} cy={-22} rx={5} ry={3} fill={c} transform="rotate(30 0 -22)" />
-            <ellipse cx={0} cy={-25} rx={4} ry={2.5} fill={c} />
-            <circle cx={0} cy={-23} r={1.6} fill="#FBD56B" />
+            {/* Tige courbée */}
+            <path d="M 0 0 Q -1.5 -10 -0.5 -22" stroke="#5E8954" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+            {/* Petite feuille sur la tige */}
+            <path d="M -0.8 -12 Q -7 -14 -8 -10 Q -4 -9 -0.8 -10 Z" fill="#5E8954" />
+            <path d="M -0.8 -11.5 Q -5 -12.5 -7 -10.5" stroke="#3F5E4A" strokeWidth={0.4} fill="none" />
+            {/* 5 pétales en arrière-plan (rotation à 72°) */}
+            {[0, 72, 144, 216, 288].map(a => (
+              <ellipse key={a} cx={0} cy={-26} rx={3.2} ry={4.5}
+                       fill={c}
+                       transform={`rotate(${a} 0 -22)`} />
+            ))}
+            {/* 5 pétales avant (plus petits, plus clairs) pour donner du relief */}
+            {[36, 108, 180, 252, 324].map(a => (
+              <ellipse key={a} cx={0} cy={-24} rx={2.2} ry={3}
+                       fill={c} opacity={0.85}
+                       transform={`rotate(${a} 0 -22)`} />
+            ))}
+            {/* Centre */}
+            <circle cx={0} cy={-22} r={1.8} fill="#A8741E" />
+            <circle cx={-0.5} cy={-22.5} r={0.6} fill="#FBD56B" />
           </g>
         )
       }
       case 'sunflower': {
+        // 12 pétales disposés en cercle + cœur brun avec pattern de graines.
+        const RAY = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <line x1={0} y1={0} x2={-6} y2={-32} stroke="#5E8954" strokeWidth={2.2} />
-            <line x1={-6} y1={-32} x2={-12} y2={-50} stroke="#5E8954" strokeWidth={1.7} />
-            <line x1={-6} y1={-32} x2={0} y2={-48} stroke="#5E8954" strokeWidth={1.7} />
-            <line x1={-6} y1={-32} x2={-2} y2={-58} stroke="#5E8954" strokeWidth={1.7} />
-            <ellipse cx={-12} cy={-52} rx={6} ry={4} fill="#FBD56B" />
-            <ellipse cx={0} cy={-50} rx={6} ry={4} fill="#FBD56B" />
-            <ellipse cx={-2} cy={-60} rx={6} ry={4} fill="#FBD56B" />
-            <circle cx={-12} cy={-52} r={2} fill="#A8741E" />
-            <circle cx={0} cy={-50} r={2} fill="#A8741E" />
-            <circle cx={-2} cy={-60} r={2} fill="#A8741E" />
+            {/* Tige droite */}
+            <path d="M 0 0 Q -1 -15 -2 -32" stroke="#5E8954" strokeWidth={2.2} fill="none" strokeLinecap="round" />
+            {/* Feuille longue */}
+            <path d="M -1.5 -16 Q -10 -22 -13 -14 Q -7 -12 -1.5 -14 Z" fill="#5E8954" />
+            <path d="M -1.5 -15.5 Q -7 -19 -11 -15" stroke="#3F5E4A" strokeWidth={0.5} fill="none" />
+            {/* Pétales (12 en couronne) */}
+            <g transform="translate(-2 -36)">
+              {RAY.map(a => (
+                <ellipse key={a} cx={0} cy={-9} rx={3} ry={5.5}
+                         fill="#FBD56B"
+                         transform={`rotate(${a})`} />
+              ))}
+              {/* Pétales avant plus clairs */}
+              {RAY.filter((_, i) => i % 2 === 0).map(a => (
+                <ellipse key={`b-${a}`} cx={0} cy={-9} rx={2} ry={4.5}
+                         fill="#FFE598"
+                         transform={`rotate(${a})`} />
+              ))}
+              {/* Centre brun */}
+              <circle cx={0} cy={0} r={5.5} fill="url(#sunflowerCenter)" />
+              {/* Pattern de graines (petits points concentriques) */}
+              <circle cx={0} cy={0} r={1} fill="#3D2418" />
+              <circle cx={2} cy={0.5} r={0.6} fill="#3D2418" />
+              <circle cx={-2} cy={0.5} r={0.6} fill="#3D2418" />
+              <circle cx={0} cy={-2} r={0.6} fill="#3D2418" />
+              <circle cx={1.5} cy={2} r={0.5} fill="#3D2418" />
+              <circle cx={-1.5} cy={2} r={0.5} fill="#3D2418" />
+              <circle cx={3} cy={-1.5} r={0.5} fill="#3D2418" />
+              <circle cx={-3} cy={-1.5} r={0.5} fill="#3D2418" />
+            </g>
           </g>
         )
       }
       case 'tulip': {
+        // Forme classique : 3 pétales fermés en coupe, gradient pour le volume.
         const c = FLOWER_COLORS[el.variant ?? 'red']
+        const cDark = el.variant === 'yellow' ? '#D8A53A' : el.variant === 'white' ? '#D8C4B8' : '#7A2A2A'
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <line x1={0} y1={0} x2={0} y2={-30} stroke="#5E8954" strokeWidth={2} />
-            <line x1={0} y1={-12} x2={-7} y2={-22} stroke="#5E8954" strokeWidth={1.2} />
-            <line x1={0} y1={-12} x2={7} y2={-22} stroke="#5E8954" strokeWidth={1.2} />
-            <ellipse cx={0} cy={-32} rx={4.5} ry={7} fill={c} />
-            <circle cx={0} cy={-30} r={1.4} fill="#FBD56B" />
+            {/* Tige */}
+            <path d="M 0 0 Q -0.5 -16 0 -32" stroke="#5E8954" strokeWidth={2} fill="none" strokeLinecap="round" />
+            {/* Feuille longue effilée */}
+            <path d="M 0 -14 Q -10 -20 -13 -8 Q -8 -6 0 -10 Z" fill="#5E8954" />
+            <path d="M 0 -13.5 Q -7 -16 -11 -10" stroke="#3F5E4A" strokeWidth={0.4} fill="none" />
+            {/* Pétale arrière */}
+            <path d="M -5 -32 Q -5 -42 0 -44 Q 5 -42 5 -32 Q 0 -28 -5 -32 Z" fill={cDark} />
+            {/* Pétale milieu (le plus clair) */}
+            <path d="M -3.5 -32 Q -3.5 -41 0 -43 Q 3.5 -41 3.5 -32 Q 0 -29 -3.5 -32 Z" fill={c} />
+            {/* Pétale avant (subtle highlight) */}
+            <path d="M -2 -32 Q -2 -39 0 -41 Q 2 -39 2 -32 Q 0 -30 -2 -32 Z" fill={c} opacity={0.7} />
+            {/* Reflet brillant */}
+            <ellipse cx={-1.5} cy={-38} rx={0.8} ry={2} fill="rgba(255,255,255,0.4)" />
           </g>
         )
       }
       case 'mushroom': {
+        // Style amanite : chapeau dôme avec gradient + pois blancs, pied épais, lamelles.
         const isRed = el.variant !== 'orange'
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <ellipse cx={0} cy={0} rx={14} ry={10} fill={isRed ? '#C75050' : '#C58040'} />
-            <ellipse cx={0} cy={-3} rx={6} ry={2} fill="rgba(255,255,255,0.35)" />
-            <ellipse cx={-5} cy={-4} rx={3} ry={2} fill="rgba(255,255,255,0.5)" />
-            <rect x={-3} y={-2} width={6} height={10} rx={1.5} fill="#FFFFFF" opacity={0.85} />
+            {/* Ombre au sol */}
+            <ellipse cx={0} cy={9} rx={9} ry={2} fill="rgba(0,0,0,0.18)" />
+            {/* Pied (stipe) */}
+            <path d="M -3 8 Q -4 0 -3 -2 L 3 -2 Q 4 0 3 8 Z" fill="url(#mushroomStem)" />
+            {/* Anneau (volve) */}
+            <ellipse cx={0} cy={-1.5} rx={4.5} ry={1} fill="#E8DCB8" />
+            {/* Lamelles sous le chapeau (suggérées) */}
+            <ellipse cx={0} cy={-2.5} rx={9} ry={1.5} fill="#5A4438" opacity={0.4} />
+            {/* Chapeau dôme */}
+            <path d="M -11 -3 Q -11 -14 0 -14 Q 11 -14 11 -3 Q 8 -1 0 -1 Q -8 -1 -11 -3 Z"
+                  fill={isRed ? 'url(#mushroomCapRed)' : 'url(#mushroomCapOrange)'} />
+            {/* Pois blancs (amanite) */}
+            <circle cx={-5} cy={-7} r={1.6} fill="rgba(255,255,255,0.95)" />
+            <circle cx={3} cy={-9} r={1.3} fill="rgba(255,255,255,0.92)" />
+            <circle cx={6} cy={-5} r={1.1} fill="rgba(255,255,255,0.9)" />
+            <circle cx={-2} cy={-11} r={1} fill="rgba(255,255,255,0.88)" />
+            {/* Highlight sur le chapeau */}
+            <ellipse cx={-3} cy={-10} rx={5} ry={2.2} fill="rgba(255,255,255,0.3)" />
           </g>
         )
       }
       case 'butterfly': {
+        // 4 ailes en path Bézier (sup + inf, gauche + droite), motifs sur chaque aile,
+        // antennes courbes avec petits bulbes, corps fuselé.
         const [body, wing] = BUTTERFLY_COLORS[el.variant ?? 'amber']
         const flapDelay = (idx % 7) * 50
         return (
           <g key={k} transform={`translate(${el.x} ${el.y}) rotate(-15)`}>
             <g className="focus-butterfly-wings" style={{ animationDelay: `${flapDelay}ms` }}>
-              <ellipse cx={-7} cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
-              <ellipse cx={7}  cy={-2} rx={9} ry={6} fill={body} opacity={0.95} />
-              <ellipse cx={-6} cy={-3} rx={4} ry={2} fill={wing} />
-              <ellipse cx={6}  cy={-3} rx={4} ry={2} fill={wing} />
+              {/* Aile gauche supérieure */}
+              <path d="M 0 -1 Q -10 -10 -14 -4 Q -13 2 -2 2 Z" fill={body} />
+              {/* Aile gauche inférieure */}
+              <path d="M -2 2 Q -11 6 -8 12 Q -3 10 -1 4 Z" fill={body} opacity={0.92} />
+              {/* Aile droite supérieure */}
+              <path d="M 0 -1 Q 10 -10 14 -4 Q 13 2 2 2 Z" fill={body} />
+              {/* Aile droite inférieure */}
+              <path d="M 2 2 Q 11 6 8 12 Q 3 10 1 4 Z" fill={body} opacity={0.92} />
+              {/* Motifs sur ailes supérieures (cercles plus clairs) */}
+              <circle cx={-8} cy={-3} r={2.2} fill={wing} />
+              <circle cx={8}  cy={-3} r={2.2} fill={wing} />
+              <circle cx={-8} cy={-3} r={1} fill="rgba(255,255,255,0.5)" />
+              <circle cx={8}  cy={-3} r={1} fill="rgba(255,255,255,0.5)" />
+              {/* Petits points sur ailes inférieures */}
+              <circle cx={-6} cy={7} r={0.8} fill={wing} />
+              <circle cx={6}  cy={7} r={0.8} fill={wing} />
             </g>
-            <line x1={0} y1={-4} x2={0} y2={4} stroke="#3D2C20" strokeWidth={1.5} />
+            {/* Corps fuselé */}
+            <ellipse cx={0} cy={1} rx={1} ry={4.5} fill="#3D2C20" />
+            <circle cx={0} cy={-3.5} r={1.1} fill="#3D2C20" />
+            {/* Antennes courbes avec bulbes */}
+            <path d="M -0.5 -4.5 Q -2 -7 -3 -10" stroke="#3D2C20" strokeWidth={0.7} fill="none" strokeLinecap="round" />
+            <path d="M 0.5 -4.5 Q 2 -7 3 -10" stroke="#3D2C20" strokeWidth={0.7} fill="none" strokeLinecap="round" />
+            <circle cx={-3} cy={-10} r={0.7} fill="#3D2C20" />
+            <circle cx={3}  cy={-10} r={0.7} fill="#3D2C20" />
           </g>
         )
       }
       case 'rabbit': {
+        // Lapin avec corps + tête organiques, oreilles longues courbes, yeux brillants,
+        // moustaches, queue cotton ball blanche.
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <ellipse cx={0} cy={14} rx={22} ry={5} fill="rgba(0,0,0,0.18)" />
-            <ellipse cx={0} cy={0}  rx={18} ry={14} fill="#D8C4A8" />
-            <ellipse cx={-3} cy={-2} rx={12} ry={9} fill="#E8D4B8" />
-            <ellipse cx={14} cy={-3} rx={9} ry={7} fill="#D8C4A8" />
-            <ellipse cx={11} cy={-4} rx={5} ry={4} fill="#E8D4B8" />
-            <ellipse cx={-12} cy={-12} rx={4} ry={9} fill="#D8C4A8" />
-            <ellipse cx={-6}  cy={-13} rx={4} ry={9} fill="#D8C4A8" />
-            <ellipse cx={-12} cy={-14} rx={2} ry={6} fill="#F0DCC0" />
-            <ellipse cx={-6}  cy={-15} rx={2} ry={6} fill="#F0DCC0" />
-            <circle cx={14} cy={-5} r={1.5} fill="#1A1A0F" />
-            <circle cx={14} cy={-5} r={0.5} fill="white" />
-            <ellipse cx={18} cy={-1} rx={1.5} ry={1} fill="#C75050" />
-            <path d="M-18 8 Q-22 6 -23 10 Q-20 12 -16 10" fill="#D8C4A8" />
+            {/* Ombre au sol */}
+            <ellipse cx={0} cy={14} rx={22} ry={4} fill="rgba(0,0,0,0.22)" />
+            {/* Corps (path arrondi) */}
+            <path d="M -16 6 Q -18 -10 -8 -12 Q 4 -14 14 -8 Q 22 0 18 10 Q 8 14 -8 14 Q -16 12 -16 6 Z"
+                  fill="url(#rabbitBody)" />
+            {/* Ventre clair */}
+            <path d="M -10 6 Q -10 0 -2 -2 Q 8 -2 14 4 Q 14 10 6 12 Q -6 12 -10 6 Z"
+                  fill="url(#rabbitBelly)" opacity={0.7} />
+            {/* Tête */}
+            <ellipse cx={14} cy={-3} rx={10} ry={8} fill="url(#rabbitBody)" />
+            <ellipse cx={16} cy={0} rx={6} ry={5} fill="url(#rabbitBelly)" opacity={0.6} />
+            {/* Oreille gauche (longue, courbée) */}
+            <path d="M 7 -10 Q 4 -22 8 -25 Q 12 -22 11 -10 Z" fill="url(#rabbitBody)" />
+            <path d="M 8 -11 Q 7 -20 9 -22 Q 10 -19 10 -12 Z" fill="rgba(244,181,201,0.55)" />
+            {/* Oreille droite */}
+            <path d="M 14 -10 Q 13 -23 18 -25 Q 21 -22 17 -10 Z" fill="url(#rabbitBody)" />
+            <path d="M 15 -11 Q 15 -21 17 -22 Q 18 -19 17 -12 Z" fill="rgba(244,181,201,0.55)" />
+            {/* Œil brillant */}
+            <ellipse cx={18} cy={-4} rx={1.6} ry={2} fill="#1A1A0F" />
+            <circle cx={18.5} cy={-4.8} r={0.6} fill="white" />
+            {/* Petit nez triangulaire */}
+            <path d="M 22 -1 Q 23.5 0 22 0.8 Q 20.5 0 22 -1 Z" fill="#C75050" />
+            {/* Bouche */}
+            <path d="M 22 1 Q 21 2 20 1.8" stroke="#5A3A28" strokeWidth={0.4} fill="none" />
+            {/* Moustaches */}
+            <line x1={20} y1={0.5} x2={26} y2={0} stroke="#5A4438" strokeWidth={0.3} />
+            <line x1={20} y1={1.5} x2={26} y2={2} stroke="#5A4438" strokeWidth={0.3} />
+            <line x1={20} y1={-0.5} x2={26} y2={-1.5} stroke="#5A4438" strokeWidth={0.3} />
+            {/* Queue cotton ball */}
+            <circle cx={-17} cy={2} r={4} fill="#FFFAF0" />
+            <circle cx={-17} cy={1.5} r={2.5} fill="rgba(255,255,255,0.7)" />
+            {/* Patte avant visible */}
+            <ellipse cx={8} cy={12} rx={3} ry={2} fill="#A89578" />
           </g>
         )
       }
       case 'squirrel': {
+        // Petit corps, queue plumeuse en S majestueuse, oreilles pointues,
+        // gros yeux brillants, petites pattes.
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <ellipse cx={0} cy={0} rx={14} ry={8} fill="#7C5A3A" />
-            <ellipse cx={-3} cy={-1} rx={9} ry={6} fill="#9C7B5A" />
-            <ellipse cx={-7} cy={0} rx={6} ry={6} fill="#7C5A3A" />
-            <ellipse cx={-9} cy={-1} rx={2.5} ry={2.5} fill="#9C7B5A" />
-            <circle cx={-9} cy={-2} r={0.8} fill="#1A1A0F" />
-            <ellipse cx={-9} cy={0} rx={0.7} ry={0.5} fill="#1A1A0F" />
-            <path d="M-7 -3 L-9 -7 M-5 -3 L-6 -7" stroke="#7C5A3A" strokeWidth={1.2} fill="none" />
-            <path d="M12 -2 Q22 -10 26 0 Q20 0 12 1 Z" fill="#9C7B5A" />
-            <path d="M14 -1 Q20 -7 24 -1" stroke="#7C5A3A" strokeWidth={0.8} fill="none" />
+            {/* Ombre */}
+            <ellipse cx={-2} cy={9} rx={14} ry={2.5} fill="rgba(0,0,0,0.2)" />
+            {/* Queue plumeuse en S derrière */}
+            <path d="M 12 -2 Q 26 -8 30 4 Q 26 10 18 8 Q 22 0 18 -4 Q 16 -1 12 -1 Z"
+                  fill="url(#squirrelBody)" />
+            <path d="M 16 -2 Q 24 -6 26 2 Q 22 0 18 -2" fill="rgba(255,220,180,0.35)" />
+            {/* Corps */}
+            <path d="M -10 4 Q -12 -6 -4 -8 Q 6 -8 12 -2 Q 12 6 4 8 Q -8 9 -10 4 Z"
+                  fill="url(#squirrelBody)" />
+            {/* Ventre clair */}
+            <ellipse cx={-2} cy={4} rx={6} ry={3} fill="rgba(240,210,170,0.6)" />
+            {/* Tête */}
+            <ellipse cx={-9} cy={-2} rx={5} ry={4.5} fill="url(#squirrelBody)" />
+            <ellipse cx={-10} cy={0} rx={3} ry={2.5} fill="rgba(240,210,170,0.5)" />
+            {/* Oreilles pointues touffues */}
+            <path d="M -10 -6 L -12 -10 L -8 -7 Z" fill="#5A3818" />
+            <path d="M -7 -5 L -8 -9 L -5 -7 Z" fill="#5A3818" />
+            {/* Œil brillant */}
+            <ellipse cx={-11} cy={-2} rx={1} ry={1.2} fill="#1A1A0F" />
+            <circle cx={-11.3} cy={-2.5} r={0.4} fill="white" />
+            {/* Museau et nez */}
+            <ellipse cx={-13} cy={-0.5} rx={1.5} ry={1.2} fill="rgba(255,240,220,0.7)" />
+            <circle cx={-13.5} cy={-0.5} r={0.5} fill="#3D2418" />
+            {/* Pattes avant (qui tient quelque chose) */}
+            <path d="M -8 4 Q -10 7 -7 8" stroke="#5A3818" strokeWidth={1.2} fill="none" strokeLinecap="round" />
+            <path d="M -5 4 Q -3 7 -6 8" stroke="#5A3818" strokeWidth={1.2} fill="none" strokeLinecap="round" />
+            {/* Petit gland tenu */}
+            <ellipse cx={-7} cy={3} rx={1.2} ry={1.5} fill="#9C6E2A" />
+            <ellipse cx={-7} cy={2.2} rx={1.2} ry={0.5} fill="#5A3818" />
           </g>
         )
       }
       case 'owl': {
+        // Hibou rond avec énormes yeux ronds, plumes texturées sur la poitrine,
+        // ailes repliées, bec triangulaire, petites serres.
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <ellipse cx={0} cy={0} rx={20} ry={10} fill="#3D2C20" />
-            <ellipse cx={-3} cy={-2} rx={12} ry={8} fill="#5A4438" />
-            <circle cx={-7} cy={-3} r={2} fill="white" />
-            <circle cx={-7} cy={-3} r={1} fill="#1A1A0F" />
-            <path d="M-12 -3 L-17 -5 L-14 -1 Z" fill="#E08B3C" />
-            <path d="M5 -2 Q14 -10 22 -4 Q14 0 5 -1 Z" fill="#5A4438" />
-            <path d="M-2 8 L-2 14" stroke="#3D2C20" strokeWidth={1.5} />
-            <path d="M2 8 L2 14" stroke="#3D2C20" strokeWidth={1.5} />
+            {/* Ombre sur la branche */}
+            <ellipse cx={0} cy={11} rx={14} ry={2} fill="rgba(0,0,0,0.25)" />
+            {/* Corps rond */}
+            <path d="M -14 5 Q -16 -8 -8 -12 Q 0 -14 8 -12 Q 16 -8 14 5 Q 10 11 0 12 Q -10 11 -14 5 Z"
+                  fill="url(#owlBody)" />
+            {/* Ventre + plumes en V (texture) */}
+            <path d="M -10 3 Q -10 -6 -3 -8 Q 5 -8 10 0 Q 8 8 0 9 Q -8 8 -10 3 Z"
+                  fill="url(#owlBelly)" />
+            <path d="M -6 -2 Q -4 0 -2 -2 M 2 -2 Q 4 0 6 -2 M -4 2 Q -2 4 0 2 M 0 2 Q 2 4 4 2 M -6 6 Q -4 8 -2 6 M 2 6 Q 4 8 6 6"
+                  stroke="#5A4438" strokeWidth={0.5} fill="none" />
+            {/* Disques faciaux (autour des yeux) */}
+            <circle cx={-5} cy={-5} r={4.5} fill="#A88A6A" />
+            <circle cx={5}  cy={-5} r={4.5} fill="#A88A6A" />
+            {/* Yeux énormes */}
+            <circle cx={-5} cy={-5} r={2.8} fill="#FFFEF0" />
+            <circle cx={5}  cy={-5} r={2.8} fill="#FFFEF0" />
+            <circle cx={-5} cy={-5} r={1.8} fill="#3A2418" />
+            <circle cx={5}  cy={-5} r={1.8} fill="#3A2418" />
+            {/* Reflets pupilles */}
+            <circle cx={-4.4} cy={-5.6} r={0.6} fill="white" />
+            <circle cx={5.6}  cy={-5.6} r={0.6} fill="white" />
+            {/* Bec triangulaire */}
+            <path d="M -1.5 -2 L 0 1 L 1.5 -2 Z" fill="#E08B3C" />
+            {/* Sourcils (plumes au-dessus des yeux) */}
+            <path d="M -8 -8 Q -5 -10 -2 -8" stroke="#3D2C20" strokeWidth={0.8} fill="none" />
+            <path d="M 2 -8 Q 5 -10 8 -8" stroke="#3D2C20" strokeWidth={0.8} fill="none" />
+            {/* Aile repliée */}
+            <path d="M 8 -2 Q 14 0 12 8" stroke="#3A2C20" strokeWidth={1.2} fill="none" />
+            {/* Serres */}
+            <path d="M -2 11 L -3 13 M -1 11 L -1 13.5 M 0 11 L 1 13" stroke="#9C7B3A" strokeWidth={0.8} strokeLinecap="round" />
+            <path d="M 2 11 L 3 13 M 1 11 L 1 13.5 M 0 11 L -1 13" stroke="#9C7B3A" strokeWidth={0.8} strokeLinecap="round" />
           </g>
         )
       }
       case 'deer': {
+        // Cerf majestueux avec cou élancé, bois ramifiés, taches blanches sur le dos,
+        // queue blanche, gradient sur le corps.
         return (
-          <g key={k} transform={`translate(${el.x} ${el.y})`} opacity={0.95}>
-            <ellipse cx={0} cy={6} rx={35} ry={5} fill="rgba(0,0,0,0.22)" />
-            <ellipse cx={0} cy={-6} rx={25} ry={14} fill="#A8755A" />
-            <ellipse cx={-2} cy={-8} rx={20} ry={11} fill="#C49080" />
-            <path d="M-22 -3 Q-30 0 -28 6 Q-22 6 -20 4" fill="#A8755A" />
-            <ellipse cx={22} cy={-12} rx={11} ry={14} fill="#A8755A" />
-            <ellipse cx={22} cy={-14} rx={8} ry={10} fill="#C49080" />
-            <path d="M22 -25 L18 -38 M22 -25 L26 -38 M22 -25 L19 -36 M22 -25 L25 -36" stroke="#FFFFFF" strokeWidth={1.4} fill="none" strokeLinecap="round" />
-            <path d="M19 -38 L17 -42 M26 -38 L28 -42" stroke="#FFFFFF" strokeWidth={1.2} fill="none" strokeLinecap="round" />
-            <circle cx={20} cy={-12} r={1.2} fill="#1A1A0F" />
-            <ellipse cx={28} cy={-9} rx={1.5} ry={1} fill="#1A1A0F" />
-            <line x1={-20} y1={6} x2={-20} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
-            <line x1={-12} y1={6} x2={-12} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
-            <line x1={12} y1={2} x2={12} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
-            <line x1={20} y1={2} x2={20} y2={14} stroke="#A8755A" strokeWidth={2.5} strokeLinecap="round" />
+          <g key={k} transform={`translate(${el.x} ${el.y})`} opacity={0.96}>
+            {/* Ombre */}
+            <ellipse cx={0} cy={8} rx={32} ry={4} fill="rgba(0,0,0,0.22)" />
+            {/* Corps */}
+            <path d="M -22 -3 Q -24 -14 -10 -16 Q 6 -16 18 -8 Q 22 0 18 6 Q -2 8 -22 6 Q -24 0 -22 -3 Z"
+                  fill="url(#deerBody)" />
+            {/* Ventre clair */}
+            <path d="M -16 0 Q -14 4 -4 5 Q 8 5 14 2 Q 12 6 0 7 Q -16 7 -16 0 Z" fill="rgba(248,220,200,0.7)" />
+            {/* Taches blanches dos (faon) */}
+            <circle cx={-10} cy={-10} r={1.5} fill="rgba(255,255,255,0.6)" />
+            <circle cx={-2} cy={-12} r={1.3} fill="rgba(255,255,255,0.6)" />
+            <circle cx={6} cy={-10} r={1.5} fill="rgba(255,255,255,0.6)" />
+            <circle cx={12} cy={-7} r={1.2} fill="rgba(255,255,255,0.5)" />
+            {/* Cou et tête */}
+            <path d="M 18 -8 Q 24 -14 25 -22 Q 30 -22 32 -14 Q 34 -8 28 -4 Q 22 -2 18 -4 Z"
+                  fill="url(#deerBody)" />
+            {/* Museau */}
+            <ellipse cx={32} cy={-12} rx={3.5} ry={2.5} fill="#5A3818" />
+            <circle cx={33} cy={-13} r={0.8} fill="#1A1A0F" />
+            {/* Œil brillant */}
+            <ellipse cx={28} cy={-15} rx={1.2} ry={1.5} fill="#1A1A0F" />
+            <circle cx={28.5} cy={-15.6} r={0.4} fill="white" />
+            {/* Oreilles */}
+            <path d="M 22 -22 Q 21 -28 24 -27 Q 26 -24 25 -20 Z" fill="url(#deerBody)" />
+            <path d="M 23 -23 Q 23 -26 24 -25" fill="rgba(255,210,180,0.6)" />
+            {/* Bois ramifiés (style arbre) */}
+            <path d="M 24 -22 Q 22 -32 20 -38 M 22 -32 L 18 -36 M 22 -32 L 25 -38"
+                  stroke="#8C6A48" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+            <path d="M 27 -22 Q 28 -32 30 -38 M 28 -32 L 26 -38 M 28 -32 L 32 -36"
+                  stroke="#8C6A48" strokeWidth={1.4} fill="none" strokeLinecap="round" />
+            {/* Pattes fines */}
+            <path d="M -18 6 L -19 14" stroke="#5A3818" strokeWidth={2} strokeLinecap="round" />
+            <path d="M -10 6 L -11 14" stroke="#5A3818" strokeWidth={2} strokeLinecap="round" />
+            <path d="M 8 4 L 10 14" stroke="#5A3818" strokeWidth={2} strokeLinecap="round" />
+            <path d="M 16 4 L 18 14" stroke="#5A3818" strokeWidth={2} strokeLinecap="round" />
+            {/* Sabots */}
+            <ellipse cx={-19} cy={14} rx={1.2} ry={0.8} fill="#1A1A0F" />
+            <ellipse cx={-11} cy={14} rx={1.2} ry={0.8} fill="#1A1A0F" />
+            <ellipse cx={10} cy={14} rx={1.2} ry={0.8} fill="#1A1A0F" />
+            <ellipse cx={18} cy={14} rx={1.2} ry={0.8} fill="#1A1A0F" />
+            {/* Queue blanche dressée */}
+            <ellipse cx={-22} cy={-6} rx={2} ry={4} fill="#FFFAF0" />
           </g>
         )
       }
       case 'fox': {
+        // Renard avec corps orange dégradé, museau blanc, queue épaisse à bout blanc,
+        // oreilles pointues, yeux brillants, pattes noires.
         return (
           <g key={k} transform={`translate(${el.x} ${el.y})`}>
-            <ellipse cx={0} cy={6} rx={20} ry={4} fill="rgba(0,0,0,0.2)" />
-            <ellipse cx={0} cy={-2} rx={16} ry={9} fill="#C75A2A" />
-            <ellipse cx={-3} cy={-3} rx={11} ry={6} fill="#E07840" />
-            <path d="M14 -4 L24 -10 L26 -2 L20 0 Z" fill="#C75A2A" />
-            <path d="M-14 -3 L-18 -10 L-13 -10 Z" fill="#C75A2A" />
-            <path d="M-10 -3 L-14 -8 L-9 -8 Z" fill="#C75A2A" />
-            <ellipse cx={20} cy={-6} rx={3} ry={2} fill="#FFFFFF" />
-            <circle cx={22} cy={-5} r={0.8} fill="#1A1A0F" />
-            <path d="M14 4 Q26 10 32 4 Q34 -6 28 -8 Q22 -2 18 6 Z" fill="#C75A2A" />
-            <path d="M28 -6 Q32 -2 30 2" stroke="#FFFFFF" strokeWidth={1} fill="none" />
+            {/* Ombre */}
+            <ellipse cx={0} cy={8} rx={22} ry={3.5} fill="rgba(0,0,0,0.22)" />
+            {/* Queue épaisse derrière (avant le corps pour que body chevauche) */}
+            <path d="M 12 0 Q 26 -4 32 4 Q 28 12 18 10 Q 14 6 12 4 Z" fill="url(#foxBody)" />
+            {/* Bout de queue blanc */}
+            <path d="M 28 0 Q 33 0 32 6 Q 28 8 26 4 Z" fill="url(#foxBelly)" />
+            {/* Corps */}
+            <path d="M -16 4 Q -18 -8 -8 -10 Q 6 -10 14 -4 Q 18 4 12 8 Q -4 9 -16 8 Q -18 6 -16 4 Z"
+                  fill="url(#foxBody)" />
+            {/* Poitrail blanc */}
+            <path d="M -10 4 Q -8 0 -2 -2 Q 6 -1 10 4 Q 6 8 -2 8 Q -10 8 -10 4 Z" fill="url(#foxBelly)" opacity={0.85} />
+            {/* Tête triangulaire */}
+            <path d="M 14 -4 Q 22 -8 26 -2 Q 26 4 18 6 Q 14 4 14 -4 Z" fill="url(#foxBody)" />
+            {/* Menton blanc */}
+            <path d="M 18 0 Q 22 1 24 3 Q 22 5 18 4 Z" fill="url(#foxBelly)" />
+            {/* Oreilles pointues (intérieur foncé) */}
+            <path d="M 14 -4 L 12 -12 L 18 -7 Z" fill="url(#foxBody)" />
+            <path d="M 14 -4 L 13 -10 L 16 -6 Z" fill="#3A1810" />
+            <path d="M 22 -6 L 22 -13 L 26 -8 Z" fill="url(#foxBody)" />
+            <path d="M 22 -6 L 22 -11 L 25 -7 Z" fill="#3A1810" />
+            {/* Œil amande brillant */}
+            <ellipse cx={20} cy={-2} rx={1.5} ry={1.2} fill="#1A1A0F" />
+            <circle cx={20.4} cy={-2.4} r={0.4} fill="white" />
+            {/* Petit nez triangulaire noir */}
+            <path d="M 25 1 L 26.5 2 L 25 3 Z" fill="#1A1A0F" />
+            {/* Moustaches */}
+            <line x1={24} y1={2} x2={28} y2={1.5} stroke="#3D2418" strokeWidth={0.3} />
+            <line x1={24} y1={3} x2={28} y2={3.5} stroke="#3D2418" strokeWidth={0.3} />
+            {/* Pattes */}
+            <path d="M -10 8 L -11 13" stroke="#3A1810" strokeWidth={2.2} strokeLinecap="round" />
+            <path d="M -2 8 L -3 13" stroke="#3A1810" strokeWidth={2.2} strokeLinecap="round" />
+            <path d="M 6 7 L 7 13" stroke="#3A1810" strokeWidth={2.2} strokeLinecap="round" />
+            <path d="M 12 7 L 13 13" stroke="#3A1810" strokeWidth={2.2} strokeLinecap="round" />
           </g>
         )
       }
@@ -587,11 +799,35 @@ export default function GardenSvg({
           <stop offset="70%"  stopColor={sky.loMid} />
           <stop offset="100%" stopColor={sky.bottom} />
         </linearGradient>
-        <radialGradient id="sungod" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFEFB8" stopOpacity="0.95" />
-          <stop offset="35%" stopColor="#F8D880" stopOpacity="0.55" />
+
+        {/* ===== SOLEIL & LUNE ===== */}
+        <radialGradient id="sunHaloOuter" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFEFB8" stopOpacity="0.45" />
+          <stop offset="55%" stopColor="#F8B855" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#F8B855" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="sunHaloInner" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFEFB8" stopOpacity="0.85" />
+          <stop offset="60%" stopColor="#F8D880" stopOpacity="0.35" />
           <stop offset="100%" stopColor="#F8D880" stopOpacity="0" />
         </radialGradient>
+        <radialGradient id="sunDisc" cx="38%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#FFFEF8" />
+          <stop offset="50%" stopColor="#FFE5A0" />
+          <stop offset="100%" stopColor="#F0BC60" />
+        </radialGradient>
+        <radialGradient id="moonHalo" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#E5E8F0" stopOpacity="0.28" />
+          <stop offset="60%" stopColor="#E5E8F0" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#E5E8F0" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="moonDisc" cx="32%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#FFFEF8" />
+          <stop offset="55%" stopColor="#F0EDD8" />
+          <stop offset="100%" stopColor="#C8C4B0" />
+        </radialGradient>
+
+        {/* ===== SOL & ARBRE CENTRAL ===== */}
         <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#A8C088" />
           <stop offset="60%" stopColor="#86A56A" />
@@ -611,6 +847,11 @@ export default function GardenSvg({
           <stop offset="0%" stopColor="#A8C088" />
           <stop offset="100%" stopColor="#7AA56B" />
         </radialGradient>
+        <pattern id="bark" width="10" height="20" patternUnits="userSpaceOnUse">
+          <path d="M2 0 Q1 10 3 20 M7 0 Q9 10 6 20" stroke="#1F1410" strokeWidth="0.8" fill="none" opacity="0.6" />
+        </pattern>
+
+        {/* ===== ÉTANG ===== */}
         <radialGradient id="pondGrad" cx="50%" cy="35%" r="60%">
           <stop offset="0%" stopColor="#A8CDD8" />
           <stop offset="60%" stopColor="#6E9AAA" />
@@ -625,32 +866,110 @@ export default function GardenSvg({
           <stop offset="0%" stopColor="#9DBC78" />
           <stop offset="100%" stopColor="#6F8D52" />
         </radialGradient>
-        <pattern id="bark" width="10" height="20" patternUnits="userSpaceOnUse">
-          <path d="M2 0 Q1 10 3 20 M7 0 Q9 10 6 20" stroke="#1F1410" strokeWidth="0.8" fill="none" opacity="0.6" />
-        </pattern>
+
+        {/* ===== ANIMAUX (corps avec volume) ===== */}
+        <radialGradient id="rabbitBody" cx="40%" cy="30%" r="75%">
+          <stop offset="0%" stopColor="#F0DCC0" />
+          <stop offset="100%" stopColor="#A89578" />
+        </radialGradient>
+        <radialGradient id="rabbitBelly" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stopColor="#FFFAF0" />
+          <stop offset="100%" stopColor="#E5D4B8" />
+        </radialGradient>
+        <radialGradient id="foxBody" cx="40%" cy="30%" r="75%">
+          <stop offset="0%" stopColor="#E8804A" />
+          <stop offset="100%" stopColor="#A03818" />
+        </radialGradient>
+        <radialGradient id="foxBelly" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F0E4D0" />
+        </radialGradient>
+        <radialGradient id="deerBody" cx="40%" cy="30%" r="75%">
+          <stop offset="0%" stopColor="#D8A088" />
+          <stop offset="100%" stopColor="#7A5240" />
+        </radialGradient>
+        <radialGradient id="owlBody" cx="40%" cy="30%" r="75%">
+          <stop offset="0%" stopColor="#7A5E48" />
+          <stop offset="100%" stopColor="#3A2C20" />
+        </radialGradient>
+        <radialGradient id="owlBelly" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stopColor="#C8A480" />
+          <stop offset="100%" stopColor="#8A6B50" />
+        </radialGradient>
+        <radialGradient id="squirrelBody" cx="40%" cy="30%" r="75%">
+          <stop offset="0%" stopColor="#A88058" />
+          <stop offset="100%" stopColor="#5A3818" />
+        </radialGradient>
+
+        {/* ===== FLEURS & CHAMPIGNONS ===== */}
+        <radialGradient id="mushroomCapRed" cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#E07060" />
+          <stop offset="100%" stopColor="#9C2828" />
+        </radialGradient>
+        <radialGradient id="mushroomCapOrange" cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#F0A858" />
+          <stop offset="100%" stopColor="#A85820" />
+        </radialGradient>
+        <radialGradient id="mushroomStem" cx="40%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#FFFEF0" />
+          <stop offset="100%" stopColor="#D8C8A8" />
+        </radialGradient>
+        <radialGradient id="sunflowerCenter" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#9C6E2A" />
+          <stop offset="100%" stopColor="#5A3818" />
+        </radialGradient>
       </defs>
 
       {/* CIEL */}
       <rect width="1600" height="1000" fill="url(#sky)" />
 
-      {/* SOLEIL */}
+      {/* SOLEIL — disque + halo + couronne de rayons subtils */}
       {isDaytime && (
         <g>
-          <circle cx={sunX} cy={sunY} r={240} fill="url(#sungod)" />
-          <circle cx={sunX} cy={sunY} r={90}  fill="#FFE5A0" opacity={0.95} />
-          <circle cx={sunX} cy={sunY} r={64}  fill="#FDF4D5" />
+          {/* Halo très diffus */}
+          <circle cx={sunX} cy={sunY} r={300} fill="url(#sunHaloOuter)" />
+          {/* Halo intermédiaire chaud */}
+          <circle cx={sunX} cy={sunY} r={170} fill="url(#sunHaloInner)" />
+          {/* Couronne de rayons (12 rayons régulièrement espacés) */}
+          <g transform={`translate(${sunX} ${sunY})`}>
+            {[0,30,60,90,120,150,180,210,240,270,300,330].map((a, i) => (
+              <line
+                key={i}
+                x1={0} y1={-105} x2={0} y2={-128}
+                stroke="rgba(255,235,180,0.55)"
+                strokeWidth={i % 2 === 0 ? 5 : 3}
+                strokeLinecap="round"
+                transform={`rotate(${a})`}
+              />
+            ))}
+          </g>
+          {/* Disque solaire avec gradient (highlight en haut-gauche) */}
+          <circle cx={sunX} cy={sunY} r={86} fill="url(#sunDisc)" />
+          {/* Highlight discret */}
+          <ellipse cx={sunX - 28} cy={sunY - 30} rx={32} ry={20} fill="rgba(255,255,255,0.35)" />
         </g>
       )}
 
-      {/* LUNE */}
+      {/* LUNE — disque texturé + halo + plusieurs cratères variés */}
       {isNight && (
         <g>
-          <circle cx={moonX} cy={moonY} r={140} fill="#E5E8F0" opacity={0.12} />
-          <circle cx={moonX} cy={moonY} r={56}  fill="#F5F2E0" opacity={0.95} />
-          <circle cx={moonX} cy={moonY} r={48}  fill="#FFFEF8" />
-          <circle cx={moonX - 14} cy={moonY - 8}  r={5} fill="rgba(180,180,200,0.35)" />
-          <circle cx={moonX + 10} cy={moonY + 6}  r={6} fill="rgba(180,180,200,0.32)" />
-          <circle cx={moonX + 4}  cy={moonY - 14} r={3} fill="rgba(180,180,200,0.28)" />
+          {/* Halo extérieur */}
+          <circle cx={moonX} cy={moonY} r={160} fill="url(#moonHalo)" />
+          {/* Lueur proche */}
+          <circle cx={moonX} cy={moonY} r={78} fill="rgba(255,255,250,0.18)" />
+          {/* Disque lunaire (gradient pour donner un côté ombré) */}
+          <circle cx={moonX} cy={moonY} r={56} fill="url(#moonDisc)" />
+          {/* Cratères variés (tailles, opacités) */}
+          <ellipse cx={moonX - 18} cy={moonY - 12} rx={7} ry={6} fill="rgba(160,160,180,0.42)" />
+          <ellipse cx={moonX + 14} cy={moonY + 8}  rx={9} ry={7} fill="rgba(160,160,180,0.38)" />
+          <ellipse cx={moonX + 6}  cy={moonY - 18} rx={4} ry={3} fill="rgba(160,160,180,0.32)" />
+          <ellipse cx={moonX - 10} cy={moonY + 16} rx={5} ry={4} fill="rgba(160,160,180,0.34)" />
+          <ellipse cx={moonX + 22} cy={moonY - 4}  rx={3} ry={2.5} fill="rgba(160,160,180,0.28)" />
+          <ellipse cx={moonX - 24} cy={moonY + 4}  rx={3.5} ry={3} fill="rgba(160,160,180,0.3)" />
+          <circle cx={moonX + 18}  cy={moonY + 22} r={2} fill="rgba(160,160,180,0.24)" />
+          <circle cx={moonX - 5}   cy={moonY + 24} r={1.8} fill="rgba(160,160,180,0.22)" />
+          {/* Highlight lunaire (côté éclairé) */}
+          <ellipse cx={moonX - 18} cy={moonY - 22} rx={20} ry={12} fill="rgba(255,255,255,0.32)" />
         </g>
       )}
 
@@ -806,6 +1125,39 @@ export default function GardenSvg({
 
       {/* ÉLÉMENTS FOREGROUND (fleurs, animaux, papillons, etc.) APRÈS l'arbre */}
       {unlocked.filter(e => e.kind !== 'pond' && e.kind !== 'log' && e.kind !== 'sapling' && e.kind !== 'deer').map(renderEl)}
+
+      {/* PARTICULES dorées (burst à la notation focus). Optionnel — uniquement
+          rendu si particleBurst est passé (focus). Animations CSS via classes
+          focus-particle-burst et focus-particle (cf. focus-styles.css). */}
+      {particleBurst && (() => {
+        const px = particleBurst.x ?? 800
+        const py = particleBurst.y ?? 500
+        const angles = [0, 45, 90, 135, 180, 225, 270, 315]
+        return (
+          <g key={`burst-${particleBurst.ts}`} className="focus-particle-burst">
+            {angles.map((a, i) => {
+              const rad = (a * Math.PI) / 180
+              const dx = Math.cos(rad) * 38
+              const dy = Math.sin(rad) * 38
+              return (
+                <circle
+                  key={i}
+                  cx={px}
+                  cy={py}
+                  r={4}
+                  fill="#FBD56B"
+                  className="focus-particle"
+                  style={{
+                    animationDelay: `${i * 25}ms`,
+                    ['--px-dx' as string]: `${dx}px`,
+                    ['--px-dy' as string]: `${dy}px`,
+                  } as CSSProperties}
+                />
+              )
+            })}
+          </g>
+        )
+      })()}
 
       {/* Arc du soleil (trace pointillée) */}
       <g>
