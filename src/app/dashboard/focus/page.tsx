@@ -1076,8 +1076,10 @@ function FocusPageBody() {
     setResults(newResults)
 
     // Burst de particules gold à chaque rate — feedback générique de complétion.
+    // Position : sur le nouvel élément si on en gagne un, sinon sur l'arbre central.
     // Le score n'a pas d'incidence visuelle.
-    setParticleBurst({ ts: Date.now() })
+    let burstX: number | undefined
+    let burstY: number | undefined
 
     // Sur PREMIÈRE notation : 50% de chance que rien n'apparaisse (juste l'arbre pousse),
     // sinon tirage d'UN seul élément (fleur 30% / insecte 12% / animal 6% / rare 2%).
@@ -1085,6 +1087,11 @@ function FocusPageBody() {
     if (wasEmpty) {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
       const newEl = pickElement(dayGardenRef.current.elements)
+      if (newEl) {
+        // Burst à la position exacte du nouvel élément.
+        burstX = newEl.x
+        burstY = newEl.y
+      }
       const updatedGarden: DayGardenState = {
         ...dayGardenRef.current,
         elapsedMs: totalElapsed,
@@ -1100,6 +1107,14 @@ function FocusPageBody() {
       // il retrouve sa dernière fleur tout de suite.
       pushGardenToSupabase(supabase, userIdRef.current, updatedGarden)
     }
+
+    // Pas d'élément généré (re-rating, tirage à vide, ou élément hors zone) →
+    // burst sur l'arbre central (mi-hauteur du tronc).
+    if (burstX === undefined || burstY === undefined) {
+      burstX = HERO_TRUNK_X
+      burstY = HERO_GROUND_Y - 200
+    }
+    setParticleBurst({ ts: Date.now(), x: burstX, y: burstY })
 
     // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
     if (wasEmpty) {
