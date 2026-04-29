@@ -1059,28 +1059,119 @@ export default function GardenSvg({
       {/* ÉLÉMENTS DE FOND (étang, log, sapling, deer) AVANT l'arbre */}
       {unlocked.filter(e => e.kind === 'pond' || e.kind === 'log' || e.kind === 'sapling' || e.kind === 'deer').map(renderEl)}
 
-      {/* ARBRE CENTRAL */}
+      {/* ARBRE CENTRAL — Croissance organique progressive.
+          Phases interpolées en continu pour que tout fluide :
+          - 0.00 → 0.04 : seedling (2 cotyledons + tige fine)
+          - 0.04 → 0.18 : jeune pousse (tronc fin qui grandit en hauteur)
+          - 0.18 → 0.50 : adolescent (branches basses + feuillage qui se densifie)
+          - 0.50 → 1.00 : mature (canopée luxuriante)
+          La hauteur ET la largeur du tronc sont calculées dynamiquement (pas
+          juste un scale uniforme), ce qui donne l'impression d'un vrai arbre. */}
       <g transform={`translate(${HERO_TRUNK_X} ${HERO_GROUND_Y})`}>
-        <ellipse cx={0} cy={-8} rx={64} ry={16} fill="rgba(0,0,0,0.22)" />
+        {/* Ombre au sol qui s'étend avec l'arbre */}
+        <ellipse cx={0} cy={-2}
+                 rx={18 + treeProgress * 100}
+                 ry={4 + treeProgress * 16}
+                 fill="rgba(0,0,0,0.22)" />
 
-        <g style={{
-          transform: `scale(${0.15 + treeProgress * 0.85})`,
-          transformOrigin: '0px 0px',
-        }}>
-          <path d="M -22 0 Q -26 -90 -18 -180 Q -12 -270 -10 -360 Q -8 -420 -6 -460 L 6 -460 Q 8 -420 10 -360 Q 12 -270 18 -180 Q 26 -90 22 0 Z" fill="url(#trunkbody)" />
-          <path d="M -22 0 Q -26 -90 -18 -180 Q -12 -270 -10 -360 Q -8 -420 -6 -460 L 6 -460 Q 8 -420 10 -360 Q 12 -270 18 -180 Q 26 -90 22 0 Z" fill="url(#bark)" opacity={0.55} />
-          <path d="M -14 -30 Q -18 -130 -12 -240 Q -8 -340 -7 -420" stroke="rgba(255,255,255,0.16)" strokeWidth={3} fill="none" />
-          <ellipse cx={-9}  cy={-110} rx={6} ry={9} fill="#1F1410" opacity={0.65} />
-          <ellipse cx={11}  cy={-220} rx={5} ry={7} fill="#1F1410" opacity={0.6} />
-          <ellipse cx={-12} cy={-330} rx={4} ry={6} fill="#1F1410" opacity={0.55} />
-        </g>
+        {/* === SEEDLING === Petit pousse visible avant le tronc.
+            Fade out entre 0.06 et 0.10 quand le tronc prend le relais. */}
+        {treeProgress < 0.10 && (() => {
+          const sFade = Math.max(0, Math.min(1, (0.10 - treeProgress) / 0.04))
+          // Tige qui grandit légèrement avec treeProgress
+          const stemH = 14 + treeProgress * 60
+          return (
+            <g style={{ opacity: sFade }}>
+              <path d={`M 0 0 Q -0.8 ${-stemH * 0.5} -0.3 ${-stemH}`}
+                    stroke="#5E8954" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+              {/* 2 cotyledons opposés */}
+              <ellipse cx={-4} cy={-stemH * 0.7} rx={4.5} ry={2} fill="#7AA56B"
+                       transform={`rotate(-25 -4 ${-stemH * 0.7})`} />
+              <ellipse cx={4} cy={-stemH * 0.7} rx={4.5} ry={2} fill="#7AA56B"
+                       transform={`rotate(25 4 ${-stemH * 0.7})`} />
+              <ellipse cx={-4.5} cy={-stemH * 0.7 - 0.3} rx={2} ry={0.8} fill="rgba(255,255,255,0.3)"
+                       transform={`rotate(-25 -4.5 ${-stemH * 0.7 - 0.3})`} />
+              {/* Petite feuille au sommet */}
+              <ellipse cx={0} cy={-stemH - 2} rx={3} ry={4} fill="#5E8954" />
+              <ellipse cx={-0.5} cy={-stemH - 3} rx={1} ry={1.5} fill="rgba(255,255,255,0.3)" />
+            </g>
+          )
+        })()}
 
+        {/* === TRONC === Hauteur et largeur interpolées en continu.
+            Apparition progressive entre 0.04 et 0.10, suit ensuite treeProgress. */}
+        {treeProgress > 0.04 && (() => {
+          const tFade = Math.min(1, (treeProgress - 0.04) / 0.06)
+          // Hauteur du tronc : grandit de 60px (mini) à 460px (mature)
+          const trunkH = 60 + treeProgress * 400
+          // Largeur de la base (épaisse) et du sommet (effilée)
+          const baseW = 5 + treeProgress * 19
+          const topW = 2 + treeProgress * 5
+          // Un point de contrôle légèrement décalé pour donner une courbure naturelle
+          const sway = treeProgress * 4
+          // Path Bézier qui s'incurve doucement
+          const trunkPath = `
+            M ${-baseW} 0
+            Q ${-baseW - 1 + sway} ${-trunkH * 0.3} ${-(baseW + topW) / 2 + sway} ${-trunkH * 0.55}
+            Q ${-(topW + 1) + sway} ${-trunkH * 0.8} ${-topW + sway * 0.5} ${-trunkH}
+            L ${topW + sway * 0.5} ${-trunkH}
+            Q ${(topW + 1) + sway} ${-trunkH * 0.8} ${(baseW + topW) / 2 + sway} ${-trunkH * 0.55}
+            Q ${baseW + 1 + sway} ${-trunkH * 0.3} ${baseW} 0
+            Z
+          `.replace(/\s+/g, ' ').trim()
+          // Courbe centrale (highlight)
+          const trunkHighlight = `M ${-baseW * 0.3} 0 Q ${-baseW * 0.2 + sway} ${-trunkH * 0.5} ${-topW * 0.4 + sway * 0.5} ${-trunkH * 0.95}`
+
+          return (
+            <g style={{ opacity: tFade }}>
+              <path d={trunkPath} fill="url(#trunkbody)" />
+              <path d={trunkPath} fill="url(#bark)" opacity={0.5} />
+              <path d={trunkHighlight} stroke="rgba(255,255,255,0.16)" strokeWidth={Math.max(1, 3 * treeProgress)} fill="none" />
+              {/* Marques d'écorce (visibles à partir de 0.30) */}
+              {treeProgress > 0.25 && (() => {
+                const knotFade = Math.min(1, (treeProgress - 0.25) / 0.15)
+                return (
+                  <g style={{ opacity: knotFade }}>
+                    <ellipse cx={-baseW * 0.45} cy={-trunkH * 0.22} rx={3.5} ry={6} fill="#1F1410" opacity={0.6} />
+                    <ellipse cx={baseW * 0.45} cy={-trunkH * 0.55} rx={3} ry={5} fill="#1F1410" opacity={0.55} />
+                    <ellipse cx={-baseW * 0.4} cy={-trunkH * 0.78} rx={2.5} ry={4} fill="#1F1410" opacity={0.5} />
+                  </g>
+                )
+              })()}
+              {/* Petites racines apparentes au sol (à partir de 0.40) */}
+              {treeProgress > 0.40 && (() => {
+                const rFade = Math.min(1, (treeProgress - 0.40) / 0.15)
+                return (
+                  <g style={{ opacity: rFade }}>
+                    <path d={`M ${-baseW} 0 Q ${-baseW - 14} 1 ${-baseW - 22} 4`} stroke="#3D2418" strokeWidth={5} fill="none" strokeLinecap="round" />
+                    <path d={`M ${baseW} 0 Q ${baseW + 14} 1 ${baseW + 22} 4`} stroke="#3D2418" strokeWidth={5} fill="none" strokeLinecap="round" />
+                    <path d={`M ${-baseW * 0.5} 0 Q ${-baseW * 0.5} 3 ${-baseW * 0.7} 5`} stroke="#3D2418" strokeWidth={3} fill="none" strokeLinecap="round" />
+                    <path d={`M ${baseW * 0.5} 0 Q ${baseW * 0.5} 3 ${baseW * 0.7} 5`} stroke="#3D2418" strokeWidth={3} fill="none" strokeLinecap="round" />
+                  </g>
+                )
+              })()}
+            </g>
+          )
+        })()}
+
+        {/* === BRANCHES === Apparition progressive avec un effet "grow" :
+            chaque branche démarre à un scale réduit et grandit à mesure que treeProgress
+            augmente. La plage de fade est large (0.18) pour des transitions douces. */}
         <g stroke="#3D2C20" strokeLinecap="round" fill="none">
           {HERO_BRANCHES.map((b, i) => {
-            if (treeProgress < b.threshold) return null
-            const fadeT = Math.max(0, Math.min(1, (treeProgress - b.threshold) / 0.06))
+            const fadeT = Math.max(0, Math.min(1, (treeProgress - b.threshold) / 0.18))
+            if (fadeT <= 0) return null
+            // Effet de croissance : la branche grandit depuis 0.4× à 1×
+            const growScale = 0.4 + fadeT * 0.6
+            // Origin approximative au point d'attache (variable selon la branche)
+            const originY = -200 - i * 80
             return (
-              <g key={`branch-${i}`} style={{ opacity: fadeT }}>
+              <g key={`branch-${i}`}
+                 style={{
+                   opacity: fadeT,
+                   transform: `scale(${growScale})`,
+                   transformOrigin: `0px ${originY}px`,
+                 }}>
                 <path d={b.thickPath} strokeWidth={22} />
                 <path d={b.innerPath} strokeWidth={14} stroke="#5A4031" />
                 {(b.subPaths ?? []).map((sp, j) => (
@@ -1091,12 +1182,22 @@ export default function GardenSvg({
           })}
         </g>
 
+        {/* === FEUILLAGE === Apparition progressive avec scale + fade.
+            Plage de fade très large (0.22) pour que ça se densifie petit à petit. */}
         <g>
           {HERO_FOLIAGE.map((cluster, i) => {
-            if (treeProgress < cluster.threshold) return null
-            const fadeT = Math.max(0, Math.min(1, (treeProgress - cluster.threshold) / 0.08))
+            const fadeT = Math.max(0, Math.min(1, (treeProgress - cluster.threshold) / 0.22))
+            if (fadeT <= 0) return null
+            const growScale = 0.45 + fadeT * 0.55
+            const originX = cluster.back[0]?.cx ?? 0
+            const originY = cluster.back[0]?.cy ?? 0
             return (
-              <g key={`fol-${i}`} style={{ opacity: fadeT }}>
+              <g key={`fol-${i}`}
+                 style={{
+                   opacity: fadeT,
+                   transform: `scale(${growScale})`,
+                   transformOrigin: `${originX}px ${originY}px`,
+                 }}>
                 {cluster.back.map((e, j) => (
                   <ellipse key={`b-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={e.fill} />
                 ))}
@@ -1110,6 +1211,27 @@ export default function GardenSvg({
             )
           })}
         </g>
+
+        {/* === Petites feuilles décoratives entre les branches (mature) === */}
+        {treeProgress > 0.20 && (() => {
+          const lFade = Math.min(1, (treeProgress - 0.20) / 0.15)
+          return (
+            <g style={{ opacity: lFade }}>
+              <ellipse cx={-280} cy={-260} rx={5} ry={3} fill="#7AA56B" transform="rotate(-30 -280 -260)" />
+              <ellipse cx={-320} cy={-170} rx={4} ry={2.5} fill="#5E8954" transform="rotate(15 -320 -170)" />
+              <ellipse cx={290} cy={-300} rx={5} ry={3} fill="#7AA56B" transform="rotate(40 290 -300)" />
+              <ellipse cx={350} cy={-200} rx={4} ry={2.5} fill="#5E8954" transform="rotate(-20 350 -200)" />
+              {treeProgress > 0.45 && (
+                <>
+                  <ellipse cx={-230} cy={-440} rx={5} ry={3} fill="#A8C088" transform="rotate(-25 -230 -440)" />
+                  <ellipse cx={250} cy={-490} rx={5} ry={3} fill="#A8C088" transform="rotate(35 250 -490)" />
+                  <ellipse cx={-100} cy={-600} rx={5} ry={3} fill="#7AA56B" transform="rotate(-15 -100 -600)" />
+                  <ellipse cx={130} cy={-580} rx={5} ry={3} fill="#7AA56B" transform="rotate(20 130 -580)" />
+                </>
+              )}
+            </g>
+          )
+        })()}
 
         {forceFull && (
           <g>
