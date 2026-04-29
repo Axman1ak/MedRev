@@ -24,6 +24,23 @@ export type GardenElement = {
   variant?: string
 }
 
+// ============ VITESSE DU CYCLE JOUR/NUIT ============
+// timeMultiplier = 72 → 24h simulées en 20 minutes réelles (1h ≈ 50s).
+// Source unique : importé par /dashboard (mini-jardin) ET /focus (jardin hero)
+// pour que les deux cyclent à la même vitesse.
+//
+// Pour ralentir/accélérer : changer cette valeur uniquement ici.
+//   - 24 → cycle 1h
+//   - 72 → cycle 20min  ← actuel
+//   - 144 → cycle 10min
+//   - 288 → cycle 5min
+export const GARDEN_TIME_MULTIPLIER = 72
+
+// Tick recommandé pour un mouvement fluide du soleil/lune. À 100ms, on a
+// 10fps de re-render — imperceptible à l'œil mais coût React négligeable
+// puisque le SVG est sans state interne.
+export const GARDEN_TICK_MS = 100
+
 // ============ CIEL : interpolation horaire ============
 type SkyColors = { top: string; upMid: string; loMid: string; bottom: string }
 
