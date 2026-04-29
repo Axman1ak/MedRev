@@ -255,6 +255,13 @@ type GardenSvgProps = {
   /** Inclure les @keyframes inline (true par défaut, à false sur la page focus
    *  qui charge déjà focus-styles.css avec les keyframes équivalentes). */
   injectStyles?: boolean
+  /** viewBox du SVG. Default '0 0 1600 1000' (vue large, arbre à 27.5% horizontal).
+   *  Pour centrer l'arbre, passer '40 0 800 1000' (le mini-jardin dashboard). */
+  viewBox?: string
+  /** Vitesse du cycle jour/nuit. 1 = temps réel (24h cycle). 240 = 24h en 6min.
+   *  Utilisé sur le mini-jardin pour que l'étudiant voie passer la nuit même
+   *  pendant des sessions de jour. */
+  timeMultiplier?: number
 }
 
 // ============ COMPOSANT ============
@@ -267,12 +274,21 @@ export default function GardenSvg({
   className,
   style,
   injectStyles = true,
+  viewBox = '0 0 1600 1000',
+  timeMultiplier = 1,
 }: GardenSvgProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
 
-  // Cycle jour/nuit
-  const nowDate = new Date(nowMs ?? Date.now())
-  const hour = nowDate.getHours() + nowDate.getMinutes() / 60
+  // Cycle jour/nuit. Avec timeMultiplier=1, l'heure simulée = heure réelle.
+  // Avec timeMultiplier>1, le cycle s'accélère (24h en 24h/timeMultiplier).
+  // Ex: timeMultiplier=240 → 24h simulées en 6min réelles.
+  const realMs = nowMs ?? Date.now()
+  const hour = timeMultiplier === 1
+    ? (() => {
+        const d = new Date(realMs)
+        return d.getHours() + d.getMinutes() / 60
+      })()
+    : (((realMs / 3_600_000) * timeMultiplier) % 24 + 24) % 24
   const sky = skyAtHour(hour)
 
   const isDaytime = hour >= 6 && hour <= 19
@@ -522,7 +538,7 @@ export default function GardenSvg({
 
   return (
     <svg
-      viewBox="0 0 1600 1000"
+      viewBox={viewBox}
       className={className}
       style={style}
       role="img"
