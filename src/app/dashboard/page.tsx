@@ -13,7 +13,8 @@ const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
 
 // Jardin Focus : pleine maturité de l'arbre à 100h cumulées (synchro avec la page focus)
-const GARDEN_TIME_TO_FULL_MS = 100 * 60 * 60 * 1000
+// Cible de complétion du temple d'Asclépios : 1500h cumulées (~1 année P1).
+const GARDEN_TIME_TO_FULL_MS = 1500 * 60 * 60 * 1000
 
 // ======================= TYPES =======================
 type Score = 1 | 2 | 3 | 4 | 5
