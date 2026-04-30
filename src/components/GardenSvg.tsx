@@ -9,7 +9,7 @@
 // sont injectées via <style> inline pour que le composant fonctionne partout
 // (dashboard inclus, sans devoir importer focus-styles.css).
 
-import type { CSSProperties } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 
 // ============ TYPES PARTAGÉS ============
 export type GardenKind =
@@ -95,165 +95,485 @@ const BUTTERFLY_COLORS: Record<string, [string, string]> = {
   purple:['#9C68B0', '#D5B0E0'],
 }
 
-// ============ ARBRE CENTRAL : branches & feuillage ============
-type HeroBranch = {
-  threshold: number
-  thickPath: string
-  innerPath: string
-  subPaths?: string[]
-}
+// ============ TEMPLE D'ASCLÉPIOS : 1500 pièces paramétriques ============
+// Le temple se construit pierre par pierre sur 1500h cumulées (1 pièce/h).
+// Chaque pièce a un seuil `at` (0..1) et une chaîne SVG. Au render, on
+// concatène toutes les pièces où treeProgress >= at et on injecte via
+// dangerouslySetInnerHTML — bypass de la réconciliation React pour
+// supporter 1500 nodes sans coût à chaque tick du cycle jour/nuit.
+//
+// Ordre de construction :
+//   - Fondations (200) : 3 marches × 30 blocs + joints + inscriptions grecques
+//   - Colonnes (400)   : 4 col × (24 tambours + chapiteau + lierre + détails)
+//   - Architrave (60)  : 8 blocs + regulae + guttae
+//   - Frieze (200)     : 9 triglyphes + 8 métopes sculptées (figures)
+//   - Corniche (100)   : blocs + mutules + dentils
+//   - Statue d'Asclépios (200) : visible entre les colonnes 2 et 3
+//   - Pediment (200)   : raking cornice + tympanum + couronne de laurier + méandre grec
+//   - Décorations (140): acroteria + guirlandes + oiseaux + pèlerins + fleurs
 
-const HERO_BRANCHES: HeroBranch[] = [
-  {
-    threshold: 0.18,
-    thickPath: 'M -12 -180 Q -90 -210 -180 -200 Q -235 -195 -270 -185',
-    innerPath: 'M -12 -180 Q -90 -210 -180 -200 Q -235 -195 -270 -185',
-    subPaths: ['M -180 -200 Q -220 -240 -260 -250', 'M -220 -195 Q -260 -180 -300 -160', 'M -180 -200 Q -180 -160 -195 -130'],
-  },
-  {
-    threshold: 0.34,
-    thickPath: 'M 14 -250 Q 90 -240 180 -210 Q 240 -185 280 -160',
-    innerPath: 'M 14 -250 Q 90 -240 180 -210 Q 240 -185 280 -160',
-    subPaths: ['M 180 -210 Q 235 -255 280 -290', 'M 240 -185 Q 295 -195 340 -195', 'M 250 -180 Q 260 -130 280 -90'],
-  },
-  {
-    threshold: 0.50,
-    thickPath: 'M -10 -340 Q -70 -360 -150 -345 Q -200 -335 -240 -320',
-    innerPath: 'M -10 -340 Q -70 -360 -150 -345 Q -200 -335 -240 -320',
-    subPaths: ['M -150 -345 Q -185 -395 -210 -440', 'M -200 -335 Q -260 -355 -300 -360'],
-  },
-  {
-    threshold: 0.66,
-    thickPath: 'M 11 -400 Q 70 -420 150 -440 Q 200 -455 240 -465',
-    innerPath: 'M 11 -400 Q 70 -420 150 -440 Q 200 -455 240 -465',
-    subPaths: ['M 150 -440 Q 190 -480 220 -510', 'M 210 -460 Q 260 -475 295 -490'],
-  },
-  {
-    threshold: 0.82,
-    thickPath: 'M 0 -460 Q -30 -510 -85 -540 Q -130 -565 -160 -575',
-    innerPath: 'M 0 -460 Q -30 -510 -85 -540 Q -130 -565 -160 -575',
-    subPaths: ['M -85 -540 Q -95 -580 -110 -610', 'M 0 -460 Q 40 -490 80 -540', 'M 80 -540 Q 120 -555 160 -560'],
-  },
-]
+export const HERO_TRUNK_X = 440
+export const HERO_GROUND_Y = 750
 
-type FoliageCluster = {
-  threshold: number
-  back: { cx: number; cy: number; rx: number; ry: number; fill: string }[]
-  mid: { cx: number; cy: number; rx: number; ry: number }[]
-  front: { cx: number; cy: number; rx: number; ry: number }[]
-}
+// Cible de complétion : 1500h cumulées d'étude (~ 1 année P1 motivée).
+// Importé par le focus et le dashboard pour rester cohérent.
+export const GARDEN_TIME_TO_FULL_MS = 1500 * 60 * 60 * 1000
 
-const HERO_FOLIAGE: FoliageCluster[] = [
-  {
-    threshold: 0.18,
-    back: [
-      { cx: -220, cy: -200, rx: 84, ry: 68, fill: '#2F4438' },
-      { cx: -260, cy: -180, rx: 64, ry: 52, fill: '#3F5E4A' },
-      { cx: -280, cy: -220, rx: 58, ry: 46, fill: '#3F5E4A' },
-      { cx: -200, cy: -160, rx: 52, ry: 44, fill: '#4A6E55' },
-      { cx: -300, cy: -160, rx: 46, ry: 40, fill: '#3F5E4A' },
-    ],
-    mid: [
-      { cx: -205, cy: -205, rx: 70, ry: 54 },
-      { cx: -245, cy: -185, rx: 52, ry: 42 },
-      { cx: -265, cy: -225, rx: 46, ry: 36 },
-      { cx: -185, cy: -165, rx: 42, ry: 34 },
-    ],
-    front: [
-      { cx: -195, cy: -215, rx: 40, ry: 30 },
-      { cx: -235, cy: -200, rx: 32, ry: 24 },
-      { cx: -265, cy: -235, rx: 28, ry: 22 },
-    ],
-  },
-  {
-    threshold: 0.34,
-    back: [
-      { cx: 220, cy: -220, rx: 98, ry: 78, fill: '#2F4438' },
-      { cx: 280, cy: -180, rx: 74, ry: 58, fill: '#3F5E4A' },
-      { cx: 280, cy: -260, rx: 64, ry: 52, fill: '#4A6E55' },
-      { cx: 340, cy: -220, rx: 56, ry: 46, fill: '#3F5E4A' },
-      { cx: 200, cy: -160, rx: 54, ry: 46, fill: '#4A6E55' },
-    ],
-    mid: [
-      { cx: 225, cy: -225, rx: 80, ry: 62 },
-      { cx: 285, cy: -185, rx: 60, ry: 48 },
-      { cx: 285, cy: -265, rx: 52, ry: 42 },
-      { cx: 345, cy: -225, rx: 46, ry: 38 },
-      { cx: 205, cy: -165, rx: 44, ry: 36 },
-    ],
-    front: [
-      { cx: 215, cy: -235, rx: 48, ry: 36 },
-      { cx: 275, cy: -200, rx: 36, ry: 28 },
-      { cx: 280, cy: -275, rx: 32, ry: 24 },
-      { cx: 345, cy: -235, rx: 28, ry: 22 },
-    ],
-  },
-  {
-    threshold: 0.50,
-    back: [
-      { cx: -200, cy: -360, rx: 92, ry: 72, fill: '#2F4438' },
-      { cx: -260, cy: -340, rx: 66, ry: 56, fill: '#3F5E4A' },
-      { cx: -260, cy: -400, rx: 58, ry: 48, fill: '#4A6E55' },
-      { cx: -310, cy: -360, rx: 52, ry: 44, fill: '#3F5E4A' },
-    ],
-    mid: [
-      { cx: -185, cy: -365, rx: 76, ry: 58 },
-      { cx: -245, cy: -345, rx: 54, ry: 44 },
-      { cx: -245, cy: -405, rx: 48, ry: 38 },
-      { cx: -295, cy: -365, rx: 42, ry: 34 },
-    ],
-    front: [
-      { cx: -175, cy: -375, rx: 44, ry: 32 },
-      { cx: -235, cy: -355, rx: 32, ry: 26 },
-      { cx: -245, cy: -415, rx: 28, ry: 22 },
-    ],
-  },
-  {
-    threshold: 0.66,
-    back: [
-      { cx: 220, cy: -460, rx: 88, ry: 72, fill: '#2F4438' },
-      { cx: 280, cy: -490, rx: 62, ry: 54, fill: '#3F5E4A' },
-      { cx: 270, cy: -440, rx: 58, ry: 48, fill: '#4A6E55' },
-      { cx: 180, cy: -510, rx: 54, ry: 46, fill: '#3F5E4A' },
-    ],
-    mid: [
-      { cx: 225, cy: -465, rx: 72, ry: 58 },
-      { cx: 285, cy: -495, rx: 50, ry: 44 },
-      { cx: 275, cy: -445, rx: 46, ry: 40 },
-      { cx: 185, cy: -515, rx: 44, ry: 36 },
-    ],
-    front: [
-      { cx: 215, cy: -475, rx: 42, ry: 32 },
-      { cx: 285, cy: -505, rx: 30, ry: 24 },
-      { cx: 275, cy: -455, rx: 28, ry: 22 },
-    ],
-  },
-  {
-    threshold: 0.82,
-    back: [
-      { cx: -130, cy: -580, rx: 74, ry: 62, fill: '#2F4438' },
-      { cx: -170, cy: -610, rx: 54, ry: 46, fill: '#4A6E55' },
-      { cx: -90, cy: -620, rx: 50, ry: 42, fill: '#3F5E4A' },
-      { cx: 80, cy: -560, rx: 64, ry: 54, fill: '#3F5E4A' },
-      { cx: 140, cy: -580, rx: 50, ry: 44, fill: '#4A6E55' },
-    ],
-    mid: [
-      { cx: -115, cy: -585, rx: 60, ry: 50 },
-      { cx: -155, cy: -615, rx: 44, ry: 38 },
-      { cx: -75, cy: -625, rx: 40, ry: 34 },
-      { cx: 95, cy: -565, rx: 52, ry: 44 },
-      { cx: 155, cy: -585, rx: 42, ry: 36 },
-    ],
-    front: [
-      { cx: -105, cy: -595, rx: 36, ry: 28 },
-      { cx: -155, cy: -625, rx: 26, ry: 22 },
-      { cx: 105, cy: -575, rx: 32, ry: 26 },
-    ],
-  },
-]
+type TemplePiece = { at: number; svg: string }
 
-const HERO_TRUNK_X = 440
-const HERO_GROUND_Y = 750
+const TEMPLE_PIECES: TemplePiece[] = (() => {
+  const list: TemplePiece[] = []
+  const TOTAL = 1500
+  let pi = 0
+  const addPc = (svg: string) => { list.push({ at: pi / TOTAL, svg }); pi++ }
+  const greekChars = ['Α','Σ','Κ','Λ','Η','Π','Ι','Ο','Ν','Ε','Μ','Τ','Δ','Ρ','Φ','Ω','Γ','Β','Θ','Ψ','Ξ','Χ','Υ','Ζ','Λ','Ν','Ε','Α','Σ','Κ']
+
+  // === FOUNDATION (200) ===
+  const stepCfg = [
+    { y: -10, x0: -260, w: 520, color: '#B5A380' },
+    { y: -22, x0: -250, w: 500, color: '#C9B89A' },
+    { y: -34, x0: -240, w: 480, color: '#D4C5A8' },
+  ]
+  for (let s = 0; s < 3; s++) {
+    const cfg = stepCfg[s]
+    for (let i = 0; i < 30; i++) {
+      const sw = cfg.w / 30 + 1
+      const x = cfg.x0 + i * (cfg.w / 30)
+      addPc(`<rect x="${x.toFixed(1)}" y="${cfg.y}" width="${sw.toFixed(1)}" height="12" fill="${cfg.color}"/>`)
+    }
+  }
+  for (let s = 0; s < 3; s++) {
+    const cfg = stepCfg[s]
+    addPc(`<rect x="${cfg.x0}" y="${cfg.y}" width="${cfg.w}" height="12" fill="none" stroke="#5C4A35" stroke-width="2.2"/>`)
+  }
+  for (let s = 0; s < 3; s++) {
+    for (let i = 0; i < 9; i++) {
+      const cfg = stepCfg[s]
+      const x = cfg.x0 + (i + 1) * (cfg.w / 10)
+      addPc(`<line x1="${x.toFixed(1)}" y1="${cfg.y}" x2="${x.toFixed(1)}" y2="${cfg.y + 12}" stroke="#5C4A35" stroke-width="0.8" opacity="0.7"/>`)
+    }
+  }
+  for (let i = 0; i < 30; i++) {
+    const stepIdx = i % 3
+    const cfg = stepCfg[stepIdx]
+    const x = cfg.x0 + 20 + (Math.floor(i / 3) * 50)
+    const y = cfg.y + 8
+    addPc(`<text x="${x}" y="${y}" font-size="6" fill="#5C4A35" opacity="0.7" font-family="serif">${greekChars[i]}</text>`)
+  }
+  for (let i = 0; i < 18; i++) {
+    const stepIdx = i % 3
+    const cfg = stepCfg[stepIdx]
+    const x = cfg.x0 + 30 + (i * 27)
+    addPc(`<path d="M ${x.toFixed(1)} ${cfg.y + 1} L ${(x + 2).toFixed(1)} ${cfg.y + 5} L ${x.toFixed(1)} ${cfg.y + 9}" stroke="#5C4A35" stroke-width="0.6" fill="none" opacity="0.6"/>`)
+  }
+  for (let s = 0; s < 3; s++) {
+    for (let i = 0; i < 4; i++) {
+      const cfg = stepCfg[s]
+      const x = cfg.x0 + 50 + i * 100
+      addPc(`<rect x="${x.toFixed(1)}" y="${cfg.y + 9}" width="40" height="3" fill="#9C8A6A" opacity="0.5"/>`)
+    }
+  }
+  addPc(`<path d="M -260 0 L -255 -2 L -260 -4 Z" fill="#9C8A6A"/>`)
+  addPc(`<path d="M 260 -2 L 255 -4 L 260 -6 Z" fill="#9C8A6A"/>`)
+  addPc(`<path d="M -250 -10 L -246 -14 L -252 -14 Z" fill="#9C8A6A" opacity="0.7"/>`)
+  addPc(`<path d="M 250 -10 L 246 -14 L 252 -14 Z" fill="#9C8A6A" opacity="0.7"/>`)
+  addPc(`<rect x="-258" y="-2" width="6" height="2" fill="#9C8A6A" opacity="0.6"/>`)
+  addPc(`<rect x="252" y="-2" width="6" height="2" fill="#9C8A6A" opacity="0.6"/>`)
+  for (let i = 0; i < 5; i++) {
+    const x = -240 + i * 120
+    addPc(`<path d="M ${x} 0 Q ${x - 2} -3 ${x - 1} -5 M ${x} 0 Q ${x} -4 ${x} -6 M ${x} 0 Q ${x + 2} -3 ${x + 1} -5" stroke="#5E8954" stroke-width="0.8" fill="none" stroke-linecap="round"/>`)
+  }
+  for (let i = 0; i < 14; i++) {
+    const x = -250 + i * 36
+    addPc(`<circle cx="${x}" cy="3" r="1.5" fill="#F4B5C9" stroke="#A85040" stroke-width="0.4"/>`)
+  }
+
+  // === COLONNES (400, 100/col) ===
+  const colXs = [-153, -51, 51, 153]
+  for (let c = 0; c < 4; c++) {
+    const cx = colXs[c]
+    for (let d = 0; d < 24; d++) {
+      const yt = -34 - (d + 1) * 9
+      const yb = -34 - d * 9
+      addPc(`<path d="M ${cx - 17} ${yt} Q ${cx - 18} ${yt + 4.5} ${cx - 17} ${yb} L ${cx + 17} ${yb} Q ${cx + 18} ${yt + 4.5} ${cx + 17} ${yt} Z" fill="#D4C5A8"/>`)
+    }
+    for (let j = 0; j < 23; j++) {
+      const y = -43 - j * 9
+      addPc(`<line x1="${cx - 15}" y1="${y}" x2="${cx + 15}" y2="${y}" stroke="#5C4A35" stroke-width="0.5" opacity="0.35"/>`)
+    }
+    addPc(`<path d="M ${cx + 5} -34 Q ${cx + 5} -150 ${cx + 5} -250 L ${cx + 17} -250 Q ${cx + 18} -150 ${cx + 17} -34 Z" fill="#B5A380" opacity="0.55"/>`)
+    addPc(`<path d="M ${cx - 17} -34 Q ${cx - 19} -90 ${cx - 17} -150 Q ${cx - 16} -210 ${cx - 16} -250 L ${cx + 16} -250 Q ${cx + 16} -210 ${cx + 17} -150 Q ${cx + 19} -90 ${cx + 17} -34 Z" fill="none" stroke="#5C4A35" stroke-width="2"/>`)
+    for (let f = 0; f < 6; f++) {
+      const fx = cx - 13 + f * 5
+      addPc(`<line x1="${fx}" y1="-244" x2="${fx}" y2="-44" stroke="#5C4A35" stroke-width="0.8" opacity="0.55"/>`)
+    }
+    addPc(`<line x1="${cx - 17}" y1="-250" x2="${cx + 17}" y2="-250" stroke="#5C4A35" stroke-width="1.3"/>`)
+    addPc(`<line x1="${cx - 17}" y1="-254" x2="${cx + 17}" y2="-254" stroke="#5C4A35" stroke-width="1.3"/>`)
+    addPc(`<path d="M ${cx - 20} -256 Q ${cx - 25} -266 ${cx - 17} -272 L ${cx + 17} -272 Q ${cx + 25} -266 ${cx + 20} -256 Z" fill="#D4C5A8" stroke="#5C4A35" stroke-width="2"/>`)
+    addPc(`<rect x="${cx - 25}" y="-282" width="50" height="10" fill="#D4C5A8" stroke="#5C4A35" stroke-width="2"/>`)
+    addPc(`<rect x="${cx + 14}" y="-282" width="11" height="10" fill="#B5A380" opacity="0.5"/>`)
+    addPc(`<line x1="${cx - 25}" y1="-272" x2="${cx + 25}" y2="-272" stroke="#5C4A35" stroke-width="0.6" opacity="0.5"/>`)
+    addPc(`<line x1="${cx - 23}" y1="-282" x2="${cx + 23}" y2="-282" stroke="#5C4A35" stroke-width="0.5" opacity="0.4"/>`)
+    addPc(`<line x1="${cx - 25}" y1="-280" x2="${cx + 25}" y2="-280" stroke="#5C4A35" stroke-width="0.5" opacity="0.3"/>`)
+    const leafSide = (c < 2) ? -1 : 1
+    for (let l = 0; l < 12; l++) {
+      const ly = -50 - l * 16
+      const lx = cx + leafSide * (16 + (l % 3) * 2)
+      addPc(`<ellipse cx="${lx.toFixed(1)}" cy="${ly}" rx="3.5" ry="2.5" fill="#5E8954" stroke="#3F5E4A" stroke-width="0.5"/>`)
+    }
+    for (let i = 0; i < 10; i++) {
+      const y = -60 - i * 18
+      addPc(`<text x="${cx - 4}" y="${y}" font-size="5" fill="#5C4A35" opacity="0.75" font-family="serif">${greekChars[(c * 7 + i) % greekChars.length]}</text>`)
+    }
+    for (let fl = 0; fl < 8; fl++) {
+      const ly = -55 - fl * 23 - (fl % 2) * 7
+      const lx = cx + leafSide * (14 + (fl % 3))
+      addPc(`<circle cx="${lx.toFixed(1)}" cy="${ly}" r="2" fill="#F4B5C9" stroke="#A85040" stroke-width="0.4"/>`)
+    }
+    for (let w = 0; w < 10; w++) {
+      const y = -50 - w * 19
+      const xOff = (w % 3 - 1) * 8
+      addPc(`<path d="M ${cx + xOff} ${y} L ${cx + xOff + 1} ${y - 4} L ${cx + xOff - 1} ${y - 8}" stroke="#9C8A6A" stroke-width="0.5" fill="none" opacity="0.6"/>`)
+    }
+  }
+
+  // === ARCHITRAVE (60) ===
+  for (let i = 0; i < 8; i++) addPc(`<rect x="${-220 + i * 55}" y="-312" width="56" height="30" fill="#D4C5A8"/>`)
+  addPc(`<rect x="-220" y="-312" width="440" height="30" fill="none" stroke="#5C4A35" stroke-width="2.2"/>`)
+  for (let i = 0; i < 7; i++) {
+    const x = -165 + i * 55
+    addPc(`<line x1="${x}" y1="-312" x2="${x}" y2="-282" stroke="#5C4A35" stroke-width="0.7" opacity="0.55"/>`)
+  }
+  for (let i = 0; i < 9; i++) addPc(`<rect x="${-198 + i * 49.5}" y="-285" width="12" height="3" fill="#B5A380"/>`)
+  const reguXs = [-194, -153, -102, -51, 0, 51, 102, 153, 194]
+  for (let i = 0; i < 9; i++) {
+    for (let g = 0; g < 3; g++) {
+      addPc(`<circle cx="${reguXs[i] - 4 + g * 4}" cy="-281" r="1" fill="#9C8A6A"/>`)
+    }
+  }
+  for (let i = 0; i < 9; i++) {
+    addPc(`<text x="${-200 + i * 50}" y="-295" font-size="6" fill="#5C4A35" opacity="0.75" font-family="serif">${greekChars[i]}</text>`)
+  }
+
+  // === FRIEZE (200) ===
+  addPc(`<rect x="-220" y="-344" width="440" height="32" fill="#C9B89A"/>`)
+  addPc(`<rect x="-220" y="-344" width="440" height="32" fill="none" stroke="#5C4A35" stroke-width="2.2"/>`)
+  const triXs = [-194, -153, -102, -51, 0, 51, 102, 153, 194]
+  for (let t = 0; t < 9; t++) {
+    const x = triXs[t] - 6
+    addPc(`<rect x="${x}" y="-343" width="12" height="30" fill="#D4C5A8" stroke="#5C4A35" stroke-width="1.3"/>`)
+  }
+  for (let t = 0; t < 9; t++) {
+    const x = triXs[t] - 6
+    addPc(`<line x1="${x + 2}" y1="-341" x2="${x + 2}" y2="-315" stroke="#5C4A35" stroke-width="0.8"/>`)
+    addPc(`<line x1="${x + 6}" y1="-341" x2="${x + 6}" y2="-315" stroke="#5C4A35" stroke-width="0.8"/>`)
+    addPc(`<line x1="${x + 10}" y1="-341" x2="${x + 10}" y2="-315" stroke="#5C4A35" stroke-width="0.8"/>`)
+  }
+  const metXs = [-128, -76, -26, 26, 76, 128, -176, 176]
+  for (let m = 0; m < 8; m++) {
+    const mx = metXs[m]
+    addPc(`<ellipse cx="${mx}" cy="-324" rx="3" ry="4" fill="#9C7A4F"/>`)
+    addPc(`<rect x="${mx - 2.5}" y="-322" width="5" height="8" fill="#9C7A4F"/>`)
+    addPc(`<rect x="${mx - 4}" y="-321" width="2" height="6" fill="#9C7A4F"/>`)
+    addPc(`<rect x="${mx + 2}" y="-321" width="2" height="6" fill="#9C7A4F"/>`)
+    addPc(`<line x1="${mx + 5}" y1="-330" x2="${mx + 5}" y2="-315" stroke="#5C4A35" stroke-width="0.8"/>`)
+    addPc(`<circle cx="${mx - 1}" cy="-326" r="0.5" fill="#3D2818"/>`)
+    addPc(`<circle cx="${mx + 1}" cy="-326" r="0.5" fill="#3D2818"/>`)
+    addPc(`<rect x="${mx - 3}" y="-315" width="6" height="1.5" fill="#9C7A4F"/>`)
+    addPc(`<circle cx="${mx}" cy="-329" r="3.5" fill="none" stroke="#9C8A6A" stroke-width="0.4" opacity="0.5"/>`)
+    addPc(`<rect x="${mx - 9}" y="-340" width="18" height="24" fill="none" stroke="#5C4A35" stroke-width="0.5" opacity="0.4"/>`)
+  }
+  for (let i = 0; i < 9; i++) {
+    addPc(`<line x1="-218" y1="${-340 + i * 3.5}" x2="218" y2="${-340 + i * 3.5}" stroke="#B5A380" stroke-width="0.4" opacity="0.4"/>`)
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = -198 + i * 49.5
+    addPc(`<text x="${x}" y="-330" font-size="4" fill="#5C4A35" opacity="0.6" font-family="serif">${greekChars[i]}${greekChars[(i + 5) % greekChars.length]}</text>`)
+  }
+  for (let i = 0; i < 8; i++) {
+    addPc(`<line x1="${metXs[i] - 8}" y1="-336" x2="${metXs[i] + 8}" y2="-336" stroke="#5C4A35" stroke-width="0.5" opacity="0.6"/>`)
+  }
+  for (let m = 0; m < 8; m++) {
+    const mx = metXs[m]
+    addPc(`<line x1="${mx - 7}" y1="-318" x2="${mx + 7}" y2="-318" stroke="#5C4A35" stroke-width="0.4" opacity="0.5"/>`)
+    if (m < 7) {
+      addPc(`<line x1="${mx - 5}" y1="-340" x2="${mx + 5}" y2="-340" stroke="#5C4A35" stroke-width="0.4" opacity="0.4"/>`)
+      addPc(`<line x1="${mx - 7}" y1="-321" x2="${mx + 7}" y2="-321" stroke="#5C4A35" stroke-width="0.3" opacity="0.4"/>`)
+    }
+  }
+
+  // === CORNICHE (100) ===
+  for (let i = 0; i < 9; i++) addPc(`<rect x="${-230 + i * 51}" y="-354" width="52" height="10" fill="#D4C5A8"/>`)
+  addPc(`<rect x="-230" y="-354" width="460" height="10" fill="none" stroke="#5C4A35" stroke-width="2.2"/>`)
+  for (let i = 0; i < 9; i++) addPc(`<rect x="${triXs[i] - 7}" y="-348" width="14" height="4" fill="#C9B89A" stroke="#5C4A35" stroke-width="0.8"/>`)
+  for (let i = 0; i < 9; i++) {
+    for (let g = 0; g < 6; g++) {
+      addPc(`<circle cx="${triXs[i] - 5 + g * 2}" cy="-343" r="0.9" fill="#9C8A6A"/>`)
+    }
+  }
+  for (let i = 0; i < 24; i++) addPc(`<rect x="${-220 + i * 18}" y="-358" width="8" height="4" fill="#D4C5A8" stroke="#5C4A35" stroke-width="0.4"/>`)
+
+  // === STATUE D'ASCLÉPIOS (200) ===
+  addPc(`<rect x="-25" y="-46" width="50" height="12" fill="#B5A380" stroke="#5C4A35" stroke-width="1.3"/>`)
+  addPc(`<rect x="-22" y="-58" width="44" height="12" fill="#C9B89A" stroke="#5C4A35" stroke-width="1.3"/>`)
+  addPc(`<rect x="-19" y="-70" width="38" height="12" fill="#D4C5A8" stroke="#5C4A35" stroke-width="1.3"/>`)
+  addPc(`<rect x="-25" y="-46" width="50" height="3" fill="#9C8A6A" opacity="0.55"/>`)
+  for (let i = 0; i < 12; i++) {
+    const x = -22 + i * 4
+    addPc(`<text x="${x}" y="-50" font-size="3" fill="#5C4A35" opacity="0.8" font-family="serif">${greekChars[i]}</text>`)
+  }
+  addPc(`<path d="M -10 -70 Q -14 -100 -12 -130 Q -10 -150 -8 -160 L 8 -160 Q 10 -150 12 -130 Q 14 -100 10 -70 Z" fill="#E8DDC5" stroke="#5C4A35" stroke-width="1.2"/>`)
+  addPc(`<path d="M -10 -70 Q -14 -100 -12 -130 L -8 -130 Q -10 -100 -8 -70 Z" fill="#C9B89A"/>`)
+  addPc(`<path d="M -8 -90 L 8 -90" stroke="#9C8A6A" stroke-width="0.6" opacity="0.6"/>`)
+  addPc(`<path d="M -10 -110 L 10 -110" stroke="#9C8A6A" stroke-width="0.6" opacity="0.6"/>`)
+  addPc(`<path d="M -11 -125 L 11 -125" stroke="#9C8A6A" stroke-width="0.6" opacity="0.6"/>`)
+  addPc(`<path d="M -12 -140 L 12 -140" stroke="#9C8A6A" stroke-width="0.6" opacity="0.6"/>`)
+  addPc(`<path d="M -8 -160 Q -10 -175 -7 -185 L 7 -185 Q 10 -175 8 -160 Z" fill="#E8DDC5" stroke="#5C4A35" stroke-width="1.2"/>`)
+  addPc(`<path d="M -8 -160 Q -10 -175 -7 -185 L -3 -185 Q -5 -175 -4 -160 Z" fill="#C9B89A"/>`)
+  addPc(`<line x1="-7" y1="-170" x2="7" y2="-170" stroke="#9C8A6A" stroke-width="0.5" opacity="0.6"/>`)
+  addPc(`<line x1="-7" y1="-180" x2="7" y2="-180" stroke="#9C8A6A" stroke-width="0.5" opacity="0.6"/>`)
+  addPc(`<rect x="-12" y="-180" width="3" height="20" fill="#E8DDC5" stroke="#5C4A35" stroke-width="0.8"/>`)
+  addPc(`<rect x="9" y="-180" width="3" height="20" fill="#E8DDC5" stroke="#5C4A35" stroke-width="0.8"/>`)
+  addPc(`<line x1="-10.5" y1="-170" x2="-10.5" y2="-162" stroke="#9C8A6A" stroke-width="0.4"/>`)
+  addPc(`<line x1="10.5" y1="-170" x2="10.5" y2="-162" stroke="#9C8A6A" stroke-width="0.4"/>`)
+  addPc(`<ellipse cx="0" cy="-192" rx="6" ry="7" fill="#E8DDC5" stroke="#5C4A35" stroke-width="1.2"/>`)
+  addPc(`<path d="M -6 -195 Q -6 -202 0 -204 Q 6 -202 6 -195 Q 6 -198 0 -200 Q -6 -198 -6 -195 Z" fill="#9C7A4F" stroke="#5C4A35" stroke-width="0.8"/>`)
+  addPc(`<circle cx="-2" cy="-193" r="0.8" fill="#3D2818"/>`)
+  addPc(`<circle cx="2" cy="-193" r="0.8" fill="#3D2818"/>`)
+  addPc(`<path d="M -2 -188 Q 0 -187 2 -188" stroke="#3D2818" stroke-width="0.5" fill="none"/>`)
+  addPc(`<path d="M -3 -190 L -2.5 -190.5 M 3 -190 L 2.5 -190.5" stroke="#3D2818" stroke-width="0.4"/>`)
+  addPc(`<ellipse cx="0" cy="-190" rx="0.5" ry="0.8" fill="#3D2818" opacity="0.5"/>`)
+  addPc(`<path d="M -5 -200 Q 0 -202 5 -200" stroke="#9C7A4F" stroke-width="0.4" fill="none"/>`)
+  addPc(`<line x1="14" y1="-160" x2="14" y2="-200" stroke="#7A5A3E" stroke-width="2"/>`)
+  addPc(`<line x1="14" y1="-200" x2="14" y2="-205" stroke="#9C7A4F" stroke-width="2"/>`)
+  addPc(`<circle cx="14" cy="-205" r="2" fill="#7A5A3E" stroke="#5C4A35" stroke-width="0.5"/>`)
+  addPc(`<line x1="14" y1="-160" x2="14" y2="-155" stroke="#5C4A35" stroke-width="2"/>`)
+  addPc(`<line x1="13" y1="-180" x2="15" y2="-180" stroke="#5C4A35" stroke-width="0.5"/>`)
+  addPc(`<line x1="13" y1="-170" x2="15" y2="-170" stroke="#5C4A35" stroke-width="0.5"/>`)
+  addPc(`<line x1="13" y1="-190" x2="15" y2="-190" stroke="#5C4A35" stroke-width="0.5"/>`)
+  for (let i = 0; i < 6; i++) {
+    const yy = -165 - i * 7
+    const sign = i % 2 === 0 ? -1 : 1
+    addPc(`<path d="M ${14 + sign * 3} ${yy} Q ${14 - sign * 3} ${yy - 3.5} ${14 + sign * 3} ${yy - 7}" stroke="#5E8954" stroke-width="1.3" fill="none" stroke-linecap="round"/>`)
+  }
+  addPc(`<ellipse cx="11.5" cy="-208" rx="2" ry="1.2" fill="#5E8954" stroke="#3F5E4A" stroke-width="0.4"/>`)
+  addPc(`<circle cx="11" cy="-208.5" r="0.4" fill="#3D2818"/>`)
+  addPc(`<line x1="10" y1="-208" x2="9" y2="-207.5" stroke="#C75050" stroke-width="0.3"/>`)
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * 2 * Math.PI
+    const x1 = Math.cos(angle) * 9
+    const y1 = -192 + Math.sin(angle) * 9
+    const x2 = Math.cos(angle) * 12
+    const y2 = -192 + Math.sin(angle) * 12
+    addPc(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFE598" stroke-width="0.8" opacity="0.7"/>`)
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = -22 + (i * 3)
+    addPc(`<circle cx="${x.toFixed(1)}" cy="-48" r="1" fill="#5E8954" opacity="0.85"/>`)
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = -10 + (i % 4) * 7
+    const y = -75 - Math.floor(i / 4) * 18
+    addPc(`<line x1="${x}" y1="${y}" x2="${x + 5}" y2="${y - 1}" stroke="#9C8A6A" stroke-width="0.3" opacity="0.6"/>`)
+  }
+  for (let i = 0; i < 8; i++) {
+    const x = -22 + i * 6
+    addPc(`<circle cx="${x}" cy="-48" r="0.7" fill="#F4B5C9" stroke="#A85040" stroke-width="0.3"/>`)
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = -10 + (i % 5) * 5
+    const y = -100 - Math.floor(i / 5) * 30
+    addPc(`<line x1="${x}" y1="${y}" x2="${x + 3}" y2="${y + 1}" stroke="#9C8A6A" stroke-width="0.3" opacity="0.6"/>`)
+  }
+  for (let i = 0; i < 10; i++) {
+    const angle = (i / 10) * Math.PI - Math.PI / 2
+    const x1 = Math.cos(angle) * 13
+    const y1 = -192 + Math.sin(angle) * 13
+    const x2 = Math.cos(angle) * 16
+    const y2 = -192 + Math.sin(angle) * 16
+    addPc(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFE598" stroke-width="0.5" opacity="0.5"/>`)
+  }
+  for (let i = 0; i < 24; i++) {
+    const stepIdx = i % 3
+    const yPed = stepIdx === 0 ? -45 : stepIdx === 1 ? -57 : -69
+    const x = -22 + (Math.floor(i / 3) * 6)
+    addPc(`<ellipse cx="${x}" cy="${yPed}" rx="1.3" ry="0.5" fill="#F4B5C9" opacity="0.85"/>`)
+  }
+
+  // === PEDIMENT (200) ===
+  addPc(`<path d="M -218 -358 L 0 -432 L 218 -358 Z" fill="#B5A380"/>`)
+  addPc(`<path d="M -230 -354 L 0 -442 L 230 -354 Z" fill="#D4C5A8"/>`)
+  addPc(`<path d="M -218 -358 L 0 -432 L 218 -358 Z" fill="#9C8A6A" opacity="0.5"/>`)
+  addPc(`<path d="M -230 -354 L 0 -442 L 230 -354 Z" fill="none" stroke="#5C4A35" stroke-width="2.2" stroke-linejoin="round"/>`)
+  for (let i = 0; i < 12; i++) {
+    const t = i / 12
+    const x1 = -230 + t * 230
+    const y1 = -354 - t * 90
+    addPc(`<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${(x1 + 19).toFixed(1)} ${(y1 - 7.5).toFixed(1)} L ${(x1 + 19).toFixed(1)} ${(y1 - 2).toFixed(1)} L ${x1.toFixed(1)} ${(y1 + 5).toFixed(1)} Z" fill="#D4C5A8"/>`)
+  }
+  for (let i = 0; i < 12; i++) {
+    const t = i / 12
+    const x1 = 230 - t * 230
+    const y1 = -354 - t * 90
+    addPc(`<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${(x1 - 19).toFixed(1)} ${(y1 - 7.5).toFixed(1)} L ${(x1 - 19).toFixed(1)} ${(y1 - 2).toFixed(1)} L ${x1.toFixed(1)} ${(y1 + 5).toFixed(1)} Z" fill="#D4C5A8"/>`)
+  }
+  for (let i = 0; i < 8; i++) {
+    const t = (i + 1) / 12
+    const xL = -230 + t * 230
+    const yL = -354 - t * 90
+    addPc(`<line x1="${xL.toFixed(1)}" y1="${yL.toFixed(1)}" x2="${(xL + 19).toFixed(1)}" y2="${(yL - 7).toFixed(1)}" stroke="#5C4A35" stroke-width="0.5" opacity="0.6"/>`)
+  }
+  // Asclepius + partner figures (16)
+  addPc(`<ellipse cx="-50" cy="-385" rx="6" ry="8" fill="#9C7A4F"/>`)
+  addPc(`<rect x="-54" y="-378" width="8" height="22" fill="#9C7A4F"/>`)
+  addPc(`<path d="M -56 -356 L -44 -356 L -42 -358 L -58 -358 Z" fill="#9C7A4F"/>`)
+  addPc(`<line x1="-50" y1="-377" x2="-50" y2="-358" stroke="#7A5A3E" stroke-width="0.8"/>`)
+  addPc(`<line x1="-46" y1="-377" x2="-46" y2="-358" stroke="#7A5A3E" stroke-width="0.8"/>`)
+  addPc(`<circle cx="-52" cy="-388" r="0.8" fill="#3D2818"/>`)
+  addPc(`<circle cx="-48" cy="-388" r="0.8" fill="#3D2818"/>`)
+  addPc(`<path d="M -54 -383 Q -50 -380 -46 -383" stroke="#3D2818" stroke-width="0.5" fill="none"/>`)
+  addPc(`<ellipse cx="50" cy="-385" rx="6" ry="8" fill="#9C7A4F"/>`)
+  addPc(`<rect x="46" y="-378" width="8" height="22" fill="#9C7A4F"/>`)
+  addPc(`<path d="M 44 -356 L 56 -356 L 58 -358 L 42 -358 Z" fill="#9C7A4F"/>`)
+  addPc(`<line x1="50" y1="-377" x2="50" y2="-358" stroke="#7A5A3E" stroke-width="0.8"/>`)
+  addPc(`<line x1="54" y1="-377" x2="54" y2="-358" stroke="#7A5A3E" stroke-width="0.8"/>`)
+  addPc(`<circle cx="48" cy="-388" r="0.8" fill="#3D2818"/>`)
+  addPc(`<circle cx="52" cy="-388" r="0.8" fill="#3D2818"/>`)
+  // Laurel branches (40)
+  for (let i = 0; i < 20; i++) {
+    const t = i / 20
+    const x = -150 + t * 50
+    const y = -370 - t * 30
+    addPc(`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3" ry="1.5" fill="#5E8954" opacity="0.85"/>`)
+  }
+  for (let i = 0; i < 20; i++) {
+    const t = i / 20
+    const x = 150 - t * 50
+    const y = -370 - t * 30
+    addPc(`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3" ry="1.5" fill="#5E8954" opacity="0.85"/>`)
+  }
+  // Tympanum bricks (50, formule corrigée)
+  const tympH = (y: number) => 218 * (y + 432) / 74
+  for (let row = 0; row < 5; row++) {
+    const yTop = -372 - row * 14
+    const yBottom = yTop + 14
+    const halfWidth = Math.min(tympH(yTop), tympH(yBottom)) - 1
+    if (halfWidth <= 0) continue
+    const numBricks = 10
+    const brickW = (2 * halfWidth) / numBricks
+    for (let col = 0; col < numBricks; col++) {
+      const x = -halfWidth + col * brickW
+      addPc(`<rect x="${x.toFixed(1)}" y="${yTop}" width="${(brickW + 0.5).toFixed(1)}" height="14" fill="#A89578" opacity="0.45" stroke="#9C8A6A" stroke-width="0.3"/>`)
+    }
+  }
+  // Pediment frame border (30)
+  for (let i = 0; i < 15; i++) {
+    const t = i / 15
+    const x = -218 + t * 218
+    const y = -358 - t * 74
+    addPc(`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + 5).toFixed(1)}" y2="${(y - 1.5).toFixed(1)}" stroke="#9C8A6A" stroke-width="0.7" opacity="0.6"/>`)
+  }
+  for (let i = 0; i < 15; i++) {
+    const t = i / 15
+    const x = 218 - t * 218
+    const y = -358 - t * 74
+    addPc(`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - 5).toFixed(1)}" y2="${(y - 1.5).toFixed(1)}" stroke="#9C8A6A" stroke-width="0.7" opacity="0.6"/>`)
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = -200 + i * 50
+    addPc(`<path d="M ${x} -355 L ${x - 3} -362 L ${x} -370 L ${x + 3} -362 Z" fill="#C9B89A" stroke="#5C4A35" stroke-width="0.8"/>`)
+  }
+  addPc(`<rect x="-3" y="-450" width="6" height="8" fill="#A87858" stroke="#5C4A35" stroke-width="0.8"/>`)
+  // Couronne de laurier (10)
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 7) * Math.PI - Math.PI
+    const cxL = Math.cos(angle) * 20
+    const cyL = -395 + Math.sin(angle) * 8
+    const rot = (angle + Math.PI / 2) * 180 / Math.PI
+    addPc(`<ellipse cx="${cxL.toFixed(1)}" cy="${cyL.toFixed(1)}" rx="4" ry="1.8" fill="#5E8954" stroke="#3F5E4A" stroke-width="0.5" transform="rotate(${rot.toFixed(0)} ${cxL.toFixed(1)} ${cyL.toFixed(1)})"/>`)
+  }
+  addPc(`<path d="M -8 -390 Q 0 -385 8 -390 L 6 -380 Q 0 -383 -6 -380 Z" fill="#C75050" stroke="#A85040" stroke-width="0.4"/>`)
+  addPc(`<circle cx="0" cy="-395" r="3" fill="#FFE598" stroke="#9C8A6A" stroke-width="0.6"/>`)
+  // Méandre grec en bas du tympanum (17)
+  for (let i = 0; i < 9; i++) {
+    const x = -180 + i * 45
+    addPc(`<path d="M ${x} -360 L ${x + 4} -360 L ${x + 4} -363 L ${x + 1} -363 L ${x + 1} -362 L ${x + 3} -362 L ${x + 3} -361 L ${x} -361 Z" fill="#9C8A6A" stroke="#5C4A35" stroke-width="0.4" opacity="0.85"/>`)
+  }
+  for (let i = 0; i < 8; i++) {
+    const x = -160 + i * 45
+    addPc(`<circle cx="${x}" cy="-361" r="1.5" fill="#9C8A6A" stroke="#5C4A35" stroke-width="0.4"/>`)
+  }
+
+  // === DÉCORATIONS FINALES (140) ===
+  for (let i = 0; i < 30; i++) {
+    const which = Math.floor(i / 10)
+    const idx = i % 10
+    const cxA = which === 0 ? -230 : (which === 1 ? 230 : 0)
+    const cyA = which === 2 ? -442 : -354
+    const angle = (idx / 10) * Math.PI
+    const lx = cxA + Math.cos(angle - Math.PI / 2) * 10
+    const ly = cyA + Math.sin(angle - Math.PI / 2) * 12
+    addPc(`<line x1="${cxA}" y1="${cyA}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#5C4A35" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>`)
+  }
+  for (let g = 0; g < 3; g++) {
+    const xStart = -153 + g * 102
+    const xEnd = xStart + 102
+    addPc(`<path d="M ${xStart} -282 Q ${xStart + 51} -274 ${xEnd} -282" stroke="#9C8A6A" stroke-width="1" fill="none"/>`)
+    for (let l = 0; l < 7; l++) {
+      const t = l / 6
+      const x = xStart + t * 102
+      const y = -282 + Math.sin(t * Math.PI) * 8
+      addPc(`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3" ry="2" fill="#5E8954" stroke="#3F5E4A" stroke-width="0.5"/>`)
+    }
+  }
+  const birdSpots = [
+    { x: -200, y: -373 }, { x: -150, y: -373 }, { x: -100, y: -373 },
+    { x: -50, y: -373 }, { x: 50, y: -373 }, { x: 100, y: -373 },
+    { x: 150, y: -373 }, { x: 200, y: -373 },
+    { x: -80, y: -460 }, { x: 80, y: -460 }, { x: 0, y: -465 }, { x: -150, y: -455 },
+  ]
+  for (let i = 0; i < 12; i++) {
+    const b = birdSpots[i]
+    addPc(`<path d="M ${b.x} ${b.y} Q ${b.x + 3} ${b.y - 2} ${b.x + 6} ${b.y} M ${b.x} ${b.y} Q ${b.x - 1} ${b.y - 1} ${b.x - 3} ${b.y}" stroke="#3D2818" stroke-width="0.7" fill="none" stroke-linecap="round"/>`)
+  }
+  for (let i = 0; i < 12; i++) {
+    const x = -270 + i * 50
+    addPc(`<circle cx="${x}" cy="4" r="3" fill="#F4B5C9" stroke="#A85040" stroke-width="0.6"/>`)
+  }
+  for (let i = 0; i < 6; i++) {
+    const x = -250 + i * 90
+    const y = -440 + (i % 2) * 8
+    addPc(`<ellipse cx="${x}" cy="${y}" rx="14" ry="3" fill="#FFFFFF" opacity="0.55"/>`)
+  }
+  for (let p = 0; p < 3; p++) {
+    const px = -200 + p * 200
+    addPc(`<ellipse cx="${px}" cy="-12" rx="3" ry="4" fill="#7A5A3E"/>`)
+    addPc(`<rect x="${px - 2.5}" y="-10" width="5" height="10" fill="#9C7A4F"/>`)
+    addPc(`<rect x="${px - 3}" y="0" width="6" height="3" fill="#5C4A35"/>`)
+    addPc(`<circle cx="${px - 1}" cy="-13" r="0.3" fill="#3D2818"/>`)
+    addPc(`<circle cx="${px + 1}" cy="-13" r="0.3" fill="#3D2818"/>`)
+  }
+  for (let i = 0; i < 24; i++) {
+    const x = -260 + i * 22
+    addPc(`<path d="M ${x} 4 Q ${x - 1} 1 ${x - 1} -1 M ${x} 4 Q ${x + 1} 1 ${x + 1} -1" stroke="#5E8954" stroke-width="0.6" fill="none"/>`)
+  }
+  for (let i = 0; i < 14; i++) {
+    const x = -200 + (i * 28)
+    const y = -50 - (i % 5) * 60
+    addPc(`<line x1="${x.toFixed(1)}" y1="${y}" x2="${(x + 10).toFixed(1)}" y2="${y}" stroke="#9C8A6A" stroke-width="0.5" opacity="0.55"/>`)
+  }
+  const ivyExtraXs = [-153, -51, 51, 153, -153, 153]
+  for (let i = 0; i < 6; i++) {
+    addPc(`<ellipse cx="${ivyExtraXs[i]}" cy="${-200 - i * 8}" rx="2" ry="1.5" fill="#7AA56B" stroke="#3F5E4A" stroke-width="0.4"/>`)
+  }
+  for (let i = 0; i < 6; i++) {
+    const x = -200 + i * 80
+    addPc(`<circle cx="${x}" cy="-32" r="2" fill="#FFE598" stroke="#9C8A6A" stroke-width="0.4"/>`)
+  }
+
+  return list
+})()
+
 
 // ============ PROPS ============
 type GardenSvgProps = {
@@ -299,6 +619,20 @@ export default function GardenSvg({
   particleBurst = null,
 }: GardenSvgProps) {
   const treeProgress = forceFull ? 1 : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
+
+  // Nombre de pièces du temple visibles à ce niveau de progression.
+  // Floor pour que la valeur ne change qu'aux franchissements de seuil
+  // (pas à chaque tick), permettant à useMemo de cacher le HTML.
+  const visibleTempleCount = Math.floor(treeProgress * TEMPLE_PIECES.length)
+  const templeHtml = useMemo(() => {
+    if (visibleTempleCount === 0) return ''
+    // Ombre au sol qui apparaît dès la première pierre posée
+    let html = '<ellipse cx="0" cy="0" rx="290" ry="14" fill="rgba(0,0,0,0.22)"/>'
+    for (let i = 0; i < visibleTempleCount && i < TEMPLE_PIECES.length; i++) {
+      html += TEMPLE_PIECES[i].svg
+    }
+    return html
+  }, [visibleTempleCount])
 
   // Cycle jour/nuit. Avec timeMultiplier=1, l'heure simulée = heure réelle.
   // Avec timeMultiplier>1, le cycle s'accélère (24h en 24h/timeMultiplier).
@@ -1059,191 +1393,19 @@ export default function GardenSvg({
       {/* ÉLÉMENTS DE FOND (étang, log, sapling, deer) AVANT l'arbre */}
       {unlocked.filter(e => e.kind === 'pond' || e.kind === 'log' || e.kind === 'sapling' || e.kind === 'deer').map(renderEl)}
 
-      {/* ARBRE CENTRAL — Croissance organique progressive.
-          Phases interpolées en continu pour que tout fluide :
-          - 0.00 → 0.04 : seedling (2 cotyledons + tige fine)
-          - 0.04 → 0.18 : jeune pousse (tronc fin qui grandit en hauteur)
-          - 0.18 → 0.50 : adolescent (branches basses + feuillage qui se densifie)
-          - 0.50 → 1.00 : mature (canopée luxuriante)
-          La hauteur ET la largeur du tronc sont calculées dynamiquement (pas
-          juste un scale uniforme), ce qui donne l'impression d'un vrai arbre. */}
-      <g transform={`translate(${HERO_TRUNK_X} ${HERO_GROUND_Y})`}>
-        {/* Ombre au sol qui s'étend avec l'arbre */}
-        <ellipse cx={0} cy={-2}
-                 rx={18 + treeProgress * 100}
-                 ry={4 + treeProgress * 16}
-                 fill="rgba(0,0,0,0.22)" />
-
-        {/* === SEEDLING === Petit pousse visible avant le tronc.
-            Fade out entre 0.06 et 0.10 quand le tronc prend le relais. */}
-        {treeProgress < 0.10 && (() => {
-          const sFade = Math.max(0, Math.min(1, (0.10 - treeProgress) / 0.04))
-          // Tige qui grandit légèrement avec treeProgress
-          const stemH = 14 + treeProgress * 60
-          return (
-            <g style={{ opacity: sFade }}>
-              <path d={`M 0 0 Q -0.8 ${-stemH * 0.5} -0.3 ${-stemH}`}
-                    stroke="#5E8954" strokeWidth={1.6} fill="none" strokeLinecap="round" />
-              {/* 2 cotyledons opposés */}
-              <ellipse cx={-4} cy={-stemH * 0.7} rx={4.5} ry={2} fill="#7AA56B"
-                       transform={`rotate(-25 -4 ${-stemH * 0.7})`} />
-              <ellipse cx={4} cy={-stemH * 0.7} rx={4.5} ry={2} fill="#7AA56B"
-                       transform={`rotate(25 4 ${-stemH * 0.7})`} />
-              <ellipse cx={-4.5} cy={-stemH * 0.7 - 0.3} rx={2} ry={0.8} fill="rgba(255,255,255,0.3)"
-                       transform={`rotate(-25 -4.5 ${-stemH * 0.7 - 0.3})`} />
-              {/* Petite feuille au sommet */}
-              <ellipse cx={0} cy={-stemH - 2} rx={3} ry={4} fill="#5E8954" />
-              <ellipse cx={-0.5} cy={-stemH - 3} rx={1} ry={1.5} fill="rgba(255,255,255,0.3)" />
-            </g>
-          )
-        })()}
-
-        {/* === TRONC === Hauteur et largeur interpolées en continu.
-            Apparition progressive entre 0.04 et 0.10, suit ensuite treeProgress. */}
-        {treeProgress > 0.04 && (() => {
-          const tFade = Math.min(1, (treeProgress - 0.04) / 0.06)
-          // Hauteur du tronc : grandit de 60px (mini) à 460px (mature)
-          const trunkH = 60 + treeProgress * 400
-          // Largeur de la base (épaisse) et du sommet (effilée)
-          const baseW = 5 + treeProgress * 19
-          const topW = 2 + treeProgress * 5
-          // Un point de contrôle légèrement décalé pour donner une courbure naturelle
-          const sway = treeProgress * 4
-          // Path Bézier qui s'incurve doucement
-          const trunkPath = `
-            M ${-baseW} 0
-            Q ${-baseW - 1 + sway} ${-trunkH * 0.3} ${-(baseW + topW) / 2 + sway} ${-trunkH * 0.55}
-            Q ${-(topW + 1) + sway} ${-trunkH * 0.8} ${-topW + sway * 0.5} ${-trunkH}
-            L ${topW + sway * 0.5} ${-trunkH}
-            Q ${(topW + 1) + sway} ${-trunkH * 0.8} ${(baseW + topW) / 2 + sway} ${-trunkH * 0.55}
-            Q ${baseW + 1 + sway} ${-trunkH * 0.3} ${baseW} 0
-            Z
-          `.replace(/\s+/g, ' ').trim()
-          // Courbe centrale (highlight)
-          const trunkHighlight = `M ${-baseW * 0.3} 0 Q ${-baseW * 0.2 + sway} ${-trunkH * 0.5} ${-topW * 0.4 + sway * 0.5} ${-trunkH * 0.95}`
-
-          return (
-            <g style={{ opacity: tFade }}>
-              <path d={trunkPath} fill="url(#trunkbody)" />
-              <path d={trunkPath} fill="url(#bark)" opacity={0.5} />
-              <path d={trunkHighlight} stroke="rgba(255,255,255,0.16)" strokeWidth={Math.max(1, 3 * treeProgress)} fill="none" />
-              {/* Marques d'écorce (visibles à partir de 0.30) */}
-              {treeProgress > 0.25 && (() => {
-                const knotFade = Math.min(1, (treeProgress - 0.25) / 0.15)
-                return (
-                  <g style={{ opacity: knotFade }}>
-                    <ellipse cx={-baseW * 0.45} cy={-trunkH * 0.22} rx={3.5} ry={6} fill="#1F1410" opacity={0.6} />
-                    <ellipse cx={baseW * 0.45} cy={-trunkH * 0.55} rx={3} ry={5} fill="#1F1410" opacity={0.55} />
-                    <ellipse cx={-baseW * 0.4} cy={-trunkH * 0.78} rx={2.5} ry={4} fill="#1F1410" opacity={0.5} />
-                  </g>
-                )
-              })()}
-              {/* Petites racines apparentes au sol (à partir de 0.40) */}
-              {treeProgress > 0.40 && (() => {
-                const rFade = Math.min(1, (treeProgress - 0.40) / 0.15)
-                return (
-                  <g style={{ opacity: rFade }}>
-                    <path d={`M ${-baseW} 0 Q ${-baseW - 14} 1 ${-baseW - 22} 4`} stroke="#3D2418" strokeWidth={5} fill="none" strokeLinecap="round" />
-                    <path d={`M ${baseW} 0 Q ${baseW + 14} 1 ${baseW + 22} 4`} stroke="#3D2418" strokeWidth={5} fill="none" strokeLinecap="round" />
-                    <path d={`M ${-baseW * 0.5} 0 Q ${-baseW * 0.5} 3 ${-baseW * 0.7} 5`} stroke="#3D2418" strokeWidth={3} fill="none" strokeLinecap="round" />
-                    <path d={`M ${baseW * 0.5} 0 Q ${baseW * 0.5} 3 ${baseW * 0.7} 5`} stroke="#3D2418" strokeWidth={3} fill="none" strokeLinecap="round" />
-                  </g>
-                )
-              })()}
-            </g>
-          )
-        })()}
-
-        {/* === BRANCHES === Apparition progressive avec un effet "grow" :
-            chaque branche démarre à un scale réduit et grandit à mesure que treeProgress
-            augmente. La plage de fade est large (0.18) pour des transitions douces. */}
-        <g stroke="#3D2C20" strokeLinecap="round" fill="none">
-          {HERO_BRANCHES.map((b, i) => {
-            const fadeT = Math.max(0, Math.min(1, (treeProgress - b.threshold) / 0.18))
-            if (fadeT <= 0) return null
-            // Effet de croissance : la branche grandit depuis 0.4× à 1×
-            const growScale = 0.4 + fadeT * 0.6
-            // Origin approximative au point d'attache (variable selon la branche)
-            const originY = -200 - i * 80
-            return (
-              <g key={`branch-${i}`}
-                 style={{
-                   opacity: fadeT,
-                   transform: `scale(${growScale})`,
-                   transformOrigin: `0px ${originY}px`,
-                 }}>
-                <path d={b.thickPath} strokeWidth={22} />
-                <path d={b.innerPath} strokeWidth={14} stroke="#5A4031" />
-                {(b.subPaths ?? []).map((sp, j) => (
-                  <path key={`sb-${j}`} d={sp} strokeWidth={9} />
-                ))}
-              </g>
-            )
-          })}
-        </g>
-
-        {/* === FEUILLAGE === Apparition progressive avec scale + fade.
-            Plage de fade très large (0.22) pour que ça se densifie petit à petit. */}
-        <g>
-          {HERO_FOLIAGE.map((cluster, i) => {
-            const fadeT = Math.max(0, Math.min(1, (treeProgress - cluster.threshold) / 0.22))
-            if (fadeT <= 0) return null
-            const growScale = 0.45 + fadeT * 0.55
-            const originX = cluster.back[0]?.cx ?? 0
-            const originY = cluster.back[0]?.cy ?? 0
-            return (
-              <g key={`fol-${i}`}
-                 style={{
-                   opacity: fadeT,
-                   transform: `scale(${growScale})`,
-                   transformOrigin: `${originX}px ${originY}px`,
-                 }}>
-                {cluster.back.map((e, j) => (
-                  <ellipse key={`b-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={e.fill} />
-                ))}
-                {cluster.mid.map((e, j) => (
-                  <ellipse key={`m-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill="url(#foliageMid)" />
-                ))}
-                {cluster.front.map((e, j) => (
-                  <ellipse key={`f-${j}`} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill="url(#foliageFront)" />
-                ))}
-              </g>
-            )
-          })}
-        </g>
-
-        {/* === Petites feuilles décoratives entre les branches (mature) === */}
-        {treeProgress > 0.20 && (() => {
-          const lFade = Math.min(1, (treeProgress - 0.20) / 0.15)
-          return (
-            <g style={{ opacity: lFade }}>
-              <ellipse cx={-280} cy={-260} rx={5} ry={3} fill="#7AA56B" transform="rotate(-30 -280 -260)" />
-              <ellipse cx={-320} cy={-170} rx={4} ry={2.5} fill="#5E8954" transform="rotate(15 -320 -170)" />
-              <ellipse cx={290} cy={-300} rx={5} ry={3} fill="#7AA56B" transform="rotate(40 290 -300)" />
-              <ellipse cx={350} cy={-200} rx={4} ry={2.5} fill="#5E8954" transform="rotate(-20 350 -200)" />
-              {treeProgress > 0.45 && (
-                <>
-                  <ellipse cx={-230} cy={-440} rx={5} ry={3} fill="#A8C088" transform="rotate(-25 -230 -440)" />
-                  <ellipse cx={250} cy={-490} rx={5} ry={3} fill="#A8C088" transform="rotate(35 250 -490)" />
-                  <ellipse cx={-100} cy={-600} rx={5} ry={3} fill="#7AA56B" transform="rotate(-15 -100 -600)" />
-                  <ellipse cx={130} cy={-580} rx={5} ry={3} fill="#7AA56B" transform="rotate(20 130 -580)" />
-                </>
-              )}
-            </g>
-          )
-        })()}
-
-        {forceFull && (
-          <g>
-            <circle cx={0} cy={-470} r={26} fill="#FFE5DD" opacity={0.6} />
-            <ellipse cx={-6} cy={-476} rx={6} ry={4.5} fill="#F4B5C9" />
-            <ellipse cx={6}  cy={-476} rx={6} ry={4.5} fill="#F4B5C9" />
-            <ellipse cx={-6} cy={-466} rx={6} ry={4.5} fill="#F4B5C9" />
-            <ellipse cx={6}  cy={-466} rx={6} ry={4.5} fill="#F4B5C9" />
-            <circle cx={0} cy={-471} r={3} fill="#FBD56B" />
-          </g>
-        )}
-      </g>
+      {/* TEMPLE D'ASCLÉPIOS — Construction pierre par pierre sur 1500h cumulées.
+          1500 pièces qui apparaissent dans l'ordre de construction réelle :
+          fondations → colonnes → architrave → frieze → corniche → statue
+          intérieure → pediment → décorations finales.
+          Rendu via dangerouslySetInnerHTML pour bypass de la réconciliation
+          React (1500 nodes seraient lents à diffuser à chaque tick du cycle
+          jour/nuit). Memoization sur visibleTempleCount : on ne reconstruit
+          la chaîne SVG que quand un nouveau seuil de pièce est franchi
+          (~ toutes les heures de progression, pas tous les 100ms). */}
+      <g
+        transform={`translate(${HERO_TRUNK_X} ${HERO_GROUND_Y})`}
+        dangerouslySetInnerHTML={{ __html: templeHtml }}
+      />
 
       {/* ÉLÉMENTS FOREGROUND (fleurs, animaux, papillons, etc.) APRÈS l'arbre */}
       {unlocked.filter(e => e.kind !== 'pond' && e.kind !== 'log' && e.kind !== 'sapling' && e.kind !== 'deer').map(renderEl)}
