@@ -486,21 +486,23 @@ function pickFromPool(pool: GardenElement[], existing: GardenElement[]): GardenE
 
 function pickElement(existing: GardenElement[]): GardenElement | null {
   const r = Math.random()
-  // 50% : RIEN — la fiche n'apporte que la croissance silencieuse de l'arbre
-  if (r < 0.50) return null
-  // 30% : fleur
-  if (r < 0.80) {
+  // 25% : RIEN — la fiche n'apporte que la progression silencieuse du temple.
+  // (Avant 50%, baissé après passage à la cible 1500h pour que le feedback
+  // par fiche reste fréquent : 75% des fiches génèrent maintenant un élément.)
+  if (r < 0.25) return null
+  // 40% : fleur (était 30%)
+  if (r < 0.65) {
     return pickFromPool(FLOWER_POOL, existing)
   }
-  // 12% : insecte
-  if (r < 0.92) {
+  // 18% : insecte (était 12%)
+  if (r < 0.83) {
     return pickFromPool(INSECT_POOL, existing)
   }
-  // 6% : animal courant
-  if (r < 0.98) {
+  // 11% : animal courant (était 6%)
+  if (r < 0.94) {
     return pickFromPool(ANIMAL_POOL, existing)
   }
-  // 2% : événement rare (positions multiples par espèce, on filtre ce qui est pris)
+  // 6% : événement rare (était 2%)
   const taken = new Set(existing.map(e => `${e.kind}:${e.x},${e.y}`))
   const availRares = RARE_POOL.filter(p => !taken.has(`${p.kind}:${p.x},${p.y}`))
   if (availRares.length > 0) {
@@ -1236,7 +1238,13 @@ function FocusPageBody() {
     // ============ Recap session ============
     // Croissance "physique" de l'arbre cette session (en cm)
     const sessionElapsedMs = Math.max(0, now - startedAt)
-    const sessionGrowthCm = (sessionElapsedMs / TIME_TO_FULL_MS) * MAX_TREE_CM
+    // Pierres ajoutées au temple pendant cette session : différence entre
+    // le nombre de pierres posées avant et après la session. Avec 1500 pièces
+    // sur 1500h, c'est ~1 pierre par heure cumulée d'étude.
+    const TEMPLE_PIECES_TOTAL = 1500
+    const piecesAtStart = Math.floor((cumElapsedAtStart / TIME_TO_FULL_MS) * TEMPLE_PIECES_TOTAL)
+    const piecesAtEnd = Math.floor(((cumElapsedAtStart + sessionElapsedMs) / TIME_TO_FULL_MS) * TEMPLE_PIECES_TOTAL)
+    const sessionTemplePieces = Math.max(0, piecesAtEnd - piecesAtStart)
     // Éléments ajoutés au jardin pendant cette session (slice depuis le mark de début)
     const sessionGains = dayGarden.elements.slice(sessionStartElementCount)
     // Décomposition : fleurs / papillons / animaux courants / événements rares
@@ -1286,12 +1294,16 @@ function FocusPageBody() {
                 {avg !== null && <> {'·'} moyenne <strong>{avg.toFixed(1)}/5</strong></>}
               </div>
 
-              {/* Recap croissance arbre + gains du jardin pendant la session */}
+              {/* Recap construction temple + gains du jardin pendant la session */}
               <div className="focus-done-recap">
                 <div className="focus-done-recap-row">
-                  <span className="focus-done-recap-icon" aria-hidden="true">{'\u{1F33F}'}</span>
+                  <span className="focus-done-recap-icon" aria-hidden="true">{'\u{1F3DB}'}</span>
                   <span className="focus-done-recap-text">
-                    L&apos;arbre a poussé de <strong>{sessionGrowthCm.toFixed(1)} cm</strong>
+                    {sessionTemplePieces > 0 ? (
+                      <>Le temple a gagné <strong>{sessionTemplePieces}</strong> {sessionTemplePieces > 1 ? 'pierres' : 'pierre'}</>
+                    ) : (
+                      <>Le temple progresse, prochaine pierre bientôt</>
+                    )}
                   </span>
                 </div>
                 {sessionGains.length > 0 ? (
@@ -1313,7 +1325,7 @@ function FocusPageBody() {
                     </div>
                   </div>
                 ) : (
-                  <div className="focus-done-recap-empty">Pas de nouvel élément cette fois — l&apos;arbre a quand même profité de la session.</div>
+                  <div className="focus-done-recap-empty">Pas de nouvel élément cette fois — le temple a quand même progressé.</div>
                 )}
               </div>
 
