@@ -30,7 +30,7 @@ const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
 // L'arbre pousse TRÈS doucement, sur toute l'année.
 // 100h cumulées = pleine maturité (≈ 33 jours à 3h/jour). Au-delà, l'arbre reste à son max
 // et continue à se peupler de feuilles via le système de récompenses.
-const TIME_TO_FULL_MS = 100 * 60 * 60 * 1000
+const TIME_TO_FULL_MS = 1500 * 60 * 60 * 1000
 
 // Hauteur "réelle" de l'arbre à pleine maturité, pour le recap "L'arbre a poussé de X cm".
 const MAX_TREE_CM = 300
