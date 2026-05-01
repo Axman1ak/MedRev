@@ -642,19 +642,26 @@
   padding: 20px;
 }
 
-/* =========== ZONE 3 : RÉGULARITÉ — refonte lisibilité ===========
-   1 chiffre dominant énorme (streak), contexte court fusionné, grille 7 jours plus grosse
-   collée en bas de carte (margin-top: auto). */
+/* =========== ZONE 3 : RÉGULARITÉ — heatmap 4 semaines ===========
+   Hero compact à gauche (streak XL) + stats à droite (record + sem).
+   Heatmap 4 semaines × 7 jours en bas, cellules rectangulaires qui occupent
+   toute la largeur disponible. */
 .reg-card { gap: 0; }
 .reg-hero {
   display: flex;
   align-items: baseline;
-  gap: 14px;
-  margin-bottom: 6px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.reg-hero-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 .reg-hero-num {
   font-family: 'Fraunces', serif;
-  font-size: 64px;
+  font-size: 48px;
   font-weight: 500;
   letter-spacing: -.03em;
   line-height: 1;
@@ -662,63 +669,86 @@
 }
 .reg-hero-unit {
   font-family: 'Fraunces', serif;
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--dark);
   line-height: 1.15;
 }
 .reg-hero-unit-soft {
   color: var(--gray);
-  font-size: 13.5px;
+  font-size: 12px;
   font-style: italic;
   font-weight: 400;
 }
-.reg-context {
-  font-size: 12px;
+.reg-stats {
+  font-size: 11px;
   color: var(--gray);
-  line-height: 1.5;
-  padding: 8px 12px;
-  background: var(--soft);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-top: 4px;
+  text-align: right;
+  line-height: 1.4;
+  font-style: italic;
+  font-family: 'Cormorant Garamond', Georgia, serif;
 }
-.reg-context strong {
-  color: var(--dark);
-  font-weight: 500;
+.reg-stats strong {
   font-family: 'Fraunces', serif;
+  color: var(--dark);
+  font-style: normal;
+  font-weight: 500;
   font-size: 13px;
 }
 
-.reg-week {
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px dashed var(--border);
-}
-.reg-strip {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 7px;
-}
-.reg-day {
+.reg-heat-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  gap: 3px;
+  margin-top: auto;
 }
-.reg-day-dot {
-  width: 100%;
-  aspect-ratio: 1;
-  max-width: 30px;
-  border-radius: 50%;
+.reg-heat-headers {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 4px;
+}
+.reg-heat-day {
+  font-size: 9px;
+  color: var(--gray);
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.reg-heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.reg-heat-cell {
+  height: 12px;
+  border-radius: 3px;
   background: #EFEBE2;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
 }
-.reg-day.done .reg-day-dot { background: var(--gm); border-color: var(--gm); box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
-.reg-day.today .reg-day-dot { background: white; border-color: var(--gm); border-width: 2px; box-shadow: 0 0 0 3px rgba(45,106,79,.15); }
-.reg-day.today.done .reg-day-dot { background: var(--gm); }
-.reg-day-label { font-size: 11px; color: var(--gray); font-weight: 600; letter-spacing: .04em; }
-.reg-day.today .reg-day-label { color: var(--gm); font-weight: 700; }
+.reg-heat-cell.done {
+  background: var(--gm);
+  border-color: var(--gm);
+}
+.reg-heat-cell.today {
+  box-shadow: 0 0 0 1.5px rgba(45, 106, 79, .55);
+  z-index: 2;
+  position: relative;
+}
+.reg-heat-cell.future {
+  background: transparent;
+  border-style: dashed;
+  opacity: .45;
+}
+.reg-heat-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--gray);
+  margin-top: 6px;
+  font-style: italic;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
 
 /* =========== ZONE 4 : CHARGE À VENIR — refonte lisibilité ===========
    1 total dominant (44px), bar chart vertical 4 semaines, note finale.
