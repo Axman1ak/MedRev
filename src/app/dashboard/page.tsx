@@ -220,6 +220,35 @@ function computeWeek(activeDays: Set<string>, today: string): WeekDay[] {
   return out
 }
 
+// ======================= HEATMAP (4 semaines) =======================
+// Construit une grille 4 semaines × 7 jours pour l'affichage régularité.
+// La dernière semaine = semaine courante (lun-dim). Les 3 précédentes complètes.
+type HeatmapCell = { date: string; active: boolean; isToday: boolean; inFuture: boolean }
+
+function computeHeatmap(activeDays: Set<string>, today: string, weeksBack: number = 4): HeatmapCell[][] {
+  const d = new Date(today + 'T12:00:00')
+  const dayOfWeek = d.getDay()
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const weeks: HeatmapCell[][] = []
+  // weeksBack-1 semaines avant la courante, puis la courante en dernier
+  for (let w = weeksBack - 1; w >= 0; w--) {
+    const week: HeatmapCell[] = []
+    for (let i = 0; i < 7; i++) {
+      const t = new Date(d)
+      t.setDate(d.getDate() + mondayOffset + i - w * 7)
+      const dateStr = t.toISOString().split('T')[0]
+      week.push({
+        date: dateStr,
+        active: activeDays.has(dateStr),
+        isToday: dateStr === today,
+        inFuture: dateStr > today,
+      })
+    }
+    weeks.push(week)
+  }
+  return weeks
+}
+
 // ======================= UPCOMING LOAD =======================
 type WeekLoad = { label: string; count: number }
 
@@ -568,6 +597,7 @@ export default function DashboardPage() {
   const streak = useMemo(() => computeStreak(activeDays, today), [activeDays, today])
   const recordStreak = useMemo(() => computeRecordStreak(activeDays), [activeDays])
   const weekDays = useMemo(() => computeWeek(activeDays, today), [activeDays, today])
+  const heatmap = useMemo(() => computeHeatmap(activeDays, today, 4), [activeDays, today])
   const upcomingLoad = useMemo(() => computeUpcomingLoad(semLessons, today), [semLessons, today])
   const matiereStats = useMemo(() => computeMatiereStats(semSystems, semLessons), [semSystems, semLessons])
 
@@ -742,33 +772,45 @@ export default function DashboardPage() {
             <div className="dash-card-title">Régularité</div>
 
             <div className="reg-hero">
-              <div className="reg-hero-num">{streak}</div>
-              <div className="reg-hero-unit">
-                {streak <= 1 ? 'jour' : 'jours'}<br />
-                <span className="reg-hero-unit-soft">d&apos;affilée</span>
+              <div className="reg-hero-left">
+                <div className="reg-hero-num">{streak}</div>
+                <div className="reg-hero-unit">
+                  {streak <= 1 ? 'jour' : 'jours'}<br />
+                  <span className="reg-hero-unit-soft">d&apos;affilée</span>
+                </div>
+              </div>
+              <div className="reg-stats">
+                Record <strong>{recordStreak} j</strong><br />
+                Sem. <strong>{weekDone}/{weekTotal}</strong>
               </div>
             </div>
-            <div className="reg-context">
-              {streak === 0
-                ? <>Reprends le rythme {'\u2014'} record <strong>{recordStreak} j</strong>.</>
-                : <>Record <strong>{recordStreak} j</strong> {'\u00b7'} cette sem. <strong>{weekDone}/{weekTotal}</strong></>}
-            </div>
 
-            <div className="reg-week">
-              <div className="reg-strip">
-                {weekDays.map((d, i) => {
-                  const cls = [
-                    'reg-day',
-                    d.active && !d.inFuture ? 'done' : '',
-                    d.isToday ? 'today' : '',
-                  ].filter(Boolean).join(' ')
-                  return (
-                    <div key={i} className={cls}>
-                      <div className="reg-day-dot" />
-                      <div className="reg-day-label">{d.label}</div>
-                    </div>
-                  )
-                })}
+            <div className="reg-heat-wrap">
+              <div className="reg-heat-headers">
+                <div className="reg-heat-day">L</div>
+                <div className="reg-heat-day">M</div>
+                <div className="reg-heat-day">M</div>
+                <div className="reg-heat-day">J</div>
+                <div className="reg-heat-day">V</div>
+                <div className="reg-heat-day">S</div>
+                <div className="reg-heat-day">D</div>
+              </div>
+              {heatmap.map((week, wi) => (
+                <div key={wi} className="reg-heatmap">
+                  {week.map((cell, ci) => {
+                    const cls = [
+                      'reg-heat-cell',
+                      cell.active && !cell.inFuture ? 'done' : '',
+                      cell.isToday ? 'today' : '',
+                      cell.inFuture ? 'future' : '',
+                    ].filter(Boolean).join(' ')
+                    return <div key={ci} className={cls} />
+                  })}
+                </div>
+              ))}
+              <div className="reg-heat-axis">
+                <span>il y a 4 sem.</span>
+                <span>aujourd&apos;hui {'↑'}</span>
               </div>
             </div>
           </div>
