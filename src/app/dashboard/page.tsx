@@ -603,7 +603,8 @@ export default function DashboardPage() {
 
   // Nombre de jours actifs cette semaine jusqu'à aujourd'hui (inclus)
   const weekDone = weekDays.filter(d => d.active && !d.inFuture).length
-  const weekTotal = weekDays.filter(d => !d.inFuture).length
+  // Une semaine = 7 jours (lun-dim), même si on est mercredi.
+  const weekTotal = 7
 
   // Point faible principal
   const weakest = matiereStats[0] ?? null
