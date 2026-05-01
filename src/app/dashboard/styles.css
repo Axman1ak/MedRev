@@ -163,7 +163,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 440px;
   overflow: hidden;
   position: relative;
 }
