@@ -163,7 +163,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 320px;
   overflow: hidden;
   position: relative;
 }
@@ -298,98 +298,201 @@
 .today-item-arrow { color: var(--dim); font-size: 13px; }
 .today-item.highlight .today-item-arrow { color: var(--rose); }
 
-/* =========== ZONE 1 BIS : MINI JARDIN (remplace l'ancien side panel CTA) ===========
-   Le mini-jardin se loge dans la 2e colonne du .today grid (280px). Il sert à la fois
-   de visuel d'accueil et de point d'entrée vers la session focus. Les classes sont
-   préfixées .dash-garden- pour rester scope-isolées. */
-.dash-garden {
-  position: relative;
+/* =========== ZONE 1 BIS : MINI BIBLIOTHÈQUE (colonne droite du today panel) ===========
+   La bibliothèque se loge dans la 2e colonne (320px) du .today grid. Aspect ratio
+   1600/1100 enforced pour que la bibliothèque entière soit visible (pas de crop).
+   En dessous : compteur, dots des trésors, CTA, lien vers la vue plein écran.
+   Classes préfixées .dash-bib- pour scope. */
+.dash-bib-side {
+  background: linear-gradient(180deg, #1F1208 0%, #0E0805 100%);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 1px solid #2D1B0E;
+  min-width: 0;
+}
+.dash-bib-thumb {
+  aspect-ratio: 1600 / 1100;
+  width: 100%;
+  background: #0E0805;
+  border-radius: 8px;
   overflow: hidden;
-  background: #C8DCEA;
-  display: flex;
-  flex-direction: column;
+  border: 1px solid rgba(216, 168, 72, 0.18);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(216, 168, 72, 0.10);
+  flex-shrink: 0;
 }
-.dash-garden-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.dash-garden-overlay {
-  position: relative;
-  z-index: 1;
-  margin-top: auto;
-  padding: 14px 16px 16px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: linear-gradient(to top, rgba(11, 25, 18, .55) 0%, rgba(11, 25, 18, .25) 60%, transparent 100%);
-}
-.dash-garden-stats {
+.dash-bib-thumb svg { display: block; width: 100%; height: 100%; }
+
+.dash-bib-stats {
   display: flex;
   align-items: baseline;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 4px;
+  font-family: 'Fraunces', Georgia, serif;
+  color: #F0DDB8;
+  margin-top: 2px;
 }
-.dash-garden-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
-}
-.dash-garden-num {
-  font-family: 'Fraunces', serif;
-  font-size: 22px;
+.dash-bib-stats-num {
+  font-size: 28px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: -.02em;
 }
-.dash-garden-lbl {
-  font-size: 10.5px;
-  letter-spacing: .04em;
-  font-weight: 500;
-  opacity: .9;
+.dash-bib-stats-tot {
+  color: #A88058;
+  font-size: 14px;
+  font-weight: 400;
 }
-.dash-garden-cta-wrap {
+.dash-bib-stats-lbl {
+  margin-left: 6px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #A88058;
+}
+
+.dash-bib-tres {
   display: flex;
   align-items: center;
-  gap: 10px;
-  justify-content: space-between;
-}
-.dash-garden-queue {
+  gap: 9px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 11.5px;
-  color: rgba(255, 255, 255, .92);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
-  line-height: 1.3;
-  flex: 1;
-  min-width: 0;
+  font-style: italic;
+  color: #C8A878;
 }
-.dash-garden-queue strong {
-  font-family: 'Fraunces', serif;
-  font-weight: 500;
-  color: white;
-  font-size: 14px;
-}
-.dash-garden-cta {
-  background: white;
-  color: var(--green);
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-  white-space: nowrap;
+.dash-bib-tres-dots {
+  display: flex;
+  gap: 3px;
   flex-shrink: 0;
-  transition: transform .12s, box-shadow .12s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
 }
-.dash-garden-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); }
+.dash-bib-tres-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(216, 168, 72, 0.20);
+  border: 1px solid rgba(216, 168, 72, 0.30);
+}
+.dash-bib-tres-dot.on {
+  background: #D8A848;
+  border-color: #D8A848;
+  box-shadow: 0 0 6px rgba(216, 168, 72, 0.55);
+}
+.dash-bib-tres-lbl { min-width: 0; line-height: 1.3; }
+
+.dash-bib-cta {
+  margin-top: auto;
+  padding: 11px 16px;
+  background: #F0DDB8;
+  color: #3D2516;
+  border: none;
+  border-radius: 7px;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  display: block;
+  transition: background .15s, transform .12s;
+}
+.dash-bib-cta:hover { background: #FFE598; transform: translateY(-1px); }
+.dash-bib-cta.disabled {
+  opacity: .55;
+  pointer-events: none;
+  background: rgba(232, 200, 152, 0.4);
+  color: #5C4A35;
+}
+
+.dash-bib-link {
+  background: transparent;
+  border: none;
+  color: #A88058;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 11.5px;
+  letter-spacing: 0.3px;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px;
+  transition: color .15s;
+}
+.dash-bib-link:hover { color: #D8A848; }
+
+/* === Vue plein écran : modale (Voir entièrement) === */
+.dash-bib-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 4, 2, 0.92);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  cursor: zoom-out;
+  animation: dash-bib-modal-in 0.25s ease-out both;
+}
+@keyframes dash-bib-modal-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.dash-bib-fullscreen-stage {
+  position: relative;
+  width: 100%;
+  max-width: 1600px;
+  max-height: 100%;
+  cursor: default;
+  display: grid;
+  gap: 0;
+}
+.dash-bib-fullscreen-svg {
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 80px);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+.dash-bib-fullscreen-panel {
+  /* Le panel des trésors est positionné en absolu sur le côté gauche
+     (par défaut depuis BibliothecaSvg.tsx) */
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+}
+.dash-bib-fullscreen-close {
+  position: absolute;
+  top: -36px;
+  right: 0;
+  background: rgba(232, 220, 180, 0.10);
+  border: 1px solid rgba(216, 168, 72, 0.40);
+  color: #F0DDB8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+  font-family: inherit;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+.dash-bib-fullscreen-close:hover { background: rgba(232, 220, 180, 0.20); }
+
+@media (max-width: 900px) {
+  .dash-bib-fullscreen { padding: 20px; }
+  .dash-bib-fullscreen-panel { display: none; }
+}
 
 /* =========== ZONE 2 : POINT FAIBLE — refonte lisibilité ===========
    Hero ligne : matière à gauche + score géant à droite. Liste compacte (max 2),
@@ -1191,7 +1294,23 @@
 @media (max-width: 980px) {
   .dash-row { grid-template-columns: 1fr; }
   .today { grid-template-columns: 1fr; }
-  .dash-garden { min-height: 220px; }
+  .dash-bib-side {
+    border-left: none;
+    border-top: 1px solid #2D1B0E;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+  .dash-bib-thumb { width: 200px; flex-shrink: 0; }
+  .dash-bib-stats, .dash-bib-tres { flex: 1 1 auto; }
+  .dash-bib-cta { margin-top: 0; flex: 1 1 auto; min-width: 200px; }
+  .dash-bib-link { width: 100%; }
   .dash-page { height: auto; overflow: auto; }
   .dash { overflow: visible; }
+}
+
+@media (max-width: 600px) {
+  .dash-bib-side { flex-direction: column; }
+  .dash-bib-thumb { width: 100%; }
 }
