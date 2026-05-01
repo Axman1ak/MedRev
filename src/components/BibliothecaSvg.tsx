@@ -411,6 +411,11 @@ type BibliothecaSvgProps = {
   style?: CSSProperties
   /** viewBox du SVG. Default '0 0 1600 1100' (vue large complète). */
   viewBox?: string
+  /** preserveAspectRatio du SVG. Default 'xMidYMid meet' : la bibliothèque
+   *  entière est toujours visible (avec letterbox sur les côtés/haut/bas si le
+   *  ratio du container ne matche pas). Passer 'xMidYMid slice' si on veut
+   *  remplir le container quitte à cropper. */
+  preserveAspectRatio?: string
 }
 
 // ============ COMPOSANT ============
@@ -419,16 +424,28 @@ export default function BibliothecaSvg({
   className,
   style,
   viewBox = '0 0 1600 1100',
+  preserveAspectRatio = 'xMidYMid meet',
 }: BibliothecaSvgProps) {
   // Nombre de livres visibles : 1 fiche = 1 livre, capé à la capacité totale
   const visibleBooks = Math.min(Math.max(0, Math.floor(fichesCount)), ALL_BOOKS.length)
 
-  const booksHtml = useMemo(() => {
-    if (visibleBooks === 0) return ''
+  // On sépare le rendu : tous les livres sauf le dernier sont stables (innerHTML
+  // pour la perf) ; le dernier livre est rendu séparément avec un `key` qui
+  // change à chaque incrément de fichesCount, ce qui re-monte le nœud et
+  // déclenche l'animation CSS bib-book-pop-in.
+  const stableCount = Math.max(0, visibleBooks - 1)
+  const lastBookIdx = visibleBooks - 1
+
+  const stableBooksHtml = useMemo(() => {
+    if (stableCount === 0) return ''
     let s = ''
-    for (let i = 0; i < visibleBooks; i++) s += ALL_BOOKS[i].svg
+    for (let i = 0; i < stableCount; i++) s += ALL_BOOKS[i].svg
     return s
-  }, [visibleBooks])
+  }, [stableCount])
+
+  const latestBookSvg = lastBookIdx >= 0 && lastBookIdx < ALL_BOOKS.length
+    ? ALL_BOOKS[lastBookIdx].svg
+    : null
 
   const decorationsHtml = useMemo(() => {
     let s = ''
@@ -444,9 +461,35 @@ export default function BibliothecaSvg({
       className={className}
       style={style}
       role="img"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio={preserveAspectRatio}
     >
       <title>Bibliothèque MedRev</title>
+
+      {/* Animations CSS embarquées (auto-suffisantes) */}
+      <style>{`
+        @keyframes bib-book-pop-in {
+          0%   { transform: scaleY(0.05) translateY(0); opacity: 0; }
+          55%  { transform: scaleY(1.06) translateY(0); opacity: 1; }
+          100% { transform: scaleY(1) translateY(0); opacity: 1; }
+        }
+        @keyframes bib-book-glow {
+          0%   { filter: drop-shadow(0 0 0 rgba(216, 168, 72, 0)); }
+          40%  { filter: drop-shadow(0 0 8px rgba(216, 168, 72, 0.85)); }
+          100% { filter: drop-shadow(0 0 0 rgba(216, 168, 72, 0)); }
+        }
+        .bib-book-pop {
+          transform-box: fill-box;
+          transform-origin: 50% 100%;
+          animation: bib-book-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                     bib-book-glow 0.9s ease-out both;
+        }
+        @keyframes bib-treasure-unlock {
+          0%   { transform: scale(0.4); opacity: 0; filter: drop-shadow(0 0 16px #D8A848); }
+          60%  { transform: scale(1.12); opacity: 1; filter: drop-shadow(0 0 12px #D8A848); }
+          100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 0 transparent); }
+        }
+      `}</style>
+
 
       <defs>
         <linearGradient id="bib-wallGrad" x1="0" y1="0" x2="0" y2="1">
@@ -589,8 +632,17 @@ export default function BibliothecaSvg({
       {/* === ÉTAGÈRES (planches en bois) — toujours visibles === */}
       <g dangerouslySetInnerHTML={{ __html: SHELVES_HTML }} />
 
-      {/* === LIVRES (apparaissent au fil des fiches) === */}
-      <g dangerouslySetInnerHTML={{ __html: booksHtml }} />
+      {/* === LIVRES STABLES (tous sauf le dernier) === */}
+      <g dangerouslySetInnerHTML={{ __html: stableBooksHtml }} />
+
+      {/* === DERNIER LIVRE (avec animation pop-in à chaque incrément de fichesCount) === */}
+      {latestBookSvg && (
+        <g
+          key={lastBookIdx}
+          className="bib-book-pop"
+          dangerouslySetInnerHTML={{ __html: latestBookSvg }}
+        />
+      )}
 
       {/* === DÉCORATIONS / TRÉSORS (palier après palier) === */}
       <g dangerouslySetInnerHTML={{ __html: decorationsHtml }} />
@@ -619,5 +671,68 @@ export default function BibliothecaSvg({
         <circle cx="160" cy="320" r="0.4" fill="rgba(255,220,160,0.4)" />
       </g>
     </svg>
+  )
+}
+
+// ============ COMPOSANT : PANEL DES TRÉSORS (sidebar) ============
+// Liste verticale des 6 trésors. Verrouillés : silhouette + nom masqué.
+// Débloqués : nom révélé + petit indicateur d'or. Le prochain palier est mis
+// en avant avec un compteur "encore X h" pour donner un horizon.
+
+type BibliothecaTreasuresPanelProps = {
+  fichesCount: number
+  className?: string
+  style?: CSSProperties
+  /** Affiche un en-tête avec le compteur d'ouvrages. Default true. */
+  showHeader?: boolean
+}
+
+export function BibliothecaTreasuresPanel({
+  fichesCount,
+  className,
+  style,
+  showHeader = true,
+}: BibliothecaTreasuresPanelProps) {
+  const upcoming = nextTreasure(fichesCount)
+  const treasuresUnlocked = unlockedTreasuresCount(fichesCount)
+  const progressPct = Math.min(100, (fichesCount / BIBLIOTHECA_TOTAL_CAPACITY) * 100)
+  return (
+    <aside className={`bib-treasures ${className ?? ''}`} style={style} aria-label="Trésors de la bibliothèque">
+      {showHeader && (
+        <header className="bib-treasures-header">
+          <div className="bib-treasures-kicker">Bibliotheca</div>
+          <div className="bib-treasures-count">
+            <span className="bib-treasures-count-num">{fichesCount}</span>
+            <span className="bib-treasures-count-sep">/</span>
+            <span className="bib-treasures-count-tot">{BIBLIOTHECA_TOTAL_CAPACITY}</span>
+            <span className="bib-treasures-count-lbl">ouvrages</span>
+          </div>
+          <div className="bib-treasures-progress" aria-hidden="true">
+            <div className="bib-treasures-progress-bar" style={{ width: `${progressPct}%` }} />
+          </div>
+        </header>
+      )}
+      <div className="bib-treasures-title">Trésors · {treasuresUnlocked}/6</div>
+      <ol className="bib-treasures-list">
+        {DECORATIONS.map((d) => {
+          const unlocked = fichesCount >= d.unlockAt
+          const isNext = !unlocked && upcoming?.at === d.unlockAt
+          const cls = ['bib-treasure', unlocked ? 'unlocked' : 'locked', isNext ? 'next' : ''].filter(Boolean).join(' ')
+          return (
+            <li key={d.unlockAt} className={cls}>
+              <span className="bib-treasure-marker" aria-hidden="true">
+                {unlocked ? '✦' : (isNext ? '◆' : '·')}
+              </span>
+              <span className="bib-treasure-info">
+                <span className="bib-treasure-threshold">{d.unlockAt}h</span>
+                <span className="bib-treasure-name">
+                  {unlocked ? d.name : (isNext ? `Encore ${d.unlockAt - fichesCount} h` : '???')}
+                </span>
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </aside>
   )
 }
