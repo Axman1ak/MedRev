@@ -5,16 +5,12 @@ import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'r
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import GardenSvg, { type GardenElement, GARDEN_TIME_MULTIPLIER, GARDEN_TICK_MS } from '@/components/GardenSvg'
+import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
-
-// Jardin Focus : pleine maturité de l'arbre à 100h cumulées (synchro avec la page focus)
-// Cible de complétion du temple d'Asclépios : 1500h cumulées (~1 année P1).
-const GARDEN_TIME_TO_FULL_MS = 1500 * 60 * 60 * 1000
 
 // ======================= TYPES =======================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -331,84 +327,55 @@ function buildMetaForDue(due: DueInfo, systemName: string, lastScore: Score | nu
   return { text: parts.join(' · '), withOverdue: due.status === 'missed' }
 }
 
-// ======================= MINI JARDIN (lecture du state Focus) =======================
-// On ne fait QUE lire l'état du jardin (localStorage prioritaire, Supabase optionnel).
-// Le jardin est cultivé sur la page /dashboard/focus — ici on l'expose en aperçu
-// via le composant <GardenSvg> partagé, ce qui garantit un rendu strictement
-// identique à celui du focus (ciel gradient horaire, soleil/lune, montagnes,
-// arbre central avec branches & feuillage, éléments détaillés).
-type GardenSnapshot = { elapsedMs: number; fichesCount: number; elements: GardenElement[] }
+// ======================= MINI BIBLIOTHÈQUE (lecture du state Focus) =======================
+// On ne fait QUE lire l'état de la bibliothèque (localStorage prioritaire, Supabase optionnel).
+// La culture se fait sur la page /dashboard/focus — ici on l'expose en aperçu via le
+// composant <BibliothecaSvg> partagé pour un rendu strictement identique.
+type BibSnapshot = { elapsedMs: number; fichesCount: number }
 
-function readGardenLocal(userId: string): GardenSnapshot {
-  if (typeof window === 'undefined') return { elapsedMs: 0, fichesCount: 0, elements: [] }
+function readBibLocal(userId: string): BibSnapshot {
+  if (typeof window === 'undefined') return { elapsedMs: 0, fichesCount: 0 }
   try {
     const raw = localStorage.getItem('medrev-garden-' + userId)
-    if (!raw) return { elapsedMs: 0, fichesCount: 0, elements: [] }
+    if (!raw) return { elapsedMs: 0, fichesCount: 0 }
     const parsed = JSON.parse(raw)
     return {
       elapsedMs: Number(parsed.elapsedMs ?? 0),
       fichesCount: Number(parsed.fichesCount ?? 0),
-      elements: (parsed.elements as GardenElement[]) ?? [],
     }
   } catch {
-    return { elapsedMs: 0, fichesCount: 0, elements: [] }
+    return { elapsedMs: 0, fichesCount: 0 }
   }
 }
 
-type GardenCounts = { flowers: number; butterflies: number; animals: number; rares: number }
-function countGardenElements(els: GardenElement[]): GardenCounts {
-  const c: GardenCounts = { flowers: 0, butterflies: 0, animals: 0, rares: 0 }
-  for (const e of els) {
-    if (e.kind === 'flower' || e.kind === 'tulip' || e.kind === 'sunflower') c.flowers++
-    else if (e.kind === 'butterfly') c.butterflies++
-    else if (e.kind === 'rabbit' || e.kind === 'mushroom' || e.kind === 'sapling') c.animals++
-    else if (e.kind === 'owl' || e.kind === 'deer' || e.kind === 'fox' || e.kind === 'squirrel' || e.kind === 'pond' || e.kind === 'log') c.rares++
-  }
-  return c
-}
-
-// ======================= MINI JARDIN COMPONENT =======================
-// Aperçu compact du jardin annuel : utilise <GardenSvg> pour un rendu identique
-// au focus, juste à plus petite échelle. Toute la culture du jardin se fait
-// sur /dashboard/focus.
+// ======================= MINI BIBLIOTHÈQUE COMPONENT =======================
+// Aperçu compact de la bibliothèque annuelle. Utilise <BibliothecaSvg> pour
+// un rendu identique au focus, juste à plus petite échelle.
 function DashGarden({
   userId, queueLength, startHref,
 }: { userId: string | null; queueLength: number; startHref: string }) {
   const supabase = createClient()
-  const [garden, setGarden] = useState<GardenSnapshot | null>(null)
-  // nowMs rafraîchi périodiquement pour que le ciel évolue avec l'heure réelle
-  // (gradient interpolé selon heure, soleil/lune sur arc, étoiles au crépuscule).
-  const [nowMs, setNowMs] = useState<number>(() => Date.now())
+  const [bib, setBib] = useState<BibSnapshot | null>(null)
 
   useEffect(() => {
     if (!userId) return
-    setGarden(readGardenLocal(userId))
+    setBib(readBibLocal(userId))
     // Pull cloud (best-effort) si plus à jour que local
     void (async () => {
       try {
         const { data } = await supabase
           .from('gardens')
-          .select('elapsed_ms, fiches_count, elements')
+          .select('elapsed_ms, fiches_count')
           .eq('user_id', userId)
           .maybeSingle()
         if (!data) return
         const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
         const cloudFiches = Number((data as any).fiches_count ?? 0)
-        const cloudElements = ((data as any).elements as GardenElement[]) ?? []
-        setGarden(prev => {
-          const local = prev ?? { elapsedMs: 0, fichesCount: 0, elements: [] }
-          const seen = new Set<string>()
-          const merged: GardenElement[] = []
-          for (const e of [...local.elements, ...cloudElements]) {
-            const k = e.kind + '|' + e.x + '|' + e.y + '|' + (e.variant ?? '')
-            if (seen.has(k)) continue
-            seen.add(k)
-            merged.push(e)
-          }
+        setBib(prev => {
+          const local = prev ?? { elapsedMs: 0, fichesCount: 0 }
           return {
             elapsedMs: Math.max(local.elapsedMs, cloudElapsed),
             fichesCount: Math.max(local.fichesCount, cloudFiches),
-            elements: merged,
           }
         })
       } catch {
@@ -417,43 +384,29 @@ function DashGarden({
     })()
 
     // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert.
-    // On re-vérifie userId pour que TypeScript narrow dans la closure onStorage
-    // (le narrowing du if (!userId) return tout en haut ne traverse pas l'iife async).
     if (!userId) return
     const uid: string = userId
     function onStorage(e: StorageEvent) {
-      if (e.key === 'medrev-garden-' + uid) setGarden(readGardenLocal(uid))
+      if (e.key === 'medrev-garden-' + uid) setBib(readBibLocal(uid))
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [userId, supabase])
 
-  // Refresh visibilité du jardin si on revient sur l'onglet (ex: après une session focus
-  // dans un autre onglet). Le storage event seul ne suffit pas si tab inactif.
+  // Refresh visibilité si on revient sur l'onglet (ex: après une session focus).
   useEffect(() => {
     if (!userId) return
     const uid = userId
     function onVisible() {
-      if (document.visibilityState === 'visible') {
-        setGarden(readGardenLocal(uid))
-        setNowMs(Date.now())
-      }
+      if (document.visibilityState === 'visible') setBib(readBibLocal(uid))
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [userId])
 
-  // Tick rapide pour le cycle jour/nuit accéléré. À GARDEN_TICK_MS=100ms (10fps),
-  // le soleil/lune se déplacent de manière lisse en arc de cercle plutôt que par
-  // sauts. Le SVG est sans state interne, ce re-render reste léger.
-  useEffect(() => {
-    const t = window.setInterval(() => setNowMs(Date.now()), GARDEN_TICK_MS)
-    return () => window.clearInterval(t)
-  }, [])
-
-  const counts = garden ? countGardenElements(garden.elements) : { flowers: 0, butterflies: 0, animals: 0, rares: 0 }
-  const elements = garden?.elements ?? []
-  const elapsedMs = garden?.elapsedMs ?? 0
+  const fichesCount = bib?.fichesCount ?? 0
+  const treasures = unlockedTreasuresCount(fichesCount)
+  const upcoming = nextBibTreasure(fichesCount)
 
   const wrapStyle: CSSProperties = {
     position: 'relative',
@@ -463,7 +416,7 @@ function DashGarden({
     minHeight: 220,
     display: 'flex',
     flexDirection: 'column',
-    background: '#1F2A4A', // fallback avant render SVG
+    background: '#0E0805', // fallback noyer foncé avant render SVG
   }
   const svgStyle: CSSProperties = {
     position: 'absolute',
@@ -480,39 +433,30 @@ function DashGarden({
     display: 'flex',
     flexDirection: 'column',
     gap: 10,
-    background: 'linear-gradient(to top, rgba(11,25,18,.55) 0%, rgba(11,25,18,.25) 60%, transparent 100%)',
+    background: 'linear-gradient(to top, rgba(8,4,2,.7) 0%, rgba(8,4,2,.3) 60%, transparent 100%)',
   }
 
   return (
     <div className="dash-garden" style={wrapStyle}>
-      <GardenSvg
-        elements={elements}
-        elapsedMs={elapsedMs}
-        timeToFullMs={GARDEN_TIME_TO_FULL_MS}
-        nowMs={nowMs}
+      <BibliothecaSvg
+        fichesCount={fichesCount}
         style={svgStyle}
-        // viewBox recadré sur l'arbre central (HERO_TRUNK_X=440 dans le viewBox
-        // 40-840, centre = 440 → arbre à 50% horizontal quel que soit le ratio
-        // du container).
-        viewBox="40 0 800 1000"
-        // Cycle jour/nuit : même multiplier que le focus (cf. GardenSvg.tsx).
-        timeMultiplier={GARDEN_TIME_MULTIPLIER}
       />
 
       <div className="dash-garden-overlay" style={overlayStyle}>
         <div className="dash-garden-stats" style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
-            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{counts.flowers}</span>
-            <span style={{ fontSize: 10.5, opacity: .9 }}>fleurs</span>
+            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{fichesCount}</span>
+            <span style={{ fontSize: 10.5, opacity: .9 }}>{fichesCount > 1 ? 'ouvrages' : 'ouvrage'} / {BIBLIOTHECA_TOTAL_CAPACITY}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
-            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{counts.butterflies}</span>
-            <span style={{ fontSize: 10.5, opacity: .9 }}>papillons</span>
+            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{treasures}</span>
+            <span style={{ fontSize: 10.5, opacity: .9 }}>/ 6 trésors</span>
           </div>
-          {counts.rares > 0 && (
+          {upcoming && (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
-              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{counts.rares}</span>
-              <span style={{ fontSize: 10.5, opacity: .9 }}>rares</span>
+              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{upcoming.at - fichesCount}</span>
+              <span style={{ fontSize: 10.5, opacity: .9 }}>avant {upcoming.name}</span>
             </div>
           )}
         </div>
@@ -531,7 +475,7 @@ function DashGarden({
             href={startHref}
             style={{
               background: 'white',
-              color: '#1B4332',
+              color: '#3D2516',
               padding: '8px 14px',
               borderRadius: 8,
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -544,7 +488,7 @@ function DashGarden({
               ...(queueLength === 0 ? { pointerEvents: 'none', opacity: .55 } : null),
             }}
           >
-            {queueLength === 0 ? 'Voir le jardin' : 'Démarrer'}
+            {queueLength === 0 ? 'Voir la bibliothèque' : 'Démarrer'}
           </Link>
         </div>
       </div>
