@@ -750,8 +750,8 @@ export default function DashboardPage() {
             </div>
             <div className="reg-context">
               {streak === 0
-                ? <>Reprends le rythme \u2014 record <strong>{recordStreak} j</strong>.</>
-                : <>Record <strong>{recordStreak} j</strong> \u00b7 cette sem. <strong>{weekDone}/{weekTotal}</strong></>}
+                ? <>Reprends le rythme {'\u2014'} record <strong>{recordStreak} j</strong>.</>
+                : <>Record <strong>{recordStreak} j</strong> {'\u00b7'} cette sem. <strong>{weekDone}/{weekTotal}</strong></>}
             </div>
 
             <div className="reg-week">
