@@ -1,11 +1,11 @@
 'use client'
 // src/app/dashboard/page.tsx
 
-import { useEffect, useState, useCallback, useMemo, type CSSProperties } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -408,91 +408,75 @@ function DashGarden({
   const treasures = unlockedTreasuresCount(fichesCount)
   const upcoming = nextBibTreasure(fichesCount)
 
-  const wrapStyle: CSSProperties = {
-    position: 'relative',
-    overflow: 'hidden',
-    width: '100%',
-    height: '100%',
-    minHeight: 220,
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#0E0805', // fallback noyer foncé avant render SVG
-  }
-  const svgStyle: CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    display: 'block',
-  }
-  const overlayStyle: CSSProperties = {
-    position: 'relative',
-    zIndex: 1,
-    marginTop: 'auto',
-    padding: '14px 16px 16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-    background: 'linear-gradient(to top, rgba(8,4,2,.7) 0%, rgba(8,4,2,.3) 60%, transparent 100%)',
-  }
+  const [showFullscreen, setShowFullscreen] = useState(false)
+
+  // Fermeture modale par ESC
+  useEffect(() => {
+    if (!showFullscreen) return
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setShowFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showFullscreen])
 
   return (
-    <div className="dash-garden" style={wrapStyle}>
-      <BibliothecaSvg
-        fichesCount={fichesCount}
-        style={svgStyle}
-      />
+    <>
+      <aside className="dash-bib-side" aria-label="Ma bibliothèque">
+        <div className="dash-bib-thumb">
+          <BibliothecaSvg fichesCount={fichesCount} />
+        </div>
+        <div className="dash-bib-stats">
+          <span className="dash-bib-stats-num">{fichesCount}</span>
+          <span className="dash-bib-stats-tot">/ {BIBLIOTHECA_TOTAL_CAPACITY}</span>
+          <span className="dash-bib-stats-lbl">Ouvrages</span>
+        </div>
+        <div className="dash-bib-tres">
+          <div className="dash-bib-tres-dots" aria-hidden="true">
+            {BIBLIOTHECA_TREASURES.map(t => (
+              <span key={t.unlockAt} className={`dash-bib-tres-dot${fichesCount >= t.unlockAt ? ' on' : ''}`} title={`${t.unlockAt}h · ${t.name}`} />
+            ))}
+          </div>
+          <span className="dash-bib-tres-lbl">
+            {treasures}/6 trésors{upcoming ? ` · prochain à ${upcoming.at} h` : ' · complet'}
+          </span>
+        </div>
+        <Link
+          href={queueLength > 0 ? startHref : '#'}
+          className={`dash-bib-cta${queueLength === 0 ? ' disabled' : ''}`}
+          aria-disabled={queueLength === 0}
+        >
+          {queueLength === 0
+            ? 'Aucune révision aujourd\'hui'
+            : `Démarrer · ${queueLength} ${queueLength > 1 ? 'fiches' : 'fiche'}`}
+        </Link>
+        <button
+          type="button"
+          className="dash-bib-link"
+          onClick={() => setShowFullscreen(true)}
+        >
+          Voir ma bibliothèque entièrement →
+        </button>
+      </aside>
 
-      <div className="dash-garden-overlay" style={overlayStyle}>
-        <div className="dash-garden-stats" style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
-            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{fichesCount}</span>
-            <span style={{ fontSize: 10.5, opacity: .9 }}>{fichesCount > 1 ? 'ouvrages' : 'ouvrage'} / {BIBLIOTHECA_TOTAL_CAPACITY}</span>
+      {showFullscreen && (
+        <div
+          className="dash-bib-fullscreen"
+          role="dialog"
+          aria-label="Bibliothèque complète"
+          onClick={() => setShowFullscreen(false)}
+        >
+          <button
+            type="button"
+            className="dash-bib-fullscreen-close"
+            onClick={() => setShowFullscreen(false)}
+            aria-label="Fermer"
+          >×</button>
+          <div className="dash-bib-fullscreen-stage" onClick={e => e.stopPropagation()}>
+            <BibliothecaSvg fichesCount={fichesCount} className="dash-bib-fullscreen-svg" />
+            <BibliothecaTreasuresPanel fichesCount={fichesCount} className="dash-bib-fullscreen-panel" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
-            <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{treasures}</span>
-            <span style={{ fontSize: 10.5, opacity: .9 }}>/ 6 trésors</span>
-          </div>
-          {upcoming && (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, color: 'white', textShadow: '0 1px 3px rgba(0,0,0,.35)' }}>
-              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-.02em' }}>{upcoming.at - fichesCount}</span>
-              <span style={{ fontSize: 10.5, opacity: .9 }}>avant {upcoming.name}</span>
-            </div>
-          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.92)', textShadow: '0 1px 3px rgba(0,0,0,.4)', lineHeight: 1.3, flex: 1, minWidth: 0 }}>
-            {queueLength === 0 ? (
-              <span>Aucune révision aujourd&apos;hui</span>
-            ) : (
-              <span>
-                <strong style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 500, color: 'white', fontSize: 14 }}>{queueLength}</strong>
-                {' '}{queueLength === 1 ? 'fiche' : 'fiches'} · ~{queueLength * 8} min
-              </span>
-            )}
-          </div>
-          <Link
-            href={startHref}
-            style={{
-              background: 'white',
-              color: '#3D2516',
-              padding: '8px 14px',
-              borderRadius: 8,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: 12,
-              fontWeight: 700,
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(0,0,0,.2)',
-              ...(queueLength === 0 ? { pointerEvents: 'none', opacity: .55 } : null),
-            }}
-          >
-            {queueLength === 0 ? 'Voir la bibliothèque' : 'Démarrer'}
-          </Link>
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }
 
