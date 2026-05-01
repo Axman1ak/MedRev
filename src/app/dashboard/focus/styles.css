@@ -1171,64 +1171,70 @@
   background: rgba(232, 220, 180, 0.22);
 }
 
-/* --- Card centrale : parchemin sur scène sombre --- */
+/* --- Card centrale : verre dépoli sombre (même palette que le panel trésors) --- */
 .focus-card {
-  background: rgba(240, 221, 184, 0.96);
-  border: 1px solid rgba(154, 110, 32, 0.35);
+  background: rgba(15, 8, 5, 0.78);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(216, 168, 72, 0.32);
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.55),
-    0 6px 18px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 245, 215, 0.7);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+    0 24px 60px rgba(0, 0, 0, 0.65),
+    0 6px 18px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(216, 168, 72, 0.18);
 }
 
-/* --- Texte de la card adapté au parchemin (ton sépia foncé) --- */
-.focus-name { color: #2A180C; }
-.focus-kicker { color: #5C4A35; }
-.focus-kicker-sys { color: #2A180C; }
-.focus-kicker-sep { color: rgba(90, 53, 32, 0.4); }
-.focus-kicker-status.missed { color: #A03818; }
-.focus-kicker-status.today { color: #5A3520; }
-.focus-kicker-status.fresh { color: #9A6E20; }
-.focus-last { color: #5C4A35; }
-.focus-ask { color: #5C4A35; }
+/* --- Texte de la card : cream/gold sur fond sombre --- */
+.focus-name { color: #F0DDB8; }
+.focus-kicker { color: #A88058; }
+.focus-kicker-sys { color: #F0DDB8; }
+.focus-kicker-sep { color: rgba(216, 168, 72, 0.4); }
+.focus-kicker-status {
+  background: rgba(216, 168, 72, 0.12) !important;
+  border: 1px solid rgba(216, 168, 72, 0.25);
+}
+.focus-kicker-status.missed { color: #E89070; }
+.focus-kicker-status.today { color: #D8A848; }
+.focus-kicker-status.fresh { color: #C8A878; }
+.focus-last { color: #C8A878; }
+.focus-ask { color: #A88058; }
 
 /* --- Actions/séparateur de la card --- */
-.focus-actions { border-top: 1px solid rgba(90, 53, 32, 0.18); }
+.focus-actions { border-top: 1px solid rgba(216, 168, 72, 0.18); }
 
-/* --- Report : adapté au parchemin --- */
+/* --- Report : verre + texte gold --- */
 .focus-report {
-  border: 1px solid rgba(90, 53, 32, 0.30);
-  color: #5C4A35;
+  border: 1px solid rgba(216, 168, 72, 0.30);
+  color: #C8A878;
+  background: transparent;
 }
 .focus-report:hover:not(:disabled) {
-  border-color: #9A6E20;
-  color: #9A6E20;
-  background: rgba(154, 110, 32, 0.12);
+  border-color: #D8A848;
+  color: #D8A848;
+  background: rgba(216, 168, 72, 0.10);
 }
 
-/* --- Nav dots : adaptés au parchemin --- */
+/* --- Nav dots : palette gold --- */
 .focus-nav-dot {
-  background: rgba(255, 245, 215, 0.5);
-  border: 1px solid rgba(90, 53, 32, 0.25);
-  color: #5C4A35;
+  background: rgba(216, 168, 72, 0.10);
+  border: 1px solid rgba(216, 168, 72, 0.25);
+  color: #C8A878;
 }
 .focus-nav-dot:hover:not(:disabled) {
-  background: rgba(255, 245, 215, 0.85);
-  border-color: rgba(90, 53, 32, 0.45);
+  background: rgba(216, 168, 72, 0.20);
+  border-color: rgba(216, 168, 72, 0.50);
+  color: #D8A848;
 }
 .focus-nav-dot-next {
-  background: #5A3520;
-  color: #F0DDB8;
+  background: #9A6E20;
+  color: #1A0F08;
   border-color: transparent;
 }
 .focus-nav-dot-next:hover:not(:disabled) {
-  background: #3D2516;
-  color: #FFE598;
+  background: #D8A848;
+  color: #1A0F08;
 }
 
-/* --- Hint clavier (déjà en blanc, OK sur fond sombre) --- */
+/* --- Hint clavier (cream/gold sur fond sombre) --- */
 .focus-hint { color: rgba(232, 200, 152, 0.85); }
 .focus-hint kbd {
   background: rgba(232, 220, 180, 0.10);
@@ -1243,44 +1249,46 @@
   background: rgba(216, 168, 72, 0.18);
   color: #D8A848;
 }
-.focus-empty-title { color: #E8DDC5; }
+.focus-empty-title { color: #F0DDB8; }
 .focus-empty-sub { color: #A88058; }
 .focus-empty-cta {
-  background: #5A3520;
-  color: #F0DDB8;
+  background: #9A6E20;
+  color: #1A0F08;
 }
-.focus-empty-cta:hover { background: #3D2516; }
+.focus-empty-cta:hover { background: #D8A848; }
 
-/* --- Done card (bilan) : adaptée au parchemin --- */
-.focus-done-card { color: #2A180C; }
-.focus-done-kicker { color: #5C4A35; }
-.focus-done-title { color: #2A180C; }
-.focus-done-sep { color: rgba(90, 53, 32, 0.4); }
-.focus-done-reported { color: #9A6E20; }
+/* --- Done card (bilan) : même verre dépoli sombre --- */
+.focus-done-card { color: #F0DDB8; }
+.focus-done-kicker { color: #A88058; }
+.focus-done-title { color: #F0DDB8; }
+.focus-done-sep { color: rgba(216, 168, 72, 0.4); }
+.focus-done-reported { color: #D8A848; }
 
 .focus-done-recap {
-  background: rgba(216, 168, 72, 0.12);
-  border-left: 3px solid #9A6E20;
+  background: rgba(216, 168, 72, 0.10);
+  border-left: 3px solid #D8A848;
 }
-.focus-done-recap-text { color: #2A180C; }
-.focus-done-recap-empty { color: #5C4A35; }
-.focus-done-recap-gains-lbl { color: #5C4A35; }
+.focus-done-recap-text { color: #F0DDB8; }
+.focus-done-recap-empty { color: #C8A878; }
+.focus-done-recap-gains-lbl { color: #A88058; }
 .focus-done-recap-pill {
-  background: rgba(154, 110, 32, 0.15);
-  color: #2A180C;
-  border: 1px solid rgba(154, 110, 32, 0.3);
+  background: rgba(216, 168, 72, 0.12);
+  color: #F0DDB8;
+  border: 1px solid rgba(216, 168, 72, 0.30);
 }
+.focus-done-recap-pill strong { color: #D8A848; }
 .focus-done-recap-pill.rare {
-  background: rgba(216, 168, 72, 0.25);
-  color: #5A3520;
-  border-color: #9A6E20;
+  background: rgba(216, 168, 72, 0.22);
+  color: #FFE598;
+  border-color: #D8A848;
 }
+.focus-done-recap-pill.rare strong { color: #FFE598; }
 
-.focus-done-list { color: #2A180C; }
+.focus-done-list { color: #F0DDB8; }
 .focus-done-row {
-  border-bottom: 1px solid rgba(90, 53, 32, 0.12);
+  border-bottom: 1px solid rgba(216, 168, 72, 0.15);
 }
-.focus-done-row-sys { color: #5C4A35; }
+.focus-done-row-sys { color: #A88058; }
 
 /* ============================================================
    ============ PANEL DES TRÉSORS (sidebar gauche/droite) =====
