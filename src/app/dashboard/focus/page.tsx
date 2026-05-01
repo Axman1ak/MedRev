@@ -13,7 +13,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -570,9 +570,7 @@ function FocusPageBody() {
   const currentSystemName = currentSystem?.name ?? 'Matière'
   const currentResult = results[currentIdx] ?? null
 
-  // Stats agrégées dérivées de la bibliothèque (cumulatif annuel)
-  const dayFichesCount = dayGarden.fichesCount
-  const treasuresUnlocked = unlockedTreasuresCount(dayGarden.fichesCount)
+  // Prochain trésor à débloquer (utilisé dans le recap de fin de session)
   const upcomingTreasure = nextBibTreasure(dayGarden.fichesCount)
 
   // ============ Helpers d'avancement ============
@@ -840,21 +838,11 @@ function FocusPageBody() {
             </div>
           </div>
 
-          {/* Stats du jardin annuel, gardées visibles en bas-droite */}
-          <div className="focus-garden-stats focus-garden-stats-right" aria-live="polite">
-            <div className="focus-garden-stats-kicker">Bibliothèque (cumulée)</div>
-            <div className="focus-garden-stats-row">
-              <span className="focus-garden-stats-item">
-                <span className="focus-garden-stats-num">{dayGarden.fichesCount}</span>
-                <span className="focus-garden-stats-lbl">{dayGarden.fichesCount > 1 ? 'ouvrages' : 'ouvrage'}</span>
-              </span>
-              <span className="focus-garden-stats-sep">·</span>
-              <span className="focus-garden-stats-item">
-                <span className="focus-garden-stats-num">{treasuresUnlocked}</span>
-                <span className="focus-garden-stats-lbl">/ 6 trésors</span>
-              </span>
-            </div>
-          </div>
+          {/* Panel trésors sur la droite (la card de bilan est à gauche) */}
+          <BibliothecaTreasuresPanel
+            fichesCount={dayGarden.fichesCount}
+            className="bib-treasures-right"
+          />
         </div>
       </div>
     )
@@ -938,30 +926,9 @@ function FocusPageBody() {
           />
         </div>
 
-        {/* Stats de la bibliothèque (bottom-left, glass) */}
-        <div className="focus-garden-stats" aria-live="polite">
-          <div className="focus-garden-stats-kicker">Ta bibliothèque</div>
-          <div className="focus-garden-stats-row">
-            <span className="focus-garden-stats-item">
-              <span className="focus-garden-stats-num">{dayFichesCount}</span>
-              <span className="focus-garden-stats-lbl">{dayFichesCount > 1 ? 'ouvrages' : 'ouvrage'}</span>
-            </span>
-            <span className="focus-garden-stats-sep">·</span>
-            <span className="focus-garden-stats-item">
-              <span className="focus-garden-stats-num">{treasuresUnlocked}</span>
-              <span className="focus-garden-stats-lbl">/ 6 trésors</span>
-            </span>
-            {upcomingTreasure && (
-              <>
-                <span className="focus-garden-stats-sep">·</span>
-                <span className="focus-garden-stats-item">
-                  <span className="focus-garden-stats-num">{upcomingTreasure.at - dayFichesCount}</span>
-                  <span className="focus-garden-stats-lbl">avant {upcomingTreasure.name}</span>
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+        {/* Panel des trésors (left-side, vertical) — montre les 6 trésors avec
+            leur palier en heures. Verrouillés masqués, débloqués révélés. */}
+        <BibliothecaTreasuresPanel fichesCount={dayGarden.fichesCount} />
 
         {/* Zone CARD : la card flotte en glass, navigation discrète en pied de card */}
         <div className="focus-card-zone">
