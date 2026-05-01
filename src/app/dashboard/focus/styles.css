@@ -1124,3 +1124,385 @@
      via l'inline "Suivante" et le clavier. */
   .focus-nav-arrow { display: none; }
 }
+
+/* ============================================================
+   ============ THEME BIBLIOTHÈQUE — overrides ================
+   ============================================================
+   Adapte le focus-page au visuel bibliothèque (noyer foncé,
+   parchemin/sépia/laiton). Les règles existantes ci-dessus
+   (théme jardin/ciel) sont surchargées par celles-ci.
+*/
+
+/* --- Background plein écran : noyer profond --- */
+.focus-root {
+  background: #0E0805;
+  color: #E8DDC5;
+}
+
+/* --- Stage : fallback gradient walnut au lieu du ciel --- */
+.focus-stage {
+  background: linear-gradient(180deg, #1A0F08 0%, #0E0805 60%, #050302 100%);
+}
+
+/* --- Topbar progress chip : verre parchemin sur fond sombre --- */
+.focus-progress-chip {
+  background: rgba(232, 220, 180, 0.10);
+  border: 1px solid rgba(216, 168, 72, 0.35);
+  color: #E8DDC5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.focus-progress-chip-divider { background: rgba(216, 168, 72, 0.3); }
+
+/* --- Brand : remplace l'accent vert par du laiton --- */
+.focus-brand-dot {
+  background: #D8A848;
+  box-shadow: 0 0 10px rgba(216, 168, 72, 0.7);
+}
+.focus-brand-mode { color: #D8A848; }
+
+/* --- Quit button : verre parchemin --- */
+.focus-quit {
+  background: rgba(232, 220, 180, 0.10);
+  border: 1px solid rgba(216, 168, 72, 0.35);
+  color: #E8DDC5;
+}
+.focus-quit:hover {
+  background: rgba(232, 220, 180, 0.22);
+}
+
+/* --- Card centrale : parchemin sur scène sombre --- */
+.focus-card {
+  background: rgba(240, 221, 184, 0.96);
+  border: 1px solid rgba(154, 110, 32, 0.35);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 245, 215, 0.7);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* --- Texte de la card adapté au parchemin (ton sépia foncé) --- */
+.focus-name { color: #2A180C; }
+.focus-kicker { color: #5C4A35; }
+.focus-kicker-sys { color: #2A180C; }
+.focus-kicker-sep { color: rgba(90, 53, 32, 0.4); }
+.focus-kicker-status.missed { color: #A03818; }
+.focus-kicker-status.today { color: #5A3520; }
+.focus-kicker-status.fresh { color: #9A6E20; }
+.focus-last { color: #5C4A35; }
+.focus-ask { color: #5C4A35; }
+
+/* --- Actions/séparateur de la card --- */
+.focus-actions { border-top: 1px solid rgba(90, 53, 32, 0.18); }
+
+/* --- Report : adapté au parchemin --- */
+.focus-report {
+  border: 1px solid rgba(90, 53, 32, 0.30);
+  color: #5C4A35;
+}
+.focus-report:hover:not(:disabled) {
+  border-color: #9A6E20;
+  color: #9A6E20;
+  background: rgba(154, 110, 32, 0.12);
+}
+
+/* --- Nav dots : adaptés au parchemin --- */
+.focus-nav-dot {
+  background: rgba(255, 245, 215, 0.5);
+  border: 1px solid rgba(90, 53, 32, 0.25);
+  color: #5C4A35;
+}
+.focus-nav-dot:hover:not(:disabled) {
+  background: rgba(255, 245, 215, 0.85);
+  border-color: rgba(90, 53, 32, 0.45);
+}
+.focus-nav-dot-next {
+  background: #5A3520;
+  color: #F0DDB8;
+  border-color: transparent;
+}
+.focus-nav-dot-next:hover:not(:disabled) {
+  background: #3D2516;
+  color: #FFE598;
+}
+
+/* --- Hint clavier (déjà en blanc, OK sur fond sombre) --- */
+.focus-hint { color: rgba(232, 200, 152, 0.85); }
+.focus-hint kbd {
+  background: rgba(232, 220, 180, 0.10);
+  border: 1px solid rgba(216, 168, 72, 0.30);
+  color: #E8C898;
+}
+.focus-hint-sep { color: rgba(216, 168, 72, 0.4); }
+
+/* --- États empty/loading --- */
+.focus-loading { color: #9A8470; }
+.focus-empty-mark {
+  background: rgba(216, 168, 72, 0.18);
+  color: #D8A848;
+}
+.focus-empty-title { color: #E8DDC5; }
+.focus-empty-sub { color: #A88058; }
+.focus-empty-cta {
+  background: #5A3520;
+  color: #F0DDB8;
+}
+.focus-empty-cta:hover { background: #3D2516; }
+
+/* --- Done card (bilan) : adaptée au parchemin --- */
+.focus-done-card { color: #2A180C; }
+.focus-done-kicker { color: #5C4A35; }
+.focus-done-title { color: #2A180C; }
+.focus-done-sep { color: rgba(90, 53, 32, 0.4); }
+.focus-done-reported { color: #9A6E20; }
+
+.focus-done-recap {
+  background: rgba(216, 168, 72, 0.12);
+  border-left: 3px solid #9A6E20;
+}
+.focus-done-recap-text { color: #2A180C; }
+.focus-done-recap-empty { color: #5C4A35; }
+.focus-done-recap-gains-lbl { color: #5C4A35; }
+.focus-done-recap-pill {
+  background: rgba(154, 110, 32, 0.15);
+  color: #2A180C;
+  border: 1px solid rgba(154, 110, 32, 0.3);
+}
+.focus-done-recap-pill.rare {
+  background: rgba(216, 168, 72, 0.25);
+  color: #5A3520;
+  border-color: #9A6E20;
+}
+
+.focus-done-list { color: #2A180C; }
+.focus-done-row {
+  border-bottom: 1px solid rgba(90, 53, 32, 0.12);
+}
+.focus-done-row-sys { color: #5C4A35; }
+
+/* ============================================================
+   ============ PANEL DES TRÉSORS (sidebar gauche/droite) =====
+   ============================================================ */
+.bib-treasures {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  background: rgba(15, 8, 5, 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(216, 168, 72, 0.32);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  min-width: 220px;
+  max-width: 250px;
+  color: #E8C898;
+  font-family: 'Cormorant Garamond', 'Cinzel', Georgia, serif;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(216, 168, 72, 0.18);
+}
+
+/* Variante : panel positionné à droite (utilisé sur le bilan) */
+.bib-treasures-right {
+  left: auto;
+  right: 28px;
+}
+
+.bib-treasures-header {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(216, 168, 72, 0.22);
+}
+.bib-treasures-kicker {
+  font-family: 'Cinzel', serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: #C8A878;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.bib-treasures-count {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: 'Fraunces', Georgia, serif;
+  color: #F0DDB8;
+}
+.bib-treasures-count-num {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.bib-treasures-count-sep { color: rgba(216, 168, 72, 0.4); font-size: 17px; }
+.bib-treasures-count-tot { color: #A88058; font-size: 14px; }
+.bib-treasures-count-lbl {
+  font-family: 'Cinzel', serif;
+  font-size: 9.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #A88058;
+  margin-left: 6px;
+  font-weight: 400;
+}
+.bib-treasures-progress {
+  margin-top: 10px;
+  height: 3px;
+  background: rgba(232, 220, 180, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bib-treasures-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #5A3520 0%, #9A6E20 60%, #D8A848 100%);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bib-treasures-title {
+  font-family: 'Cinzel', serif;
+  font-size: 9.5px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #C8A878;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.bib-treasures-list {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bib-treasure {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: 'Cormorant Garamond', serif;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.bib-treasure-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0;
+}
+.bib-treasure-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.bib-treasure-threshold {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #E8C898;
+  line-height: 1.1;
+}
+.bib-treasure-name {
+  font-size: 11px;
+  font-style: italic;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bib-treasure.unlocked .bib-treasure-marker {
+  background: linear-gradient(135deg, #D8A848 0%, #9A6E20 100%);
+  color: #1A0F08;
+  box-shadow: 0 0 0 1px rgba(216, 168, 72, 0.4), 0 2px 6px rgba(216, 168, 72, 0.25);
+}
+.bib-treasure.unlocked .bib-treasure-name {
+  color: #F0DDB8;
+  font-style: normal;
+}
+
+.bib-treasure.locked {
+  opacity: 0.55;
+}
+.bib-treasure.locked .bib-treasure-marker {
+  background: rgba(90, 53, 32, 0.35);
+  color: rgba(232, 200, 152, 0.45);
+  border: 1px solid rgba(154, 110, 32, 0.25);
+}
+.bib-treasure.locked .bib-treasure-name {
+  color: rgba(168, 128, 88, 0.7);
+}
+.bib-treasure.locked .bib-treasure-threshold {
+  color: rgba(232, 200, 152, 0.55);
+}
+
+.bib-treasure.next {
+  opacity: 1;
+}
+.bib-treasure.next .bib-treasure-marker {
+  background: rgba(216, 168, 72, 0.18);
+  color: #D8A848;
+  border: 1px solid rgba(216, 168, 72, 0.55);
+  animation: bib-next-pulse 2.4s ease-in-out infinite;
+}
+.bib-treasure.next .bib-treasure-name {
+  color: #D8A848;
+  font-style: italic;
+}
+.bib-treasure.next .bib-treasure-threshold { color: #F0DDB8; }
+
+@keyframes bib-next-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(216, 168, 72, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(216, 168, 72, 0.15); }
+}
+
+/* --- Responsive : panel adapté sur écrans <1100px --- */
+@media (max-width: 1100px) {
+  .bib-treasures {
+    min-width: 180px;
+    max-width: 200px;
+    padding: 14px 14px 12px;
+  }
+  .bib-treasures-count-num { font-size: 22px; }
+  .bib-treasures-count-tot { font-size: 12px; }
+  .bib-treasure-threshold { font-size: 12px; }
+  .bib-treasure-name { font-size: 10px; }
+}
+
+/* Sur écrans très étroits, le panel passe en BAS-GAUCHE plus compact */
+@media (max-width: 820px) {
+  .bib-treasures {
+    position: absolute;
+    top: auto;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    transform: none;
+    max-width: none;
+    padding: 12px 14px;
+  }
+  .bib-treasures-header { display: none; }
+  .bib-treasures-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  .bib-treasure { flex-direction: column; align-items: center; gap: 3px; }
+  .bib-treasure-info { align-items: center; }
+  .bib-treasure-name { display: none; }
+  .bib-treasures-right { right: 14px; left: 14px; }
+}
