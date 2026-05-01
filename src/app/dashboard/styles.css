@@ -785,10 +785,12 @@
 .load-bars {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 1fr;            /* la ligne occupe toute la hauteur du container */
   gap: 8px;
   flex: 1;
   margin-top: 16px;
-  align-items: end;
+  align-items: stretch;           /* les .load-col remplissent leur cellule */
+  min-height: 120px;              /* sécurise même quand la card est petite */
 }
 .load-col {
   display: flex;
@@ -796,24 +798,24 @@
   align-items: center;
   gap: 5px;
   min-height: 0;
+  height: 100%;                   /* indispensable pour que flex: 1 du wrap soit chiffré */
 }
 .load-col-bar-wrap {
   width: 100%;
-  flex: 1;
+  flex: 1;                        /* prend toute la hauteur restante après count+label */
   background: var(--soft);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  min-height: 60px;
+  min-height: 0;                  /* on laisse flex grandir librement */
 }
 .load-col-bar {
   width: 100%;
   background: linear-gradient(180deg, #BEDDC3, var(--gm));
   border-radius: 6px 6px 0 0;
   transition: height .3s;
-  min-height: 6%;
 }
 .load-col-bar.peak { background: linear-gradient(180deg, #F0C880, var(--amber)); }
 .load-col-count {
