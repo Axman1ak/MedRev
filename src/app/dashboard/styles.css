@@ -699,17 +699,17 @@
 .reg-heat-wrap {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   margin-top: auto;
 }
 .reg-heat-headers {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  margin-bottom: 4px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 .reg-heat-day {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--gray);
   text-align: center;
   font-weight: 600;
@@ -718,11 +718,11 @@
 .reg-heatmap {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  gap: 4px;
 }
 .reg-heat-cell {
-  height: 12px;
-  border-radius: 3px;
+  height: 26px;
+  border-radius: 5px;
   background: #EFEBE2;
   border: 1px solid var(--border);
 }
