@@ -694,13 +694,14 @@ function StepCard({ i, lesson, t, activeStep, openStep, SCORE_COLORS, SCORE_BG, 
   let border = '1px solid var(--border)', bg = 'var(--card)'
   if (isActive) { border = '2px solid var(--accent)'; bg = 'rgba(45,106,79,.04)' }
   else if (step) { border = `1px solid ${SCORE_BORDER[step.score]}`; bg = SCORE_BG[step.score] }
-  else if (isToday) { border = '1px solid rgba(45,106,79,.4)'; bg = 'rgba(45,106,79,.03)' }
+  // Today : tons gris neutres pour ne pas être confondu avec une note officielle (vert).
+  else if (isToday) { border = '1px solid rgba(107,111,106,.4)'; bg = 'rgba(107,111,106,.05)' }
   else if (isLate) { border = '1px solid rgba(220,38,38,.3)'; bg = 'rgba(220,38,38,.03)' }
 
   return (
     <div onClick={() => openStep(i)}
       style={{ border, background: bg, borderRadius: 12, padding: '14px 10px', textAlign: 'center', cursor: 'pointer', transition: 'all .15s', opacity: isFuture ? 0.45 : 1, boxShadow: isActive ? '0 0 0 3px rgba(45,106,79,.1)' : 'none' }}>
-      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: isToday ? 'var(--accent)' : isLate ? 'var(--danger)' : 'var(--t3)', marginBottom: 6 }}>{jLabel(i)}</div>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: isToday ? 'var(--t2)' : isLate ? 'var(--danger)' : 'var(--t3)', marginBottom: 6 }}>{jLabel(i)}</div>
       {ds && <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 8 }}>{fmtDate(ds)}</div>}
       {step ? (
         <>
@@ -708,7 +709,7 @@ function StepCard({ i, lesson, t, activeStep, openStep, SCORE_COLORS, SCORE_BG, 
           {step.note && <div style={{ fontSize: 10, color: 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{step.note}</div>}
         </>
       ) : (
-        <div style={{ fontSize: 10, color: isLate ? 'var(--danger)' : isToday ? 'var(--accent)' : 'var(--t3)', fontStyle: 'italic' }}>
+        <div style={{ fontSize: 10, color: isLate ? 'var(--danger)' : isToday ? 'var(--t2)' : 'var(--t3)', fontStyle: 'italic' }}>
           {isLate ? 'Non fait' : isToday ? '📝 Aujourd\'hui' : 'À venir'}
         </div>
       )}
