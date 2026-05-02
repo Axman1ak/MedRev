@@ -19,7 +19,8 @@ const SUBJ_COLORS = [
 type Score = 1 | 2 | 3 | 4 | 5
 type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
 
-// Normalise une step : supporte l'ancien format {ok, date} et le nouveau {score, date}
+// stepScore : score OFFICIEL uniquement. Utilisé pour la logique de calendrier
+// (due, done, next undone) — un temp_score ne rend pas un J "fait".
 function stepScore(s: StepEntry): Score | null {
   if (!s) return null
   if (typeof (s as any).score === 'number') {
@@ -32,6 +33,17 @@ function stepScore(s: StepEntry): Score | null {
   return null
 }
 
+// effectiveStepScore : officiel sinon temp_score. Utilisé pour les agrégations
+// affichées (last score) — un retravailler en avance compte comme score posé.
+function effectiveStepScore(s: StepEntry): Score | null {
+  const off = stepScore(s)
+  if (off) return off
+  if (!s) return null
+  const t = (s as any).temp_score
+  if (typeof t === 'number' && t >= 1 && t <= 5) return t as Score
+  return null
+}
+
 function stepDate(lesson: Lesson, i: number): string {
   if (!lesson.learn_date) return ''
   const d = new Date(lesson.learn_date + 'T12:00:00')
@@ -41,14 +53,26 @@ function stepDate(lesson: Lesson, i: number): string {
 
 type StampState =
   | { kind: 'score'; score: Score }
+  | { kind: 'temp'; score: Score }      // score temporaire (retravailler), à remplacer au vrai J
   | { kind: 'today' }
   | { kind: 'missed' }
   | { kind: 'future' }
+
+// Lit le temp_score d'un step si présent et valide (1-5)
+function stepTempScore(s: StepEntry | null): Score | null {
+  if (!s) return null
+  const t = (s as { temp_score?: number }).temp_score
+  if (typeof t === 'number' && t >= 1 && t <= 5) return t as Score
+  return null
+}
 
 function getStampState(lesson: Lesson, i: number, today: string): StampState {
   const steps = (lesson.steps as StepEntry[]) || []
   const sc = stepScore(steps[i])
   if (sc) return { kind: 'score', score: sc }
+  // Score officiel absent : on regarde si un retravailler en avance a posé un temp_score.
+  const tempSc = stepTempScore(steps[i])
+  if (tempSc) return { kind: 'temp', score: tempSc }
   if (!lesson.learn_date) return { kind: 'future' }
   const ds = stepDate(lesson, i)
   if (ds === today) return { kind: 'today' }
@@ -70,7 +94,7 @@ function getDueStepIndex(lesson: Lesson, today: string): number {
 function getLastScore(lesson: Lesson): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = J.length - 1; i >= 0; i--) {
-    const sc = stepScore(steps[i])
+    const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
   return null
@@ -590,6 +614,13 @@ export default function FichesPage() {
                           return (
                             <span key={i} className={`stamp s${s.score}`} title={`J+${J[i]} · note ${s.score}/5`}>
                               {s.score === 5 && <span className="stamp-star" aria-hidden="true">★</span>}
+                            </span>
+                          )
+                        }
+                        if (s.kind === 'temp') {
+                          return (
+                            <span key={i} className={`stamp temp s${s.score}`} title={`J+${J[i]} · retravaillé en avance · note ${s.score}/5 (temporaire jusqu'au vrai J)`}>
+                              {s.score}
                             </span>
                           )
                         }
