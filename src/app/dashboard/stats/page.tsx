@@ -1,467 +1,640 @@
 'use client'
 // src/app/dashboard/stats/page.tsx
+//
+// Cockpit annuel + insights coaching.
+// 4 KPIs, heatmap année, évolution 12 semaines, maîtrise par palier J,
+// classement matières, top fragiles, et insights dynamiques en bas.
+//
+// Toutes les stats utilisent effectiveStepScore (officiel sinon temp_score).
+// Le modèle binaire ok/miss n'est plus utilisé.
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const FRAGILE_THRESHOLD = 3
 
-type StepEntry = { ok: boolean; date: string } | null
+// ===================== TYPES =====================
+type Score = 1 | 2 | 3 | 4 | 5
+type StepEntry = {
+  score?: Score
+  ok?: boolean       // legacy
+  date?: string
+  note?: string
+  temp_score?: Score
+  temp_date?: string
+} | null
 
-function getCompletedSteps(lesson: Lesson): StepEntry[] {
-  return (lesson.steps as StepEntry[]) || []
+// ===================== STEP HELPERS =====================
+function stepScore(s: StepEntry): Score | null {
+  if (!s) return null
+  if (typeof (s as { score?: number }).score === 'number') {
+    const sc = (s as { score: number }).score
+    if (sc >= 1 && sc <= 5) return sc as Score
+  }
+  if (typeof (s as { ok?: boolean }).ok === 'boolean') {
+    return (s as { ok: boolean }).ok ? 5 : 1
+  }
+  return null
 }
 
-function getMasteryLevel(lesson: Lesson): number {
-  const steps = getCompletedSteps(lesson)
-  let count = 0
+function effectiveStepScore(s: StepEntry): Score | null {
+  const off = stepScore(s)
+  if (off) return off
+  if (!s) return null
+  const t = (s as { temp_score?: number }).temp_score
+  if (typeof t === 'number' && t >= 1 && t <= 5) return t as Score
+  return null
+}
+
+function stepPostedDate(s: StepEntry): string | null {
+  if (!s) return null
+  const off = (s as { date?: string }).date
+  if (off) return off
+  const tmp = (s as { temp_date?: string }).temp_date
+  if (tmp) return tmp
+  return null
+}
+
+// ===================== AGRÉGATIONS =====================
+type LessonAgg = {
+  lesson: Lesson
+  avg: number | null
+  scoredCount: number
+  officialCount: number
+  isMastered: boolean
+  isFragile: boolean
+}
+
+function computeLessonAgg(lesson: Lesson): LessonAgg {
+  const steps = (lesson.steps as StepEntry[]) || []
+  let sum = 0, n = 0, official = 0
   for (let i = 0; i < J.length; i++) {
-    if (steps[i]) count = i + 1
+    const eff = effectiveStepScore(steps[i])
+    if (eff) { sum += eff; n++ }
+    if (stepScore(steps[i])) official++
   }
-  return count // 0 = jamais révisé, 14 = maîtrisé complet
+  const avg = n > 0 ? sum / n : null
+  return {
+    lesson,
+    avg,
+    scoredCount: n,
+    officialCount: official,
+    isMastered: official >= 5 && avg !== null && avg >= 4,
+    isFragile: n >= 3 && avg !== null && avg < FRAGILE_THRESHOLD,
+  }
 }
 
-function getMasteryPct(lesson: Lesson): number {
-  return Math.round((getMasteryLevel(lesson) / J.length) * 100)
-}
-
-function getDueCount(lessons: Lesson[], today: string): number {
-  return lessons.filter(l => {
-    if (!l.learn_date) return false
-    const steps = getCompletedSteps(l)
-    for (let i = 0; i < J.length; i++) {
-      if (steps[i]) continue
-      const d = new Date(l.learn_date + 'T12:00:00')
-      d.setDate(d.getDate() + J[i])
-      if (d.toISOString().split('T')[0] <= today) return true
+function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
+  const m = new Map<string, number>()
+  for (const l of lessons) {
+    const steps = (l.steps as StepEntry[]) || []
+    for (const s of steps) {
+      if (!s) continue
+      if (effectiveStepScore(s) === null) continue
+      const d = stepPostedDate(s)
+      if (!d) continue
+      m.set(d, (m.get(d) ?? 0) + 1)
     }
-    return false
-  }).length
-}
-
-function getSuccessRate(lessons: Lesson[]): number {
-  let ok = 0, total = 0
-  lessons.forEach(l => {
-    const steps = getCompletedSteps(l)
-    steps.forEach(s => {
-      if (s !== null) {
-        total++
-        if (s && (s as { ok: boolean }).ok) ok++
-      }
-    })
-  })
-  return total === 0 ? 0 : Math.round((ok / total) * 100)
-}
-
-// Returns array of {date, count} for last N days of reviews done
-function getActivityLast30(lessons: Lesson[]): { date: string; ok: number; miss: number }[] {
-  const map: Record<string, { ok: number; miss: number }> = {}
-  lessons.forEach(l => {
-    const steps = getCompletedSteps(l)
-    steps.forEach(s => {
-      if (s && typeof s === 'object' && 'date' in s) {
-        const entry = s as { ok: boolean; date: string }
-        if (!map[entry.date]) map[entry.date] = { ok: 0, miss: 0 }
-        if (entry.ok) map[entry.date].ok++
-        else map[entry.date].miss++
-      }
-    })
-  })
-  // Build last 30 days
-  const result: { date: string; ok: number; miss: number }[] = []
-  const today = new Date()
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    const ds = d.toISOString().split('T')[0]
-    result.push({ date: ds, ok: map[ds]?.ok || 0, miss: map[ds]?.miss || 0 })
   }
-  return result
+  return m
 }
 
-// Streak: consecutive days with at least 1 review
-function getStreak(activity: { date: string; ok: number; miss: number }[]): number {
-  let streak = 0
-  for (let i = activity.length - 1; i >= 0; i--) {
-    if (activity[i].ok + activity[i].miss > 0) streak++
-    else break
+function buildWeeklyAvg(lessons: Lesson[], today: string, weeks: number): { weekStart: string; avg: number | null; count: number }[] {
+  const out: { weekStart: string; avg: number | null; count: number }[] = []
+  const todayD = new Date(today + 'T12:00:00')
+  const dow = todayD.getDay()
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const thisMonday = new Date(todayD)
+  thisMonday.setDate(todayD.getDate() + mondayOffset)
+
+  for (let w = weeks - 1; w >= 0; w--) {
+    const weekStart = new Date(thisMonday)
+    weekStart.setDate(thisMonday.getDate() - w * 7)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+    const weekStartStr = weekStart.toISOString().split('T')[0]
+    const weekEndStr = weekEnd.toISOString().split('T')[0]
+
+    let sum = 0, n = 0
+    for (const l of lessons) {
+      const steps = (l.steps as StepEntry[]) || []
+      for (const s of steps) {
+        if (!s) continue
+        const eff = effectiveStepScore(s)
+        if (!eff) continue
+        const d = stepPostedDate(s)
+        if (!d) continue
+        if (d >= weekStartStr && d <= weekEndStr) { sum += eff; n++ }
+      }
+    }
+    out.push({ weekStart: weekStartStr, avg: n > 0 ? sum / n : null, count: n })
   }
-  return streak
+  return out
 }
 
+function buildJStats(lessons: Lesson[]): { jLabel: string; avg: number | null; count: number }[] {
+  const out: { jLabel: string; avg: number | null; count: number }[] = []
+  for (let i = 0; i < J.length; i++) {
+    let sum = 0, n = 0
+    for (const l of lessons) {
+      const steps = (l.steps as StepEntry[]) || []
+      const sc = stepScore(steps[i])
+      if (sc) { sum += sc; n++ }
+    }
+    out.push({ jLabel: i === 0 ? 'J+0' : `J+${J[i]}`, avg: n > 0 ? sum / n : null, count: n })
+  }
+  return out
+}
+
+type MatiereStat = {
+  system: System
+  totalFiches: number
+  scoredFiches: number
+  avg: number | null
+  fragileCount: number
+  masteredCount: number
+}
+
+function computeMatiereStats(systems: System[], lessons: Lesson[]): MatiereStat[] {
+  const out: MatiereStat[] = []
+  for (const sys of systems) {
+    const sysLessons = lessons.filter(l => l.system_id === sys.id)
+    let sum = 0, n = 0, fragile = 0, mastered = 0
+    for (const l of sysLessons) {
+      const a = computeLessonAgg(l)
+      if (a.avg !== null) { sum += a.avg; n++ }
+      if (a.isFragile) fragile++
+      if (a.isMastered) mastered++
+    }
+    out.push({
+      system: sys,
+      totalFiches: sysLessons.length,
+      scoredFiches: n,
+      avg: n > 0 ? sum / n : null,
+      fragileCount: fragile,
+      masteredCount: mastered,
+    })
+  }
+  return out.filter(m => m.scoredFiches > 0).sort((a, b) => (a.avg ?? 999) - (b.avg ?? 999))
+}
+
+// ===================== HEATMAP =====================
+type HeatmapCell = { date: string; count: number; isToday: boolean; inFuture: boolean }
+
+function buildYearHeatmap(activityIndex: Map<string, number>, today: string): HeatmapCell[][] {
+  const todayD = new Date(today + 'T12:00:00')
+  const dow = todayD.getDay()
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const thisMonday = new Date(todayD)
+  thisMonday.setDate(todayD.getDate() + mondayOffset)
+
+  const weeks: HeatmapCell[][] = []
+  for (let w = 51; w >= 0; w--) {
+    const week: HeatmapCell[] = []
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(thisMonday)
+      date.setDate(thisMonday.getDate() - w * 7 + d)
+      const ds = date.toISOString().split('T')[0]
+      week.push({
+        date: ds,
+        count: activityIndex.get(ds) ?? 0,
+        isToday: ds === today,
+        inFuture: ds > today,
+      })
+    }
+    weeks.push(week)
+  }
+  return weeks
+}
+
+function intensityClass(count: number, max: number): string {
+  if (count === 0) return 'i0'
+  const ratio = count / max
+  if (ratio < 0.25) return 'i1'
+  if (ratio < 0.5) return 'i2'
+  if (ratio < 0.75) return 'i3'
+  return 'i4'
+}
+
+// ===================== INSIGHTS =====================
+type Insight = { kind: 'positive' | 'neutral' | 'warning'; text: string }
+
+function generateInsights(
+  matiereStats: MatiereStat[],
+  weeklyAvg: { weekStart: string; avg: number | null; count: number }[]
+): Insight[] {
+  const out: Insight[] = []
+  if (weeklyAvg.length < 2) return out
+
+  const last = weeklyAvg[weeklyAvg.length - 1]
+  const prev = weeklyAvg[weeklyAvg.length - 2]
+  if (last.avg !== null && prev.avg !== null) {
+    const delta = last.avg - prev.avg
+    if (Math.abs(delta) >= 0.2) {
+      const sign = delta > 0 ? '+' : ''
+      out.push({
+        kind: delta > 0 ? 'positive' : 'warning',
+        text: `Ta moyenne est passée de ${prev.avg.toFixed(1)} à ${last.avg.toFixed(1)} cette semaine (${sign}${delta.toFixed(1)}).`,
+      })
+    }
+  }
+
+  if (last.count > 0 || prev.count > 0) {
+    const delta = last.count - prev.count
+    const pct = prev.count > 0 ? Math.round((delta / prev.count) * 100) : 100
+    if (Math.abs(delta) >= 3) {
+      out.push({
+        kind: delta > 0 ? 'positive' : 'neutral',
+        text: `${last.count} révisions cette semaine (${delta > 0 ? '+' : ''}${pct}% vs sem. précédente).`,
+      })
+    }
+  }
+
+  const weakest = matiereStats[0]
+  if (weakest && weakest.avg !== null && weakest.avg < FRAGILE_THRESHOLD + 0.5) {
+    out.push({
+      kind: 'warning',
+      text: `${weakest.system.name} reste ton point faible (avg ${weakest.avg.toFixed(1)}/5${weakest.fragileCount > 0 ? ` · ${weakest.fragileCount} fiche${weakest.fragileCount > 1 ? 's' : ''} fragile${weakest.fragileCount > 1 ? 's' : ''}` : ''}).`,
+    })
+  }
+
+  const strongest = matiereStats[matiereStats.length - 1]
+  if (strongest && weakest && strongest !== weakest && strongest.avg !== null && strongest.avg >= 4) {
+    out.push({
+      kind: 'positive',
+      text: `${strongest.system.name} est ta matière la plus solide (avg ${strongest.avg.toFixed(1)}/5).`,
+    })
+  }
+
+  const recentRate = weeklyAvg.slice(-4).reduce((s, w) => s + w.count, 0) / 4
+  if (recentRate >= 1) {
+    const projected8w = Math.round(recentRate * 8)
+    out.push({
+      kind: 'neutral',
+      text: `À ton rythme actuel (${recentRate.toFixed(1)} révisions/sem.), tu en feras ~${projected8w} dans les 8 semaines à venir.`,
+    })
+  }
+
+  if (last.count === 0 && prev.count > 0) {
+    out.push({
+      kind: 'warning',
+      text: `Aucune révision cette semaine — reprends le rythme avant de perdre tes acquis.`,
+    })
+  }
+
+  return out
+}
+
+function scoreClass(avg: number | null): string {
+  if (avg === null) return 's3'
+  if (avg < 2) return 's1'
+  if (avg < 3) return 's2'
+  if (avg < 3.7) return 's3'
+  if (avg < 4.5) return 's4'
+  return 's5'
+}
+
+function fmtMonth(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+}
+
+// ===================== PAGE =====================
 export default function StatsPage() {
   const supabase = createClient()
   const router = useRouter()
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedSemestre, setSelectedSemestre] = useState<number | null>(null)
+  const [semestre, setSemestre] = useState<1 | 2>(2)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
-  const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }] = await Promise.all([
-      supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
-      supabase.from('lessons').select('*').eq('user_id', uid).order('created_at'),
-    ])
-    setSystems(sys || [])
-    setLessons(les || [])
-    setLoading(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = localStorage.getItem('medrev-sem')
+    setSemestre(raw === '1' ? 1 : 2)
   }, [])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-      load(user.id)
-    })
-  }, [])
+      const [{ data: sys }, { data: les }] = await Promise.all([
+        supabase.from('systems').select('*').eq('user_id', user.id).order('semestre').order('created_at'),
+        supabase.from('lessons').select('*').eq('user_id', user.id).order('created_at'),
+      ])
+      if (cancelled) return
+      setSystems((sys as System[] | null) ?? [])
+      setLessons((les as Lesson[] | null) ?? [])
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [supabase, router])
 
-  // Filtered data
-  const filteredSystems = selectedSemestre === null
-    ? systems
-    : systems.filter(s => s.semestre === selectedSemestre)
-  const filteredSysIds = new Set(filteredSystems.map(s => s.id))
-  const filteredLessons = lessons.filter(l => filteredSysIds.has(l.system_id))
+  const semSystems = useMemo(() => systems.filter(s => s.semestre === semestre), [systems, semestre])
+  const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
+  const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
-  const totalFiches = filteredLessons.length
-  const fichesAvecDate = filteredLessons.filter(l => l.learn_date).length
-  const dueCount = getDueCount(filteredLessons, today)
-  const successRate = getSuccessRate(filteredLessons)
+  const aggs = useMemo(() => semLessons.map(computeLessonAgg), [semLessons])
+  const activityIndex = useMemo(() => buildActivityIndex(semLessons), [semLessons])
+  const weeklyAvg = useMemo(() => buildWeeklyAvg(semLessons, today, 12), [semLessons, today])
+  const jStats = useMemo(() => buildJStats(semLessons), [semLessons])
+  const matiereStats = useMemo(() => computeMatiereStats(semSystems, semLessons), [semSystems, semLessons])
+  const heatmap = useMemo(() => buildYearHeatmap(activityIndex, today), [activityIndex, today])
+  const insights = useMemo(() => generateInsights(matiereStats, weeklyAvg), [matiereStats, weeklyAvg])
 
-  const activity = getActivityLast30(filteredLessons)
-  const streak = getStreak(activity)
-  const totalRevisions = activity.reduce((acc, d) => acc + d.ok + d.miss, 0)
-  const maxActivity = Math.max(...activity.map(d => d.ok + d.miss), 1)
+  const totalFiches = semLessons.length
+  const scoredFiches = aggs.filter(a => a.avg !== null).length
+  const masteredCount = aggs.filter(a => a.isMastered).length
+  const fragileCount = aggs.filter(a => a.isFragile).length
 
-  // Per-system mastery
-  const systemStats = filteredSystems.map(sys => {
-    const sysLessons = filteredLessons.filter(l => l.system_id === sys.id)
-    if (sysLessons.length === 0) return { sys, avg: 0, count: 0, due: 0 }
-    const avg = Math.round(sysLessons.reduce((a, l) => a + getMasteryPct(l), 0) / sysLessons.length)
-    const due = getDueCount(sysLessons, today)
-    return { sys, avg, count: sysLessons.length, due }
-  }).sort((a, b) => b.avg - a.avg)
+  const globalAvg = useMemo(() => {
+    const valid = aggs.filter(a => a.avg !== null)
+    if (valid.length === 0) return null
+    return valid.reduce((s, a) => s + (a.avg ?? 0), 0) / valid.length
+  }, [aggs])
 
-  // Mastery distribution
-  const dist = [0, 0, 0, 0, 0] // 0-20, 21-40, 41-60, 61-80, 81-100
-  filteredLessons.forEach(l => {
-    const pct = getMasteryPct(l)
-    if (pct <= 20) dist[0]++
-    else if (pct <= 40) dist[1]++
-    else if (pct <= 60) dist[2]++
-    else if (pct <= 80) dist[3]++
-    else dist[4]++
+  const last7Count = weeklyAvg[weeklyAvg.length - 1]?.count ?? 0
+  const prev7Count = weeklyAvg[weeklyAvg.length - 2]?.count ?? 0
+  const week7Delta = last7Count - prev7Count
+
+  const totalActivity = useMemo(() => {
+    let sum = 0
+    activityIndex.forEach(v => { sum += v })
+    return sum
+  }, [activityIndex])
+
+  const recent4wRate = weeklyAvg.slice(-4).reduce((s, w) => s + w.count, 0) / 4
+  const projection8w = Math.round(recent4wRate * 8)
+
+  const heatmapMax = useMemo(() => {
+    let max = 1
+    activityIndex.forEach(v => { if (v > max) max = v })
+    return max
+  }, [activityIndex])
+
+  if (loading) {
+    return (
+      <div className="stats-page">
+        <div className="stats-loading">Chargement…</div>
+      </div>
+    )
+  }
+
+  const topFragiles = aggs
+    .filter(a => a.avg !== null && a.scoredCount >= 2)
+    .sort((a, b) => (a.avg ?? 999) - (b.avg ?? 999))
+    .slice(0, 5)
+
+  const monthLabels: { weekIdx: number; label: string }[] = []
+  let lastMonth = ''
+  heatmap.forEach((week, idx) => {
+    const m = fmtMonth(week[0].date)
+    if (m !== lastMonth) {
+      monthLabels.push({ weekIdx: idx, label: m })
+      lastMonth = m
+    }
   })
-  const maxDist = Math.max(...dist, 1)
-
-  // Semestres disponibles
-  const semestres = Array.from(new Set(systems.map(s => s.semestre).filter(Boolean))).sort() as number[]
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#EDEAE3' }}>
-      <div style={{ color: '#1B4332', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 16 }}>Chargement…</div>
-    </div>
-  )
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#EDEAE3',
-      fontFamily: 'Plus Jakarta Sans, sans-serif',
-      color: '#111310',
-      padding: '32px 24px',
-      maxWidth: 1100,
-      margin: '0 auto',
-    }}>
+    <div className="stats-page">
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
+      <div className="stats-header">
         <div>
-          <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 28, fontWeight: 700, color: '#111310', margin: 0 }}>
-            Statistiques
-          </h1>
-          <p style={{ margin: '4px 0 0', color: '#5a5a4a', fontSize: 14 }}>
-            Suivi de ta progression en révision espacée
-          </p>
+          <h1 className="stats-title">Statistiques</h1>
+          <div className="stats-sub">Cockpit annuel · {totalFiches} fiches · {totalActivity} révisions cumulées</div>
         </div>
-        {/* Filtre semestre */}
-        {semestres.length > 1 && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setSelectedSemestre(null)}
-              style={{
-                padding: '6px 14px', borderRadius: 20, border: '1.5px solid',
-                borderColor: selectedSemestre === null ? '#1B4332' : '#ccc',
-                background: selectedSemestre === null ? '#1B4332' : 'white',
-                color: selectedSemestre === null ? 'white' : '#555',
-                fontSize: 13, cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif',
-              }}>
-              Tout
-            </button>
-            {semestres.map(s => (
-              <button
-                key={s}
-                onClick={() => setSelectedSemestre(s)}
-                style={{
-                  padding: '6px 14px', borderRadius: 20, border: '1.5px solid',
-                  borderColor: selectedSemestre === s ? '#1B4332' : '#ccc',
-                  background: selectedSemestre === s ? '#1B4332' : 'white',
-                  color: selectedSemestre === s ? 'white' : '#555',
-                  fontSize: 13, cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif',
-                }}>
-                S{s}
-              </button>
+        <div className="stats-sem-toggle">
+          <button className={semestre === 1 ? 'active' : ''} onClick={() => setSemestre(1)}>S1</button>
+          <button className={semestre === 2 ? 'active' : ''} onClick={() => setSemestre(2)}>S2</button>
+        </div>
+      </div>
+
+      <div className="stats-kpis">
+        <div className="stats-kpi">
+          <div className="stats-kpi-label">Maîtrise globale</div>
+          <div className="stats-kpi-row">
+            <span className={`stats-kpi-val ${scoreClass(globalAvg)}`}>{globalAvg !== null ? globalAvg.toFixed(1) : '—'}</span>
+            <span className="stats-kpi-unit">/5</span>
+          </div>
+          <div className="stats-kpi-sub">{scoredFiches} fiches notées · {masteredCount} maîtrisée{masteredCount > 1 ? 's' : ''}</div>
+        </div>
+        <div className="stats-kpi">
+          <div className="stats-kpi-label">Cette semaine</div>
+          <div className="stats-kpi-row">
+            <span className="stats-kpi-val">{last7Count}</span>
+            <span className="stats-kpi-unit">révisions</span>
+          </div>
+          <div className={`stats-kpi-sub ${week7Delta > 0 ? 'pos' : week7Delta < 0 ? 'neg' : ''}`}>
+            {prev7Count === 0 && last7Count === 0 ? 'Aucune activité' : `${week7Delta > 0 ? '+' : ''}${week7Delta} vs sem. précédente`}
+          </div>
+        </div>
+        <div className="stats-kpi">
+          <div className="stats-kpi-label">Fiches fragiles</div>
+          <div className="stats-kpi-row">
+            <span className={`stats-kpi-val ${fragileCount > 0 ? 's2' : 's4'}`}>{fragileCount}</span>
+            <span className="stats-kpi-unit">à retravailler</span>
+          </div>
+          <div className="stats-kpi-sub">{fragileCount === 0 ? 'Aucune fragile · tu gères' : `avg < ${FRAGILE_THRESHOLD}`}</div>
+        </div>
+        <div className="stats-kpi">
+          <div className="stats-kpi-label">Projection 8 sem.</div>
+          <div className="stats-kpi-row">
+            <span className="stats-kpi-val">{projection8w}</span>
+            <span className="stats-kpi-unit">révisions</span>
+          </div>
+          <div className="stats-kpi-sub">à ton rythme actuel ({recent4wRate.toFixed(1)}/sem.)</div>
+        </div>
+      </div>
+
+      <div className="stats-card">
+        <div className="stats-card-title">Activité de l&apos;année <span className="stats-card-sub">52 dernières semaines</span></div>
+        <div className="stats-heatmap-wrap">
+          <div className="stats-heatmap-months">
+            {monthLabels.map((m, idx) => (
+              <span key={idx} className="stats-heatmap-month" style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
             ))}
           </div>
-        )}
+          <div className="stats-heatmap">
+            <div className="stats-heatmap-axis">
+              <span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span>
+            </div>
+            <div className="stats-heatmap-grid">
+              {heatmap.map((week, wi) => (
+                <div key={wi} className="stats-heatmap-week">
+                  {week.map((cell, di) => {
+                    const cls = ['stats-heatmap-cell',
+                      cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
+                      cell.isToday ? 'today' : '',
+                    ].filter(Boolean).join(' ')
+                    return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="stats-heatmap-legend">
+            <span>Moins</span>
+            <span className="stats-heatmap-cell i0" />
+            <span className="stats-heatmap-cell i1" />
+            <span className="stats-heatmap-cell i2" />
+            <span className="stats-heatmap-cell i3" />
+            <span className="stats-heatmap-cell i4" />
+            <span>Plus</span>
+          </div>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
-        <KpiCard label="Fiches créées" value={totalFiches} sub={`${fichesAvecDate} avec date`} color="#1B4332" />
-        <KpiCard label="À réviser aujourd'hui" value={dueCount} sub={dueCount === 0 ? 'Tu es à jour ✓' : 'fiches en attente'} color={dueCount > 0 ? '#B91C1C' : '#1B4332'} />
-        <KpiCard label="Taux de réussite" value={`${successRate}%`} sub="révisions notées OK" color="#C47B2B" />
-        <KpiCard label="Série active" value={`${streak}j`} sub="jours consécutifs" color="#2D6A4F" />
-        <KpiCard label="Révisions (30j)" value={totalRevisions} sub="répétitions effectuées" color="#555" />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
-        {/* Activité 30j */}
-        <div style={{ background: 'white', borderRadius: 14, padding: '20px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 17, fontWeight: 700, margin: '0 0 16px', color: '#111310' }}>
-            Activité des 30 derniers jours
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80 }}>
-            {activity.map((d, i) => {
-              const total = d.ok + d.miss
-              const h = total === 0 ? 2 : Math.max(6, Math.round((total / maxActivity) * 72))
-              const okH = total === 0 ? 2 : Math.round((d.ok / total) * h)
-              const missH = h - okH
-              const isToday = d.date === today
+      <div className="stats-row stats-row-2">
+        <div className="stats-card">
+          <div className="stats-card-title">Maîtrise par palier J <span className="stats-card-sub">officiel uniquement</span></div>
+          <div className="stats-jbar">
+            {jStats.map((j, i) => {
+              const pct = j.avg !== null ? (j.avg / 5) * 100 : 0
+              const cls = scoreClass(j.avg)
               return (
-                <div key={i} title={`${d.date}: ${d.ok} OK, ${d.miss} raté`}
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default' }}>
-                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', borderRadius: '3px 3px 0 0', overflow: 'hidden' }}>
-                    {total > 0 ? (
-                      <>
-                        <div style={{ height: missH, background: '#FCA5A5', minHeight: missH > 0 ? 2 : 0 }} />
-                        <div style={{ height: okH, background: '#1B4332', minHeight: okH > 0 ? 2 : 0 }} />
-                      </>
-                    ) : (
-                      <div style={{ height: 2, background: '#e5e5e5' }} />
-                    )}
+                <div key={i} className="stats-jbar-col">
+                  <div className="stats-jbar-track">
+                    <div className={`stats-jbar-fill ${cls}`} style={{ height: `${pct}%` }} title={j.avg !== null ? `${j.avg.toFixed(1)}/5 · ${j.count} note${j.count > 1 ? 's' : ''}` : 'aucune note'} />
                   </div>
-                  {isToday && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#C47B2B', marginTop: 3 }} />}
+                  <div className="stats-jbar-val">{j.avg !== null ? j.avg.toFixed(1) : '—'}</div>
+                  <div className="stats-jbar-lbl">{j.jLabel}</div>
                 </div>
               )
             })}
           </div>
-          <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555' }}>
-              <div style={{ width: 10, height: 10, background: '#1B4332', borderRadius: 2 }} /> Réussi
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555' }}>
-              <div style={{ width: 10, height: 10, background: '#FCA5A5', borderRadius: 2 }} /> À retravailler
-            </div>
-          </div>
         </div>
 
-        {/* Distribution de maîtrise */}
-        <div style={{ background: 'white', borderRadius: 14, padding: '20px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 17, fontWeight: 700, margin: '0 0 16px', color: '#111310' }}>
-            Distribution de maîtrise
-          </h2>
-          {totalFiches === 0 ? (
-            <div style={{ color: '#999', fontSize: 14, textAlign: 'center', paddingTop: 24 }}>Aucune fiche créée</div>
+        <div className="stats-card">
+          <div className="stats-card-title">Évolution moyenne <span className="stats-card-sub">12 dernières semaines</span></div>
+          <Sparkline data={weeklyAvg} />
+        </div>
+      </div>
+
+      <div className="stats-row stats-row-2">
+        <div className="stats-card">
+          <div className="stats-card-title">Maîtrise par matière</div>
+          {matiereStats.length === 0 ? (
+            <div className="stats-empty">Pas encore de matière notée pour ce semestre.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { label: 'Non commencé (0–20%)', color: '#E5E7EB', count: dist[0] },
-                { label: 'Débutant (21–40%)', color: '#D8EAE0', count: dist[1] },
-                { label: 'En cours (41–60%)', color: '#86EFAC', count: dist[2] },
-                { label: 'Avancé (61–80%)', color: '#2D6A4F', count: dist[3] },
-                { label: 'Maîtrisé (81–100%)', color: '#1B4332', count: dist[4] },
-              ].map(({ label, color, count }) => (
-                <div key={label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#555', marginBottom: 4 }}>
-                    <span>{label}</span>
-                    <span style={{ fontWeight: 600, color: '#111310' }}>{count}</span>
+            <div className="stats-mat-list">
+              {matiereStats.map(m => {
+                const pct = m.avg !== null ? (m.avg / 5) * 100 : 0
+                const cls = scoreClass(m.avg)
+                return (
+                  <div key={m.system.id} className="stats-mat">
+                    <div className="stats-mat-name">{m.system.name}</div>
+                    <div className="stats-mat-bar">
+                      <div className={`stats-mat-fill ${cls}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className={`stats-mat-val ${cls}`}>{m.avg !== null ? m.avg.toFixed(1) : '—'}</div>
+                    <div className="stats-mat-counts">
+                      {m.scoredFiches}/{m.totalFiches} f.
+                      {m.fragileCount > 0 && <span className="stats-mat-fragile"> · {m.fragileCount} fragile{m.fragileCount > 1 ? 's' : ''}</span>}
+                    </div>
                   </div>
-                  <div style={{ height: 8, background: '#f0f0ee', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${Math.round((count / totalFiches) * 100)}%`,
-                      background: color,
-                      borderRadius: 4,
-                      border: color === '#E5E7EB' ? '1px solid #ccc' : 'none',
-                      transition: 'width 0.5s ease',
-                    }} />
-                  </div>
-                </div>
-              ))}
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="stats-card">
+          <div className="stats-card-title">Top fragiles <span className="stats-card-sub">{topFragiles.length > 0 ? '5 plus faibles' : ''}</span></div>
+          {topFragiles.length === 0 ? (
+            <div className="stats-empty">Aucune fiche notée 2+ fois.</div>
+          ) : (
+            <div className="stats-frag-list">
+              {topFragiles.map(a => {
+                const sys = systems.find(s => s.id === a.lesson.system_id)
+                const cls = scoreClass(a.avg)
+                return (
+                  <Link key={a.lesson.id} href={`/dashboard/focus?lessons=${a.lesson.id}`} className="stats-frag">
+                    <div className="stats-frag-info">
+                      <div className="stats-frag-name">{a.lesson.name}</div>
+                      <div className="stats-frag-sys">{sys?.name ?? '—'} · {a.scoredCount} révision{a.scoredCount > 1 ? 's' : ''}</div>
+                    </div>
+                    <div className={`stats-frag-chip ${cls}`}>{a.avg !== null ? a.avg.toFixed(1) : '—'}</div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* Maîtrise par matière */}
-      <div style={{ background: 'white', borderRadius: 14, padding: '20px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 24 }}>
-        <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 17, fontWeight: 700, margin: '0 0 16px', color: '#111310' }}>
-          Maîtrise par matière
-        </h2>
-        {systemStats.length === 0 ? (
-          <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>
-            Aucune matière créée. Commence par ajouter des matières dans <a href="/dashboard/fiches" style={{ color: '#1B4332' }}>Fiches</a>.
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-            {systemStats.map(({ sys, avg, count, due }) => (
-              <div key={sys.id} style={{
-                border: '1.5px solid #e8e4dc',
-                borderRadius: 12,
-                padding: '14px 16px',
-                background: '#faf9f7',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 20 }}>{sys.icon || '📁'}</span>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: '#111310' }}>{sys.name}</div>
-                      <div style={{ fontSize: 12, color: '#888' }}>{count} fiche{count > 1 ? 's' : ''}</div>
-                    </div>
-                  </div>
-                  {due > 0 && (
-                    <span style={{
-                      background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA',
-                      borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 600,
-                    }}>
-                      {due} à réviser
-                    </span>
-                  )}
-                </div>
-                {/* Progress bar */}
-                <div style={{ height: 8, background: '#e8e4dc', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${avg}%`,
-                    background: avg >= 80 ? '#1B4332' : avg >= 50 ? '#2D6A4F' : avg >= 25 ? '#86EFAC' : '#D8EAE0',
-                    borderRadius: 4,
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-                <div style={{ fontSize: 12, color: '#666', textAlign: 'right' }}>
-                  <span style={{ fontWeight: 700, fontSize: 16, color: avg >= 70 ? '#1B4332' : '#C47B2B' }}>{avg}%</span>
-                  {' '}de maîtrise
-                </div>
-              </div>
+      {insights.length > 0 && (
+        <div className="stats-card">
+          <div className="stats-card-title">Insights</div>
+          <ul className="stats-insights">
+            {insights.map((ins, i) => (
+              <li key={i} className={`stats-insight ${ins.kind}`}>{ins.text}</li>
             ))}
-          </div>
-        )}
-      </div>
+          </ul>
+        </div>
+      )}
 
-      {/* Détail des fiches */}
-      <div style={{ background: 'white', borderRadius: 14, padding: '20px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <h2 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 17, fontWeight: 700, margin: '0 0 16px', color: '#111310' }}>
-          Détail des fiches
-        </h2>
-        {filteredLessons.length === 0 ? (
-          <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>
-            Aucune fiche. <a href="/dashboard/fiches" style={{ color: '#1B4332' }}>Créer des fiches →</a>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e8e4dc' }}>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#888', fontWeight: 600, fontSize: 12 }}>Fiche</th>
-                  <th style={{ textAlign: 'left', padding: '8px 12px', color: '#888', fontWeight: 600, fontSize: 12 }}>Matière</th>
-                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#888', fontWeight: 600, fontSize: 12 }}>Palier</th>
-                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#888', fontWeight: 600, fontSize: 12 }}>Maîtrise</th>
-                  <th style={{ textAlign: 'center', padding: '8px 12px', color: '#888', fontWeight: 600, fontSize: 12 }}>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLessons.slice(0, 50).map(lesson => {
-                  const sys = systems.find(s => s.id === lesson.system_id)
-                  const level = getMasteryLevel(lesson)
-                  const pct = getMasteryPct(lesson)
-                  const isDue = getDueCount([lesson], today) > 0
-                  return (
-                    <tr key={lesson.id} style={{ borderBottom: '1px solid #f0f0ee', background: isDue ? '#FFF7F7' : 'transparent' }}>
-                      <td style={{ padding: '10px 12px', color: '#111310', fontWeight: 500 }}>{lesson.name}</td>
-                      <td style={{ padding: '10px 12px', color: '#555' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                          <span>{sys?.icon || '📁'}</span>
-                          <span>{sys?.name || '—'}</span>
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#555' }}>
-                        {lesson.learn_date ? `J${level > 0 ? J[level - 1] : 0} / J${J[J.length - 1]}` : '—'}
-                      </td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <div style={{ width: 60, height: 6, background: '#e8e4dc', borderRadius: 3, overflow: 'hidden' }}>
-                            <div style={{
-                              height: '100%', width: `${pct}%`,
-                              background: pct >= 80 ? '#1B4332' : pct >= 50 ? '#2D6A4F' : '#86EFAC',
-                              borderRadius: 3,
-                            }} />
-                          </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#555', minWidth: 30 }}>{pct}%</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                        {!lesson.learn_date ? (
-                          <span style={{ fontSize: 12, color: '#999' }}>Sans date</span>
-                        ) : isDue ? (
-                          <span style={{
-                            background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA',
-                            borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 600,
-                          }}>À réviser</span>
-                        ) : pct === 100 ? (
-                          <span style={{
-                            background: '#D8EAE0', color: '#1B4332', border: '1px solid #A7D3BC',
-                            borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 600,
-                          }}>Maîtrisé ✓</span>
-                        ) : (
-                          <span style={{ fontSize: 12, color: '#888' }}>En cours</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {filteredLessons.length > 50 && (
-              <div style={{ textAlign: 'center', padding: '12px 0', color: '#888', fontSize: 13 }}>
-                Affichage des 50 premières fiches sur {filteredLessons.length}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   )
 }
 
-function KpiCard({ label, value, sub, color }: { label: string; value: string | number; sub: string; color: string }) {
+// ===================== SPARKLINE =====================
+function Sparkline({ data }: { data: { weekStart: string; avg: number | null; count: number }[] }) {
+  const w = 320
+  const h = 120
+  const pad = 16
+  const validIndices = data.map((d, i) => d.avg !== null ? i : -1).filter(i => i >= 0)
+  if (validIndices.length < 2) {
+    return <div className="stats-empty">Pas assez de données pour tracer une tendance.</div>
+  }
+
+  const xs = data.map((_, i) => pad + (i / Math.max(1, data.length - 1)) * (w - 2 * pad))
+  const ys = data.map(d => d.avg === null ? null : h - pad - ((d.avg - 1) / 4) * (h - 2 * pad))
+
+  // Construit un path linéaire en sautant les null
+  const segments: string[] = []
+  let current: string[] = []
+  for (let i = 0; i < ys.length; i++) {
+    if (ys[i] === null) {
+      if (current.length > 0) { segments.push(current.join(' ')); current = [] }
+    } else {
+      current.push(`${current.length === 0 ? 'M' : 'L'} ${xs[i].toFixed(1)} ${(ys[i] as number).toFixed(1)}`)
+    }
+  }
+  if (current.length > 0) segments.push(current.join(' '))
+
   return (
-    <div style={{
-      background: 'white',
-      borderRadius: 14,
-      padding: '18px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-      borderTop: `3px solid ${color}`,
-    }}>
-      <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        {label}
+    <div className="stats-sparkline-wrap">
+      <svg viewBox={`0 0 ${w} ${h}`} className="stats-sparkline">
+        {[1, 2, 3, 4, 5].map(v => {
+          const y = h - pad - ((v - 1) / 4) * (h - 2 * pad)
+          return (
+            <g key={v}>
+              <line x1={pad} y1={y} x2={w - pad} y2={y} stroke="#E5E2DA" strokeWidth={0.5} strokeDasharray="2 3" />
+              <text x={pad - 4} y={y + 3} textAnchor="end" fontSize={9} fill="#9CA09A">{v}</text>
+            </g>
+          )
+        })}
+        {segments.map((seg, i) => (
+          <path key={i} d={seg} fill="none" stroke="#1B4332" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+        {data.map((d, i) => d.avg === null ? null : (
+          <circle key={i} cx={xs[i]} cy={ys[i] as number} r={3} fill="#1B4332" stroke="white" strokeWidth={1.5}>
+            <title>{d.weekStart} · {d.avg.toFixed(1)}/5 · {d.count} révision{d.count > 1 ? 's' : ''}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="stats-sparkline-meta">
+        <span>S-12</span>
+        <span>aujourd&apos;hui</span>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color, fontFamily: 'Fraunces, Georgia, serif', lineHeight: 1 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>{sub}</div>
     </div>
   )
 }
