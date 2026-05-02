@@ -61,6 +61,9 @@ function daysBetween(a: string, b: string): number {
 }
 
 // ======================= STEP HELPERS =======================
+// stepScore : lit le score OFFICIEL d'un step. N'inclut PAS temp_score.
+// Utilisé partout où la logique de calendrier officiel compte (queue, due,
+// nextUndone, etc.) — un step avec uniquement temp_score est "non scoré".
 function stepScore(s: StepEntry): Score | null {
   if (!s) return null
   if (typeof (s as { score?: number }).score === 'number') {
@@ -73,6 +76,19 @@ function stepScore(s: StepEntry): Score | null {
   return null
 }
 
+// effectiveStepScore : score officiel SI présent, sinon temp_score (retravailler
+// en avance). Utilisé pour les agrégations vues par l'utilisateur (avg, last3,
+// last) — l'effort de retravailler doit se refléter dans la "santé" d'une fiche
+// jusqu'à ce que le vrai J arrive et substitue son score officiel.
+function effectiveStepScore(s: StepEntry): Score | null {
+  const off = stepScore(s)
+  if (off) return off
+  if (!s) return null
+  const t = (s as { temp_score?: number }).temp_score
+  if (typeof t === 'number' && t >= 1 && t <= 5) return t as Score
+  return null
+}
+
 function stepDate(lesson: Lesson, i: number): string {
   if (!lesson.learn_date) return ''
   return dateStrFromOffset(lesson.learn_date, J[i])
@@ -81,7 +97,7 @@ function stepDate(lesson: Lesson, i: number): string {
 function getLastScore(lesson: Lesson): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = J.length - 1; i >= 0; i--) {
-    const sc = stepScore(steps[i])
+    const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
   return null
@@ -91,7 +107,7 @@ function getAverageScore(lesson: Lesson): number | null {
   const steps = (lesson.steps as StepEntry[]) || []
   let sum = 0, n = 0
   for (let i = 0; i < J.length; i++) {
-    const sc = stepScore(steps[i])
+    const sc = effectiveStepScore(steps[i])
     if (sc) { sum += sc; n++ }
   }
   return n > 0 ? sum / n : null
@@ -101,7 +117,7 @@ function getLast3Scores(lesson: Lesson): Score[] {
   const steps = (lesson.steps as StepEntry[]) || []
   const out: Score[] = []
   for (let i = J.length - 1; i >= 0 && out.length < 3; i--) {
-    const sc = stepScore(steps[i])
+    const sc = effectiveStepScore(steps[i])
     if (sc) out.unshift(sc)
   }
   return out
@@ -757,7 +773,14 @@ export default function DashboardPage() {
                 )}
 
                 <Link
-                  href={`/dashboard/focus?system=${weakest.system.id}`}
+                  href={
+                    // S'il y a des fragiles, on les passe explicitement pour que le focus
+                    // les charge même si elles ne sont pas dues aujourd'hui (mode "retravailler" :
+                    // les scores s'écriront en temp_score sans bouger le calendrier).
+                    weakest.fragile.length > 0
+                      ? `/dashboard/focus?lessons=${weakest.fragile.map(f => f.lesson.id).join(',')}`
+                      : `/dashboard/focus?system=${weakest.system.id}`
+                  }
                   className="weak-cta"
                   style={{ textDecoration: 'none' }}
                 >
