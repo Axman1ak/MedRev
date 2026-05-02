@@ -1171,6 +1171,35 @@
   background: rgba(232, 220, 180, 0.22);
 }
 
+/* --- Bouton mode immersif (plein écran + wake lock) --- */
+.focus-immersive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(232, 220, 180, 0.10);
+  border: 1px solid rgba(216, 168, 72, 0.35);
+  color: #E8DDC5;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background .15s, transform .12s, box-shadow .15s;
+  padding: 0;
+}
+.focus-immersive:hover {
+  background: rgba(232, 220, 180, 0.22);
+  transform: scale(1.05);
+}
+.focus-immersive.active {
+  background: rgba(216, 168, 72, 0.28);
+  border-color: rgba(216, 168, 72, 0.65);
+  color: #FFE598;
+  box-shadow: 0 0 0 2px rgba(216, 168, 72, 0.18);
+}
+
 /* --- Card centrale : verre dépoli sombre (même palette que le panel trésors) --- */
 .focus-card {
   background: rgba(15, 8, 5, 0.78);
