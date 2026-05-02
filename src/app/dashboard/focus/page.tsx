@@ -76,6 +76,8 @@ function daysBetween(a: string, b: string): number {
   )
 }
 
+// stepScore : lit le score OFFICIEL uniquement. Utilisé pour la logique
+// de calendrier (due, nextUndone, queue priority de base).
 function stepScore(s: StepEntry): Score | null {
   if (!s) return null
   if (typeof (s as { score?: number }).score === 'number') {
@@ -88,6 +90,18 @@ function stepScore(s: StepEntry): Score | null {
   return null
 }
 
+// effectiveStepScore : score officiel sinon temp_score. Reflète l'état perçu
+// par l'utilisateur — un retravailler en avance compte comme "score posé"
+// jusqu'au vrai J.
+function effectiveStepScore(s: StepEntry): Score | null {
+  const off = stepScore(s)
+  if (off) return off
+  if (!s) return null
+  const t = (s as { temp_score?: number }).temp_score
+  if (typeof t === 'number' && t >= 1 && t <= 5) return t as Score
+  return null
+}
+
 function stepDate(lesson: Lesson, i: number): string {
   if (!lesson.learn_date) return ''
   return dateStrFromOffset(lesson.learn_date, J[i])
@@ -96,7 +110,7 @@ function stepDate(lesson: Lesson, i: number): string {
 function getLastScore(lesson: Lesson): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = J.length - 1; i >= 0; i--) {
-    const sc = stepScore(steps[i])
+    const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
   return null
@@ -153,8 +167,43 @@ function buildQueue(
   systems: System[],
   lessonParam: string | null,
   systemParam: string | null,
+  lessonsParam: string | null,
   today: string
 ): QueueItem[] {
+  // 0) Mode "retravailler multi" : si ?lessons=id1,id2,id3 fourni, on construit
+  //    une queue UNIQUEMENT de ces fiches, chacune sur son prochain J non noté
+  //    avec status: 'fresh'. Le focus utilisera cette info pour écrire en
+  //    temp_score (pas en score officiel) et ne pas bouger le calendrier.
+  if (lessonsParam) {
+    const ids = lessonsParam.split(',').map(s => s.trim()).filter(Boolean)
+    const queue: QueueItem[] = []
+    for (const id of ids) {
+      const l = lessons.find(x => x.id === id)
+      if (!l) continue
+      let due: DueInfo | null = getDueForToday(l, today)
+      if (!due) {
+        const idx = getNextUndoneJ(l)
+        if (idx !== null) {
+          if (l.learn_date) {
+            const dd = stepDate(l, idx)
+            due = {
+              stepIndex: idx,
+              dueDate: dd,
+              status: dd <= today ? (dd === today ? 'today' : 'missed') : 'fresh',
+              overdueDays: dd < today ? daysBetween(dd, today) : 0,
+            }
+          } else {
+            due = { stepIndex: idx, dueDate: today, status: 'fresh', overdueDays: 0 }
+          }
+        }
+      }
+      if (due) {
+        queue.push({ lesson: l, due, lastScore: getLastScore(l), priority: -1 })
+      }
+    }
+    return queue
+  }
+
   // 1) Construit la queue de base : toutes les J du jour.
   //    Filtre par matière si ?system= explicite ; sinon par le semestre courant.
   let baseQueue: QueueItem[]
@@ -420,6 +469,7 @@ function FocusPageBody() {
   const searchParams = useSearchParams()
   const lessonParam = searchParams.get('lesson')
   const systemParam = searchParams.get('system')
+  const lessonsParam = searchParams.get('lessons')
 
   const [userId, setUserId] = useState<string | null>(null)
   const [systems, setSystems] = useState<System[]>([])
@@ -519,7 +569,7 @@ function FocusPageBody() {
       const sysList = (sys as System[] | null) ?? []
       const lesList = (les as Lesson[] | null) ?? []
       setSystems(sysList)
-      const q = buildQueue(lesList, sysList, lessonParam, systemParam, today)
+      const q = buildQueue(lesList, sysList, lessonParam, systemParam, lessonsParam, today)
       setQueue(q)
       setResults(new Array(q.length).fill(null))
       setPhase(q.length === 0 ? 'empty' : 'session')
@@ -528,7 +578,7 @@ function FocusPageBody() {
       setNow(Date.now())
     })()
     return () => { cancelled = true }
-  }, [supabase, router, lessonParam, systemParam, today])
+  }, [supabase, router, lessonParam, systemParam, lessonsParam, today])
 
   // Sauvegarde périodique de l'elapsed cumul (toutes les 30s) pour ne pas perdre
   // le temps écoulé si l'utilisateur ferme l'onglet. Push aussi Supabase.
@@ -592,7 +642,18 @@ function FocusPageBody() {
 
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
     while (J.length > newSteps.length) newSteps.push(null)
-    newSteps[current.due.stepIndex] = { score, date: today }
+    // Si le J n'est pas encore dû (status: 'fresh'), on écrit un score TEMPORAIRE
+    // qui ne touche ni le calendrier ni les helpers (stepScore ne lit que .score).
+    // Sinon (today/missed), c'est le score officiel : il remplace tout temp.
+    if (current.due.status === 'fresh') {
+      newSteps[current.due.stepIndex] = {
+        note: '',
+        temp_score: score,
+        temp_date: today,
+      } as unknown as StepEntry
+    } else {
+      newSteps[current.due.stepIndex] = { score, date: today, note: '' } as StepEntry
+    }
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
 
     const newResults = [...results]
