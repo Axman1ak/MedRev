@@ -9,8 +9,16 @@ export interface System {
   created_at: string
 }
 export interface StepEntry {
-  score: number  // 1-5
+  score: number  // 1-5 — score officiel posé le jour J
   note: string
+  date?: string         // date du score officiel (YYYY-MM-DD)
+  // Score temporaire posé via "Retravailler ces fiches" hors jour J.
+  // N'affecte ni l'avg ni le calendrier — purement cosmétique sur le stamp
+  // (couleur soft). Effacé quand le vrai J arrive et reçoit un score officiel.
+  temp_score?: number   // 1-5
+  temp_date?: string    // YYYY-MM-DD
+  // Legacy (anciens enregistrements)
+  ok?: boolean
 }
 export interface AiQuestion {
   type: 'qcm' | 'kfp' | 'vf'
