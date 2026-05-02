@@ -15,12 +15,12 @@
   --dim: #9CA09A;
   --border: #E1DDD3;
 
-  /* Score palette â€” 5 niveaux */
-  --s1: #C75050;   /* rouge â€” Ã  retravailler */
+  /* Score palette Ã¢â‚¬â€ 5 niveaux */
+  --s1: #C75050;   /* rouge Ã¢â‚¬â€ Ãƒ  retravailler */
   --s2: #E08B3C;   /* orange */
   --s3: #D9B24A;   /* jaune */
   --s4: #7AA56B;   /* vert clair */
-  --s5: #1B4332;   /* vert foncÃ© â€” maÃ®trisÃ© */
+  --s5: #1B4332;   /* vert foncÃƒÂ© Ã¢â‚¬â€ maÃƒÂ®trisÃƒÂ© */
 
   --s1-soft: #F5DADA;
   --s2-soft: #F5E5D2;
@@ -118,7 +118,7 @@
 
 .fi-btn-o:hover { border-color: #bbb; color: var(--dark); }
 
-/* ============ MATIÃˆRE TABS ============ */
+/* ============ MATIÃƒË†RE TABS ============ */
 .mtabs {
   display: flex;
   gap: 6px;
@@ -459,6 +459,15 @@
 .stamp.s4 { background: var(--s4); }
 .stamp.s5 { background: var(--s5); }
 
+/* Stamps "retravailler" : score temporaire posÃ© hors jour J officiel.
+   Fond pÃ¢le + bordure pleine en couleur s1-s5 pour signaler que le score
+   est posÃ© MAIS pas dÃ©finitif â€” il sera remplacÃ© quand le vrai J arrivera. */
+.stamp.temp.s1 { background: var(--s1-soft); color: var(--s1); border: 1.5px solid var(--s1); }
+.stamp.temp.s2 { background: var(--s2-soft); color: #9C5520; border: 1.5px solid var(--s2); }
+.stamp.temp.s3 { background: var(--s3-soft); color: #7A5A14; border: 1.5px solid var(--s3); }
+.stamp.temp.s4 { background: var(--s4-soft); color: var(--s5); border: 1.5px solid var(--s4); }
+.stamp.temp.s5 { background: var(--s5-soft); color: var(--s5); border: 1.5px solid var(--s5); }
+
 .stamp-star {
   color: white;
   font-size: 1em;
@@ -476,9 +485,10 @@
   border: 1.5px solid var(--s1);
 }
 
+/* Aujourd'hui : gris neutre â€” distinguÃ© clairement du score 5/5 (vert foncÃ©). */
 .stamp.today {
-  background: var(--green);
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--green);
+  background: var(--gray);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--gray);
 }
 
 /* ============ CARD FOOT ============ */
@@ -636,12 +646,12 @@
   margin-top: 22px;
 }
 
-/* NOTE : Les classes du modal de rÃ©vision (`.rev-*`, `.jpicker*`) ont Ã©tÃ©
-   migrÃ©es vers `src/components/review-modal.css` (prÃ©fixe `.rmod-*`).
-   Ne PAS rÃ©introduire ces classes ici â€” la review est maintenant fournie
-   par le composant partagÃ© `<ReviewModal>` (`src/components/ReviewModal.tsx`). */
+/* NOTE : Les classes du modal de rÃƒÂ©vision (`.rev-*`, `.jpicker*`) ont ÃƒÂ©tÃƒÂ©
+   migrÃƒÂ©es vers `src/components/review-modal.css` (prÃƒÂ©fixe `.rmod-*`).
+   Ne PAS rÃƒÂ©introduire ces classes ici Ã¢â‚¬â€ la review est maintenant fournie
+   par le composant partagÃƒÂ© `<ReviewModal>` (`src/components/ReviewModal.tsx`). */
 
-/* ============ MENU CONTEXTUEL (â‹¯) ============ */
+/* ============ MENU CONTEXTUEL (Ã¢â€¹Â¯) ============ */
 .fi-menu-btn {
   position: absolute;
   top: 50%;
@@ -663,7 +673,7 @@
   opacity: .5;
   transition: opacity .15s, background .15s, color .15s;
 }
-/* Version spÃ©cifique dans la carte (top-right) */
+/* Version spÃƒÂ©cifique dans la carte (top-right) */
 .fi-menu-btn-card {
   top: 10px;
   right: 10px;
@@ -676,12 +686,12 @@
   background: rgba(17, 19, 16, .08);
   color: var(--dark);
 }
-/* Sur le tab, laisse de la place au bouton â‹¯ Ã  droite pour qu'il ne
+/* Sur le tab, laisse de la place au bouton Ã¢â€¹Â¯ Ãƒ  droite pour qu'il ne
    chevauche pas le badge count */
 .mtab { padding-right: 32px; }
 .card .card-head { padding-right: 34px; }
 
-/* Tab actif (fond vert) : couleur claire pour le â‹¯ */
+/* Tab actif (fond vert) : couleur claire pour le Ã¢â€¹Â¯ */
 .mtab.active .fi-menu-btn {
   color: rgba(255, 255, 255, .7);
 }
@@ -708,8 +718,8 @@
   animation: fi-menu-in .12s ease-out;
 }
 
-/* Cas spÃ©cial : menu dans une fiche card (qui a overflow:hidden pour son accent).
-   On repositionne le menu Ã  l'intÃ©rieur, juste sous le bouton â‹¯. */
+/* Cas spÃƒÂ©cial : menu dans une fiche card (qui a overflow:hidden pour son accent).
+   On repositionne le menu Ãƒ  l'intÃƒÂ©rieur, juste sous le bouton Ã¢â€¹Â¯. */
 .fi-menu-btn-card + .fi-menu {
   top: 38px;
   right: 10px;
