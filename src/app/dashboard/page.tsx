@@ -43,7 +43,8 @@ type MatiereStat = {
   totalFiches: number
   fichesWithScores: number
   avgScore: number | null
-  fragile: FragileFiche[]
+  fragile: FragileFiche[]      // avg < FRAGILE_THRESHOLD (3) — utilisé par le modal "Tout voir"
+  weakestFiches: FragileFiche[] // toutes les fiches scorées de la matière, triées avg asc — utilisé par la card Point faible
   okCount: number
 }
 
@@ -305,26 +306,31 @@ function computeMatiereStats(systems: System[], lessons: Lesson[]): MatiereStat[
     const sysLessons = lessons.filter(l => l.system_id === sys.id)
     let sum = 0, n = 0
     const fragile: FragileFiche[] = []
+    const allScored: FragileFiche[] = []
     for (const l of sysLessons) {
       const avg = getAverageScore(l)
       if (avg === null) continue
       sum += avg; n++
+      const entry: FragileFiche = {
+        lesson: l,
+        avg,
+        last3: getLast3Scores(l),
+        nextRevDate: getNextRevDate(l),
+      }
+      allScored.push(entry)
       if (avg < FRAGILE_THRESHOLD) {
-        fragile.push({
-          lesson: l,
-          avg,
-          last3: getLast3Scores(l),
-          nextRevDate: getNextRevDate(l),
-        })
+        fragile.push(entry)
       }
     }
     fragile.sort((a, b) => a.avg - b.avg)
+    allScored.sort((a, b) => a.avg - b.avg)
     out.push({
       system: sys,
       totalFiches: sysLessons.length,
       fichesWithScores: n,
       avgScore: n > 0 ? sum / n : null,
       fragile,
+      weakestFiches: allScored,
       okCount: Math.max(0, sysLessons.length - fragile.length),
     })
   }
@@ -624,7 +630,9 @@ export default function DashboardPage() {
 
   // Point faible principal
   const weakest = matiereStats[0] ?? null
-  const weakestFragile = weakest?.fragile.slice(0, 2) ?? []
+  // On affiche les 3 fiches les plus faibles de la matière (toutes, pas seulement
+  // les fragiles avg < 3) — sinon la card est vide quand il n'y a qu'une fragile.
+  const weakestFragile = weakest?.weakestFiches.slice(0, 3) ?? []
 
   // Charge : peak
   const loadMax = Math.max(1, ...upcomingLoad.map(w => w.count))
@@ -755,7 +763,7 @@ export default function DashboardPage() {
 
                 {weakestFragile.length > 0 ? (
                   <div className="weak-list">
-                    {weakestFragile.slice(0, 2).map(f => {
+                    {weakestFragile.map(f => {
                       const cls = scoreClass(f.avg)
                       return (
                         <div key={f.lesson.id} className="weak-item">
@@ -764,21 +772,21 @@ export default function DashboardPage() {
                         </div>
                       )
                     })}
-                    {weakestFragile.length > 2 && (
-                      <div className="weak-more">+ {weakestFragile.length - 2} autre{weakestFragile.length - 2 > 1 ? 's' : ''}</div>
+                    {weakest && weakest.weakestFiches.length > weakestFragile.length && (
+                      <div className="weak-more">+ {weakest.weakestFiches.length - weakestFragile.length} autre{weakest.weakestFiches.length - weakestFragile.length > 1 ? 's' : ''}</div>
                     )}
                   </div>
                 ) : (
-                  <div className="weak-noframe">Aucune fiche fragile — tu gères.</div>
+                  <div className="weak-noframe">Aucune fiche notée dans cette matière.</div>
                 )}
 
                 <Link
                   href={
-                    // S'il y a des fragiles, on les passe explicitement pour que le focus
-                    // les charge même si elles ne sont pas dues aujourd'hui (mode "retravailler" :
-                    // les scores s'écriront en temp_score sans bouger le calendrier).
-                    weakest.fragile.length > 0
-                      ? `/dashboard/focus?lessons=${weakest.fragile.map(f => f.lesson.id).join(',')}`
+                    // On retravaille les fiches affichées (les plus faibles de la matière),
+                    // qu'elles soient strictement fragiles (avg < 3) ou non. Si aucune
+                    // n'est scorée encore, fallback sur la matière entière.
+                    weakestFragile.length > 0
+                      ? `/dashboard/focus?lessons=${weakestFragile.map(f => f.lesson.id).join(',')}`
                       : `/dashboard/focus?system=${weakest.system.id}`
                   }
                   className="weak-cta"
