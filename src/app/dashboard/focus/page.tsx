@@ -481,6 +481,56 @@ function FocusPageBody() {
   const [startedAt, setStartedAt] = useState<number>(0)
   const [now, setNow] = useState<number>(0)
 
+  // ============ MODE IMMERSIF (plein écran + wake lock) ============
+  // Le plein écran masque les notifs visuelles sur la plupart des OS modernes.
+  // Wake Lock empêche l'écran de se mettre en veille pendant la session.
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null)
+
+  // Acquiert un wake lock dès qu'on est en session, libère sinon.
+  // Le navigateur libère le lock quand l'onglet devient hidden — on ré-acquiert au visibilitychange.
+  useEffect(() => {
+    if (phase !== 'session') return
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return
+    let cancelled = false
+    const acquire = async () => {
+      try {
+        const lock = await (navigator as unknown as {
+          wakeLock: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> }
+        }).wakeLock.request('screen')
+        if (cancelled) { void lock.release(); return }
+        wakeLockRef.current = lock
+      } catch { /* swallow : feature non supportée ou refusée */ }
+    }
+    void acquire()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && wakeLockRef.current === null) void acquire()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      if (wakeLockRef.current) { void wakeLockRef.current.release(); wakeLockRef.current = null }
+    }
+  }, [phase])
+
+  // Suit l'état plein écran (l'utilisateur peut sortir via Escape sans cliquer notre bouton)
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      } else {
+        await document.documentElement.requestFullscreen()
+      }
+    } catch { /* swallow : refus utilisateur ou non supporté */ }
+  }, [])
+
   // Burst de particules : ts incrémenté à chaque rate pour re-déclencher l'anim CSS.
   // Position optionnelle (x, y) en coords viewBox jardin.
   const [particleBurst, setParticleBurst] = useState<{ ts: number; x?: number; y?: number } | null>(null)
@@ -771,7 +821,10 @@ function FocusPageBody() {
       <div className="focus-root">
         <div className="focus-topbar">
           <div className="focus-brand">MedRev <span className="focus-brand-mode">focus</span></div>
-          <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+          <div className="focus-topbar-right">
+            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
+            <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+          </div>
         </div>
         <div className="focus-stage">
           <div className="focus-card focus-empty-card">
@@ -821,6 +874,7 @@ function FocusPageBody() {
             MedRev <span className="focus-brand-mode">focus</span>
           </div>
           <div className="focus-topbar-right">
+            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
             <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
           </div>
         </div>
@@ -972,6 +1026,7 @@ function FocusPageBody() {
               Voir le bilan
             </button>
           )}
+          <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
           <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
         </div>
       </div>
