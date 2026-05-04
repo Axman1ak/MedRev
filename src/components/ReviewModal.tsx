@@ -1,9 +1,11 @@
 'use client'
 // src/components/ReviewModal.tsx
 // Modal partagé de révision : picker J (14 paliers) → notation 5 scores.
+// + extension 2026-05 : Sources (vidéo + PDF) + QCM générés.
 // Utilisé par Mes matières (fiches) et Calendrier.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson } from '@/types'
 import './review-modal.css'
@@ -18,6 +20,21 @@ type StampState =
   | { kind: 'today' }
   | { kind: 'missed' }
   | { kind: 'future' }
+
+// ============================================================
+// Type media (mirror du jsonb sur lessons.media — voir migration
+// 2026-05). Local au composant pour ne pas alourdir @/types.
+// ============================================================
+type LessonMedia = {
+  video_path?: string
+  video_duration_s?: number
+  video_size?: number
+  video_uploaded_at?: string
+  pdf_path?: string
+  pdf_pages?: number
+  pdf_size?: number
+  pdf_uploaded_at?: string
+}
 
 // ================ Helpers ================
 function stepScore(s: StepEntry): Score | null {
@@ -54,6 +71,68 @@ function frenchDate(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 }
 
+// Durée en hMM ou MM min
+function formatDuration(sec?: number): string {
+  if (!sec || sec <= 0) return ''
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  if (h > 0) return `${h}h${String(m).padStart(2, '0')}`
+  return `${m} min`
+}
+
+// Taille en ko / Mo
+function formatSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return ''
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} ko`
+  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`
+}
+
+// Lecture côté client de la durée d'une vidéo via HTML5 video element
+function getVideoDuration(file: File): Promise<number> {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      const dur = video.duration
+      URL.revokeObjectURL(url)
+      resolve(isFinite(dur) ? Math.round(dur) : 0)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(0)
+    }
+    video.src = url
+  })
+}
+
+// Compte approximatif des pages d'un PDF en regex sur le binaire (latin1).
+// Suffisant pour des PDF générés normalement. Renvoie null si échec.
+async function countPdfPages(file: File): Promise<number | null> {
+  try {
+    const buf = await file.arrayBuffer()
+    const arr = new Uint8Array(buf)
+    let str = ''
+    const chunk = 65536
+    for (let i = 0; i < arr.length; i += chunk) {
+      const end = Math.min(i + chunk, arr.length)
+      // String.fromCharCode est limité en taille de stack — on chunke
+      let part = ''
+      for (let j = i; j < end; j++) part += String.fromCharCode(arr[j])
+      str += part
+    }
+    const matches = str.match(/\/Type\s*\/Page[^s]/g)
+    return matches ? matches.length : null
+  } catch {
+    return null
+  }
+}
+
+function getExt(name: string, fallback = 'bin'): string {
+  const m = name.match(/\.([^.]+)$/)
+  return m ? m[1].toLowerCase() : fallback
+}
+
 // ================ Props ================
 interface ReviewModalProps {
   lesson: Lesson
@@ -61,7 +140,7 @@ interface ReviewModalProps {
   /** Ouvre directement en notation sur ce J (pratique depuis le calendrier). null = picker. */
   initialStepIdx?: number | null
   onClose: () => void
-  /** Callback appelé quand une note est enregistrée, avec la lesson mise à jour. */
+  /** Callback appelé quand une note est enregistrée OU quand les médias changent. */
   onUpdated?: (updatedLesson: Lesson) => void
 }
 
@@ -74,20 +153,27 @@ export default function ReviewModal({
   onUpdated,
 }: ReviewModalProps) {
   const supabase = createClient()
+  const router = useRouter()
   const [lesson, setLesson] = useState<Lesson>(initialLesson)
   const [stepIdx, setStepIdx] = useState<number | null>(initialStepIdx)
   const [loading, setLoading] = useState(false)
   const [justRated, setJustRated] = useState<{ idx: number; score: Score } | null>(null)
 
+  // Upload state
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+
   const today = new Date().toISOString().split('T')[0]
 
   // Synchronise uniquement si on ouvre sur une AUTRE fiche (id différent) ou un autre J.
-  // On ne se base pas sur initialLesson (objet entier) car une mise à jour parente
-  // déclencherait une réinitialisation intempestive du modal (perte du toast, etc.).
   useEffect(() => {
     setLesson(initialLesson)
     setStepIdx(initialStepIdx)
     setJustRated(null)
+    setUploadError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLesson.id, initialStepIdx])
 
@@ -126,6 +212,150 @@ export default function ReviewModal({
     setStepIdx(null)
   }
 
+  // ============================================================
+  //  Upload / remplacement / suppression de médias
+  // ============================================================
+  async function uploadMedia(file: File, kind: 'video' | 'pdf') {
+    setUploadError(null)
+    const userId = (lesson as { user_id?: string }).user_id
+    if (!userId) {
+      setUploadError("Impossible d'identifier l'utilisateur — recharge la page.")
+      return
+    }
+
+    // Garde-fous types & taille
+    if (kind === 'video' && !file.type.startsWith('video/')) {
+      setUploadError('Le fichier doit être une vidéo (.mp4, .webm…)'); return
+    }
+    if (kind === 'pdf' && file.type !== 'application/pdf') {
+      setUploadError('Le fichier doit être un PDF.'); return
+    }
+
+    if (kind === 'video') setUploadingVideo(true)
+    else setUploadingPdf(true)
+
+    try {
+      // Métadonnées calculées côté client
+      let durationS: number | undefined
+      let pdfPages: number | undefined
+      if (kind === 'video') {
+        durationS = await getVideoDuration(file)
+      } else {
+        const p = await countPdfPages(file)
+        pdfPages = p ?? undefined
+      }
+
+      // Path : {uid}/{lessonId}/cours.{ext}  ou  {uid}/{lessonId}/poly.pdf
+      const ext = kind === 'video' ? getExt(file.name, 'mp4') : 'pdf'
+      const baseName = kind === 'video' ? 'cours' : 'poly'
+      const path = `${userId}/${lesson.id}/${baseName}.${ext}`
+
+      // Si on remplace une vidéo avec une autre extension, supprimer l'ancienne pour éviter
+      // les fichiers orphelins (Supabase Storage upsert ne supprime pas les autres ext).
+      const existingMedia = (lesson.media as LessonMedia | null) || {}
+      if (kind === 'video' && existingMedia.video_path && existingMedia.video_path !== path) {
+        await supabase.storage.from('lesson-media').remove([existingMedia.video_path])
+      }
+
+      const { error: upErr } = await supabase.storage
+        .from('lesson-media')
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type || (kind === 'pdf' ? 'application/pdf' : 'video/mp4'),
+        })
+
+      if (upErr) throw upErr
+
+      // Update lessons.media
+      const newMedia: LessonMedia = { ...existingMedia }
+      if (kind === 'video') {
+        newMedia.video_path = path
+        newMedia.video_duration_s = durationS
+        newMedia.video_size = file.size
+        newMedia.video_uploaded_at = new Date().toISOString()
+      } else {
+        newMedia.pdf_path = path
+        newMedia.pdf_pages = pdfPages
+        newMedia.pdf_size = file.size
+        newMedia.pdf_uploaded_at = new Date().toISOString()
+      }
+
+      const { data: updated, error: dbErr } = await supabase
+        .from('lessons')
+        .update({ media: newMedia })
+        .eq('id', lesson.id)
+        .select()
+        .single()
+
+      if (dbErr) throw dbErr
+      if (updated) {
+        setLesson(updated as Lesson)
+        if (onUpdated) onUpdated(updated as Lesson)
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue'
+      setUploadError(`Échec de l'upload : ${msg}`)
+    } finally {
+      if (kind === 'video') setUploadingVideo(false)
+      else setUploadingPdf(false)
+    }
+  }
+
+  async function removeMedia(kind: 'video' | 'pdf') {
+    const existingMedia = (lesson.media as LessonMedia | null) || {}
+    const targetPath = kind === 'video' ? existingMedia.video_path : existingMedia.pdf_path
+    if (!targetPath) return
+
+    if (!confirm(`Supprimer ${kind === 'video' ? 'la vidéo' : 'le PDF'} ?`)) return
+
+    try {
+      await supabase.storage.from('lesson-media').remove([targetPath])
+    } catch {
+      // on continue même si le fichier physique a déjà été supprimé manuellement
+    }
+
+    const newMedia: LessonMedia = { ...existingMedia }
+    if (kind === 'video') {
+      delete newMedia.video_path
+      delete newMedia.video_duration_s
+      delete newMedia.video_size
+      delete newMedia.video_uploaded_at
+    } else {
+      delete newMedia.pdf_path
+      delete newMedia.pdf_pages
+      delete newMedia.pdf_size
+      delete newMedia.pdf_uploaded_at
+    }
+
+    const { data: updated } = await supabase
+      .from('lessons')
+      .update({ media: newMedia })
+      .eq('id', lesson.id)
+      .select()
+      .single()
+
+    if (updated) {
+      setLesson(updated as Lesson)
+      if (onUpdated) onUpdated(updated as Lesson)
+    }
+  }
+
+  function startQcmSession() {
+    onClose()
+    router.push(`/dashboard/fiches/${lesson.id}/qcm`)
+  }
+
+  // ============================================================
+  //  Données dérivées pour l'UI
+  // ============================================================
+  const media = (lesson.media as LessonMedia | null) || {}
+  const hasVideo = !!media.video_path
+  const hasPdf = !!media.pdf_path
+  const hasAnySource = hasVideo || hasPdf
+
+  const aiQuestions: unknown[] = Array.isArray(lesson.ai_questions) ? lesson.ai_questions : []
+  const qcmCount = aiQuestions.length
+
   return (
     <div className="rmod-overlay" onClick={onClose}>
       <div className="rmod-card" onClick={e => e.stopPropagation()}>
@@ -141,10 +371,10 @@ export default function ReviewModal({
               {lesson.learn_date && <> · appris le {frenchDate(lesson.learn_date)}</>}
             </div>
           </div>
-          <button className="rmod-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
+          <button className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
         </div>
 
-        {/* ---- ÉTAPE 1 : Picker J ---- */}
+        {/* ---- ÉTAPE 1 : Picker J + Sources + QCM ---- */}
         {stepIdx === null && (
           <>
             {justRated && (
@@ -188,7 +418,7 @@ export default function ReviewModal({
                     <span className="rmod-jlbl">J+{jVal}</span>
                     <span className={`rmod-jbig rmod-stamp ${stampCls}`}>
                       {s.kind === 'score' && s.score === 5 && (
-                        <span className="rmod-stamp-star" aria-hidden="true">{'\u2605'}</span>
+                        <span className="rmod-stamp-star" aria-hidden="true">{'★'}</span>
                       )}
                     </span>
                     <span className="rmod-jstatus">{statusText}</span>
@@ -200,6 +430,142 @@ export default function ReviewModal({
             <div className="rmod-hint">
               Clique sur un J pour le noter. Les J futurs sont verrouillés — ils se débloqueront à la bonne date.
             </div>
+
+            {/* ─────────────────────────────────────────────── */}
+            {/*  Bloc Sources (vidéo + PDF)                    */}
+            {/* ─────────────────────────────────────────────── */}
+            <div className="rmod-divider" />
+            <div className="rmod-block-label">Sources</div>
+
+            {/* Vidéo */}
+            {hasVideo ? (
+              <div className="rmod-src-row">
+                <div className="rmod-src-icon video">{'▶'}</div>
+                <div className="rmod-src-name">
+                  cours.{getExt(media.video_path || '', 'mp4')}
+                </div>
+                <div className="rmod-src-meta">
+                  {formatDuration(media.video_duration_s) || formatSize(media.video_size)}
+                </div>
+                <button
+                  type="button"
+                  className="rmod-src-replace"
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={uploadingVideo}
+                >
+                  {uploadingVideo ? '...' : 'Remplacer'}
+                </button>
+                <button
+                  type="button"
+                  className="rmod-src-replace rmod-src-remove"
+                  onClick={() => removeMedia('video')}
+                  disabled={uploadingVideo}
+                  aria-label="Supprimer la vidéo"
+                >{'×'}</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="rmod-src-empty"
+                onClick={() => videoInputRef.current?.click()}
+                disabled={uploadingVideo}
+              >
+                <span className="rmod-src-plus">+</span>
+                <span>{uploadingVideo ? 'Upload de la vidéo…' : 'Ajouter la vidéo du cours'}</span>
+              </button>
+            )}
+
+            {/* PDF */}
+            {hasPdf ? (
+              <div className="rmod-src-row">
+                <div className="rmod-src-icon pdf">{'📄'}</div>
+                <div className="rmod-src-name">poly.pdf</div>
+                <div className="rmod-src-meta">
+                  {media.pdf_pages ? `${media.pdf_pages} p.` : formatSize(media.pdf_size)}
+                </div>
+                <button
+                  type="button"
+                  className="rmod-src-replace"
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={uploadingPdf}
+                >
+                  {uploadingPdf ? '...' : 'Remplacer'}
+                </button>
+                <button
+                  type="button"
+                  className="rmod-src-replace rmod-src-remove"
+                  onClick={() => removeMedia('pdf')}
+                  disabled={uploadingPdf}
+                  aria-label="Supprimer le PDF"
+                >{'×'}</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="rmod-src-empty"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={uploadingPdf}
+              >
+                <span className="rmod-src-plus">+</span>
+                <span>{uploadingPdf ? 'Upload du PDF…' : 'Ajouter le polycopié (PDF)'}</span>
+              </button>
+            )}
+
+            {/* Inputs cachés — déclenchés par les boutons ci-dessus */}
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const f = e.target.files?.[0]
+                e.target.value = ''
+                if (f) uploadMedia(f, 'video')
+              }}
+            />
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const f = e.target.files?.[0]
+                e.target.value = ''
+                if (f) uploadMedia(f, 'pdf')
+              }}
+            />
+
+            {uploadError && (
+              <div className="rmod-upload-error">{uploadError}</div>
+            )}
+
+            {/* ─────────────────────────────────────────────── */}
+            {/*  Bloc QCM générés                              */}
+            {/* ─────────────────────────────────────────────── */}
+            <div className="rmod-divider" />
+            <div className="rmod-block-label">QCM générés depuis ces sources</div>
+
+            {qcmCount > 0 ? (
+              <div className="rmod-qcm-line">
+                <div className="rmod-qcm-num">{qcmCount}</div>
+                <div className="rmod-qcm-meta">QCM disponibles sur cette fiche</div>
+                <button
+                  type="button"
+                  className="rmod-qcm-cta"
+                  onClick={startQcmSession}
+                >
+                  Lancer une session
+                </button>
+              </div>
+            ) : hasAnySource ? (
+              <div className="rmod-qcm-empty">
+                Génération en cours dès que tu rouvriras cette fiche — l&apos;IA va lire {hasVideo && hasPdf ? 'la vidéo et le PDF' : hasVideo ? 'la vidéo' : 'le PDF'}.
+              </div>
+            ) : (
+              <div className="rmod-qcm-empty">
+                Les QCM seront générés automatiquement <em>dès qu&apos;une source sera ajoutée</em>.
+              </div>
+            )}
           </>
         )}
 
@@ -235,7 +601,7 @@ export default function ReviewModal({
             </div>
 
             <button className="rmod-back" onClick={() => setStepIdx(null)}>
-              {'\u2190'} Retour aux J
+              {'←'} Retour aux J
             </button>
           </>
         )}
