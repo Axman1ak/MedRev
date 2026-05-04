@@ -29,6 +29,18 @@ export interface AiQuestion {
   explanation: string
   source_ref: string
 }
+// Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
+// Stocké dans la colonne lessons.media (jsonb default {}).
+export interface LessonMedia {
+  video_path?: string
+  video_duration_s?: number
+  video_size?: number
+  video_uploaded_at?: string
+  pdf_path?: string
+  pdf_pages?: number
+  pdf_size?: number
+  pdf_uploaded_at?: string
+}
 export interface Lesson {
   id: string
   user_id: string
@@ -37,6 +49,7 @@ export interface Lesson {
   learn_date: string | null
   steps: (StepEntry | null)[]  // length 14
   ai_questions: AiQuestion[]
+  media?: LessonMedia | null   // ← ajouté 2026-05 : sources du cours
   created_at: string
 }
 export interface Profile {
