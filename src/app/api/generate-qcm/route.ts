@@ -27,11 +27,14 @@ const GEMINI_FILE_GET_URL = (name: string) =>
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024  // 100 Mo
 const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 20 Mo total req)
 
+// Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
+// (standard PASS médecine). Le V/F est interdit, les questions à moins ou
+// plus de 5 options sont rejetées au sanitize.
 const FORMAT_DESC: Record<string, string> = {
-  mixed: 'un mélange équilibré de QCM classiques (5 options A/B/C/D/E, standard PASS), KFP (vignette clinique courte + questions liées 5 options) et Vrai/Faux raisonnés',
-  qcm:   'des QCM classiques avec 5 options (A/B/C/D/E) — standard des examens PASS en médecine — une seule bonne réponse par question',
-  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis questions précises (5 options A-E)',
-  vf:    'des questions Vrai/Faux avec justification dans l\'explication',
+  mixed: 'un mélange équilibré de QCM classiques (5 options A-E) et de KFP (vignette clinique + question à 5 options A-E). JAMAIS de Vrai/Faux. JAMAIS moins ni plus de 5 options.',
+  qcm:   'des QCM classiques avec EXACTEMENT 5 options (A/B/C/D/E), une seule bonne réponse par question. Standard PASS médecine.',
+  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis question précise à 5 options A-E. JAMAIS moins ni plus de 5 options.',
+  vf:    'des QCM à 5 options A-E (le format V/F n\'est pas supporté — fallback automatique vers QCM classique).',
 }
 
 const DIFF_DESC: Record<string, string> = {
@@ -217,7 +220,10 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
       : typeof r.correct === 'number' ? r.correct
       : 0
     const explanation = String(r.explanation || '').trim()
-    if (!question || options.length < 2) continue
+    if (!question) continue
+    // RÈGLE STRICTE : exactement 5 options par question (standard PASS médecine).
+    // Toute question avec un autre nombre d'options est rejetée.
+    if (options.length !== 5) continue
     if (answer < 0 || answer >= options.length) continue
 
     // source_ref : on ne garde que les nombres valides
@@ -373,6 +379,8 @@ Génère exactement ${nbQ} ${existingQuestions.length > 0 ? 'NOUVELLES ' : ''}qu
 Niveau requis : ${DIFF_DESC[difficulty] || DIFF_DESC.annales}.
 
 RÈGLES IMPÉRATIVES :
+- ⚠ CHAQUE question doit avoir EXACTEMENT 5 OPTIONS A à E. PAS 2, PAS 3, PAS 4, PAS 6. EXACTEMENT 5. Toute question à un nombre d'options différent sera rejetée.
+- AUCUNE question Vrai/Faux. AUCUNE question à 2 options.
 - Base-toi exclusivement sur le contenu réel des sources fournies.
 ${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déjà traités ci-dessus (autres pages du PDF, autres moments de la vidéo, autres notions, autres pièges).\n' : ''}- Pour CHAQUE question, indique précisément où trouver l'information dans un objet "source_ref" :
   - "pdf_page" : numéro de page du PDF (entier ≥ 1) si l'info vient du PDF
