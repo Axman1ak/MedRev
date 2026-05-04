@@ -422,7 +422,7 @@ export default function FichesPage() {
           <div>
             <h1 className="fi-h1">Mes matières</h1>
             <div className="fi-sub">
-              Semestre {semester} · {semSystems.length} matière{semSystems.length > 1 ? 's' : ''} · {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
+              {semester === 'year' ? 'Année complète' : `Semestre ${semester}`} · {semSystems.length} matière{semSystems.length > 1 ? 's' : ''} · {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
             </div>
           </div>
           <div className="fi-actions">
@@ -433,7 +433,7 @@ export default function FichesPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            <button className="fi-btn-o" onClick={() => { setNewSysSemestre(semester); setShowNewSystem(true) }}>
+            <button className="fi-btn-o" onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}>
               + Matière
             </button>
             <button className="fi-btn-g" onClick={() => {
@@ -508,7 +508,7 @@ export default function FichesPage() {
           <div className="fi-empty">
             <h2 className="fi-empty-title">Aucune matière {semester === 'year' ? 'pour cette année' : `pour le semestre ${semester}`}</h2>
             <p className="fi-empty-text">Commence par ajouter une matière, puis crée tes fiches dedans.</p>
-            <button className="fi-btn-g" onClick={() => { setNewSysSemestre(semester); setShowNewSystem(true) }}>
+            <button className="fi-btn-g" onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}>
               + Créer une matière
             </button>
           </div>
