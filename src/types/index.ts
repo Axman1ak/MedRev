@@ -27,15 +27,21 @@ export interface AiQuestionSourceRef {
   video_ts?: number   // timestamp en secondes dans la vidéo
 }
 export interface AiQuestion {
+  // Format actuel (post-2026-05)
   question: string
   options: string[]
   answer: number          // index 0-based de la bonne réponse
   explanation: string
   // Forme objet (post-2026-05) ou string (legacy data) ou absent.
   source_ref?: AiQuestionSourceRef | string | null
-  // Optionnels rétro-compat (anciennes générations)
+  // Champs rétro-compat (legacy AVANT la refonte 2026-05) — toujours typés
+  // optionnels. Utilisés par d'anciens chemins de code (ex : page /dashboard/lesson/[id])
+  // qui n'a pas encore été migrée vers les nouveaux noms. NE PAS supprimer
+  // tant que ces fichiers existent.
   type?: 'qcm' | 'kfp' | 'vf'
   context?: string | null
+  stem?: string      // legacy alias de "question"
+  correct?: number   // legacy alias de "answer"
 }
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
