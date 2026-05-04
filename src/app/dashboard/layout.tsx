@@ -19,17 +19,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [todayCount, setTodayCount] = useState(0)
-  const [semester, setSemester] = useState<1 | 2>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
 
   // Load persisted semester on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    const s = raw === '1' ? 1 : 2
+    const s: 1 | 2 | 'year' = raw === '1' ? 1 : raw === 'year' ? 'year' : 2
     setSemester(s)
   }, [])
 
-  function chooseSemester(s: 1 | 2) {
+  function chooseSemester(s: 1 | 2 | 'year') {
     setSemester(s)
     if (typeof window !== 'undefined') {
       localStorage.setItem('medrev-sem', String(s))
@@ -157,13 +157,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className={semester === 1 ? 'active' : ''}
             onClick={() => chooseSemester(1)}
           >
-            Sem 1
+            S1
           </button>
           <button
             className={semester === 2 ? 'active' : ''}
             onClick={() => chooseSemester(2)}
           >
-            Sem 2
+            S2
+          </button>
+          <button
+            className={semester === 'year' ? 'active' : ''}
+            onClick={() => chooseSemester('year')}
+            title="Vue année (toutes matières S1 + S2)"
+          >
+            Année
           </button>
         </div>
 
