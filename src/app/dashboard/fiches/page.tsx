@@ -161,7 +161,7 @@ export default function FichesPage() {
   const [filterProgress, setFilterProgress] = useState<FilterProgress>('all')
   const [showDueOnly, setShowDueOnly] = useState(false)
   const [search, setSearch] = useState('')
-  const [semester, setSemester] = useState<1 | 2>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
 
   // Create modals
   const [showNewSystem, setShowNewSystem] = useState(false)
@@ -198,10 +198,10 @@ export default function FichesPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : 2)
+    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
     const onSem = (e: Event) => {
       const detail = (e as CustomEvent).detail
-      if (detail === 1 || detail === 2) setSemester(detail)
+      if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)
     }
     window.addEventListener('medrev-sem-change', onSem)
     return () => window.removeEventListener('medrev-sem-change', onSem)
@@ -224,8 +224,11 @@ export default function FichesPage() {
     })
   }, [])
 
+  // En mode 'year' : tous les systèmes ; sinon filtre par semestre
   const semSystems = useMemo(
-    () => systems.filter(s => (s as any).semestre === semester),
+    () => semester === 'year'
+      ? systems
+      : systems.filter(s => (s as any).semestre === semester),
     [systems, semester]
   )
 
@@ -264,9 +267,12 @@ export default function FichesPage() {
     setSysLoading(false)
     if (data) {
       setSystems(prev => [...prev, data as System])
-      if ((data as any).semestre === semester) setSelectedSystemId(data.id)
+      // En mode 'year' on auto-sélectionne ; sinon seulement si le sem matche
+      if (semester === 'year' || (data as any).semestre === semester) setSelectedSystemId(data.id)
     }
-    setShowNewSystem(false); setNewSysName(''); setNewSysColor(SUBJ_COLORS[0]); setNewSysSemestre(semester)
+    // Reset du form : si on est en 'year', on retombe sur le sem 2 par défaut
+    setShowNewSystem(false); setNewSysName(''); setNewSysColor(SUBJ_COLORS[0])
+    setNewSysSemestre(semester === 'year' ? 2 : semester)
   }
 
   async function createLesson() {
@@ -500,7 +506,7 @@ export default function FichesPage() {
         {/* Empty state semestre vide */}
         {semSystems.length === 0 && (
           <div className="fi-empty">
-            <h2 className="fi-empty-title">Aucune matière pour le semestre {semester}</h2>
+            <h2 className="fi-empty-title">Aucune matière {semester === 'year' ? 'pour cette année' : `pour le semestre ${semester}`}</h2>
             <p className="fi-empty-text">Commence par ajouter une matière, puis crée tes fiches dedans.</p>
             <button className="fi-btn-g" onClick={() => { setNewSysSemestre(semester); setShowNewSystem(true) }}>
               + Créer une matière
@@ -647,7 +653,7 @@ export default function FichesPage() {
           <div className="fi-empty">
             <p className="fi-empty-text">
               {showDueOnly
-                ? "Aucune fiche à réviser aujourd'hui dans ce semestre — bravo !"
+                ? `Aucune fiche à réviser aujourd'hui ${semester === 'year' ? 'cette année' : 'dans ce semestre'} — bravo !`
                 : search
                   ? "Aucune fiche ne correspond à ta recherche."
                   : (filterNote !== 'all' || filterProgress !== 'all')
