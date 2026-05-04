@@ -171,11 +171,18 @@ export async function POST(req: NextRequest) {
 
     // 2. Body
     const body = await req.json().catch(() => ({}))
-    const { lessonId, nbQ = 12, format = 'mixed', difficulty = 'annales' } = body as {
+    const {
+      lessonId,
+      nbQ = 30,
+      format = 'mixed',
+      difficulty = 'annales',
+      mode = 'replace',
+    } = body as {
       lessonId?: string
       nbQ?: number
       format?: string
       difficulty?: string
+      mode?: 'replace' | 'append'
     }
     if (!lessonId) {
       return NextResponse.json({ error: 'lessonId requis' }, { status: 400 })
@@ -184,7 +191,7 @@ export async function POST(req: NextRequest) {
     // 3. Fetch lesson + ownership check (RLS)
     const { data: lesson, error: lessonErr } = await supabase
       .from('lessons')
-      .select('id, name, user_id, media')
+      .select('id, name, user_id, media, ai_questions')
       .eq('id', lessonId)
       .single()
 
@@ -258,17 +265,29 @@ export async function POST(req: NextRequest) {
     if (videoIncluded) sources.push('la vidéo du cours (audio + image)')
     const sourcesStr = sources.join(' et ')
 
+    // En mode append, on récupère les questions déjà générées pour les passer
+    // au prompt et demander à Gemini de NE PAS les reproduire.
+    const existingQuestions = mode === 'append' && Array.isArray(lesson.ai_questions)
+      ? (lesson.ai_questions as Array<Record<string, unknown>>)
+      : []
+
+    const existingBlock = existingQuestions.length > 0
+      ? `\nQUESTIONS DÉJÀ GÉNÉRÉES POUR CETTE FICHE — ne les reproduis SURTOUT PAS, formule des questions sur d'autres angles, d'autres parties du cours, ou avec des pièges différents :
+${existingQuestions.slice(0, 100).map((q, i) => `${i + 1}. ${String(q.question || q.stem || '').slice(0, 140)}`).join('\n')}
+`
+      : ''
+
     const prompt = `Tu es un enseignant expert en médecine, spécialisé dans la préparation aux EDN (Épreuves Dématérialisées Nationales) français.
 
 CONTEXTE : tu reçois ${sourcesStr} pour le sujet "${lesson.name}".
-
+${existingBlock}
 CONSIGNE :
-Génère exactement ${nbQ} questions de type : ${FORMAT_DESC[format] || FORMAT_DESC.mixed}.
+Génère exactement ${nbQ} ${existingQuestions.length > 0 ? 'NOUVELLES ' : ''}questions de type : ${FORMAT_DESC[format] || FORMAT_DESC.mixed}.
 Niveau requis : ${DIFF_DESC[difficulty] || DIFF_DESC.annales}.
 
 RÈGLES IMPÉRATIVES :
 - Base-toi exclusivement sur le contenu réel des sources fournies.
-- Pour CHAQUE question, indique précisément où trouver l'information dans un objet "source_ref" :
+${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déjà traités ci-dessus (autres pages du PDF, autres moments de la vidéo, autres notions, autres pièges).\n' : ''}- Pour CHAQUE question, indique précisément où trouver l'information dans un objet "source_ref" :
   - "pdf_page" : numéro de page du PDF (entier ≥ 1) si l'info vient du PDF
   - "video_ts" : timestamp en secondes dans la vidéo (entier ≥ 0) si l'info vient de la vidéo
   - Tu peux remplir l'un, l'autre, ou les deux. Si vraiment indéterminable, omets le champ.
@@ -333,10 +352,15 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks),
       throw new Error('Aucune question valide générée')
     }
 
-    // 9. Save (overwrite ai_questions)
+    // 9. Si mode append, concaténer aux existantes ; sinon remplacer
+    const finalQuestions = mode === 'append'
+      ? [...existingQuestions, ...sanitized]
+      : sanitized
+
+    // 10. Save
     const { error: updateErr } = await supabase
       .from('lessons')
-      .update({ ai_questions: sanitized })
+      .update({ ai_questions: finalQuestions })
       .eq('id', lessonId)
       .eq('user_id', user.id)
 
@@ -345,7 +369,9 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks),
     }
 
     return NextResponse.json({
-      count: sanitized.length,
+      count: sanitized.length,             // nb de questions générées dans cet appel
+      total: finalQuestions.length,        // nb total après ajout
+      mode,
       questions: sanitized,
       videoIncluded,
       videoSkipReason,
