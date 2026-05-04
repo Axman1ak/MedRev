@@ -1,15 +1,14 @@
 @charset "UTF-8";
 /* src/app/dashboard/stats/styles.css
  *
- * Bilan annuel — aligné sur l'identité visuelle du dashboard.
- * Mêmes fonts (Fraunces + Plus Jakarta Sans), même palette beige, mêmes
- * cards blanches avec barre verte avant le titre, même score colors s1-s5.
+ * Bilan annuel — Direction 2 : hero "X révisions" + 3 secondaires.
+ * Full-width comme le dashboard, identité visuelle 100% alignée
+ * (Fraunces + Plus Jakarta Sans + Cormorant, palette beige, hero numbers verts).
  *
- * Toutes les classes restent préfixées .stats- pour éviter les collisions
- * avec les pages dashboard, fiches, focus.
+ * Toutes les classes restent préfixées .stats- pour scope.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
 
 .stats-page {
   /* === Tokens hérités du dashboard === */
@@ -41,9 +40,8 @@
 
   background: var(--bg);
   min-height: 100vh;
+  /* Full width comme le dashboard, padding identique */
   padding: 22px 28px;
-  max-width: 1180px;
-  margin: 0 auto;
   color: var(--dark);
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
@@ -60,15 +58,10 @@
 }
 
 /* ============================================================
-   HEADER
+   HEADER — pas de toggle local, c'est la sidebar qui pilote
    ============================================================ */
 .stats-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
   margin-bottom: 22px;
-  flex-wrap: wrap;
-  gap: 16px;
 }
 .stats-title {
   font-family: 'Fraunces', serif;
@@ -90,85 +83,157 @@
   margin-top: 4px;
   font-style: italic;
 }
-.stats-sem-toggle {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  background: var(--soft);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+
+/* ============================================================
+   HERO + 3 SECONDAIRES (Direction 2)
+   ============================================================ */
+.stats-totals-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
 }
-.stats-sem-toggle button {
-  padding: 6px 16px;
-  border: none;
-  background: transparent;
-  border-radius: 5px;
-  cursor: pointer;
+@media (max-width: 1080px) {
+  .stats-totals-grid { grid-template-columns: 1fr; }
+}
+
+/* HERO CARD */
+.stats-hero-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 240px;
+  position: relative;
+  overflow: hidden;
+}
+.stats-hero-card::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  right: -50px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, var(--gl) 0%, transparent 70%);
+  opacity: .55;
+  pointer-events: none;
+}
+.stats-hero-label {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .12em;
-  color: var(--gray);
-  transition: all .15s;
-}
-.stats-sem-toggle button.active {
-  background: var(--card);
-  color: var(--gm);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
-}
-
-/* ============================================================
-   TOTALS (4 cards)
-   ============================================================ */
-.stats-totals {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 22px;
-}
-@media (max-width: 880px) {
-  .stats-totals { grid-template-columns: repeat(2, 1fr); }
-}
-.stats-total {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px 20px;
-}
-.stats-total-label {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 10.5px;
-  color: var(--gray);
-  text-transform: uppercase;
   letter-spacing: .18em;
-  font-weight: 700;
+  color: var(--gray);
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  z-index: 2;
 }
-.stats-total-label::before {
+.stats-hero-label::before {
   content: '';
   width: 4px;
   height: 12px;
   background: var(--gm);
   border-radius: 2px;
+  flex-shrink: 0;
 }
-.stats-total-val {
+.stats-hero-display {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 16px 0 8px;
+  position: relative;
+  z-index: 2;
+  flex-wrap: wrap;
+}
+.stats-hero-num {
   font-family: 'Fraunces', serif;
-  font-size: 38px;
+  font-size: clamp(72px, 10vw, 112px);
+  font-weight: 500;
+  color: var(--green);
+  line-height: .9;
+  letter-spacing: -.045em;
+}
+.stats-hero-unit {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
   font-weight: 500;
   color: var(--dark);
-  margin-top: 10px;
-  line-height: 1;
-  letter-spacing: -.025em;
+  line-height: 1.15;
 }
-.stats-total-sub {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 12px;
-  color: var(--gray);
-  margin-top: 8px;
+.stats-hero-unit em {
   font-style: italic;
+  color: var(--gray);
+  font-weight: 400;
+  font-size: 16px;
+}
+.stats-hero-sub {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  color: var(--gray);
+  font-size: 14.5px;
+  position: relative;
+  z-index: 2;
+  max-width: 90%;
+  line-height: 1.5;
+}
+.stats-hero-sub strong {
+  font-family: 'Fraunces', serif;
+  font-style: normal;
+  color: var(--dark);
+  font-weight: 500;
+}
+
+/* SECONDARY GRID (3 cartes empilées vertical à droite) */
+.stats-secondary {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 12px;
+}
+.stats-sec {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.stats-sec-num {
+  font-family: 'Fraunces', serif;
+  font-size: 40px;
+  font-weight: 500;
+  color: var(--green);
+  line-height: 1;
+  letter-spacing: -.03em;
+  min-width: 64px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.stats-sec-info {
+  flex: 1;
+  min-width: 0;
+}
+.stats-sec-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--gray);
+  margin-bottom: 4px;
+}
+.stats-sec-sub {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  color: var(--gray);
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 /* ============================================================
@@ -407,8 +472,8 @@
 }
 .stats-dumb-row {
   display: grid;
-  grid-template-columns: 130px 1fr 64px;
-  gap: 16px;
+  grid-template-columns: 160px 1fr 72px;
+  gap: 18px;
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
@@ -484,8 +549,8 @@
 .stats-dumb-delta.flat { color: var(--gray); }
 .stats-dumb-scale {
   display: grid;
-  grid-template-columns: 130px 1fr 64px;
-  gap: 16px;
+  grid-template-columns: 160px 1fr 72px;
+  gap: 18px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
@@ -503,7 +568,10 @@
 @media (max-width: 880px) {
   .stats-dumb-row,
   .stats-dumb-scale {
-    grid-template-columns: 90px 1fr 50px;
-    gap: 10px;
+    grid-template-columns: 100px 1fr 56px;
+    gap: 12px;
   }
+  .stats-hero-card { padding: 22px 20px; min-height: 200px; }
+  .stats-sec { padding: 12px 14px; }
+  .stats-sec-num { font-size: 32px; min-width: 50px; }
 }
