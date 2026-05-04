@@ -132,6 +132,10 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // ---- Mot de passe oublié ----
+  const [forgotMode, setForgotMode] = useState(false)
+  const [forgotMsg, setForgotMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+
   const supabase = createClient()
   const selectedFac = FACS.find(f => f.id === fac)
 
@@ -193,6 +197,26 @@ export default function LandingPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
     window.location.href = '/dashboard'
+  }
+
+  const handleForgotPassword = async () => {
+    setForgotMsg(null)
+    if (!email.trim()) {
+      setForgotMsg({ kind: 'err', text: 'Entre ton adresse email.' })
+      return
+    }
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/auth/reset-password',
+      })
+      if (error) throw error
+      setForgotMsg({ kind: 'ok', text: 'Email envoyé. Vérifie ta boîte de réception (et tes spams).' })
+    } catch (e: any) {
+      setForgotMsg({ kind: 'err', text: e.message })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const totalSteps = selectedFac?.hasOptions ? 3 : 2
@@ -357,6 +381,20 @@ export default function LandingPage() {
         .lp-opt-card-desc { font-size: 11.5px; color: var(--gray); }
         .lp-opt-card-matieres { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
         .lp-opt-matiere { font-size: 10px; font-weight: 600; background: var(--gl); color: var(--green); border-radius: 20px; padding: 2px 7px; }
+
+        /* Forgot password link */
+        .lp-forgot-link {
+          background: none; border: none; cursor: pointer;
+          color: var(--gray); font-size: 12.5px; font-weight: 500;
+          padding: 12px 0 0; width: 100%; text-align: center;
+          font-family: inherit;
+        }
+        .lp-forgot-link:hover { color: var(--dark); }
+        .lp-forgot-msg-ok {
+          background: var(--gl); color: var(--green); border-color: #7AA56B;
+          font-size: 12.5px; padding: 10px 13px; border-radius: 8px;
+          margin-bottom: 14px; border: 1px solid #7AA56B;
+        }
 
         /* FOOTER */
         .lp-footer { background: var(--cream); border-top: 1px solid var(--border); padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; }
@@ -567,13 +605,13 @@ export default function LandingPage() {
               <div className="lp-auth-tabs">
                 <button
                   className={`lp-auth-tab${activeTab === 'register' ? ' lp-auth-tab-active' : ''}`}
-                  onClick={() => { setActiveTab('register'); setError(null); setStep('form') }}
+                  onClick={() => { setActiveTab('register'); setError(null); setStep('form'); setForgotMode(false) }}
                 >
                   Créer un compte
                 </button>
                 <button
                   className={`lp-auth-tab${activeTab === 'login' ? ' lp-auth-tab-active' : ''}`}
-                  onClick={() => { setActiveTab('login'); setError(null); setStep('form') }}
+                  onClick={() => { setActiveTab('login'); setError(null); setStep('form'); setForgotMode(false) }}
                 >
                   Se connecter
                 </button>
@@ -685,7 +723,7 @@ export default function LandingPage() {
               )}
 
               {/* CONNEXION */}
-              {activeTab === 'login' && (
+              {activeTab === 'login' && !forgotMode && (
                 <div>
                   <div className="lp-form-group">
                     <label className="lp-label">Adresse email</label>
@@ -697,6 +735,49 @@ export default function LandingPage() {
                   </div>
                   <button className="lp-submit" onClick={handleLogin} disabled={loading}>
                     {loading ? 'Connexion…' : 'Se connecter →'}
+                  </button>
+                  <button
+                    type="button"
+                    className="lp-forgot-link"
+                    onClick={() => { setForgotMode(true); setError(null); setForgotMsg(null) }}
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                </div>
+              )}
+
+              {/* MOT DE PASSE OUBLIÉ */}
+              {activeTab === 'login' && forgotMode && (
+                <div>
+                  <button
+                    className="lp-back-btn"
+                    onClick={() => { setForgotMode(false); setForgotMsg(null) }}
+                  >
+                    ← Retour
+                  </button>
+                  <div className="lp-step-title">Mot de passe oublié</div>
+                  <div className="lp-step-sub">On t&apos;envoie un lien pour le réinitialiser par email.</div>
+                  <div className="lp-form-group">
+                    <label className="lp-label">Adresse email</label>
+                    <input
+                      type="email"
+                      className="lp-input"
+                      placeholder="prenom@email.com"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                    />
+                  </div>
+                  {forgotMsg && (
+                    forgotMsg.kind === 'ok'
+                      ? <div className="lp-forgot-msg-ok">{forgotMsg.text}</div>
+                      : <div className="lp-auth-error">{forgotMsg.text}</div>
+                  )}
+                  <button
+                    className="lp-submit"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                  >
+                    {loading ? 'Envoi…' : 'Envoyer le lien'}
                   </button>
                 </div>
               )}
