@@ -75,6 +75,15 @@ function lessonAvg(lesson: Lesson): number | null {
   return n > 0 ? sum / n : null
 }
 
+function scoreClass(avg: number | null): string {
+  if (avg === null) return 's3'
+  if (avg < 2) return 's1'
+  if (avg < 3) return 's2'
+  if (avg < 3.7) return 's3'
+  if (avg < 4.5) return 's4'
+  return 's5'
+}
+
 // ===================== QUESTIONS PARSING =====================
 function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Question[] {
   const raw = lesson.ai_questions as unknown[]
@@ -202,6 +211,16 @@ export default function SimulateurPage() {
     return lessons
       .filter(l => l.system_id === sysId)
       .reduce((acc, l) => acc + (Array.isArray(l.ai_questions) ? (l.ai_questions as unknown[]).length : 0), 0)
+  }
+
+  function avgForSystem(sysId: string): number | null {
+    const sysLessons = lessons.filter(l => l.system_id === sysId)
+    let sum = 0, n = 0
+    for (const l of sysLessons) {
+      const a = lessonAvg(l)
+      if (a !== null) { sum += a; n++ }
+    }
+    return n > 0 ? sum / n : null
   }
 
   const availableQuestions = useMemo<Question[]>(() => {
@@ -386,26 +405,33 @@ export default function SimulateurPage() {
                   {totalAvailable > 0 ? ` · ${totalAvailable} questions disponibles` : ''}
                 </span>
               </div>
-              <div className="sim-mat-pills">
+              <div className="sim-mat-grid">
                 {semSystems.length === 0 ? (
                   <div className="sim-mat-empty">Aucune matière pour {semester === 'year' ? 'l\'année' : `le semestre ${semester}`}.</div>
                 ) : semSystems.map((sys, i) => {
                   const isSel = selectedSysIds.has(sys.id)
                   const qCount = countQuestionsForSystem(sys.id)
                   const sysColor = (sys as unknown as { color?: string }).color || PALETTE[i % PALETTE.length]
+                  const avg = avgForSystem(sys.id)
+                  const scoreCls = scoreClass(avg)
+                  const fillPct = avg !== null ? (avg / 5) * 100 : 0
                   return (
                     <button
                       key={sys.id}
-                      className={`sim-mat-pill${isSel ? ' sel' : ''}`}
+                      className={`sim-mat-row${isSel ? ' sel' : ''}`}
                       onClick={() => {
                         const next = new Set(selectedSysIds)
                         if (isSel) next.delete(sys.id); else next.add(sys.id)
                         setSelectedSysIds(next)
                       }}
                     >
-                      <span className="dot" style={{ background: sysColor }} />
-                      {sys.name}
-                      <span className="qc">{qCount}</span>
+                      <span className="sim-mat-check" />
+                      <span className="sim-mat-color" style={{ background: sysColor }} />
+                      <span className="sim-mat-name">{sys.name}</span>
+                      <span className="sim-mat-bar" title={avg !== null ? `${avg.toFixed(1)}/5 en moyenne` : 'aucune note'}>
+                        <span className={`sim-mat-bar-fill ${scoreCls}`} style={{ width: `${fillPct}%` }} />
+                      </span>
+                      <span className="sim-mat-q">{qCount}</span>
                     </button>
                   )
                 })}
