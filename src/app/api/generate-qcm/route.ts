@@ -1,111 +1,357 @@
 // src/app/api/generate-qcm/route.ts
+//
+// Génère des QCM depuis les sources (vidéo + PDF) d'une fiche.
+// - Authentifie via le cookie Supabase (RLS check ownership)
+// - Lit lessons.media → télécharge les fichiers depuis Storage
+// - Envoie à Gemini Flash : PDF inline (si < 18 Mo) + vidéo via Files API
+// - Demande à Gemini un source_ref par question { pdf_page?, video_ts? }
+// - Sauvegarde le résultat dans lessons.ai_questions
+//
+// ⚠ Plan Vercel : nécessite Pro pour avoir maxDuration > 10s.
+//   Vidéos > 100 Mo → erreur "vidéo trop lourde" pour MVP.
+
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_GEN_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_FILES_UPLOAD_URL = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`
+const GEMINI_FILE_GET_URL = (name: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/${name}?key=${GEMINI_API_KEY}`
+
+// Limite vidéo (Vercel serverless memory + Gemini upload time)
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024  // 100 Mo
+const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 20 Mo total req)
 
 const FORMAT_DESC: Record<string, string> = {
-  mixed: 'un mélange équilibré de : QCM classiques (4 options A/B/C/D, une seule bonne réponse), KFP (vignette clinique courte + 2-3 questions liées précises), et Vrai/Faux raisonnés',
+  mixed: 'un mélange équilibré de QCM classiques (4 options A/B/C/D), KFP (vignette clinique courte + questions liées) et Vrai/Faux raisonnés',
   qcm:   'des QCM classiques avec 4 options (A/B/C/D), une seule bonne réponse par question',
-  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis questions précises sur les décisions-clés',
-  vf:    'des questions Vrai/Faux avec une justification obligatoire dans l\'explication',
+  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis questions précises',
+  vf:    'des questions Vrai/Faux avec justification dans l\'explication',
 }
 
 const DIFF_DESC: Record<string, string> = {
-  annales:  'exactement au niveau des annales EDN réelles — questions précises, pièges subtils sur les valeurs seuils et définitions officielles, formulation proche du concours',
-  concours: 'niveau concours blanc rigoureux — éléments sémiologiques et cliniques précis, raisonnement diagnostique',
-  appro:    'niveau approfondi — physiopathologie, mécanismes moléculaires, exceptions, cas particuliers, dernières recommandations HAS',
+  annales:  'au niveau des annales EDN réelles — questions précises, pièges subtils sur les valeurs seuils et définitions officielles',
+  concours: 'niveau concours blanc rigoureux — sémiologie, raisonnement diagnostique',
+  appro:    'niveau approfondi — physiopathologie, mécanismes moléculaires, exceptions, dernières recommandations HAS',
 }
 
+// ============================================================
+// Gemini Files API helpers
+// ============================================================
+type GeminiFile = {
+  name: string
+  uri: string
+  mimeType: string
+  state: 'PROCESSING' | 'ACTIVE' | 'FAILED' | string
+}
+
+async function uploadFileToGemini(blob: Blob, mimeType: string, displayName: string): Promise<GeminiFile> {
+  // Étape 1 : init resumable upload
+  const init = await fetch(GEMINI_FILES_UPLOAD_URL, {
+    method: 'POST',
+    headers: {
+      'X-Goog-Upload-Protocol': 'resumable',
+      'X-Goog-Upload-Command': 'start',
+      'X-Goog-Upload-Header-Content-Length': String(blob.size),
+      'X-Goog-Upload-Header-Content-Type': mimeType,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ file: { display_name: displayName } }),
+  })
+
+  if (!init.ok) {
+    const t = await init.text()
+    throw new Error(`Gemini upload init failed (${init.status}): ${t.slice(0, 200)}`)
+  }
+
+  const uploadUrl = init.headers.get('X-Goog-Upload-URL')
+  if (!uploadUrl) throw new Error('Pas de X-Goog-Upload-URL en réponse')
+
+  // Étape 2 : upload bytes
+  const arrBuf = await blob.arrayBuffer()
+  const upload = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Length': String(blob.size),
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+    },
+    body: arrBuf,
+  })
+
+  if (!upload.ok) {
+    const t = await upload.text()
+    throw new Error(`Gemini upload failed (${upload.status}): ${t.slice(0, 200)}`)
+  }
+
+  const data = await upload.json()
+  if (!data?.file) throw new Error('Réponse Gemini upload sans file')
+  return data.file as GeminiFile
+}
+
+async function waitForGeminiFile(name: string, maxWaitMs = 45000): Promise<GeminiFile> {
+  const startTs = Date.now()
+  while (Date.now() - startTs < maxWaitMs) {
+    const resp = await fetch(GEMINI_FILE_GET_URL(name))
+    if (resp.ok) {
+      const data = (await resp.json()) as GeminiFile
+      if (data.state === 'ACTIVE') return data
+      if (data.state === 'FAILED') throw new Error('Gemini file processing failed')
+    }
+    await new Promise(r => setTimeout(r, 3000))
+  }
+  throw new Error('Gemini file processing timeout (>45s)')
+}
+
+// ============================================================
+// Sanitisation des questions retournées par Gemini
+// ============================================================
+type SanitizedQuestion = {
+  question: string
+  options: string[]
+  answer: number
+  explanation: string
+  source_ref: { pdf_page?: number; video_ts?: number } | null
+}
+
+function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
+  const out: SanitizedQuestion[] = []
+  for (const q of raw) {
+    if (!q || typeof q !== 'object') continue
+    const r = q as Record<string, unknown>
+    const question = String(r.question || r.stem || '').trim()
+    const options = Array.isArray(r.options) ? (r.options as unknown[]).map(String) : []
+    const answer = typeof r.answer === 'number' ? r.answer
+      : typeof r.correct === 'number' ? r.correct
+      : 0
+    const explanation = String(r.explanation || '').trim()
+    if (!question || options.length < 2) continue
+    if (answer < 0 || answer >= options.length) continue
+
+    // source_ref : on ne garde que les nombres valides
+    let sourceRef: SanitizedQuestion['source_ref'] = null
+    const ref = r.source_ref
+    if (ref && typeof ref === 'object') {
+      const refObj = ref as Record<string, unknown>
+      const pdf_page = typeof refObj.pdf_page === 'number' && refObj.pdf_page > 0 ? refObj.pdf_page : undefined
+      const video_ts = typeof refObj.video_ts === 'number' && refObj.video_ts >= 0 ? refObj.video_ts : undefined
+      if (pdf_page !== undefined || video_ts !== undefined) {
+        sourceRef = {}
+        if (pdf_page !== undefined) sourceRef.pdf_page = pdf_page
+        if (video_ts !== undefined) sourceRef.video_ts = video_ts
+      }
+    }
+
+    out.push({ question, options, answer, explanation, source_ref: sourceRef })
+    if (out.length >= maxN) break
+  }
+  return out
+}
+
+// ============================================================
+// Handler
+// ============================================================
 export async function POST(req: NextRequest) {
   try {
-    const { lessonName, courseText, nbQ, format, difficulty } = await req.json()
+    if (!GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY non configurée' }, { status: 500 })
+    }
 
-    const hasCourse = courseText && courseText.trim().length > 100
+    // 1. Auth
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
 
-    const courseSection = hasCourse
-      ? `CONTENU DU COURS FOURNI (utilise-le en priorité absolue) :\n"""\n${courseText.slice(0, 10000)}\n"""\n\n`
-      : `SUJET : "${lessonName}"\nNote : aucun contenu fourni — génère des questions basées sur les référentiels officiels français (HAS, collèges de médecine, R2C 2024).\n\n`
+    // 2. Body
+    const body = await req.json().catch(() => ({}))
+    const { lessonId, nbQ = 12, format = 'mixed', difficulty = 'annales' } = body as {
+      lessonId?: string
+      nbQ?: number
+      format?: string
+      difficulty?: string
+    }
+    if (!lessonId) {
+      return NextResponse.json({ error: 'lessonId requis' }, { status: 400 })
+    }
 
-    const prompt = `${courseSection}CONSIGNE :
-Tu es un enseignant expert en médecine, spécialisé dans la préparation aux EDN (Épreuves Dématérialisées Nationales) français.
+    // 3. Fetch lesson + ownership check (RLS)
+    const { data: lesson, error: lessonErr } = await supabase
+      .from('lessons')
+      .select('id, name, user_id, media')
+      .eq('id', lessonId)
+      .single()
 
+    if (lessonErr || !lesson) {
+      return NextResponse.json({ error: 'Fiche introuvable' }, { status: 404 })
+    }
+    if (lesson.user_id !== user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
+    }
+
+    const media = (lesson.media ?? {}) as { video_path?: string; pdf_path?: string }
+    if (!media.video_path && !media.pdf_path) {
+      return NextResponse.json(
+        { error: "Aucune source uploadée. Ajoute une vidéo ou un PDF avant de générer." },
+        { status: 400 }
+      )
+    }
+
+    // 4. Build Gemini parts
+    const parts: Array<
+      | { text: string }
+      | { inlineData: { mimeType: string; data: string } }
+      | { fileData: { mimeType: string; fileUri: string } }
+    > = []
+
+    // PDF
+    if (media.pdf_path) {
+      const { data: pdfBlob, error: pdfErr } = await supabase.storage
+        .from('lesson-media')
+        .download(media.pdf_path)
+      if (pdfErr || !pdfBlob) {
+        return NextResponse.json({ error: 'PDF introuvable dans Storage' }, { status: 500 })
+      }
+      if (pdfBlob.size < PDF_INLINE_THRESHOLD) {
+        const arrBuf = await pdfBlob.arrayBuffer()
+        const b64 = Buffer.from(arrBuf).toString('base64')
+        parts.push({ inlineData: { mimeType: 'application/pdf', data: b64 } })
+      } else {
+        const file = await uploadFileToGemini(pdfBlob, 'application/pdf', 'poly.pdf')
+        const active = file.state === 'ACTIVE' ? file : await waitForGeminiFile(file.name, 30000)
+        parts.push({ fileData: { mimeType: active.mimeType, fileUri: active.uri } })
+      }
+    }
+
+    // Vidéo (toujours via Files API, avec garde-fou de taille)
+    let videoIncluded = false
+    let videoSkipReason: string | null = null
+    if (media.video_path) {
+      const { data: videoBlob, error: vidErr } = await supabase.storage
+        .from('lesson-media')
+        .download(media.video_path)
+      if (vidErr || !videoBlob) {
+        videoSkipReason = 'téléchargement Storage échoué'
+      } else if (videoBlob.size > MAX_VIDEO_SIZE) {
+        videoSkipReason = `vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > 100 Mo)`
+      } else {
+        try {
+          const file = await uploadFileToGemini(videoBlob, videoBlob.type || 'video/mp4', 'cours.mp4')
+          const active = file.state === 'ACTIVE' ? file : await waitForGeminiFile(file.name, 45000)
+          parts.push({ fileData: { mimeType: active.mimeType, fileUri: active.uri } })
+          videoIncluded = true
+        } catch (e) {
+          videoSkipReason = e instanceof Error ? e.message : 'erreur upload Gemini'
+        }
+      }
+    }
+
+    // 5. Prompt
+    const sources: string[] = []
+    if (media.pdf_path) sources.push('le polycopié du cours (PDF)')
+    if (videoIncluded) sources.push('la vidéo du cours (audio + image)')
+    const sourcesStr = sources.join(' et ')
+
+    const prompt = `Tu es un enseignant expert en médecine, spécialisé dans la préparation aux EDN (Épreuves Dématérialisées Nationales) français.
+
+CONTEXTE : tu reçois ${sourcesStr} pour le sujet "${lesson.name}".
+
+CONSIGNE :
 Génère exactement ${nbQ} questions de type : ${FORMAT_DESC[format] || FORMAT_DESC.mixed}.
 Niveau requis : ${DIFF_DESC[difficulty] || DIFF_DESC.annales}.
 
 RÈGLES IMPÉRATIVES :
-- Utilise exclusivement le contenu du cours si fourni
-- Questions précises avec valeurs numériques, termes exacts et définitions officielles
-- Pièges réalistes (évite les questions évidentes ou les distracteurs absurdes)
-- Pour les KFP : vignette clinique courte mais réaliste
-- Explications pédagogiques qui CITENT le passage exact du cours ou la source officielle
-- Langue : français médical rigoureux
-- Pas de questions redondantes
+- Base-toi exclusivement sur le contenu réel des sources fournies.
+- Pour CHAQUE question, indique précisément où trouver l'information dans un objet "source_ref" :
+  - "pdf_page" : numéro de page du PDF (entier ≥ 1) si l'info vient du PDF
+  - "video_ts" : timestamp en secondes dans la vidéo (entier ≥ 0) si l'info vient de la vidéo
+  - Tu peux remplir l'un, l'autre, ou les deux. Si vraiment indéterminable, omets le champ.
+- Questions précises avec valeurs numériques exactes, définitions officielles, pièges réalistes.
+- Pas de questions évidentes ou triviales.
+- Langue : français médical rigoureux.
 
-RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), format exact :
+RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), exactement ce format :
 [
   {
-    "type": "qcm",
-    "stem": "Question précise ?",
-    "context": null,
+    "question": "Question précise ?",
     "options": ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
-    "correct": 0,
-    "explanation": "Explication pédagogique détaillée...",
-    "source_ref": "Extrait du cours ou 'HAS 2024 — Recommandation...'"
-  },
-  ...
+    "answer": 0,
+    "explanation": "Explication pédagogique citant la source.",
+    "source_ref": { "pdf_page": 4, "video_ts": 2528 }
+  }
 ]
 
-Pour type="kfp" : mets la vignette clinique dans "context".
-Pour type="vf" : options=["Vrai","Faux"], correct=0 (Vrai) ou 1 (Faux).
-"correct" est l'index 0-3 de la bonne réponse.`
+"answer" est l'index (0-based) de la bonne réponse dans "options".`
 
-    const response = await fetch(GEMINI_URL!, {
+    parts.push({ text: prompt })
+
+    // 6. Generate
+    const genResp = await fetch(GEMINI_GEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 4000, temperature: 0.3 },
+        contents: [{ parts }],
+        generationConfig: {
+          maxOutputTokens: 8000,
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
       }),
     })
 
-    if (!response.ok) {
-      const err = await response.json()
-      throw new Error(err.error?.message || 'Erreur Gemini API')
+    if (!genResp.ok) {
+      const errText = await genResp.text()
+      throw new Error(`Gemini generateContent failed (${genResp.status}): ${errText.slice(0, 200)}`)
     }
 
-    const data = await response.json()
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    const clean = raw.replace(/```json|```/g, '').trim()
+    const genData = await genResp.json()
+    const rawText = genData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
-    let questions
+    // 7. Parse JSON
+    let parsed: unknown[]
     try {
-      questions = JSON.parse(clean)
+      const cleaned = rawText.replace(/```json|```/g, '').trim()
+      parsed = JSON.parse(cleaned)
     } catch {
-      // Try to extract JSON array from text
-      const match = clean.match(/\[[\s\S]*\]/)
-      if (!match) throw new Error('JSON invalide')
-      questions = JSON.parse(match[0])
+      const match = rawText.match(/\[[\s\S]*\]/)
+      if (!match) throw new Error('Réponse Gemini non-JSON')
+      parsed = JSON.parse(match[0])
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error('Réponse Gemini : tableau attendu')
     }
 
-    if (!Array.isArray(questions) || !questions.length) {
-      throw new Error('Format de réponse invalide')
+    // 8. Sanitize
+    const sanitized = sanitizeQuestions(parsed, nbQ)
+    if (sanitized.length === 0) {
+      throw new Error('Aucune question valide générée')
     }
 
-    // Validate and sanitize
-    const sanitized = questions.slice(0, nbQ).map((q: Record<string, unknown>) => ({
-      type: ['qcm', 'kfp', 'vf'].includes(q.type as string) ? q.type : 'qcm',
-      stem: String(q.stem || ''),
-      context: q.context || null,
-      options: Array.isArray(q.options) ? q.options.map(String) : ['A.', 'B.', 'C.', 'D.'],
-      correct: typeof q.correct === 'number' ? q.correct : 0,
-      explanation: String(q.explanation || ''),
-      source_ref: String(q.source_ref || 'Référentiel R2C'),
-    }))
+    // 9. Save (overwrite ai_questions)
+    const { error: updateErr } = await supabase
+      .from('lessons')
+      .update({ ai_questions: sanitized })
+      .eq('id', lessonId)
+      .eq('user_id', user.id)
 
-    return NextResponse.json({ questions: sanitized })
+    if (updateErr) {
+      throw new Error(`Sauvegarde échouée : ${updateErr.message}`)
+    }
+
+    return NextResponse.json({
+      count: sanitized.length,
+      questions: sanitized,
+      videoIncluded,
+      videoSkipReason,
+    })
   } catch (error) {
-    console.error('QCM generation error:', error)
+    console.error('[generate-qcm] error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur interne' },
       { status: 500 }
