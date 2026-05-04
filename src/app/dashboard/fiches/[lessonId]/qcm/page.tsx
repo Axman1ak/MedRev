@@ -1,0 +1,376 @@
+'use client'
+// src/app/dashboard/fiches/[lessonId]/qcm/page.tsx
+//
+// Page de session QCM par fiche.
+// 3 phases : question / feedback / end.
+// Lance la lightbox SourceLightbox quand l'élève clique "Voir la source ↗".
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System } from '@/types'
+import SourceLightbox from '@/components/SourceLightbox'
+import './styles.css'
+
+type Phase = 'loading' | 'question' | 'feedback' | 'end' | 'empty'
+
+interface Answer {
+  selected: number | null
+  isCorrect: boolean | null
+}
+
+function letterFor(i: number): string {
+  return String.fromCharCode(65 + i)
+}
+
+// Normalise un source_ref qui peut être objet, string legacy, ou null
+function normalizeSourceRef(raw: AiQuestion['source_ref']): AiQuestionSourceRef | null {
+  if (!raw) return null
+  if (typeof raw === 'string') return null  // legacy string, pas exploitable pour jump
+  if (typeof raw === 'object') {
+    const out: AiQuestionSourceRef = {}
+    if (typeof raw.pdf_page === 'number' && raw.pdf_page > 0) out.pdf_page = raw.pdf_page
+    if (typeof raw.video_ts === 'number' && raw.video_ts >= 0) out.video_ts = raw.video_ts
+    return Object.keys(out).length > 0 ? out : null
+  }
+  return null
+}
+
+export default function QcmSessionPage() {
+  const { lessonId } = useParams<{ lessonId: string }>()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [lesson, setLesson] = useState<Lesson | null>(null)
+  const [system, setSystem] = useState<System | null>(null)
+  const [questions, setQuestions] = useState<AiQuestion[]>([])
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const [answers, setAnswers] = useState<Answer[]>([])
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [startTime, setStartTime] = useState<number>(Date.now())
+  const [showSource, setShowSource] = useState<AiQuestionSourceRef | null>(null)
+
+  // Reset scroll au montage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0)
+      const main = document.querySelector('main')
+      if (main) main.scrollTop = 0
+    }
+  }, [])
+
+  // Load lesson + ai_questions
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
+
+      const { data: les, error: lesErr } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('id', lessonId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (cancelled) return
+      if (lesErr || !les) {
+        router.push('/dashboard/fiches')
+        return
+      }
+
+      const aiQs = Array.isArray(les.ai_questions) ? (les.ai_questions as AiQuestion[]) : []
+
+      // Récupère le système pour le contexte
+      const { data: sys } = await supabase
+        .from('systems')
+        .select('*')
+        .eq('id', les.system_id)
+        .single()
+
+      if (cancelled) return
+
+      setLesson(les as Lesson)
+      setSystem(sys as System)
+
+      if (aiQs.length === 0) {
+        setPhase('empty')
+        return
+      }
+
+      setQuestions(aiQs)
+      setAnswers(aiQs.map(() => ({ selected: null, isCorrect: null })))
+      setStartTime(Date.now())
+      setPhase('question')
+    }
+    load()
+    return () => { cancelled = true }
+  }, [lessonId, router, supabase])
+
+  // ---- Handlers ----
+  function selectOption(idx: number) {
+    if (phase !== 'question') return
+    const next = [...answers]
+    next[currentIdx] = { selected: idx, isCorrect: null }
+    setAnswers(next)
+  }
+
+  function validate() {
+    const ans = answers[currentIdx]
+    if (ans?.selected === null || ans?.selected === undefined) return
+    const q = questions[currentIdx]
+    const next = [...answers]
+    next[currentIdx] = { selected: ans.selected, isCorrect: ans.selected === q.answer }
+    setAnswers(next)
+    setPhase('feedback')
+  }
+
+  function goNext() {
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx(currentIdx + 1)
+      setPhase('question')
+    } else {
+      setPhase('end')
+    }
+  }
+
+  function quitToFiches() {
+    router.push('/dashboard/fiches')
+  }
+
+  function restartMissed() {
+    const missedIndices = answers
+      .map((a, i) => (a.selected !== null && !a.isCorrect ? i : -1))
+      .filter(i => i >= 0)
+    if (missedIndices.length === 0) {
+      quitToFiches()
+      return
+    }
+    const missedQs = missedIndices.map(i => questions[i])
+    setQuestions(missedQs)
+    setAnswers(missedQs.map(() => ({ selected: null, isCorrect: null })))
+    setCurrentIdx(0)
+    setStartTime(Date.now())
+    setPhase('question')
+  }
+
+  // ---- Render ----
+  if (phase === 'loading') {
+    return (
+      <div className="qcm-page">
+        <div className="qcm-loading">Chargement de la session…</div>
+      </div>
+    )
+  }
+
+  if (phase === 'empty') {
+    return (
+      <div className="qcm-page">
+        <div className="qcm-empty">
+          <h1 className="qcm-empty-title">Aucun QCM <em>pour cette fiche</em></h1>
+          <p className="qcm-empty-text">
+            Tu dois d&apos;abord générer les QCM depuis les sources de la fiche.
+            Reviens dans <em>Mes matières</em>, ouvre cette fiche, puis clique sur <em>Générer les QCM</em>.
+          </p>
+          <button className="qcm-empty-btn" onClick={quitToFiches}>← Retour aux fiches</button>
+        </div>
+      </div>
+    )
+  }
+
+  // Phase end
+  if (phase === 'end') {
+    const correctCount = answers.filter(a => a.isCorrect).length
+    const totalCount = questions.length
+    const wrongCount = answers.filter(a => a.isCorrect === false).length
+    const skippedCount = answers.filter(a => a.selected === null).length
+    const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
+    const timeUsedSec = Math.round((Date.now() - startTime) / 1000)
+    const minutes = Math.floor(timeUsedSec / 60)
+    const seconds = timeUsedSec % 60
+    const timeLabel = `${minutes} min ${seconds.toString().padStart(2, '0')}`
+    const haloCls = score >= 70 ? 'ok' : score >= 50 ? 'amber' : 'rose'
+    const message = score >= 70 ? 'Excellente session' : score >= 50 ? 'Bonne session' : 'À retravailler'
+    const submessage =
+      score >= 70 ? 'tu maîtrises l\'essentiel.' :
+      score >= 50 ? 'tu progresses, continue.' :
+      'c\'est en faisant les fautes qu\'on apprend.'
+
+    return (
+      <div className="qcm-page">
+        <div className="qcm-topbar">
+          <button className="qcm-topback" onClick={quitToFiches}>←</button>
+          <span className="qcm-ctx">
+            <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> — session terminée
+          </span>
+        </div>
+
+        <div className="qcm-end">
+          <div className={`qcm-end-score ${haloCls}`}>{score}<span className="qcm-end-pct">%</span></div>
+          <div className="qcm-end-message"><strong>{message}</strong> — {submessage}</div>
+
+          <div className="qcm-end-stats">
+            <div className="qcm-end-stat">
+              <div className="qcm-end-stat-num ok">{correctCount}</div>
+              <div className="qcm-end-stat-lbl">Bonnes</div>
+            </div>
+            <div className="qcm-end-stat">
+              <div className="qcm-end-stat-num ko">{wrongCount}</div>
+              <div className="qcm-end-stat-lbl">Ratées</div>
+            </div>
+            <div className="qcm-end-stat">
+              <div className="qcm-end-stat-num">{timeLabel}</div>
+              <div className="qcm-end-stat-lbl">Temps</div>
+            </div>
+            {skippedCount > 0 && (
+              <div className="qcm-end-stat">
+                <div className="qcm-end-stat-num">{skippedCount}</div>
+                <div className="qcm-end-stat-lbl">Passées</div>
+              </div>
+            )}
+          </div>
+
+          <div className="qcm-end-actions">
+            <button className="qcm-end-btn ghost" onClick={quitToFiches}>Retour à la fiche</button>
+            <button
+              className="qcm-end-btn primary"
+              onClick={restartMissed}
+              disabled={wrongCount === 0}
+            >
+              {wrongCount > 0 ? `Refaire les ${wrongCount} ratée${wrongCount > 1 ? 's' : ''} →` : 'Aucune ratée'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Phase question / feedback
+  const q = questions[currentIdx]
+  const ans = answers[currentIdx]
+  const isFeedback = phase === 'feedback'
+  const correctIdx = q.answer
+  const sourceRef = isFeedback ? normalizeSourceRef(q.source_ref) : null
+  const media = (lesson?.media ?? {}) as LessonMedia
+  const canShowSource = !!sourceRef && (
+    (sourceRef.video_ts !== undefined && !!media.video_path) ||
+    (sourceRef.pdf_page !== undefined && !!media.pdf_path)
+  )
+
+  return (
+    <div className="qcm-page">
+
+      <div className="qcm-topbar">
+        <button className="qcm-topback" onClick={quitToFiches}>←</button>
+        <span className="qcm-ctx">
+          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> — session de <em>{questions.length} questions</em>
+        </span>
+      </div>
+
+      <div className="qcm-content">
+
+        <div className="qcm-progress">
+          <div className="qcm-progress-bar">
+            <span style={{ width: `${((currentIdx + (isFeedback ? 1 : 0)) / questions.length) * 100}%` }} />
+          </div>
+          <div className="qcm-progress-lbl">{currentIdx + 1} / {questions.length}</div>
+        </div>
+
+        <div className="qcm-q-kicker">Question {currentIdx + 1}</div>
+        <h1 className="qcm-q-stem">{q.question}</h1>
+
+        <div className="qcm-options">
+          {q.options.map((opt, i) => {
+            const isSelected = ans?.selected === i
+            const isCorrect = i === correctIdx
+            let cls = 'qcm-option'
+            if (isFeedback) {
+              if (isCorrect) cls += ' correct'
+              else if (isSelected) cls += ' wrong'
+              else cls += ' dim'
+            } else if (isSelected) {
+              cls += ' selected'
+            }
+            return (
+              <button
+                key={i}
+                className={cls}
+                onClick={() => selectOption(i)}
+                disabled={isFeedback}
+                type="button"
+              >
+                <span className="qcm-letter">{letterFor(i)}</span>
+                <span className="qcm-text">{stripLetterPrefix(opt)}</span>
+                {isFeedback && isCorrect && <span className="qcm-mark">Bonne réponse</span>}
+                {isFeedback && isSelected && !isCorrect && <span className="qcm-mark">Ta réponse</span>}
+              </button>
+            )
+          })}
+        </div>
+
+        {isFeedback && q.explanation && (
+          <div className={`qcm-feedback ${ans?.isCorrect ? 'right' : 'wrong'}`}>
+            <div className="qcm-feedback-label">{ans?.isCorrect ? 'Bonne réponse' : 'Explication'}</div>
+            <p className="qcm-feedback-text">{q.explanation}</p>
+            {canShowSource && sourceRef && (
+              <div className="qcm-source-row">
+                {sourceRef.video_ts !== undefined && media.video_path && (
+                  <span className="qcm-source-tag video">{formatTs(sourceRef.video_ts)}</span>
+                )}
+                {sourceRef.pdf_page !== undefined && media.pdf_path && (
+                  <span className="qcm-source-tag pdf">{sourceRef.pdf_page}</span>
+                )}
+                <button
+                  type="button"
+                  className="qcm-source-jump"
+                  onClick={() => setShowSource(sourceRef)}
+                >
+                  Voir la source ↗
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="qcm-actions">
+          {!isFeedback ? (
+            <button
+              className="qcm-validate"
+              onClick={validate}
+              disabled={ans?.selected === null || ans?.selected === undefined}
+            >
+              Valider →
+            </button>
+          ) : (
+            <button className="qcm-next" onClick={goNext}>
+              {currentIdx < questions.length - 1 ? 'Question suivante →' : 'Terminer la session →'}
+            </button>
+          )}
+        </div>
+
+      </div>
+
+      {showSource && lesson && (
+        <SourceLightbox
+          media={media}
+          sourceRef={showSource}
+          lessonName={lesson.name}
+          onClose={() => setShowSource(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function stripLetterPrefix(s: string): string {
+  // "A. Option" → "Option" (Gemini préfixe parfois les options)
+  return s.replace(/^[A-E][.)]\s*/, '')
+}
+
+function formatTs(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
