@@ -335,7 +335,7 @@ export default function ReviewModal({
     router.push(`/dashboard/fiches/${lesson.id}/qcm`)
   }
 
-  async function generateQcms() {
+  async function generateQcms(mode: 'replace' | 'append' = 'replace') {
     setGenError(null)
     setGenInfo(null)
     setGenerating(true)
@@ -345,15 +345,16 @@ export default function ReviewModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonId: lesson.id,
-          nbQ: 12,
+          nbQ: 30,
           format: 'mixed',
           difficulty: 'annales',
+          mode,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erreur génération')
 
-      // Recharge la lesson pour récupérer les nouveaux ai_questions
+      // Recharge la lesson pour récupérer les ai_questions à jour
       const { data: updated } = await supabase
         .from('lessons')
         .select('*')
@@ -366,6 +367,8 @@ export default function ReviewModal({
 
       if (data.videoSkipReason) {
         setGenInfo(`Note : la vidéo n'a pas pu être utilisée (${data.videoSkipReason}). Les QCM viennent du PDF.`)
+      } else if (mode === 'append' && typeof data.total === 'number') {
+        setGenInfo(`+${data.count} questions ajoutées · total : ${data.total} QCM sur cette fiche.`)
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erreur inconnue'
@@ -583,11 +586,11 @@ export default function ReviewModal({
                   <button
                     type="button"
                     className="rmod-qcm-regen"
-                    onClick={generateQcms}
+                    onClick={() => generateQcms('append')}
                     disabled={generating}
-                    title="Régénérer les QCM (remplace les actuels)"
+                    title="Ajouter 30 questions de plus (sur d'autres aspects du cours)"
                   >
-                    {generating ? '...' : 'Régénérer'}
+                    {generating ? '…' : '+ Ajouter 30'}
                   </button>
                   <button
                     type="button"
@@ -607,10 +610,10 @@ export default function ReviewModal({
                 <button
                   type="button"
                   className="rmod-qcm-cta"
-                  onClick={generateQcms}
+                  onClick={() => generateQcms('replace')}
                   disabled={generating}
                 >
-                  {generating ? 'Génération… (30-60s)' : 'Générer les QCM'}
+                  {generating ? 'Génération… (30-60s)' : 'Générer 30 QCM'}
                 </button>
               </div>
             ) : (
