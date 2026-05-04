@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Lesson } from '@/types'
+import type { Lesson, LessonMedia } from '@/types'
 import './review-modal.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -20,21 +20,6 @@ type StampState =
   | { kind: 'today' }
   | { kind: 'missed' }
   | { kind: 'future' }
-
-// ============================================================
-// Type media (mirror du jsonb sur lessons.media — voir migration
-// 2026-05). Local au composant pour ne pas alourdir @/types.
-// ============================================================
-type LessonMedia = {
-  video_path?: string
-  video_duration_s?: number
-  video_size?: number
-  video_uploaded_at?: string
-  pdf_path?: string
-  pdf_pages?: number
-  pdf_size?: number
-  pdf_uploaded_at?: string
-}
 
 // ================ Helpers ================
 function stepScore(s: StepEntry): Score | null {
@@ -217,7 +202,7 @@ export default function ReviewModal({
   // ============================================================
   async function uploadMedia(file: File, kind: 'video' | 'pdf') {
     setUploadError(null)
-    const userId = (lesson as { user_id?: string }).user_id
+    const userId = lesson.user_id
     if (!userId) {
       setUploadError("Impossible d'identifier l'utilisateur — recharge la page.")
       return
@@ -252,7 +237,7 @@ export default function ReviewModal({
 
       // Si on remplace une vidéo avec une autre extension, supprimer l'ancienne pour éviter
       // les fichiers orphelins (Supabase Storage upsert ne supprime pas les autres ext).
-      const existingMedia = (lesson.media as LessonMedia | null) || {}
+      const existingMedia = (lesson.media ?? {}) as LessonMedia
       if (kind === 'video' && existingMedia.video_path && existingMedia.video_path !== path) {
         await supabase.storage.from('lesson-media').remove([existingMedia.video_path])
       }
@@ -302,7 +287,7 @@ export default function ReviewModal({
   }
 
   async function removeMedia(kind: 'video' | 'pdf') {
-    const existingMedia = (lesson.media as LessonMedia | null) || {}
+    const existingMedia = (lesson.media ?? {}) as LessonMedia
     const targetPath = kind === 'video' ? existingMedia.video_path : existingMedia.pdf_path
     if (!targetPath) return
 
@@ -348,7 +333,7 @@ export default function ReviewModal({
   // ============================================================
   //  Données dérivées pour l'UI
   // ============================================================
-  const media = (lesson.media as LessonMedia | null) || {}
+  const media = (lesson.media ?? {}) as LessonMedia
   const hasVideo = !!media.video_path
   const hasPdf = !!media.pdf_path
   const hasAnySource = hasVideo || hasPdf
