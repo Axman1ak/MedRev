@@ -151,6 +151,11 @@ export default function ReviewModal({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
+  // QCM generation state
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+  const [genInfo, setGenInfo] = useState<string | null>(null)
+
   const today = new Date().toISOString().split('T')[0]
 
   // Synchronise uniquement si on ouvre sur une AUTRE fiche (id différent) ou un autre J.
@@ -328,6 +333,46 @@ export default function ReviewModal({
   function startQcmSession() {
     onClose()
     router.push(`/dashboard/fiches/${lesson.id}/qcm`)
+  }
+
+  async function generateQcms() {
+    setGenError(null)
+    setGenInfo(null)
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/generate-qcm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonId: lesson.id,
+          nbQ: 12,
+          format: 'mixed',
+          difficulty: 'annales',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erreur génération')
+
+      // Recharge la lesson pour récupérer les nouveaux ai_questions
+      const { data: updated } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('id', lesson.id)
+        .single()
+      if (updated) {
+        setLesson(updated as Lesson)
+        if (onUpdated) onUpdated(updated as Lesson)
+      }
+
+      if (data.videoSkipReason) {
+        setGenInfo(`Note : la vidéo n'a pas pu être utilisée (${data.videoSkipReason}). Les QCM viennent du PDF.`)
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue'
+      setGenError(`Échec : ${msg}`)
+    } finally {
+      setGenerating(false)
+    }
   }
 
   // ============================================================
@@ -534,22 +579,51 @@ export default function ReviewModal({
               <div className="rmod-qcm-line">
                 <div className="rmod-qcm-num">{qcmCount}</div>
                 <div className="rmod-qcm-meta">QCM disponibles sur cette fiche</div>
+                <div className="rmod-qcm-actions">
+                  <button
+                    type="button"
+                    className="rmod-qcm-regen"
+                    onClick={generateQcms}
+                    disabled={generating}
+                    title="Régénérer les QCM (remplace les actuels)"
+                  >
+                    {generating ? '...' : 'Régénérer'}
+                  </button>
+                  <button
+                    type="button"
+                    className="rmod-qcm-cta"
+                    onClick={startQcmSession}
+                    disabled={generating}
+                  >
+                    Lancer une session
+                  </button>
+                </div>
+              </div>
+            ) : hasAnySource ? (
+              <div className="rmod-qcm-line">
+                <div className="rmod-qcm-meta rmod-qcm-meta-grow">
+                  Aucun QCM encore. L&apos;IA peut en générer depuis {hasVideo && hasPdf ? 'la vidéo et le PDF' : hasVideo ? 'la vidéo' : 'le PDF'}.
+                </div>
                 <button
                   type="button"
                   className="rmod-qcm-cta"
-                  onClick={startQcmSession}
+                  onClick={generateQcms}
+                  disabled={generating}
                 >
-                  Lancer une session
+                  {generating ? 'Génération… (30-60s)' : 'Générer les QCM'}
                 </button>
-              </div>
-            ) : hasAnySource ? (
-              <div className="rmod-qcm-empty">
-                Génération en cours dès que tu rouvriras cette fiche — l&apos;IA va lire {hasVideo && hasPdf ? 'la vidéo et le PDF' : hasVideo ? 'la vidéo' : 'le PDF'}.
               </div>
             ) : (
               <div className="rmod-qcm-empty">
                 Les QCM seront générés automatiquement <em>dès qu&apos;une source sera ajoutée</em>.
               </div>
+            )}
+
+            {genError && (
+              <div className="rmod-upload-error">{genError}</div>
+            )}
+            {genInfo && (
+              <div className="rmod-gen-info">{genInfo}</div>
             )}
           </>
         )}
