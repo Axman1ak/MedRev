@@ -1,10 +1,13 @@
 'use client'
 // src/app/dashboard/stats/page.tsx
 //
-// Bilan annuel — page rétrospective pure.
-// Pas de "fais ça" (le dashboard s'en charge), pas de top fragiles non plus.
-// Que des données long-terme : totaux annuels, heatmap 52 sem,
-// évolution 12 sem, maîtrise par palier J, dumbbell il y a 1 mois → maintenant.
+// Bilan annuel — page rétrospective.
+// Hero "847 révisions" + 3 secondaires (jours actifs / série / maîtrisées),
+// puis heatmap année, évolution 12 sem, palier J, dumbbell.
+//
+// Le filtre semestre est piloté par la sidebar globale (Sem 1 / Sem 2 / Année)
+// via localStorage 'medrev-sem' et l'event 'medrev-sem-change'. Pas de toggle
+// local — la duplication a été supprimée.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,6 +19,7 @@ const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
+type Semestre = 1 | 2 | 'year'
 type StepEntry = {
   score?: Score
   ok?: boolean       // legacy
@@ -214,9 +218,7 @@ function computeMatiereComparison(systems: System[], lessons: Lesson[], today: s
         if (!eff) continue
         const d = stepPostedDate(s)
         if (!d) continue
-        // état "maintenant" : tous les scores
         lNowSum += eff; lNowN++
-        // état "il y a 1 mois" : que les scores posés ≤ 30j
         if (d <= monthAgoStr) { lThenSum += eff; lThenN++ }
       }
       if (lNowN > 0) { sumNow += lNowSum / lNowN; nNow++ }
@@ -229,7 +231,6 @@ function computeMatiereComparison(systems: System[], lessons: Lesson[], today: s
     out.push({ system: sys, avgThen, avgNow, delta })
   }
 
-  // tri : ceux avec delta non null d'abord, par delta desc
   return out
     .filter(m => m.avgNow !== null)
     .sort((a, b) => {
@@ -297,6 +298,11 @@ function fmtDate(dateStr: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '')
 }
 
+function semLabel(s: Semestre): string {
+  if (s === 'year') return 'Année complète'
+  return `Semestre ${s}`
+}
+
 // ===================== PAGE =====================
 export default function StatsPage() {
   const supabase = createClient()
@@ -304,14 +310,25 @@ export default function StatsPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
-  const [semestre, setSemestre] = useState<1 | 2>(2)
+  const [semestre, setSemestre] = useState<Semestre>(2)
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
+  // Load initial semester from localStorage + listen to sidebar event
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemestre(raw === '1' ? 1 : 2)
+    const s: Semestre = raw === '1' ? 1 : raw === 'year' ? 'year' : 2
+    setSemestre(s)
+
+    function onSemChange(e: Event) {
+      const ce = e as CustomEvent<Semestre>
+      if (ce.detail === 1 || ce.detail === 2 || ce.detail === 'year') {
+        setSemestre(ce.detail)
+      }
+    }
+    window.addEventListener('medrev-sem-change', onSemChange)
+    return () => window.removeEventListener('medrev-sem-change', onSemChange)
   }, [])
 
   useEffect(() => {
@@ -331,7 +348,11 @@ export default function StatsPage() {
     return () => { cancelled = true }
   }, [supabase, router])
 
-  const semSystems = useMemo(() => systems.filter(s => s.semestre === semestre), [systems, semestre])
+  // En mode 'year' on prend tous les systèmes ; sinon on filtre par semestre.
+  const semSystems = useMemo(() => {
+    if (semestre === 'year') return systems
+    return systems.filter(s => s.semestre === semestre)
+  }, [systems, semestre])
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
@@ -355,13 +376,15 @@ export default function StatsPage() {
   const masteredCount = aggs.filter(a => a.isMastered).length
   const totalFiches = semLessons.length
 
-  // pour le sub-label de "jours actifs"
   const daySpan = useMemo(() => {
     if (!firstDay) return 0
     const t = new Date(today + 'T12:00:00')
     const f = new Date(firstDay + 'T12:00:00')
     return Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1)
   }, [firstDay, today])
+
+  const revsPerDay = activeDays > 0 ? totalRevs / activeDays : 0
+  const activePct = daySpan > 0 ? Math.round((activeDays / daySpan) * 100) : 0
 
   if (loading) {
     return (
@@ -391,49 +414,69 @@ export default function StatsPage() {
             Mon <em>année</em> en révisions
           </h1>
           <div className="stats-sub">
-            {totalRevs} révision{totalRevs > 1 ? 's' : ''} cumulée{totalRevs > 1 ? 's' : ''} sur {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}
+            {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}
             {longestStreak.length >= 2 ? ` · plus longue série : ${longestStreak.length} jours` : ''}
-          </div>
-        </div>
-        <div className="stats-sem-toggle">
-          <button className={semestre === 1 ? 'active' : ''} onClick={() => setSemestre(1)}>S1</button>
-          <button className={semestre === 2 ? 'active' : ''} onClick={() => setSemestre(2)}>S2</button>
-        </div>
-      </div>
-
-      <div className="stats-totals">
-        <div className="stats-total">
-          <div className="stats-total-label">Révisions totales</div>
-          <div className="stats-total-val">{totalRevs}</div>
-          <div className="stats-total-sub">
-            {firstDay ? `depuis ${fmtDate(firstDay)}` : 'aucune révision encore'}
-          </div>
-        </div>
-        <div className="stats-total">
-          <div className="stats-total-label">Jours actifs</div>
-          <div className="stats-total-val">{activeDays}</div>
-          <div className="stats-total-sub">
-            {daySpan > 0 ? `sur ${daySpan} jours · ${Math.round((activeDays / daySpan) * 100)}%` : '—'}
-          </div>
-        </div>
-        <div className="stats-total">
-          <div className="stats-total-label">Plus longue série</div>
-          <div className="stats-total-val">{longestStreak.length}</div>
-          <div className="stats-total-sub">
-            {longestStreak.length >= 2 && longestStreak.start && longestStreak.end
-              ? `jours · ${fmtDate(longestStreak.start)} → ${fmtDate(longestStreak.end)}`
-              : 'jour'}
-          </div>
-        </div>
-        <div className="stats-total">
-          <div className="stats-total-label">Fiches maîtrisées</div>
-          <div className="stats-total-val">{masteredCount}</div>
-          <div className="stats-total-sub">
-            sur {totalFiches} · avg ≥ 4 sur 5+ J
+            {' · '}{masteredCount} fiche{masteredCount > 1 ? 's' : ''} maîtrisée{masteredCount > 1 ? 's' : ''}
           </div>
         </div>
       </div>
 
+      {/* HERO + 3 SECONDAIRES */}
+      <div className="stats-totals-grid">
+        <div className="stats-hero-card">
+          <div className="stats-hero-label">
+            Révisions cumulées · {semLabel(semestre)}
+          </div>
+          <div className="stats-hero-display">
+            <span className="stats-hero-num">{totalRevs}</span>
+            <span className="stats-hero-unit">
+              révision{totalRevs > 1 ? 's' : ''}<br />
+              {firstDay ? <em>depuis le {fmtDate(firstDay)}</em> : <em>aucune révision</em>}
+            </span>
+          </div>
+          <div className="stats-hero-sub">
+            {activeDays > 0 ? (
+              <>Soit <strong>{revsPerDay.toFixed(1)} révisions/jour</strong> en moyenne sur tes {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}{daySpan > 0 ? ` (${activePct}% des ${daySpan} jours écoulés)` : ''}.</>
+            ) : (
+              <>Pas encore de révisions enregistrées sur cette période.</>
+            )}
+          </div>
+        </div>
+
+        <div className="stats-secondary">
+          <div className="stats-sec">
+            <div className="stats-sec-num">{activeDays}</div>
+            <div className="stats-sec-info">
+              <div className="stats-sec-label">Jours actifs</div>
+              <div className="stats-sec-sub">
+                {daySpan > 0 ? `sur ${daySpan} jours · ${activePct}% de présence` : '—'}
+              </div>
+            </div>
+          </div>
+          <div className="stats-sec">
+            <div className="stats-sec-num">{longestStreak.length}</div>
+            <div className="stats-sec-info">
+              <div className="stats-sec-label">Plus longue série</div>
+              <div className="stats-sec-sub">
+                {longestStreak.length >= 2 && longestStreak.start && longestStreak.end
+                  ? `jours · ${fmtDate(longestStreak.start)} → ${fmtDate(longestStreak.end)}`
+                  : 'jour'}
+              </div>
+            </div>
+          </div>
+          <div className="stats-sec">
+            <div className="stats-sec-num">{masteredCount}</div>
+            <div className="stats-sec-info">
+              <div className="stats-sec-label">Fiches maîtrisées</div>
+              <div className="stats-sec-sub">
+                sur {totalFiches} · avg ≥ 4 sur 5+ J
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* HEATMAP */}
       <div className="stats-card">
         <div className="stats-card-title">
           Activité de l&apos;année
