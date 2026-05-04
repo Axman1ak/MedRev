@@ -23,6 +23,16 @@ function letterFor(i: number): string {
   return String.fromCharCode(65 + i)
 }
 
+// Mélange Fisher-Yates : nouvel ordre à chaque session.
+function shuffleArr<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = a[i]; a[i] = a[j]; a[j] = tmp
+  }
+  return a
+}
+
 // Normalise un source_ref qui peut être objet, string legacy, ou null
 function normalizeSourceRef(raw: AiQuestion['source_ref']): AiQuestionSourceRef | null {
   if (!raw) return null
@@ -98,8 +108,10 @@ export default function QcmSessionPage() {
         return
       }
 
-      setQuestions(aiQs)
-      setAnswers(aiQs.map(() => ({ selected: null, isCorrect: null })))
+      // Mélange les questions à chaque ouverture : ordre différent à chaque session.
+      const shuffledQs = shuffleArr(aiQs)
+      setQuestions(shuffledQs)
+      setAnswers(shuffledQs.map(() => ({ selected: null, isCorrect: null })))
       setStartTime(Date.now())
       setPhase('question')
     }
@@ -146,7 +158,7 @@ export default function QcmSessionPage() {
       quitToFiches()
       return
     }
-    const missedQs = missedIndices.map(i => questions[i])
+    const missedQs = shuffleArr(missedIndices.map(i => questions[i]))
     setQuestions(missedQs)
     setAnswers(missedQs.map(() => ({ selected: null, isCorrect: null })))
     setCurrentIdx(0)
