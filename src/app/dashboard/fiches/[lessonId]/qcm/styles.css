@@ -1,0 +1,483 @@
+@charset "UTF-8";
+/* src/app/dashboard/fiches/[lessonId]/qcm/styles.css
+   Page de session QCM par fiche. Préfixe scope : .qcm-* */
+
+.qcm-page {
+  min-height: 100vh;
+  background: var(--bg, #EDEAE3);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--dark, #111310);
+  position: relative;
+}
+
+/* ---- Loading / empty ---- */
+.qcm-loading {
+  padding: 80px 20px;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--gray, #6B6F6A);
+  font-size: 16px;
+}
+
+.qcm-empty {
+  max-width: 560px;
+  margin: 80px auto 0;
+  padding: 0 32px;
+  text-align: center;
+}
+.qcm-empty-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 28px;
+  color: var(--dark, #111310);
+  margin: 0 0 12px;
+  letter-spacing: -.01em;
+}
+.qcm-empty-title em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--gm, #2D6A4F);
+  font-weight: 500;
+  font-size: 28px;
+}
+.qcm-empty-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--gray, #6B6F6A);
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+.qcm-empty-text em {
+  font-family: 'Fraunces', serif;
+  color: var(--gm, #2D6A4F);
+  font-weight: 500;
+  font-size: 16px;
+}
+.qcm-empty-btn {
+  appearance: none;
+  border: 1px solid var(--border, #E1DDD3);
+  background: #fff;
+  color: var(--green, #1B4332);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.qcm-empty-btn:hover {
+  border-color: var(--green, #1B4332);
+}
+
+/* ---- Topbar ---- */
+.qcm-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 32px 0;
+}
+.qcm-topback {
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #E1DDD3);
+  background: #fff;
+  color: var(--gray, #6B6F6A);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.qcm-topback:hover { color: var(--dark, #111310); border-color: var(--gray, #6B6F6A); }
+.qcm-ctx {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--gray, #6B6F6A);
+  font-size: 14px;
+}
+.qcm-ctx strong {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--dark, #111310);
+  font-size: 13px;
+}
+.qcm-ctx em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--gm, #2D6A4F);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* ---- Content wrapper ---- */
+.qcm-content {
+  max-width: 720px;
+  margin: 28px auto 60px;
+  padding: 0 32px;
+}
+
+/* ---- Progress ---- */
+.qcm-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 36px;
+}
+.qcm-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border, #E1DDD3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.qcm-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--green, #1B4332);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+.qcm-progress-lbl {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray, #6B6F6A);
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Question stem ---- */
+.qcm-q-kicker {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--gm, #2D6A4F);
+  margin-bottom: 12px;
+}
+.qcm-q-stem {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 24px;
+  color: var(--dark, #111310);
+  line-height: 1.35;
+  letter-spacing: -.005em;
+  margin: 0 0 28px;
+}
+.qcm-q-stem em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--gm, #2D6A4F);
+  font-weight: 500;
+  font-size: 24px;
+}
+
+/* ---- Options ---- */
+.qcm-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.qcm-option {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--border, #E1DDD3);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all .12s ease;
+}
+.qcm-option:not(:disabled):hover {
+  border-color: var(--gray, #6B6F6A);
+  background: var(--soft, #FAF8F2);
+}
+.qcm-option .qcm-letter {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--soft, #FAF8F2);
+  border: 1px solid var(--border, #E1DDD3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--dark, #111310);
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.qcm-option .qcm-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  color: var(--dark, #111310);
+  flex: 1;
+  line-height: 1.5;
+}
+.qcm-option .qcm-mark {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.qcm-option.selected {
+  border-color: var(--gm, #2D6A4F);
+  background: rgba(45, 106, 79, .06);
+}
+.qcm-option.selected .qcm-letter {
+  background: var(--gm, #2D6A4F);
+  color: #fff;
+  border-color: var(--gm, #2D6A4F);
+}
+
+.qcm-option.correct {
+  border-color: var(--gm, #2D6A4F);
+  background: var(--gl, #D8EAE0);
+}
+.qcm-option.correct .qcm-letter {
+  background: var(--gm, #2D6A4F);
+  color: #fff;
+  border-color: var(--gm, #2D6A4F);
+}
+.qcm-option.correct .qcm-mark { color: var(--gm, #2D6A4F); }
+
+.qcm-option.wrong {
+  border-color: var(--rose, #C75050);
+  background: rgba(199, 80, 80, .06);
+}
+.qcm-option.wrong .qcm-letter {
+  background: var(--rose, #C75050);
+  color: #fff;
+  border-color: var(--rose, #C75050);
+}
+.qcm-option.wrong .qcm-mark { color: var(--rose, #C75050); }
+
+.qcm-option.dim { opacity: .5; }
+.qcm-option:disabled { cursor: default; }
+
+/* ---- Feedback ---- */
+.qcm-feedback {
+  margin-top: 24px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid var(--border, #E1DDD3);
+  border-radius: 14px;
+}
+.qcm-feedback.wrong { border-left: 3px solid var(--rose, #C75050); }
+.qcm-feedback.right { border-left: 3px solid var(--gm, #2D6A4F); }
+
+.qcm-feedback-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  margin-bottom: 8px;
+}
+.qcm-feedback.wrong .qcm-feedback-label { color: var(--rose, #C75050); }
+.qcm-feedback.right .qcm-feedback-label { color: var(--gm, #2D6A4F); }
+
+.qcm-feedback-text {
+  margin: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15.5px;
+  color: var(--dark, #111310);
+  line-height: 1.55;
+}
+
+.qcm-source-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #E1DDD3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.qcm-source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray, #6B6F6A);
+  background: var(--soft, #FAF8F2);
+  border: 1px solid var(--border, #E1DDD3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.qcm-source-tag.video::before { content: "\25B6"; color: var(--green, #1B4332); font-size: 9px; }
+.qcm-source-tag.pdf::before { content: "p."; color: var(--amber, #C47B2B); font-weight: 700; font-size: 10px; }
+
+.qcm-source-jump {
+  margin-left: auto;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border, #E1DDD3);
+  color: var(--green, #1B4332);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.qcm-source-jump:hover {
+  background: var(--gl, #D8EAE0);
+  border-color: var(--green, #1B4332);
+}
+
+/* ---- Action buttons ---- */
+.qcm-actions {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.qcm-validate, .qcm-next {
+  appearance: none;
+  border: none;
+  background: var(--green, #1B4332);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: .01em;
+}
+.qcm-validate:not(:disabled):hover, .qcm-next:hover {
+  background: var(--gm, #2D6A4F);
+}
+.qcm-validate:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+/* ---- End screen ---- */
+.qcm-end {
+  max-width: 640px;
+  margin: 28px auto 60px;
+  padding: 0 32px;
+  text-align: center;
+}
+.qcm-end-score {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 96px;
+  line-height: 1;
+  letter-spacing: -.02em;
+  margin: 60px 0 12px;
+  position: relative;
+}
+.qcm-end-score.ok { color: var(--green, #1B4332); }
+.qcm-end-score.amber { color: var(--amber, #C47B2B); }
+.qcm-end-score.rose { color: var(--rose, #C75050); }
+.qcm-end-pct {
+  font-size: 0.45em;
+  vertical-align: top;
+  margin-left: 4px;
+  opacity: .7;
+}
+.qcm-end-message {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--gray, #6B6F6A);
+  margin-bottom: 38px;
+}
+.qcm-end-message strong {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--dark, #111310);
+  font-size: 14px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+
+.qcm-end-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.qcm-end-stats:has(.qcm-end-stat:nth-child(4)) {
+  grid-template-columns: repeat(4, 1fr);
+}
+.qcm-end-stat {
+  background: #fff;
+  border: 1px solid var(--border, #E1DDD3);
+  border-radius: 14px;
+  padding: 16px 12px;
+}
+.qcm-end-stat-num {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 26px;
+  color: var(--dark, #111310);
+  line-height: 1;
+}
+.qcm-end-stat-num.ok { color: var(--gm, #2D6A4F); }
+.qcm-end-stat-num.ko { color: var(--rose, #C75050); }
+.qcm-end-stat-lbl {
+  margin-top: 6px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--gray, #6B6F6A);
+}
+
+.qcm-end-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.qcm-end-btn {
+  appearance: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 11px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.qcm-end-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--border, #E1DDD3);
+  color: var(--green, #1B4332);
+}
+.qcm-end-btn.ghost:hover {
+  border-color: var(--green, #1B4332);
+}
+.qcm-end-btn.primary {
+  background: var(--green, #1B4332);
+  color: #fff;
+  border: none;
+}
+.qcm-end-btn.primary:not(:disabled):hover {
+  background: var(--gm, #2D6A4F);
+}
+.qcm-end-btn:disabled {
+  opacity: .4;
+  cursor: default;
+}
