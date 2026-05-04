@@ -123,7 +123,7 @@ export default function CalendarPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [semester, setSemester] = useState<1 | 2>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
   const [weekOffset, setWeekOffset] = useState(0)
   const [monthOffset, setMonthOffset] = useState(0)
   const [view, setView] = useState<'week' | 'month'>('week')
@@ -150,14 +150,14 @@ export default function CalendarPage() {
     })
   }, [load, router, supabase])
 
-  // Semester toggle from layout
+  // Semester toggle from layout (S1 / S2 / Année)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : 2)
+    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
     function handler(e: Event) {
-      const detail = (e as CustomEvent<1 | 2>).detail
-      if (detail === 1 || detail === 2) setSemester(detail)
+      const detail = (e as CustomEvent<1 | 2 | 'year'>).detail
+      if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)
     }
     window.addEventListener('medrev-sem-change', handler)
     return () => window.removeEventListener('medrev-sem-change', handler)
@@ -172,7 +172,11 @@ export default function CalendarPage() {
   }, [])
 
   // ============= Derived =============
-  const semSystems = useMemo(() => systems.filter(s => s.semestre === semester), [systems, semester])
+  // En mode 'year' : tous les systèmes ; sinon filtre par semestre
+  const semSystems = useMemo(
+    () => semester === 'year' ? systems : systems.filter(s => s.semestre === semester),
+    [systems, semester]
+  )
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
@@ -335,7 +339,7 @@ export default function CalendarPage() {
       {/* EMPTY STATE */}
       {!hasAnyLesson && (
         <div className="cal-empty-state">
-          <div>Pas encore de fiche pour le semestre {semester}.</div>
+          <div>Pas encore de fiche pour {semester === 'year' ? 'l\'année' : `le semestre ${semester}`}.</div>
           <Link href="/dashboard/fiches">Crée tes premières fiches →</Link>
         </div>
       )}
