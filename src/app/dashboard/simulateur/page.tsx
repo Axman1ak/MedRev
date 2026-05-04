@@ -1,12 +1,10 @@
 'use client'
 // src/app/dashboard/simulateur/page.tsx
 //
-// Simulateur d'examen — refonte complète.
-// 3 phases : config / session / results.
-// 2 modes : apprentissage (reveal + explanation + self-rating)
-//          / examen blanc (pas de feedback, navigation libre, grille style concours).
-//
-// Le toggle semestre (S1/S2/Année) de la sidebar pilote les matières disponibles.
+// Simulateur d'examen — refonte + fixes 2026-05 :
+// - bug 1 (race condition) : setTimeLeft fait dans launchSession AVANT setPhase
+// - bug 3 : les options A-E à gauche ne sont plus cliquables (réponse via la grille de droite uniquement)
+// - bug 4 : header A-E aligné par colonne dans la SheetGrid
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -14,7 +12,6 @@ import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
-// ===================== TYPES =====================
 type Semestre = 1 | 2 | 'year'
 type Mode = 'apprentissage' | 'examen'
 type Phase = 'config' | 'session' | 'results'
@@ -34,7 +31,6 @@ interface Question {
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 
-// ===================== STEP HELPERS (pour Angles morts) =====================
 type StepEntry = {
   score?: number
   ok?: boolean
@@ -84,7 +80,6 @@ function scoreClass(avg: number | null): string {
   return 's5'
 }
 
-// ===================== QUESTIONS PARSING =====================
 function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Question[] {
   const raw = lesson.ai_questions as unknown[]
   if (!Array.isArray(raw) || raw.length === 0) return []
@@ -127,7 +122,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function letterFor(i: number): string {
-  return String.fromCharCode(65 + i) // 0 → A, 1 → B, …
+  return String.fromCharCode(65 + i)
 }
 
 function formatTime(s: number): string {
@@ -136,7 +131,6 @@ function formatTime(s: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-// ===================== PAGE =====================
 export default function SimulateurPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -148,13 +142,11 @@ export default function SimulateurPage() {
 
   const [selectedSysIds, setSelectedSysIds] = useState<Set<string>>(new Set())
 
-  // Config
   const [nbQuestions, setNbQuestions] = useState(20)
   const [duration, setDuration] = useState<number | null>(30)
   const [selectionMode, setSelectionMode] = useState<Selection>('random')
   const [mode, setMode] = useState<Mode>('apprentissage')
 
-  // Session state
   const [phase, setPhase] = useState<Phase>('config')
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -164,7 +156,6 @@ export default function SimulateurPage() {
   const [timeLeft, setTimeLeft] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ===================== LOAD =====================
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
@@ -182,7 +173,6 @@ export default function SimulateurPage() {
     })
   }, [supabase, router, load])
 
-  // ===================== SEMESTER LISTENER =====================
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
@@ -195,18 +185,15 @@ export default function SimulateurPage() {
     return () => window.removeEventListener('medrev-sem-change', onSem)
   }, [])
 
-  // Filtre matières par semestre
   const semSystems = useMemo(
     () => semester === 'year' ? systems : systems.filter(s => s.semestre === semester),
     [systems, semester]
   )
 
-  // Sélectionne toutes les matières du semestre courant par défaut
   useEffect(() => {
     setSelectedSysIds(new Set(semSystems.map(s => s.id)))
   }, [semSystems])
 
-  // ===================== AVAILABLE QUESTIONS =====================
   function countQuestionsForSystem(sysId: string): number {
     return lessons
       .filter(l => l.system_id === sysId)
@@ -236,29 +223,31 @@ export default function SimulateurPage() {
 
   const totalAvailable = availableQuestions.length
 
-  // ===================== TIMER =====================
-  useEffect(() => {
-    if (phase === 'session' && duration !== null) {
-      setTimeLeft(duration * 60)
-    }
-  }, [phase, duration])
-
+  // ============================================================
+  // TIMER — un SEUL effet, géré par décrément. timeLeft est initialisé
+  // dans launchSession() avant le passage en phase 'session', donc pas
+  // de race condition.
+  // ============================================================
   useEffect(() => {
     if (phase !== 'session' || duration === null) return
-    if (timeLeft <= 0) { endSession(); return }
+    if (timeLeft <= 0) {
+      // 0 atteint après décrément depuis valeur positive : timer expiré.
+      // Si on vient de switcher en phase session sans avoir initialisé
+      // (ne devrait pas arriver, mais filet de sécurité), on ne fait rien.
+      if (sessionQuestions.length > 0) endSession()
+      return
+    }
     timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, timeLeft])
 
-  // ===================== ACTIONS =====================
   function launchSession() {
     if (totalAvailable === 0) return
 
     let qs = [...availableQuestions]
 
     if (selectionMode === 'weak') {
-      // Pondère vers les leçons fragiles : poids = (5 - avg) si avg dispo, sinon 3
       const lessonAvgs = new Map<string, number>()
       for (const l of lessons) {
         const a = lessonAvg(l)
@@ -280,11 +269,17 @@ export default function SimulateurPage() {
     setAnswers(new Array(qs.length).fill(null))
     setRevealed(new Array(qs.length).fill(false))
     setSelfRatings(new Array(qs.length).fill(''))
+    // Init timeLeft AVANT setPhase pour éviter la race condition
+    // entre l'effet timer et l'effet d'init du timeLeft (bug fixe 2026-05).
+    if (duration !== null) {
+      setTimeLeft(duration * 60)
+    } else {
+      setTimeLeft(0)
+    }
     setPhase('session')
   }
 
   function selectOption(optIdx: number) {
-    // Si déjà révélée en mode app, on ignore
     if (mode === 'apprentissage' && revealed[currentIdx]) return
 
     const newAnswers = [...answers]
@@ -322,7 +317,6 @@ export default function SimulateurPage() {
 
   function endSession() {
     if (timerRef.current) clearTimeout(timerRef.current)
-    // En examen blanc, on révèle tout pour la phase results
     if (mode === 'examen') {
       setRevealed(new Array(sessionQuestions.length).fill(true))
     }
@@ -335,6 +329,7 @@ export default function SimulateurPage() {
     setAnswers([])
     setRevealed([])
     setSelfRatings([])
+    setTimeLeft(0)
   }
 
   function replayMissed() {
@@ -345,17 +340,19 @@ export default function SimulateurPage() {
     setAnswers(new Array(missed.length).fill(null))
     setRevealed(new Array(missed.length).fill(false))
     setSelfRatings(new Array(missed.length).fill(''))
+    if (duration !== null) {
+      setTimeLeft(duration * 60)
+    } else {
+      setTimeLeft(0)
+    }
     setPhase('session')
   }
 
-  // ===================== STATS DERIVED =====================
   const correctCount = answers.filter((a, i) => a !== null && a === sessionQuestions[i]?.answer).length
   const wrongCount = answers.filter((a, i) => a !== null && a !== sessionQuestions[i]?.answer).length
   const answeredCount = answers.filter(a => a !== null).length
   const score = sessionQuestions.length > 0 ? Math.round((correctCount / sessionQuestions.length) * 100) : 0
-  const timeUsed = duration !== null ? duration * 60 - timeLeft : 0
 
-  // ===================== RENDER =====================
   if (loading) {
     return (
       <div className="sim-page">
@@ -368,7 +365,6 @@ export default function SimulateurPage() {
   if (phase === 'session') return renderSession()
   return renderResults()
 
-  // ===================== CONFIG VIEW =====================
   function renderConfig() {
     const summary = {
       mode: mode === 'apprentissage' ? 'Apprentissage' : 'Examen blanc',
@@ -381,7 +377,6 @@ export default function SimulateurPage() {
 
     return (
       <div className="sim-page">
-
         <div className="sim-header">
           <div>
             <h1 className="sim-title">Simulateur d&apos;<em>examen</em></h1>
@@ -392,11 +387,7 @@ export default function SimulateurPage() {
         </div>
 
         <div className="sim-cfg-grid">
-
-          {/* ===== LEFT ===== */}
           <div className="sim-cfg-left">
-
-            {/* Matières */}
             <div className="sim-card">
               <div className="sim-card-h">
                 Matières à inclure
@@ -438,7 +429,6 @@ export default function SimulateurPage() {
               </div>
             </div>
 
-            {/* Options : 3 sub-cards */}
             <div className="sim-opt-row">
               <div className="sim-opt-card">
                 <div className="sim-opt-h">Nb questions</div>
@@ -471,11 +461,9 @@ export default function SimulateurPage() {
               </div>
             </div>
 
-            {/* Mode card */}
             <div className="sim-card sim-mode-card">
               <div className="sim-card-h">Mode de session</div>
               <div className="sim-mode-pills">
-
                 <button
                   className={`sim-mode-pill${mode === 'apprentissage' ? ' sel' : ''}`}
                   onClick={() => setMode('apprentissage')}
@@ -489,7 +477,7 @@ export default function SimulateurPage() {
                     <div className="sim-mp-app-q">Quel mécanisme principal de la dyspnée ?</div>
                     <div className="sim-mp-app-opt dim"><span className="mark">A.</span>Bronchospasme vagal</div>
                     <div className="sim-mp-app-opt wrong"><span className="mark">B.</span>Hyperventilation</div>
-                    <div className="sim-mp-app-opt right"><span className="mark">C.</span>Redistribution sanguine<span className="check">✓</span></div>
+                    <div className="sim-mp-app-opt right"><span className="mark">C.</span>Redistribution sanguine<span className="check">{'✓'}</span></div>
                     <div className="sim-mp-app-opt dim"><span className="mark">D.</span>Activation rénine-angiotensine</div>
                     <div className="sim-mp-app-opt dim"><span className="mark">E.</span>Décompression abdominale</div>
                     <div className="sim-mp-app-explain">
@@ -539,13 +527,10 @@ export default function SimulateurPage() {
                     <div className="sim-mp-ex-bottom">Tu coches, tu valides à la fin · 0 indice.</div>
                   </div>
                 </button>
-
               </div>
             </div>
-
           </div>
 
-          {/* ===== RIGHT : Hero CTA ===== */}
           <div className="sim-hero">
             <div className="sim-hero-tag">Prêt à lancer</div>
             <div className="sim-hero-display">
@@ -586,13 +571,11 @@ export default function SimulateurPage() {
                 : 'Lancer la session →'}
             </button>
           </div>
-
         </div>
       </div>
     )
   }
 
-  // ===================== SESSION VIEW =====================
   function renderSession() {
     const q = sessionQuestions[currentIdx]
     if (!q) return <div className="sim-page"><div className="sim-loading">…</div></div>
@@ -602,8 +585,6 @@ export default function SimulateurPage() {
 
     return (
       <div className="sim-page">
-
-        {/* HEADER */}
         <div className="sim-ses-header">
           <div className="sim-ses-header-l">
             <span className={`sim-ses-tag ${mode === 'apprentissage' ? 'app' : 'ex'}`}>
@@ -647,10 +628,7 @@ export default function SimulateurPage() {
           <button className="sim-ses-quit" onClick={endSession}>Terminer</button>
         </div>
 
-        {/* GRID 1.5fr 1fr */}
         <div className="sim-ses-grid">
-
-          {/* LEFT : Question */}
           <div className="sim-ses-q">
             <div className="sim-ses-q-meta">
               <em>Question {currentIdx + 1} / {sessionQuestions.length}</em>
@@ -658,6 +636,8 @@ export default function SimulateurPage() {
             </div>
             <div className="sim-ses-q-text">{q.question}</div>
 
+            {/* Bug 3 fix : options NON cliquables. Réponse via la grille à droite uniquement.
+                On garde l'affichage (lettre + texte + état) mais sans onClick et toujours disabled. */}
             <div className="sim-ses-q-options">
               {q.options.map((opt, i) => {
                 const isSelected = selectedAnswer === i
@@ -674,8 +654,9 @@ export default function SimulateurPage() {
                   <button
                     key={i}
                     className={cls}
-                    disabled={mode === 'apprentissage' && isRevealed}
-                    onClick={() => selectOption(i)}
+                    disabled
+                    type="button"
+                    aria-label={`Option ${letterFor(i)} — réponse via la grille à droite`}
                   >
                     <span className="sim-ses-q-opt-letter">{letterFor(i)}.</span>
                     {opt}
@@ -684,7 +665,6 @@ export default function SimulateurPage() {
               })}
             </div>
 
-            {/* Explication + self-rating (Apprentissage only, après reveal) */}
             {mode === 'apprentissage' && isRevealed && (
               <>
                 <div className="sim-ses-explain">
@@ -723,12 +703,11 @@ export default function SimulateurPage() {
             </div>
           </div>
 
-          {/* RIGHT : Answer grid */}
           <div className="sim-ses-sheet">
             <div className="sim-ses-sheet-h">
               Grille de réponses
               <span className="sim-meta">
-                {mode === 'apprentissage' ? 'vert = correct · rouge = raté' : 'clique pour aller à une question'}
+                {mode === 'apprentissage' ? 'vert = correct · rouge = raté' : 'clique pour répondre · navigation par ligne'}
               </span>
             </div>
             <SheetGrid
@@ -755,13 +734,11 @@ export default function SimulateurPage() {
               </span>
             </div>
           </div>
-
         </div>
       </div>
     )
   }
 
-  // ===================== RESULTS VIEW =====================
   function renderResults() {
     const message = score >= 70 ? 'Excellente session' : score >= 50 ? 'Bonne session' : 'À retravailler'
     const submessage = score >= 70 ? '— tu maîtrises l\'essentiel.' : score >= 50 ? '— tu progresses, continue.' : '— c\'est en faisant les fautes qu\'on apprend.'
@@ -779,7 +756,6 @@ export default function SimulateurPage() {
 
     return (
       <div className="sim-page">
-
         <div className="sim-header">
           <div>
             <h1 className="sim-title">Session <em>terminée</em></h1>
@@ -788,7 +764,6 @@ export default function SimulateurPage() {
         </div>
 
         <div className="sim-res-wrap">
-
           <div className="sim-res-hero">
             <div className="sim-res-tag">Mode {mode === 'apprentissage' ? 'apprentissage' : 'examen blanc'}</div>
             <div className={`sim-res-score ${scoreCls}`}>{score}<sup>%</sup></div>
@@ -841,14 +816,16 @@ export default function SimulateurPage() {
               {wrongCount > 0 ? `Refaire les ${wrongCount} ratée${wrongCount > 1 ? 's' : ''} →` : 'Aucune ratée'}
             </button>
           </div>
-
         </div>
       </div>
     )
   }
 }
 
-// ===================== ANSWER GRID =====================
+// ============================================================
+// SHEET GRID — bug 4 fix : header A B C D E par colonne
+// pour qu'ils soient alignés avec leurs bulles respectives.
+// ============================================================
 function SheetGrid({
   questions,
   answers,
@@ -866,13 +843,11 @@ function SheetGrid({
   onRowClick: (i: number) => void
   onBubbleClick: (qi: number, oi: number) => void
 }) {
-  // On découpe les questions en 2 colonnes égales
   const total = questions.length
   const half = Math.ceil(total / 2)
   const col1 = questions.slice(0, half)
   const col2 = questions.slice(half)
 
-  // Détecte le nombre max d'options sur l'ensemble (souvent 5)
   const maxOpts = questions.reduce((m, q) => Math.max(m, q.options.length), 5)
   const letters = Array.from({ length: maxOpts }, (_, i) => letterFor(i))
 
@@ -909,19 +884,28 @@ function SheetGrid({
     )
   }
 
+  // Header réutilisable (utilisé en haut de chaque colonne)
+  const headerJsx = (
+    <div
+      className="sim-ses-sheet-headers"
+      style={{ gridTemplateColumns: `26px repeat(${maxOpts}, 1fr)` }}
+    >
+      <div className="h"></div>
+      {letters.map(l => <div key={l} className="h">{l}</div>)}
+    </div>
+  )
+
   return (
     <div className="sim-ses-sheet-wrap">
-      <div className="sim-ses-sheet-headers" style={{ gridTemplateColumns: `26px repeat(${maxOpts}, 1fr)` }}>
-        <div className="h"></div>
-        {letters.map(l => <div key={l} className="h">{l}</div>)}
-      </div>
       <div className="sim-ses-sheet-grid">
         <div>
+          {headerJsx}
           {col1.map((q, i) => (
             <div key={i} style={{ ['--cols' as never]: maxOpts }}>{renderRow(q, i)}</div>
           ))}
         </div>
         <div>
+          {headerJsx}
           {col2.map((q, i) => (
             <div key={i + half} style={{ ['--cols' as never]: maxOpts }}>{renderRow(q, i + half)}</div>
           ))}
@@ -931,5 +915,4 @@ function SheetGrid({
   )
 }
 
-// ===================== PALETTE FALLBACK (si systems n'a pas de color) =====================
 const PALETTE = ['#7AA56B', '#60A5FA', '#F59E0B', '#A78BFA', '#F472B6', '#2D6A4F', '#9CA3AF']
