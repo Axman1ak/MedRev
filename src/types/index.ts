@@ -20,14 +20,22 @@ export interface StepEntry {
   // Legacy (anciens enregistrements)
   ok?: boolean
 }
+// Référence vers la source qui a fourni la question (vidéo et/ou PDF).
+// Utilisée par le bouton "Voir la source ↗" en cas de réponse fausse.
+export interface AiQuestionSourceRef {
+  pdf_page?: number   // numéro de page (1-N) dans le PDF
+  video_ts?: number   // timestamp en secondes dans la vidéo
+}
 export interface AiQuestion {
-  type: 'qcm' | 'kfp' | 'vf'
-  stem: string
-  context: string | null
+  question: string
   options: string[]
-  correct: number
+  answer: number          // index 0-based de la bonne réponse
   explanation: string
-  source_ref: string
+  // Forme objet (post-2026-05) ou string (legacy data) ou absent.
+  source_ref?: AiQuestionSourceRef | string | null
+  // Optionnels rétro-compat (anciennes générations)
+  type?: 'qcm' | 'kfp' | 'vf'
+  context?: string | null
 }
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
