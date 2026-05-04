@@ -154,8 +154,8 @@
   border: 1.5px solid #C75050;
 }
 .rmod-stamp.today {
-  background: transparent;
-  border: 1.5px dashed #6B6F6A;
+  background: #6B6F6A;
+  border: none;
   box-shadow: none;
 }
 
