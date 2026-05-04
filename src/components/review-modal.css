@@ -157,6 +157,8 @@
   background: #6B6F6A;
   border: none;
   box-shadow: none;
+  outline: 1.5px dashed #6B6F6A;
+  outline-offset: 2px;
 }
 
 .rmod-hint {
