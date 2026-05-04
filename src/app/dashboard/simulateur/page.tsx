@@ -1,87 +1,223 @@
 'use client'
 // src/app/dashboard/simulateur/page.tsx
+//
+// Simulateur d'examen — refonte complète.
+// 3 phases : config / session / results.
+// 2 modes : apprentissage (reveal + explanation + self-rating)
+//          / examen blanc (pas de feedback, navigation libre, grille style concours).
+//
+// Le toggle semestre (S1/S2/Année) de la sidebar pilote les matières disponibles.
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import './styles.css'
 
-const SYS_COLORS: [string, string][] = [
-  ['#4ADE80', '#166534'],
-  ['#60A5FA', '#1D4ED8'],
-  ['#F59E0B', '#92400E'],
-  ['#F472B6', '#9D174D'],
-  ['#A78BFA', '#6D28D9'],
-  ['#2D6A4F', '#D8EAE0'],
-  ['#9CA3AF', '#374151'],
-]
+// ===================== TYPES =====================
+type Semestre = 1 | 2 | 'year'
+type Mode = 'apprentissage' | 'examen'
+type Phase = 'config' | 'session' | 'results'
+type Selection = 'random' | 'weak'
 
 interface Question {
   question: string
   options: string[]
   answer: number
   source?: string
+  explanation?: string
+  lessonId?: string
   lessonName?: string
   systemName?: string
+  systemId?: string
 }
 
-function parseQuestions(lesson: Lesson, systemName: string): Question[] {
-  const raw = lesson.ai_questions as any[]
+const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+
+// ===================== STEP HELPERS (pour Angles morts) =====================
+type StepEntry = {
+  score?: number
+  ok?: boolean
+  date?: string
+  note?: string
+  temp_score?: number
+  temp_date?: string
+} | null
+
+function stepScore(s: StepEntry): number | null {
+  if (!s) return null
+  if (typeof (s as { score?: number }).score === 'number') {
+    const sc = (s as { score: number }).score
+    if (sc >= 1 && sc <= 5) return sc
+  }
+  if (typeof (s as { ok?: boolean }).ok === 'boolean') {
+    return (s as { ok: boolean }).ok ? 5 : 1
+  }
+  return null
+}
+
+function effectiveStepScore(s: StepEntry): number | null {
+  const off = stepScore(s)
+  if (off) return off
+  if (!s) return null
+  const t = (s as { temp_score?: number }).temp_score
+  if (typeof t === 'number' && t >= 1 && t <= 5) return t
+  return null
+}
+
+function lessonAvg(lesson: Lesson): number | null {
+  const steps = (lesson.steps as StepEntry[]) || []
+  let sum = 0, n = 0
+  for (let i = 0; i < J.length; i++) {
+    const eff = effectiveStepScore(steps[i])
+    if (eff) { sum += eff; n++ }
+  }
+  return n > 0 ? sum / n : null
+}
+
+// ===================== QUESTIONS PARSING =====================
+function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Question[] {
+  const raw = lesson.ai_questions as unknown[]
   if (!Array.isArray(raw) || raw.length === 0) return []
-  return raw.map((q: any) => ({
-    question: q.question || q.q || '',
-    options: q.options || q.opts || [],
-    answer: typeof q.answer === 'number' ? q.answer : (typeof q.correct_index === 'number' ? q.correct_index : 0),
-    source: q.source || q.src || undefined,
-    lessonName: lesson.name,
-    systemName,
-  })).filter(q => q.question && q.options.length >= 2)
+  const out: Question[] = []
+  for (const r of raw) {
+    if (!r || typeof r !== 'object') continue
+    const q = r as Record<string, unknown>
+    const question = (q.question as string) || (q.q as string) || ''
+    const options = (q.options as string[]) || (q.opts as string[]) || []
+    const answer = typeof q.answer === 'number'
+      ? (q.answer as number)
+      : typeof q.correct_index === 'number'
+        ? (q.correct_index as number)
+        : 0
+    const source = (q.source as string) || (q.src as string) || undefined
+    const explanation = (q.explanation as string) || (q.explication as string) || undefined
+    if (!question || !Array.isArray(options) || options.length < 2) continue
+    out.push({
+      question,
+      options,
+      answer,
+      source,
+      explanation,
+      lessonId: lesson.id,
+      lessonName: lesson.name,
+      systemName,
+      systemId,
+    })
+  }
+  return out
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function letterFor(i: number): string {
+  return String.fromCharCode(65 + i) // 0 → A, 1 → B, …
+}
+
+function formatTime(s: number): string {
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+// ===================== PAGE =====================
 export default function SimulateurPage() {
   const supabase = createClient()
   const router = useRouter()
 
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [loading, setLoading] = useState(true)
+  const [semester, setSemester] = useState<Semestre>(2)
+
   const [selectedSysIds, setSelectedSysIds] = useState<Set<string>>(new Set())
 
   // Config
   const [nbQuestions, setNbQuestions] = useState(20)
-  const [duration, setDuration] = useState<number | null>(30) // minutes, null = libre
-  const [selectionMode, setSelectionMode] = useState<'random' | 'weak'>('random')
+  const [duration, setDuration] = useState<number | null>(30)
+  const [selectionMode, setSelectionMode] = useState<Selection>('random')
+  const [mode, setMode] = useState<Mode>('apprentissage')
 
   // Session state
-  type Phase = 'config' | 'session' | 'results'
   const [phase, setPhase] = useState<Phase>('config')
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [answers, setAnswers] = useState<(number | null)[]>([]) // selected option per question
-  const [revealed, setRevealed] = useState(false)
-  const [selfRatings, setSelfRatings] = useState<string[]>([]) // 'reprendre'|'difficile'|'bien'|'facile'
-  const [timeLeft, setTimeLeft] = useState(0) // seconds
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [answers, setAnswers] = useState<(number | null)[]>([])
+  const [revealed, setRevealed] = useState<boolean[]>([])
+  const [selfRatings, setSelfRatings] = useState<string[]>([])
+  const [timeLeft, setTimeLeft] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ===================== LOAD =====================
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid),
     ])
-    setSystems(sys || [])
-    setLessons(les || [])
-    if (sys && sys.length > 0) {
-      setSelectedSysIds(new Set(sys.map((s: System) => s.id)))
-    }
-  }, [])
+    setSystems((sys as System[] | null) ?? [])
+    setLessons((les as Lesson[] | null) ?? [])
+    setLoading(false)
+  }, [supabase])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
       load(user.id)
     })
+  }, [supabase, router, load])
+
+  // ===================== SEMESTER LISTENER =====================
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = localStorage.getItem('medrev-sem')
+    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
+    const onSem = (e: Event) => {
+      const detail = (e as CustomEvent<Semestre>).detail
+      if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)
+    }
+    window.addEventListener('medrev-sem-change', onSem)
+    return () => window.removeEventListener('medrev-sem-change', onSem)
   }, [])
 
-  // Timer
+  // Filtre matières par semestre
+  const semSystems = useMemo(
+    () => semester === 'year' ? systems : systems.filter(s => s.semestre === semester),
+    [systems, semester]
+  )
+
+  // Sélectionne toutes les matières du semestre courant par défaut
+  useEffect(() => {
+    setSelectedSysIds(new Set(semSystems.map(s => s.id)))
+  }, [semSystems])
+
+  // ===================== AVAILABLE QUESTIONS =====================
+  function countQuestionsForSystem(sysId: string): number {
+    return lessons
+      .filter(l => l.system_id === sysId)
+      .reduce((acc, l) => acc + (Array.isArray(l.ai_questions) ? (l.ai_questions as unknown[]).length : 0), 0)
+  }
+
+  const availableQuestions = useMemo<Question[]>(() => {
+    const out: Question[] = []
+    for (const l of lessons) {
+      if (!selectedSysIds.has(l.system_id)) continue
+      const sys = systems.find(s => s.id === l.system_id)
+      if (!sys) continue
+      out.push(...parseQuestions(l, sys.name, sys.id))
+    }
+    return out
+  }, [lessons, selectedSysIds, systems])
+
+  const totalAvailable = availableQuestions.length
+
+  // ===================== TIMER =====================
   useEffect(() => {
     if (phase === 'session' && duration !== null) {
       setTimeLeft(duration * 60)
@@ -93,442 +229,681 @@ export default function SimulateurPage() {
     if (timeLeft <= 0) { endSession(); return }
     timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, timeLeft])
 
-  function formatTime(s: number) {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
-
-  // Available questions for selected systems
-  function getAvailableQuestions(): Question[] {
-    const qs: Question[] = []
-    lessons.forEach(l => {
-      if (!selectedSysIds.has(l.system_id)) return
-      const sys = systems.find(s => s.id === l.system_id)
-      if (!sys) return
-      qs.push(...parseQuestions(l, sys.name))
-    })
-    return qs
-  }
-
-  function countQuestionsForSystem(sysId: string): number {
-    return lessons
-      .filter(l => l.system_id === sysId)
-      .reduce((acc, l) => acc + (Array.isArray(l.ai_questions) ? (l.ai_questions as any[]).length : 0), 0)
-  }
-
-  function shuffle<T>(arr: T[]): T[] {
-    const a = [...arr]
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]]
-    }
-    return a
-  }
-
+  // ===================== ACTIONS =====================
   function launchSession() {
-    let qs = getAvailableQuestions()
-    if (qs.length === 0) return
-    qs = shuffle(qs).slice(0, nbQuestions)
+    if (totalAvailable === 0) return
+
+    let qs = [...availableQuestions]
+
+    if (selectionMode === 'weak') {
+      // Pondère vers les leçons fragiles : poids = (5 - avg) si avg dispo, sinon 3
+      const lessonAvgs = new Map<string, number>()
+      for (const l of lessons) {
+        const a = lessonAvg(l)
+        if (a !== null) lessonAvgs.set(l.id, a)
+      }
+      const weighted = qs.map(q => {
+        const avg = q.lessonId ? lessonAvgs.get(q.lessonId) : undefined
+        const weight = avg !== undefined ? Math.max(0.5, 5 - avg) : 3
+        return { q, weight, r: Math.random() / weight }
+      })
+      qs = weighted.sort((a, b) => a.r - b.r).map(x => x.q)
+    } else {
+      qs = shuffle(qs)
+    }
+
+    qs = qs.slice(0, nbQuestions)
     setSessionQuestions(qs)
     setCurrentIdx(0)
     setAnswers(new Array(qs.length).fill(null))
+    setRevealed(new Array(qs.length).fill(false))
     setSelfRatings(new Array(qs.length).fill(''))
-    setRevealed(false)
     setPhase('session')
   }
 
   function selectOption(optIdx: number) {
-    if (revealed) return
+    // Si déjà révélée en mode app, on ignore
+    if (mode === 'apprentissage' && revealed[currentIdx]) return
+
     const newAnswers = [...answers]
     newAnswers[currentIdx] = optIdx
     setAnswers(newAnswers)
-    setRevealed(true)
+
+    if (mode === 'apprentissage') {
+      const newRevealed = [...revealed]
+      newRevealed[currentIdx] = true
+      setRevealed(newRevealed)
+    }
   }
 
   function rateSelf(rating: string) {
     const newRatings = [...selfRatings]
     newRatings[currentIdx] = rating
     setSelfRatings(newRatings)
-    // Go to next question
+  }
+
+  function gotoNext() {
     if (currentIdx < sessionQuestions.length - 1) {
-      setCurrentIdx(i => i + 1)
-      setRevealed(false)
+      setCurrentIdx(currentIdx + 1)
     } else {
       endSession()
     }
   }
 
+  function gotoPrev() {
+    if (currentIdx > 0) setCurrentIdx(currentIdx - 1)
+  }
+
+  function gotoQuestion(idx: number) {
+    if (idx >= 0 && idx < sessionQuestions.length) setCurrentIdx(idx)
+  }
+
   function endSession() {
     if (timerRef.current) clearTimeout(timerRef.current)
+    // En examen blanc, on révèle tout pour la phase results
+    if (mode === 'examen') {
+      setRevealed(new Array(sessionQuestions.length).fill(true))
+    }
     setPhase('results')
   }
 
-  const correctCount = answers.filter((a, i) => a === sessionQuestions[i]?.answer).length
-  const score = sessionQuestions.length > 0 ? Math.round((correctCount / sessionQuestions.length) * 100) : 0
-  const availableQs = getAvailableQuestions()
-  const totalAvailable = availableQs.length
+  function newSession() {
+    setPhase('config')
+    setSessionQuestions([])
+    setAnswers([])
+    setRevealed([])
+    setSelfRatings([])
+  }
 
-  // ---- CONFIG PHASE ----
-  if (phase === 'config') return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
-        :root { --dark:#111310;--green:#1B4332;--gm:#2D6A4F;--gl:#D8EAE0;--amber:#C47B2B;--al:#FBF0E0;--gray:#6B7280;--border:#DDD8CE; }
-        .sim-main { padding:26px 28px; background:#EDEAE3; min-height:100vh; display:flex; flex-direction:column; gap:16px; font-family:'Plus Jakarta Sans',sans-serif; }
-        .sim-card { background:white; border:1px solid var(--border); border-radius:13px; padding:20px; }
-        .sim-ct { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--gray); margin-bottom:14px; }
-        .sim-label { display:block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--gray); margin-bottom:10px; }
-        .popt { padding:6px 14px; border-radius:20px; border:1.5px solid var(--border); font-size:12.5px; font-weight:500; color:var(--gray); cursor:pointer; background:white; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; }
-        .popt:hover { border-color:#aaa; }
-        .popt.sel { background:var(--dark); border-color:var(--dark); color:white; }
-        .spill { display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:20px; border:1.5px solid var(--border); background:white; font-size:12.5px; font-weight:500; color:var(--gray); cursor:pointer; transition:all .15s; font-family:'Plus Jakarta Sans',sans-serif; }
-        .spill:hover { border-color:#aaa; }
-        .spill.sel { border-color:var(--green); background:var(--gl); color:var(--green); }
-        .spill .sd { width:7px; height:7px; border-radius:50%; min-width:7px; }
-      `}</style>
-      <div className="sim-main">
-        <div>
-          <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 500, color: '#111310' }}>
-            Simulateur d&apos;examen
-          </h1>
-          <p style={{ fontSize: '12.5px', color: 'var(--gray)', marginTop: 3 }}>
-            Prépare-toi dans les conditions réelles du concours — multi-matières, chronométré, corrigé.
-          </p>
+  function replayMissed() {
+    const missed = sessionQuestions.filter((q, i) => answers[i] !== null && answers[i] !== q.answer)
+    if (missed.length === 0) { newSession(); return }
+    setSessionQuestions(missed)
+    setCurrentIdx(0)
+    setAnswers(new Array(missed.length).fill(null))
+    setRevealed(new Array(missed.length).fill(false))
+    setSelfRatings(new Array(missed.length).fill(''))
+    setPhase('session')
+  }
+
+  // ===================== STATS DERIVED =====================
+  const correctCount = answers.filter((a, i) => a !== null && a === sessionQuestions[i]?.answer).length
+  const wrongCount = answers.filter((a, i) => a !== null && a !== sessionQuestions[i]?.answer).length
+  const answeredCount = answers.filter(a => a !== null).length
+  const score = sessionQuestions.length > 0 ? Math.round((correctCount / sessionQuestions.length) * 100) : 0
+  const timeUsed = duration !== null ? duration * 60 - timeLeft : 0
+
+  // ===================== RENDER =====================
+  if (loading) {
+    return (
+      <div className="sim-page">
+        <div className="sim-loading">Chargement…</div>
+      </div>
+    )
+  }
+
+  if (phase === 'config') return renderConfig()
+  if (phase === 'session') return renderSession()
+  return renderResults()
+
+  // ===================== CONFIG VIEW =====================
+  function renderConfig() {
+    const summary = {
+      mode: mode === 'apprentissage' ? 'Apprentissage' : 'Examen blanc',
+      selection: selectionMode === 'random' ? 'Aléatoire' : 'Angles morts',
+      duration: duration ? `${duration} minutes` : 'Libre',
+      matieres: `${selectedSysIds.size} / ${semSystems.length}`,
+    }
+    const launchableCount = Math.min(nbQuestions, totalAvailable)
+    const canLaunch = totalAvailable > 0 && selectedSysIds.size > 0
+
+    return (
+      <div className="sim-page">
+
+        <div className="sim-header">
+          <div>
+            <h1 className="sim-title">Simulateur d&apos;<em>examen</em></h1>
+            <div className="sim-sub">
+              Multi-matières · chronométré · corrigé. Configure ta session, lance.
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 18, alignItems: 'start' }}>
-          {/* Config left */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="sim-cfg-grid">
+
+          {/* ===== LEFT ===== */}
+          <div className="sim-cfg-left">
 
             {/* Matières */}
             <div className="sim-card">
-              <div className="sim-ct">Matières à inclure</div>
-              {systems.length === 0 ? (
-                <p style={{ fontSize: 13, color: 'var(--gray)' }}>Aucune matière — crée des fiches d&apos;abord.</p>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {systems.map((sys, i) => {
-                    const [dotColor] = SYS_COLORS[i % SYS_COLORS.length]
-                    const isSel = selectedSysIds.has(sys.id)
-                    const qCount = countQuestionsForSystem(sys.id)
-                    return (
-                      <div
-                        key={sys.id}
-                        className={`spill${isSel ? ' sel' : ''}`}
-                        onClick={() => {
-                          const next = new Set(selectedSysIds)
-                          isSel ? next.delete(sys.id) : next.add(sys.id)
-                          setSelectedSysIds(next)
-                        }}
-                      >
-                        <span className="sd" style={{ background: dotColor }} />
-                        {sys.icon} {sys.name}
-                        <span style={{ fontSize: 10, marginLeft: 3, color: isSel ? 'var(--green)' : 'var(--gray)' }}>
-                          {qCount} Q
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              <div className="sim-card-h">
+                Matières à inclure
+                <span className="sim-meta">
+                  {selectedSysIds.size} sur {semSystems.length}
+                  {totalAvailable > 0 ? ` · ${totalAvailable} questions disponibles` : ''}
+                </span>
+              </div>
+              <div className="sim-mat-pills">
+                {semSystems.length === 0 ? (
+                  <div className="sim-mat-empty">Aucune matière pour {semester === 'year' ? 'l\'année' : `le semestre ${semester}`}.</div>
+                ) : semSystems.map((sys, i) => {
+                  const isSel = selectedSysIds.has(sys.id)
+                  const qCount = countQuestionsForSystem(sys.id)
+                  const sysColor = (sys as unknown as { color?: string }).color || PALETTE[i % PALETTE.length]
+                  return (
+                    <button
+                      key={sys.id}
+                      className={`sim-mat-pill${isSel ? ' sel' : ''}`}
+                      onClick={() => {
+                        const next = new Set(selectedSysIds)
+                        if (isSel) next.delete(sys.id); else next.add(sys.id)
+                        setSelectedSysIds(next)
+                      }}
+                    >
+                      <span className="dot" style={{ background: sysColor }} />
+                      {sys.name}
+                      <span className="qc">{qCount}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* Options grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="sim-card">
-                <label className="sim-label">Nb de questions</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {/* Options : 3 sub-cards */}
+            <div className="sim-opt-row">
+              <div className="sim-opt-card">
+                <div className="sim-opt-h">Nb questions</div>
+                <div className="sim-opt-pills">
                   {[10, 20, 30, 50].map(n => (
-                    <button key={n} className={`popt${nbQuestions === n ? ' sel' : ''}`} onClick={() => setNbQuestions(n)}>{n}</button>
+                    <button key={n} className={`sim-opt-pill${nbQuestions === n ? ' sel' : ''}`} onClick={() => setNbQuestions(n)}>{n}</button>
                   ))}
                 </div>
               </div>
-              <div className="sim-card">
-                <label className="sim-label">Durée</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {[{ label: '15 min', val: 15 }, { label: '30 min', val: 30 }, { label: '45 min', val: 45 }, { label: 'Libre', val: null }].map(({ label, val }) => (
-                    <button key={label} className={`popt${duration === val ? ' sel' : ''}`} onClick={() => setDuration(val)}>{label}</button>
+              <div className="sim-opt-card">
+                <div className="sim-opt-h">Durée</div>
+                <div className="sim-opt-pills">
+                  {[15, 30, 45, null].map(d => (
+                    <button
+                      key={d ?? 'libre'}
+                      className={`sim-opt-pill${duration === d ? ' sel' : ''}`}
+                      onClick={() => setDuration(d)}
+                    >
+                      {d === null ? 'Libre' : d}
+                    </button>
                   ))}
                 </div>
               </div>
-              <div className="sim-card" style={{ gridColumn: '1 / -1' }}>
-                <label className="sim-label">Sélection des questions</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button className={`popt${selectionMode === 'weak' ? ' sel' : ''}`} onClick={() => setSelectionMode('weak')}>Angles morts</button>
-                  <button className={`popt${selectionMode === 'random' ? ' sel' : ''}`} onClick={() => setSelectionMode('random')}>Aléatoire</button>
+              <div className="sim-opt-card">
+                <div className="sim-opt-h">Sélection</div>
+                <div className="sim-opt-pills">
+                  <button className={`sim-opt-pill${selectionMode === 'random' ? ' sel' : ''}`} onClick={() => setSelectionMode('random')}>Aléatoire</button>
+                  <button className={`sim-opt-pill${selectionMode === 'weak' ? ' sel' : ''}`} onClick={() => setSelectionMode('weak')}>Angles morts</button>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Summary + launch */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ background: '#111310', borderRadius: 13, padding: 22 }}>
-              <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'rgba(255,255,255,.32)', marginBottom: 16 }}>
-                Résumé
+            {/* Mode card */}
+            <div className="sim-card sim-mode-card">
+              <div className="sim-card-h">Mode de session</div>
+              <div className="sim-mode-pills">
+
+                <button
+                  className={`sim-mode-pill${mode === 'apprentissage' ? ' sel' : ''}`}
+                  onClick={() => setMode('apprentissage')}
+                  type="button"
+                >
+                  <div className="sim-mode-pill-top">
+                    <div className="sim-mode-pill-h">Apprentissage</div>
+                    <div className="sim-mode-pill-sub">Réponse révélée + explication. Tu apprends en faisant.</div>
+                  </div>
+                  <div className="sim-mp-vis sim-mp-vis-app">
+                    <div className="sim-mp-app-q">Quel mécanisme principal de la dyspnée ?</div>
+                    <div className="sim-mp-app-opt dim"><span className="mark">A.</span>Bronchospasme vagal</div>
+                    <div className="sim-mp-app-opt wrong"><span className="mark">B.</span>Hyperventilation</div>
+                    <div className="sim-mp-app-opt right"><span className="mark">C.</span>Redistribution sanguine<span className="check">✓</span></div>
+                    <div className="sim-mp-app-opt dim"><span className="mark">D.</span>Activation rénine-angiotensine</div>
+                    <div className="sim-mp-app-opt dim"><span className="mark">E.</span>Décompression abdominale</div>
+                    <div className="sim-mp-app-explain">
+                      <strong>Pourquoi C ?</strong> En décubitus, le sang redescend vers le thorax…
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  className={`sim-mode-pill${mode === 'examen' ? ' sel' : ''}`}
+                  onClick={() => setMode('examen')}
+                  type="button"
+                >
+                  <div className="sim-mode-pill-top">
+                    <div className="sim-mode-pill-h">Examen blanc</div>
+                    <div className="sim-mode-pill-sub">Aucun feedback. Grille type concours, corrections à la fin.</div>
+                  </div>
+                  <div className="sim-mp-vis sim-mp-vis-ex">
+                    <div className="sim-mp-ex-header">
+                      <div></div>
+                      <div>A</div>
+                      <div>B</div>
+                      <div>C</div>
+                      <div>D</div>
+                      <div>E</div>
+                    </div>
+                    <div className="sim-mp-ex-row">
+                      <div className="num">Q1</div>
+                      <div className="bubble" /><div className="bubble filled" /><div className="bubble" /><div className="bubble" /><div className="bubble" />
+                    </div>
+                    <div className="sim-mp-ex-row">
+                      <div className="num">Q2</div>
+                      <div className="bubble filled" /><div className="bubble" /><div className="bubble" /><div className="bubble" /><div className="bubble" />
+                    </div>
+                    <div className="sim-mp-ex-row">
+                      <div className="num">Q3</div>
+                      <div className="bubble" /><div className="bubble" /><div className="bubble" /><div className="bubble filled" /><div className="bubble" />
+                    </div>
+                    <div className="sim-mp-ex-row current">
+                      <div className="num">Q4</div>
+                      <div className="bubble" /><div className="bubble" /><div className="bubble filled" /><div className="bubble" /><div className="bubble" />
+                    </div>
+                    <div className="sim-mp-ex-row">
+                      <div className="num">Q5</div>
+                      <div className="bubble" /><div className="bubble" /><div className="bubble" /><div className="bubble" /><div className="bubble" />
+                    </div>
+                    <div className="sim-mp-ex-bottom">Tu coches, tu valides à la fin · 0 indice.</div>
+                  </div>
+                </button>
+
               </div>
-              {[
-                { label: 'Matières', value: systems.filter(s => selectedSysIds.has(s.id)).map(s => s.name).join(', ') || '—' },
-                { label: 'Questions disponibles', value: `${totalAvailable} QCMs` },
-                { label: 'Questions lancées', value: `${Math.min(nbQuestions, totalAvailable)} QCMs` },
-                { label: 'Durée max', value: duration ? `${duration} minutes` : 'Libre' },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ borderBottom: '1px solid rgba(255,255,255,.08)', padding: '9px 0', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,.42)' }}>{label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'white', maxWidth: 160, textAlign: 'right' }}>{value}</span>
-                </div>
-              ))}
-
-              <button
-                onClick={launchSession}
-                disabled={totalAvailable === 0 || selectedSysIds.size === 0}
-                style={{
-                  width: '100%', marginTop: 16, padding: 12,
-                  background: totalAvailable === 0 || selectedSysIds.size === 0 ? 'rgba(255,255,255,.1)' : '#2D6A4F',
-                  border: 'none', borderRadius: 9,
-                  fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 700,
-                  color: totalAvailable === 0 || selectedSysIds.size === 0 ? 'rgba(255,255,255,.3)' : 'white',
-                  cursor: totalAvailable === 0 || selectedSysIds.size === 0 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {totalAvailable === 0 ? 'Aucune question disponible' : 'Lancer la session →'}
-              </button>
-
-              {totalAvailable === 0 && (
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 10, textAlign: 'center', lineHeight: 1.5 }}>
-                  Importe des cours depuis<br />Mes matières pour générer des QCMs.
-                </p>
-              )}
             </div>
+
           </div>
+
+          {/* ===== RIGHT : Hero CTA ===== */}
+          <div className="sim-hero">
+            <div className="sim-hero-tag">Prêt à lancer</div>
+            <div className="sim-hero-display">
+              <div className="sim-hero-num-row">
+                <span className="sim-hero-num">{launchableCount}</span>
+                <span className="sim-hero-num-unit">question{launchableCount > 1 ? 's' : ''}</span>
+              </div>
+              <div className="sim-hero-quote">
+                <strong>Si tu peux faire ça,</strong> tu peux faire le concours.<br />
+                C&apos;est exactement le rythme demandé en P1.
+              </div>
+              <div className="sim-hero-summary">
+                <div className="sim-hero-row">
+                  <span className="sim-hero-row-l">Mode</span>
+                  <span className="sim-hero-row-v">{summary.mode}</span>
+                </div>
+                <div className="sim-hero-row">
+                  <span className="sim-hero-row-l">Sélection</span>
+                  <span className="sim-hero-row-v">{summary.selection}</span>
+                </div>
+                <div className="sim-hero-row">
+                  <span className="sim-hero-row-l">Durée</span>
+                  <span className="sim-hero-row-v">{summary.duration}</span>
+                </div>
+                <div className="sim-hero-row">
+                  <span className="sim-hero-row-l">Matières</span>
+                  <span className="sim-hero-row-v">{summary.matieres}</span>
+                </div>
+              </div>
+            </div>
+            <button
+              className="sim-hero-cta"
+              disabled={!canLaunch}
+              onClick={launchSession}
+            >
+              {!canLaunch
+                ? (totalAvailable === 0 ? 'Aucune question disponible' : 'Sélectionne au moins une matière')
+                : 'Lancer la session →'}
+            </button>
+          </div>
+
         </div>
       </div>
-    </>
-  )
+    )
+  }
 
-  // ---- SESSION PHASE ----
-  if (phase === 'session') {
+  // ===================== SESSION VIEW =====================
+  function renderSession() {
     const q = sessionQuestions[currentIdx]
+    if (!q) return <div className="sim-page"><div className="sim-loading">…</div></div>
     const selectedAnswer = answers[currentIdx]
-    const progress = ((currentIdx) / sessionQuestions.length) * 100
-    const correctSoFar = answers.slice(0, currentIdx).filter((a, i) => a === sessionQuestions[i]?.answer).length
-    const wrongSoFar = answers.slice(0, currentIdx).filter((a, i) => a !== null && a !== sessionQuestions[i]?.answer).length
+    const isRevealed = mode === 'apprentissage' && revealed[currentIdx]
+    const correctIdx = q.answer
 
     return (
-      <>
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
-          :root { --dark:#111310;--green:#1B4332;--gm:#2D6A4F;--gl:#D8EAE0;--gray:#6B7280;--border:#DDD8CE; }
-          .ses-main { padding:26px 28px; background:#EDEAE3; min-height:100vh; display:flex; flex-direction:column; gap:16px; font-family:'Plus Jakarta Sans',sans-serif; }
-          .opt-btn { padding:13px 18px; border-radius:10px; border:1.5px solid var(--border); background:white; font-family:'Plus Jakarta Sans',sans-serif; font-size:13.5px; color:var(--dark); cursor:pointer; text-align:left; transition:all .15s; display:block; width:100%; margin-bottom:6px; }
-          .opt-btn:hover:not(:disabled) { border-color:var(--gm); background:var(--gl); }
-          .opt-btn.correct { border-color:var(--green); background:var(--gl); color:var(--green); font-weight:600; }
-          .opt-btn.wrong { border-color:#FCA5A5; background:#FEF2F2; color:#B91C1C; }
-          .opt-btn.neutral-revealed { opacity:.5; }
-          .sab { flex:1; padding:9px; border-radius:9px; border:1.5px solid var(--border); font-family:'Plus Jakarta Sans',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; background:white; transition:all .15s; }
-          .sab:hover { opacity:.8; }
-          .sa-a { color:#B91C1C; border-color:#FCA5A5; }
-          .sa-h { color:var(--amber); border-color:#E8C89A; }
-          .sa-ok2 { color:var(--green); border-color:var(--gl); }
-          .sa-e { color:var(--green); background:var(--gl); border-color:var(--gl); }
-        `}</style>
-        <div className="ses-main">
-          {/* Session header */}
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 13, padding: 0, overflow: 'hidden' }}>
-            <div style={{ background: '#FAFAF8', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 11, color: 'var(--gray)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                  Session en cours
-                </span>
-                <button
-                  onClick={endSession}
-                  style={{ fontSize: 11, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 6, padding: '3px 9px', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                >
-                  Terminer
-                </button>
-              </div>
-              <div style={{ display: 'flex', gap: 14 }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 500, color: '#4ADE80' }}>{correctSoFar}</div>
-                  <div style={{ fontSize: 9, color: 'var(--gray)', textTransform: 'uppercase' }}>Bonnes</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 500, color: '#F472B6' }}>{wrongSoFar}</div>
-                  <div style={{ fontSize: 9, color: 'var(--gray)', textTransform: 'uppercase' }}>Ratées</div>
-                </div>
-                {duration !== null && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 500, color: timeLeft < 120 ? '#B91C1C' : 'var(--amber)' }}>
-                      {formatTime(timeLeft)}
-                    </div>
-                    <div style={{ fontSize: 9, color: 'var(--gray)', textTransform: 'uppercase' }}>Restant</div>
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div style={{ height: 4, background: '#E5E7EB', overflow: 'hidden' }}>
-              <div style={{ width: `${progress}%`, height: '100%', background: '#1B4332', transition: 'width .3s' }} />
-            </div>
+      <div className="sim-page">
+
+        {/* HEADER */}
+        <div className="sim-ses-header">
+          <div className="sim-ses-header-l">
+            <span className={`sim-ses-tag ${mode === 'apprentissage' ? 'app' : 'ex'}`}>
+              {mode === 'apprentissage' ? 'Apprentissage' : 'Examen blanc'}
+            </span>
+            <span className="sim-ses-tag-sub">
+              {mode === 'apprentissage'
+                ? 'Réponse révélée + explication à chaque question'
+                : 'Aucun feedback avant la fin · style concours'}
+            </span>
           </div>
-
-          {/* Question card */}
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 13, padding: 24, maxWidth: 720, margin: '0 auto', width: '100%' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--gray)', marginBottom: 11, textAlign: 'center' }}>
-              Question {currentIdx + 1} / {sessionQuestions.length}
-              {q.systemName && ` · ${q.systemName}`}
+          <div className="sim-ses-stats">
+            <div className="sim-ses-stat">
+              <div className="sim-ses-stat-num progress">{currentIdx + 1} / {sessionQuestions.length}</div>
+              <div className="sim-ses-stat-lbl">Question</div>
             </div>
-            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 400, lineHeight: 1.5, color: '#111310', textAlign: 'center', marginBottom: 14 }}>
-              {q.question}
-            </div>
-            {q.source && (
-              <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <span style={{ background: 'var(--gl)', color: 'var(--green)', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 500 }}>
-                  {q.source}
-                </span>
+            {mode === 'apprentissage' ? (
+              <>
+                <div className="sim-ses-stat">
+                  <div className="sim-ses-stat-num ok">{correctCount}</div>
+                  <div className="sim-ses-stat-lbl">Bonnes</div>
+                </div>
+                <div className="sim-ses-stat">
+                  <div className="sim-ses-stat-num ko">{wrongCount}</div>
+                  <div className="sim-ses-stat-lbl">Ratées</div>
+                </div>
+              </>
+            ) : (
+              <div className="sim-ses-stat">
+                <div className="sim-ses-stat-num progress">{answeredCount}</div>
+                <div className="sim-ses-stat-lbl">Répondues</div>
               </div>
             )}
-            {q.lessonName && !q.source && (
-              <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <span style={{ background: '#F3F4F6', color: 'var(--gray)', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>
-                  {q.lessonName}
-                </span>
+            {duration !== null && (
+              <div className="sim-ses-stat">
+                <div className={`sim-ses-stat-num timer${timeLeft < 120 ? ' danger' : ''}`}>{formatTime(timeLeft)}</div>
+                <div className="sim-ses-stat-lbl">Restant</div>
               </div>
             )}
+          </div>
+          <button className="sim-ses-quit" onClick={endSession}>Terminer</button>
+        </div>
 
-            {/* Options */}
-            <div style={{ marginBottom: 14 }}>
+        {/* GRID 1.5fr 1fr */}
+        <div className="sim-ses-grid">
+
+          {/* LEFT : Question */}
+          <div className="sim-ses-q">
+            <div className="sim-ses-q-meta">
+              <em>Question {currentIdx + 1} / {sessionQuestions.length}</em>
+              {q.systemName && <span className="sim-ses-q-source">{q.systemName}{q.lessonName ? ` · ${q.lessonName}` : ''}</span>}
+            </div>
+            <div className="sim-ses-q-text">{q.question}</div>
+
+            <div className="sim-ses-q-options">
               {q.options.map((opt, i) => {
                 const isSelected = selectedAnswer === i
-                const isCorrect = i === q.answer
-                let cls = 'opt-btn'
-                if (revealed) {
+                const isCorrect = i === correctIdx
+                let cls = 'sim-ses-q-opt'
+                if (isRevealed) {
                   if (isCorrect) cls += ' correct'
                   else if (isSelected && !isCorrect) cls += ' wrong'
-                  else cls += ' neutral-revealed'
+                  else cls += ' dim'
+                } else if (isSelected) {
+                  cls += ' sel'
                 }
                 return (
                   <button
                     key={i}
                     className={cls}
-                    disabled={revealed}
+                    disabled={mode === 'apprentissage' && isRevealed}
                     onClick={() => selectOption(i)}
                   >
-                    {opt}{isCorrect && revealed ? ' ✓' : ''}
+                    <span className="sim-ses-q-opt-letter">{letterFor(i)}.</span>
+                    {opt}
                   </button>
                 )
               })}
             </div>
 
-            {/* Self-rating (only after revealing) */}
-            {revealed && (
+            {/* Explication + self-rating (Apprentissage only, après reveal) */}
+            {mode === 'apprentissage' && isRevealed && (
               <>
-                <div style={{ fontSize: 11, color: 'var(--gray)', textAlign: 'center', marginBottom: 7, fontWeight: 500 }}>
-                  Comment tu t&apos;es senti ?
+                <div className="sim-ses-explain">
+                  <div className="sim-ses-explain-h">Explication</div>
+                  <div className="sim-ses-explain-text">
+                    {q.explanation ? (
+                      q.explanation
+                    ) : (
+                      <>
+                        La bonne réponse était <strong>{letterFor(correctIdx)}. {q.options[correctIdx]}</strong>.
+                      </>
+                    )}
+                  </div>
+                  {q.lessonId && (
+                    <a className="sim-ses-explain-link" href={`/dashboard/fiches?lesson=${q.lessonId}`}>
+                      Voir cette fiche →
+                    </a>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {[
-                    { label: 'À reprendre', cls: 'sab sa-a', val: 'reprendre' },
-                    { label: 'Difficile', cls: 'sab sa-h', val: 'difficile' },
-                    { label: 'Bien', cls: 'sab sa-ok2', val: 'bien' },
-                    { label: 'Facile', cls: 'sab sa-e', val: 'facile' },
-                  ].map(({ label, cls, val }) => (
-                    <button key={val} className={cls} onClick={() => rateSelf(val)}>{label}</button>
-                  ))}
+
+                <div className="sim-ses-rate-h">Comment tu t&apos;es senti sur cette question ?</div>
+                <div className="sim-ses-rate">
+                  <button className={`sim-ses-rate-btn r1${selfRatings[currentIdx] === 'reprendre' ? ' on' : ''}`} onClick={() => rateSelf('reprendre')}>À reprendre</button>
+                  <button className={`sim-ses-rate-btn r2${selfRatings[currentIdx] === 'difficile' ? ' on' : ''}`} onClick={() => rateSelf('difficile')}>Difficile</button>
+                  <button className={`sim-ses-rate-btn r3${selfRatings[currentIdx] === 'bien' ? ' on' : ''}`} onClick={() => rateSelf('bien')}>Bien</button>
+                  <button className={`sim-ses-rate-btn r4${selfRatings[currentIdx] === 'facile' ? ' on' : ''}`} onClick={() => rateSelf('facile')}>Facile</button>
                 </div>
               </>
             )}
+
+            <div className="sim-ses-nav">
+              <button className="sim-ses-nav-btn" onClick={gotoPrev} disabled={currentIdx === 0}>← Précédente</button>
+              <button className="sim-ses-nav-btn primary" onClick={gotoNext}>
+                {currentIdx === sessionQuestions.length - 1 ? 'Terminer →' : 'Suivante →'}
+              </button>
+            </div>
           </div>
+
+          {/* RIGHT : Answer grid */}
+          <div className="sim-ses-sheet">
+            <div className="sim-ses-sheet-h">
+              Grille de réponses
+              <span className="sim-meta">
+                {mode === 'apprentissage' ? 'vert = correct · rouge = raté' : 'clique pour aller à une question'}
+              </span>
+            </div>
+            <SheetGrid
+              questions={sessionQuestions}
+              answers={answers}
+              revealed={revealed}
+              currentIdx={currentIdx}
+              mode={mode}
+              onRowClick={gotoQuestion}
+              onBubbleClick={(qi, oi) => {
+                if (qi === currentIdx) selectOption(oi)
+                else gotoQuestion(qi)
+              }}
+            />
+            <div className="sim-ses-sheet-progress">
+              <span className="sim-ses-sheet-progress-l">
+                {mode === 'apprentissage' ? 'Score live' : 'Progression'}
+              </span>
+              <span className="sim-ses-sheet-progress-v">
+                {mode === 'apprentissage'
+                  ? <>{correctCount}<em>/ {answeredCount} répondues{wrongCount > 0 ? ` · ${wrongCount} ratée${wrongCount > 1 ? 's' : ''}` : ''}</em></>
+                  : <>{answeredCount}<em>/ {sessionQuestions.length} répondues</em></>
+                }
+              </span>
+            </div>
+          </div>
+
         </div>
-      </>
+      </div>
     )
   }
 
-  // ---- RESULTS PHASE ----
-  return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
-        :root { --dark:#111310;--green:#1B4332;--gm:#2D6A4F;--gl:#D8EAE0;--gray:#6B7280;--border:#DDD8CE; }
-        .res-main { padding:26px 28px; background:#EDEAE3; min-height:100vh; display:flex; flex-direction:column; gap:16px; font-family:'Plus Jakarta Sans',sans-serif; align-items:center; justify-content:center; }
-      `}</style>
-      <div className="res-main">
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 36, maxWidth: 520, width: '100%', textAlign: 'center' }}>
-          {/* Score */}
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 56, fontWeight: 500, color: score >= 70 ? '#1B4332' : score >= 50 ? '#C47B2B' : '#B91C1C', lineHeight: 1, marginBottom: 6 }}>
-            {score}%
-          </div>
-          <p style={{ fontSize: 14, color: 'var(--gray)', marginBottom: 24 }}>
-            {score >= 70 ? 'Excellente session ! 🎉' : score >= 50 ? 'Bonne session, continue !' : 'À retravailler — tu progresses.'}
-          </p>
+  // ===================== RESULTS VIEW =====================
+  function renderResults() {
+    const message = score >= 70 ? 'Excellente session' : score >= 50 ? 'Bonne session' : 'À retravailler'
+    const submessage = score >= 70 ? '— tu maîtrises l\'essentiel.' : score >= 50 ? '— tu progresses, continue.' : '— c\'est en faisant les fautes qu\'on apprend.'
+    const scoreCls = score >= 70 ? 'ok' : score >= 50 ? 'amber' : 'rose'
+    const totalSeconds = duration !== null ? duration * 60 - timeLeft : 0
+    const tu = formatTime(totalSeconds)
+    const matieres = Array.from(new Set(sessionQuestions.map(q => q.systemName).filter(Boolean))).join(' · ')
 
-          {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-            {[
-              { n: correctCount, label: 'Bonnes', color: '#4ADE80' },
-              { n: sessionQuestions.length - correctCount, label: 'Ratées', color: '#F472B6' },
-              { n: sessionQuestions.length, label: 'Questions', color: '#60A5FA' },
-            ].map(({ n, label, color }) => (
-              <div key={label} style={{ background: '#FAFAF8', borderRadius: 10, padding: '14px 8px' }}>
-                <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 28, fontWeight: 500, color }}>{n}</div>
-                <div style={{ fontSize: 10, color: 'var(--gray)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{label}</div>
-              </div>
-            ))}
+    const r1 = selfRatings.filter(r => r === 'reprendre').length
+    const r2 = selfRatings.filter(r => r === 'difficile').length
+    const r3 = selfRatings.filter(r => r === 'bien').length
+    const r4 = selfRatings.filter(r => r === 'facile').length
+    const rTotal = r1 + r2 + r3 + r4
+    const hasRatings = rTotal > 0
+
+    return (
+      <div className="sim-page">
+
+        <div className="sim-header">
+          <div>
+            <h1 className="sim-title">Session <em>terminée</em></h1>
+            <div className="sim-sub">{matieres || 'Toutes matières'} · {sessionQuestions.length} questions · {tu}</div>
+          </div>
+        </div>
+
+        <div className="sim-res-wrap">
+
+          <div className="sim-res-hero">
+            <div className="sim-res-tag">Mode {mode === 'apprentissage' ? 'apprentissage' : 'examen blanc'}</div>
+            <div className={`sim-res-score ${scoreCls}`}>{score}<sup>%</sup></div>
+            <div className="sim-res-message">
+              <strong>{message}</strong> {submessage}
+            </div>
           </div>
 
-          {/* Self-rating breakdown */}
-          {selfRatings.some(Boolean) && (
-            <div style={{ background: '#FAFAF8', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--gray)', marginBottom: 10 }}>
-                Ressenti
+          <div className="sim-res-stats">
+            <div className="sim-res-stat">
+              <div className="sim-res-stat-lbl">Bonnes</div>
+              <div className="sim-res-stat-num ok">{correctCount}</div>
+              <div className="sim-res-stat-sub">sur {sessionQuestions.length} questions</div>
+            </div>
+            <div className="sim-res-stat">
+              <div className="sim-res-stat-lbl">Ratées</div>
+              <div className="sim-res-stat-num ko">{wrongCount}</div>
+              <div className="sim-res-stat-sub">{wrongCount > 0 ? 'à refaire en révision ciblée' : 'aucune ratée · solide'}</div>
+            </div>
+            <div className="sim-res-stat">
+              <div className="sim-res-stat-lbl">Temps utilisé</div>
+              <div className="sim-res-stat-num total">{tu}</div>
+              <div className="sim-res-stat-sub">
+                {duration !== null ? `sur ${duration} min` : 'mode libre'}
               </div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                {[
-                  { val: 'reprendre', label: 'À reprendre', color: '#B91C1C' },
-                  { val: 'difficile', label: 'Difficile', color: '#C47B2B' },
-                  { val: 'bien', label: 'Bien', color: '#1B4332' },
-                  { val: 'facile', label: 'Facile', color: '#1B4332' },
-                ].map(({ val, label, color }) => {
-                  const count = selfRatings.filter(r => r === val).length
-                  if (count === 0) return null
-                  return (
-                    <div key={val} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 18, fontWeight: 700, color }}>{count}</div>
-                      <div style={{ fontSize: 10, color: 'var(--gray)' }}>{label}</div>
-                    </div>
-                  )
-                })}
+            </div>
+          </div>
+
+          {hasRatings && (
+            <div className="sim-res-rates">
+              <div className="sim-res-rates-h">Ressenti — répartition de tes réponses</div>
+              <div className="sim-res-rates-bar">
+                {r1 > 0 && <div className="sim-res-rates-segment r1" style={{ width: `${(r1 / rTotal) * 100}%` }} />}
+                {r2 > 0 && <div className="sim-res-rates-segment r2" style={{ width: `${(r2 / rTotal) * 100}%` }} />}
+                {r3 > 0 && <div className="sim-res-rates-segment r3" style={{ width: `${(r3 / rTotal) * 100}%` }} />}
+                {r4 > 0 && <div className="sim-res-rates-segment r4" style={{ width: `${(r4 / rTotal) * 100}%` }} />}
+              </div>
+              <div className="sim-res-rates-list">
+                <div className="sim-res-rate"><span className="sim-res-rate-dot r1" /><span className="sim-res-rate-num">{r1}</span><span className="sim-res-rate-lbl">à reprendre</span></div>
+                <div className="sim-res-rate"><span className="sim-res-rate-dot r2" /><span className="sim-res-rate-num">{r2}</span><span className="sim-res-rate-lbl">difficiles</span></div>
+                <div className="sim-res-rate"><span className="sim-res-rate-dot r3" /><span className="sim-res-rate-num">{r3}</span><span className="sim-res-rate-lbl">bien</span></div>
+                <div className="sim-res-rate"><span className="sim-res-rate-dot r4" /><span className="sim-res-rate-num">{r4}</span><span className="sim-res-rate-lbl">faciles</span></div>
               </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 9 }}>
-            <button
-              onClick={() => { setPhase('config'); setSessionQuestions([]); setAnswers([]); setSelfRatings([]) }}
-              style={{
-                flex: 1, padding: '11px', borderRadius: 8,
-                fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 600,
-                cursor: 'pointer', border: '1.5px solid var(--border)', background: 'white', color: '#111310'
-              }}
-            >
-              Nouvelle session
-            </button>
-            <button
-              onClick={launchSession}
-              style={{
-                flex: 1, padding: '11px', borderRadius: 8,
-                fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 600,
-                cursor: 'pointer', border: 'none', background: '#1B4332', color: 'white'
-              }}
-            >
-              Rejouer →
+          <div className="sim-res-actions">
+            <button className="sim-res-btn sim-res-btn-secondary" onClick={newSession}>Nouvelle session</button>
+            <button className="sim-res-btn sim-res-btn-primary" onClick={replayMissed} disabled={wrongCount === 0}>
+              {wrongCount > 0 ? `Refaire les ${wrongCount} ratée${wrongCount > 1 ? 's' : ''} →` : 'Aucune ratée'}
             </button>
           </div>
+
         </div>
       </div>
-    </>
+    )
+  }
+}
+
+// ===================== ANSWER GRID =====================
+function SheetGrid({
+  questions,
+  answers,
+  revealed,
+  currentIdx,
+  mode,
+  onRowClick,
+  onBubbleClick,
+}: {
+  questions: Question[]
+  answers: (number | null)[]
+  revealed: boolean[]
+  currentIdx: number
+  mode: Mode
+  onRowClick: (i: number) => void
+  onBubbleClick: (qi: number, oi: number) => void
+}) {
+  // On découpe les questions en 2 colonnes égales
+  const total = questions.length
+  const half = Math.ceil(total / 2)
+  const col1 = questions.slice(0, half)
+  const col2 = questions.slice(half)
+
+  // Détecte le nombre max d'options sur l'ensemble (souvent 5)
+  const maxOpts = questions.reduce((m, q) => Math.max(m, q.options.length), 5)
+  const letters = Array.from({ length: maxOpts }, (_, i) => letterFor(i))
+
+  function renderRow(q: Question, qi: number) {
+    const isCurrent = qi === currentIdx
+    const ans = answers[qi]
+    const isRevealed = mode === 'apprentissage' && revealed[qi]
+    return (
+      <div
+        key={qi}
+        className={`sim-ses-sheet-row${isCurrent ? ' current' : ''}`}
+        onClick={() => onRowClick(qi)}
+      >
+        <span className="sim-ses-sheet-num">Q{qi + 1}</span>
+        {letters.map((_, oi) => {
+          const exists = oi < q.options.length
+          if (!exists) return <span key={oi} className="sim-ses-sheet-bubble missing" />
+          const filled = ans === oi
+          let cls = 'sim-ses-sheet-bubble'
+          if (filled) cls += ' filled'
+          if (isRevealed) {
+            if (oi === q.answer) cls = 'sim-ses-sheet-bubble ok'
+            else if (filled) cls = 'sim-ses-sheet-bubble bad'
+          }
+          return (
+            <button
+              key={oi}
+              className={cls}
+              onClick={(e) => { e.stopPropagation(); onBubbleClick(qi, oi) }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div className="sim-ses-sheet-wrap">
+      <div className="sim-ses-sheet-headers" style={{ gridTemplateColumns: `26px repeat(${maxOpts}, 1fr)` }}>
+        <div className="h"></div>
+        {letters.map(l => <div key={l} className="h">{l}</div>)}
+      </div>
+      <div className="sim-ses-sheet-grid">
+        <div>
+          {col1.map((q, i) => (
+            <div key={i} style={{ ['--cols' as never]: maxOpts }}>{renderRow(q, i)}</div>
+          ))}
+        </div>
+        <div>
+          {col2.map((q, i) => (
+            <div key={i + half} style={{ ['--cols' as never]: maxOpts }}>{renderRow(q, i + half)}</div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
+
+// ===================== PALETTE FALLBACK (si systems n'a pas de color) =====================
+const PALETTE = ['#7AA56B', '#60A5FA', '#F59E0B', '#A78BFA', '#F472B6', '#2D6A4F', '#9CA3AF']
