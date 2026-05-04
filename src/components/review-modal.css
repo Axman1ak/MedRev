@@ -511,3 +511,273 @@
   color: var(--gm);
   font-weight: 500;
 }
+/* ============================================================
+   ReviewModal â€” additions 2026-05 : Sources + QCM
+   Ã€ copier-coller Ã  la fin de src/components/review-modal.css
+   ============================================================ */
+
+/* Permettre au modal de scroller s'il dÃ©passe la hauteur d'Ã©cran
+   (le modal peut maintenant contenir picker + sources + qcm).
+   Si .rmod-card a dÃ©jÃ  ces rÃ¨gles, ignorer celles-ci. */
+.rmod-card {
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+/* ---------- Divider entre blocs ---------- */
+.rmod-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 22px 0 18px;
+}
+
+/* ---------- Label de bloc ---------- */
+.rmod-block-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: var(--gray);
+  margin-bottom: 10px;
+}
+
+/* ---------- Source row (vidÃ©o / pdf renseignÃ©s) ---------- */
+.rmod-src-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.rmod-src-row + .rmod-src-row {
+  border-top: 1px solid var(--border);
+}
+
+.rmod-src-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.rmod-src-icon.video { color: var(--green); }
+.rmod-src-icon.pdf   { color: var(--amber); }
+
+.rmod-src-name {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--dark);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rmod-src-meta {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--gray);
+  flex-shrink: 0;
+}
+
+.rmod-src-replace {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--gray);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: .02em;
+}
+.rmod-src-replace:hover {
+  color: var(--gm);
+  background: var(--soft);
+}
+.rmod-src-replace:disabled {
+  opacity: .5;
+  cursor: default;
+}
+.rmod-src-replace.rmod-src-remove {
+  font-size: 14px;
+  padding: 4px 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400;
+}
+.rmod-src-replace.rmod-src-remove:hover {
+  color: var(--rose);
+  background: rgba(199, 80, 80, .06);
+}
+
+/* ---------- Source empty (invitation Ã  uploader) ---------- */
+.rmod-src-empty {
+  appearance: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  color: var(--gray);
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  transition: color .15s;
+}
+.rmod-src-empty + .rmod-src-empty {
+  border-top: 1px dashed var(--border);
+}
+.rmod-src-empty:hover {
+  color: var(--gm);
+}
+.rmod-src-empty:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+.rmod-src-plus {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--gm);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---------- Erreur d'upload ---------- */
+.rmod-upload-error {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(199, 80, 80, .07);
+  border: 1px solid rgba(199, 80, 80, .25);
+  color: var(--rose);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* ---------- Bloc QCM ---------- */
+.rmod-qcm-line {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.rmod-qcm-num {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 30px;
+  color: var(--green);
+  line-height: 1;
+  letter-spacing: -.01em;
+}
+
+.rmod-qcm-meta {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--gray);
+  line-height: 1.4;
+}
+
+.rmod-qcm-cta {
+  margin-left: auto;
+  appearance: none;
+  border: none;
+  background: var(--green);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: .01em;
+  transition: background .12s;
+}
+.rmod-qcm-cta:hover {
+  background: var(--gm);
+}
+
+.rmod-qcm-empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--gray);
+  text-align: center;
+  padding: 4px 0 4px;
+  line-height: 1.5;
+}
+.rmod-qcm-empty em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--gm);
+  font-weight: 500;
+}
+
+/* ---------- QCM actions (RÃ©gÃ©nÃ©rer + Lancer) ---------- */
+.rmod-qcm-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.rmod-qcm-regen {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--gray);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.rmod-qcm-regen:hover {
+  color: var(--dark);
+  border-color: var(--gray);
+}
+.rmod-qcm-regen:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+/* Quand la meta est seule Ã  gauche (pas de num), elle prend la place */
+.rmod-qcm-meta-grow { flex: 1; min-width: 0; }
+
+/* Disabled state for the green CTA during generation */
+.rmod-qcm-cta:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+/* ---------- Info box (vidÃ©o skipped, etc.) ---------- */
+.rmod-gen-info {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(196, 123, 43, .08);
+  border: 1px solid rgba(196, 123, 43, .25);
+  color: var(--amber);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+}
