@@ -539,7 +539,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<{ name?: string } | null>(null)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [semester, setSemester] = useState<1 | 2>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
   const [showTodayModal, setShowTodayModal] = useState(false)
   const [showWeakModal, setShowWeakModal] = useState(false)
 
@@ -575,14 +575,14 @@ export default function DashboardPage() {
     })
   }, [load, router, supabase])
 
-  // Écoute le toggle Sem 1 / Sem 2 depuis le layout
+  // Écoute le toggle Sem 1 / Sem 2 / Année depuis le layout
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : 2)
+    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
     function handler(e: Event) {
-      const detail = (e as CustomEvent<1 | 2>).detail
-      if (detail === 1 || detail === 2) setSemester(detail)
+      const detail = (e as CustomEvent<1 | 2 | 'year'>).detail
+      if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)
     }
     window.addEventListener('medrev-sem-change', handler)
     return () => window.removeEventListener('medrev-sem-change', handler)
@@ -610,7 +610,11 @@ export default function DashboardPage() {
   }, [])
 
   // ================= DONNÉES DÉRIVÉES =================
-  const semSystems = useMemo(() => systems.filter(s => s.semestre === semester), [systems, semester])
+  // En mode 'year' : tous les systèmes ; sinon filtre par semestre
+  const semSystems = useMemo(
+    () => semester === 'year' ? systems : systems.filter(s => s.semestre === semester),
+    [systems, semester]
+  )
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
