@@ -11,6 +11,7 @@ const NAV = [
   { href: '/dashboard/fiches', label: 'Mes matières', icon: '▤' },
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
+  { href: '/dashboard/settings', label: 'Paramètres', icon: '⚙' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
