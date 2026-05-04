@@ -136,6 +136,66 @@ function questionKey(s: string): string {
 }
 
 // ============================================================
+// Parsing JSON tolérant aux troncatures de Gemini.
+// Si la réponse est coupée au milieu d'un objet, on retombe
+// sur le dernier objet complet et on construit un tableau valide.
+// ============================================================
+function parseQuestionsJson(raw: string): unknown[] {
+  const cleaned = raw.replace(/```json|```/g, '').trim()
+
+  // 1. Essai direct
+  try {
+    const v = JSON.parse(cleaned)
+    if (Array.isArray(v)) return v
+  } catch {
+    // continue avec les fallbacks
+  }
+
+  // 2. Cherche le tableau JSON dans la chaîne
+  const arrayStart = cleaned.indexOf('[')
+  if (arrayStart < 0) return []
+
+  // 3. Reparcours caractère par caractère pour trouver la dernière } complète
+  // qui clôt un objet de premier niveau dans le tableau, puis on referme [].
+  let depth = 0          // profondeur des objets
+  let inString = false
+  let escape = false
+  let lastValidEnd = -1  // index du dernier '}' qui ferme un objet top-level
+
+  for (let i = arrayStart + 1; i < cleaned.length; i++) {
+    const c = cleaned[i]
+    if (escape) { escape = false; continue }
+    if (c === '\\') { escape = true; continue }
+    if (c === '"') { inString = !inString; continue }
+    if (inString) continue
+
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) lastValidEnd = i  // on vient de fermer un objet top-level
+    }
+    else if (c === ']' && depth === 0) {
+      // Fin propre du tableau : tente le parse
+      try {
+        const v = JSON.parse(cleaned.slice(arrayStart, i + 1))
+        if (Array.isArray(v)) return v
+      } catch { /* continue */ }
+    }
+  }
+
+  // 4. Tableau pas refermé → on prend tout jusqu'au dernier '}' valide et on referme.
+  if (lastValidEnd > 0) {
+    const repaired = cleaned.slice(arrayStart, lastValidEnd + 1) + ']'
+    try {
+      const v = JSON.parse(repaired)
+      if (Array.isArray(v)) return v
+    } catch { /* échec final */ }
+  }
+
+  return []
+}
+
+// ============================================================
 // Sanitisation des questions retournées par Gemini
 // ============================================================
 type SanitizedQuestion = {
@@ -344,7 +404,7 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks),
       body: JSON.stringify({
         contents: [{ parts }],
         generationConfig: {
-          maxOutputTokens: 8000,
+          maxOutputTokens: 16000,  // 30 QCM détaillés ≈ 7-9k tokens, marge confortable
           temperature: 0.3,
           responseMimeType: 'application/json',
         },
@@ -359,18 +419,10 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks),
     const genData = await genResp.json()
     const rawText = genData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
-    // 7. Parse JSON
-    let parsed: unknown[]
-    try {
-      const cleaned = rawText.replace(/```json|```/g, '').trim()
-      parsed = JSON.parse(cleaned)
-    } catch {
-      const match = rawText.match(/\[[\s\S]*\]/)
-      if (!match) throw new Error('Réponse Gemini non-JSON')
-      parsed = JSON.parse(match[0])
-    }
-    if (!Array.isArray(parsed)) {
-      throw new Error('Réponse Gemini : tableau attendu')
+    // 7. Parse JSON — tolère les troncatures (Gemini peut couper en plein milieu)
+    const parsed: unknown[] = parseQuestionsJson(rawText)
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('Réponse Gemini : aucune question parsable')
     }
 
     // 8. Sanitize
