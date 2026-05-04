@@ -1,22 +1,18 @@
 'use client'
 // src/app/dashboard/stats/page.tsx
 //
-// Cockpit annuel + insights coaching.
-// 4 KPIs, heatmap année, évolution 12 semaines, maîtrise par palier J,
-// classement matières, top fragiles, et insights dynamiques en bas.
-//
-// Toutes les stats utilisent effectiveStepScore (officiel sinon temp_score).
-// Le modèle binaire ok/miss n'est plus utilisé.
+// Bilan annuel — page rétrospective pure.
+// Pas de "fais ça" (le dashboard s'en charge), pas de top fragiles non plus.
+// Que des données long-terme : totaux annuels, heatmap 52 sem,
+// évolution 12 sem, maîtrise par palier J, dumbbell il y a 1 mois → maintenant.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
-const FRAGILE_THRESHOLD = 3
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -60,14 +56,13 @@ function stepPostedDate(s: StepEntry): string | null {
   return null
 }
 
-// ===================== AGRÉGATIONS =====================
+// ===================== AGRÉGATIONS LESSON =====================
 type LessonAgg = {
   lesson: Lesson
   avg: number | null
   scoredCount: number
   officialCount: number
   isMastered: boolean
-  isFragile: boolean
 }
 
 function computeLessonAgg(lesson: Lesson): LessonAgg {
@@ -85,10 +80,10 @@ function computeLessonAgg(lesson: Lesson): LessonAgg {
     scoredCount: n,
     officialCount: official,
     isMastered: official >= 5 && avg !== null && avg >= 4,
-    isFragile: n >= 3 && avg !== null && avg < FRAGILE_THRESHOLD,
   }
 }
 
+// ===================== ACTIVITÉ =====================
 function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
   const m = new Map<string, number>()
   for (const l of lessons) {
@@ -104,6 +99,44 @@ function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
   return m
 }
 
+function totalRevisions(activityIndex: Map<string, number>): number {
+  let n = 0
+  activityIndex.forEach(v => { n += v })
+  return n
+}
+
+function activeDaysCount(activityIndex: Map<string, number>): number {
+  return activityIndex.size
+}
+
+type Streak = { length: number; start: string | null; end: string | null }
+
+function computeLongestStreak(activityIndex: Map<string, number>): Streak {
+  if (activityIndex.size === 0) return { length: 0, start: null, end: null }
+  const dates = Array.from(activityIndex.keys()).sort()
+  let maxLen = 1, maxStart = dates[0], maxEnd = dates[0]
+  let curLen = 1, curStart = dates[0]
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i - 1] + 'T12:00:00')
+    const curr = new Date(dates[i] + 'T12:00:00')
+    const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000)
+    if (diff === 1) {
+      curLen++
+      if (curLen > maxLen) { maxLen = curLen; maxStart = curStart; maxEnd = dates[i] }
+    } else {
+      curLen = 1
+      curStart = dates[i]
+    }
+  }
+  return { length: maxLen, start: maxStart, end: maxEnd }
+}
+
+function firstActivityDate(activityIndex: Map<string, number>): string | null {
+  if (activityIndex.size === 0) return null
+  return Array.from(activityIndex.keys()).sort()[0]
+}
+
+// ===================== ÉVOLUTION =====================
 function buildWeeklyAvg(lessons: Lesson[], today: string, weeks: number): { weekStart: string; avg: number | null; count: number }[] {
   const out: { weekStart: string; avg: number | null; count: number }[] = []
   const todayD = new Date(today + 'T12:00:00')
@@ -151,36 +184,60 @@ function buildJStats(lessons: Lesson[]): { jLabel: string; avg: number | null; c
   return out
 }
 
-type MatiereStat = {
+// ===================== COMPARAISON 1 MOIS → MAINTENANT =====================
+type MatiereComparison = {
   system: System
-  totalFiches: number
-  scoredFiches: number
-  avg: number | null
-  fragileCount: number
-  masteredCount: number
+  avgThen: number | null
+  avgNow: number | null
+  delta: number | null
 }
 
-function computeMatiereStats(systems: System[], lessons: Lesson[]): MatiereStat[] {
-  const out: MatiereStat[] = []
+function computeMatiereComparison(systems: System[], lessons: Lesson[], today: string): MatiereComparison[] {
+  const todayD = new Date(today + 'T12:00:00')
+  const monthAgo = new Date(todayD)
+  monthAgo.setDate(todayD.getDate() - 30)
+  const monthAgoStr = monthAgo.toISOString().split('T')[0]
+
+  const out: MatiereComparison[] = []
+
   for (const sys of systems) {
     const sysLessons = lessons.filter(l => l.system_id === sys.id)
-    let sum = 0, n = 0, fragile = 0, mastered = 0
+    let sumThen = 0, nThen = 0
+    let sumNow = 0, nNow = 0
+
     for (const l of sysLessons) {
-      const a = computeLessonAgg(l)
-      if (a.avg !== null) { sum += a.avg; n++ }
-      if (a.isFragile) fragile++
-      if (a.isMastered) mastered++
+      const steps = (l.steps as StepEntry[]) || []
+      let lThenSum = 0, lThenN = 0
+      let lNowSum = 0, lNowN = 0
+      for (const s of steps) {
+        const eff = effectiveStepScore(s)
+        if (!eff) continue
+        const d = stepPostedDate(s)
+        if (!d) continue
+        // état "maintenant" : tous les scores
+        lNowSum += eff; lNowN++
+        // état "il y a 1 mois" : que les scores posés ≤ 30j
+        if (d <= monthAgoStr) { lThenSum += eff; lThenN++ }
+      }
+      if (lNowN > 0) { sumNow += lNowSum / lNowN; nNow++ }
+      if (lThenN > 0) { sumThen += lThenSum / lThenN; nThen++ }
     }
-    out.push({
-      system: sys,
-      totalFiches: sysLessons.length,
-      scoredFiches: n,
-      avg: n > 0 ? sum / n : null,
-      fragileCount: fragile,
-      masteredCount: mastered,
-    })
+
+    const avgNow = nNow > 0 ? sumNow / nNow : null
+    const avgThen = nThen > 0 ? sumThen / nThen : null
+    const delta = avgNow !== null && avgThen !== null ? avgNow - avgThen : null
+    out.push({ system: sys, avgThen, avgNow, delta })
   }
-  return out.filter(m => m.scoredFiches > 0).sort((a, b) => (a.avg ?? 999) - (b.avg ?? 999))
+
+  // tri : ceux avec delta non null d'abord, par delta desc
+  return out
+    .filter(m => m.avgNow !== null)
+    .sort((a, b) => {
+      if (a.delta === null && b.delta === null) return (b.avgNow ?? 0) - (a.avgNow ?? 0)
+      if (a.delta === null) return 1
+      if (b.delta === null) return -1
+      return (b.delta ?? 0) - (a.delta ?? 0)
+    })
 }
 
 // ===================== HEATMAP =====================
@@ -221,75 +278,6 @@ function intensityClass(count: number, max: number): string {
   return 'i4'
 }
 
-// ===================== INSIGHTS =====================
-type Insight = { kind: 'positive' | 'neutral' | 'warning'; text: string }
-
-function generateInsights(
-  matiereStats: MatiereStat[],
-  weeklyAvg: { weekStart: string; avg: number | null; count: number }[]
-): Insight[] {
-  const out: Insight[] = []
-  if (weeklyAvg.length < 2) return out
-
-  const last = weeklyAvg[weeklyAvg.length - 1]
-  const prev = weeklyAvg[weeklyAvg.length - 2]
-  if (last.avg !== null && prev.avg !== null) {
-    const delta = last.avg - prev.avg
-    if (Math.abs(delta) >= 0.2) {
-      const sign = delta > 0 ? '+' : ''
-      out.push({
-        kind: delta > 0 ? 'positive' : 'warning',
-        text: `Ta moyenne est passée de ${prev.avg.toFixed(1)} à ${last.avg.toFixed(1)} cette semaine (${sign}${delta.toFixed(1)}).`,
-      })
-    }
-  }
-
-  if (last.count > 0 || prev.count > 0) {
-    const delta = last.count - prev.count
-    const pct = prev.count > 0 ? Math.round((delta / prev.count) * 100) : 100
-    if (Math.abs(delta) >= 3) {
-      out.push({
-        kind: delta > 0 ? 'positive' : 'neutral',
-        text: `${last.count} révisions cette semaine (${delta > 0 ? '+' : ''}${pct}% vs sem. précédente).`,
-      })
-    }
-  }
-
-  const weakest = matiereStats[0]
-  if (weakest && weakest.avg !== null && weakest.avg < FRAGILE_THRESHOLD + 0.5) {
-    out.push({
-      kind: 'warning',
-      text: `${weakest.system.name} reste ton point faible (avg ${weakest.avg.toFixed(1)}/5${weakest.fragileCount > 0 ? ` · ${weakest.fragileCount} fiche${weakest.fragileCount > 1 ? 's' : ''} fragile${weakest.fragileCount > 1 ? 's' : ''}` : ''}).`,
-    })
-  }
-
-  const strongest = matiereStats[matiereStats.length - 1]
-  if (strongest && weakest && strongest !== weakest && strongest.avg !== null && strongest.avg >= 4) {
-    out.push({
-      kind: 'positive',
-      text: `${strongest.system.name} est ta matière la plus solide (avg ${strongest.avg.toFixed(1)}/5).`,
-    })
-  }
-
-  const recentRate = weeklyAvg.slice(-4).reduce((s, w) => s + w.count, 0) / 4
-  if (recentRate >= 1) {
-    const projected8w = Math.round(recentRate * 8)
-    out.push({
-      kind: 'neutral',
-      text: `À ton rythme actuel (${recentRate.toFixed(1)} révisions/sem.), tu en feras ~${projected8w} dans les 8 semaines à venir.`,
-    })
-  }
-
-  if (last.count === 0 && prev.count > 0) {
-    out.push({
-      kind: 'warning',
-      text: `Aucune révision cette semaine — reprends le rythme avant de perdre tes acquis.`,
-    })
-  }
-
-  return out
-}
-
 function scoreClass(avg: number | null): string {
   if (avg === null) return 's3'
   if (avg < 2) return 's1'
@@ -302,6 +290,11 @@ function scoreClass(avg: number | null): string {
 function fmtMonth(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+}
+
+function fmtDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '')
 }
 
 // ===================== PAGE =====================
@@ -346,39 +339,29 @@ export default function StatsPage() {
   const activityIndex = useMemo(() => buildActivityIndex(semLessons), [semLessons])
   const weeklyAvg = useMemo(() => buildWeeklyAvg(semLessons, today, 12), [semLessons, today])
   const jStats = useMemo(() => buildJStats(semLessons), [semLessons])
-  const matiereStats = useMemo(() => computeMatiereStats(semSystems, semLessons), [semSystems, semLessons])
   const heatmap = useMemo(() => buildYearHeatmap(activityIndex, today), [activityIndex, today])
-  const insights = useMemo(() => generateInsights(matiereStats, weeklyAvg), [matiereStats, weeklyAvg])
-
-  const totalFiches = semLessons.length
-  const scoredFiches = aggs.filter(a => a.avg !== null).length
-  const masteredCount = aggs.filter(a => a.isMastered).length
-  const fragileCount = aggs.filter(a => a.isFragile).length
-
-  const globalAvg = useMemo(() => {
-    const valid = aggs.filter(a => a.avg !== null)
-    if (valid.length === 0) return null
-    return valid.reduce((s, a) => s + (a.avg ?? 0), 0) / valid.length
-  }, [aggs])
-
-  const last7Count = weeklyAvg[weeklyAvg.length - 1]?.count ?? 0
-  const prev7Count = weeklyAvg[weeklyAvg.length - 2]?.count ?? 0
-  const week7Delta = last7Count - prev7Count
-
-  const totalActivity = useMemo(() => {
-    let sum = 0
-    activityIndex.forEach(v => { sum += v })
-    return sum
-  }, [activityIndex])
-
-  const recent4wRate = weeklyAvg.slice(-4).reduce((s, w) => s + w.count, 0) / 4
-  const projection8w = Math.round(recent4wRate * 8)
+  const comparison = useMemo(() => computeMatiereComparison(semSystems, semLessons, today), [semSystems, semLessons, today])
 
   const heatmapMax = useMemo(() => {
     let max = 1
     activityIndex.forEach(v => { if (v > max) max = v })
     return max
   }, [activityIndex])
+
+  const totalRevs = useMemo(() => totalRevisions(activityIndex), [activityIndex])
+  const activeDays = useMemo(() => activeDaysCount(activityIndex), [activityIndex])
+  const longestStreak = useMemo(() => computeLongestStreak(activityIndex), [activityIndex])
+  const firstDay = useMemo(() => firstActivityDate(activityIndex), [activityIndex])
+  const masteredCount = aggs.filter(a => a.isMastered).length
+  const totalFiches = semLessons.length
+
+  // pour le sub-label de "jours actifs"
+  const daySpan = useMemo(() => {
+    if (!firstDay) return 0
+    const t = new Date(today + 'T12:00:00')
+    const f = new Date(firstDay + 'T12:00:00')
+    return Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1)
+  }, [firstDay, today])
 
   if (loading) {
     return (
@@ -388,11 +371,7 @@ export default function StatsPage() {
     )
   }
 
-  const topFragiles = aggs
-    .filter(a => a.avg !== null && a.scoredCount >= 2)
-    .sort((a, b) => (a.avg ?? 999) - (b.avg ?? 999))
-    .slice(0, 5)
-
+  // mois pour la heatmap
   const monthLabels: { weekIdx: number; label: string }[] = []
   let lastMonth = ''
   heatmap.forEach((week, idx) => {
@@ -408,8 +387,13 @@ export default function StatsPage() {
 
       <div className="stats-header">
         <div>
-          <h1 className="stats-title">Statistiques</h1>
-          <div className="stats-sub">Cockpit annuel · {totalFiches} fiches · {totalActivity} révisions cumulées</div>
+          <h1 className="stats-title">
+            Mon <em>année</em> en révisions
+          </h1>
+          <div className="stats-sub">
+            {totalRevs} révision{totalRevs > 1 ? 's' : ''} cumulée{totalRevs > 1 ? 's' : ''} sur {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}
+            {longestStreak.length >= 2 ? ` · plus longue série : ${longestStreak.length} jours` : ''}
+          </div>
         </div>
         <div className="stats-sem-toggle">
           <button className={semestre === 1 ? 'active' : ''} onClick={() => setSemestre(1)}>S1</button>
@@ -417,45 +401,44 @@ export default function StatsPage() {
         </div>
       </div>
 
-      <div className="stats-kpis">
-        <div className="stats-kpi">
-          <div className="stats-kpi-label">Maîtrise globale</div>
-          <div className="stats-kpi-row">
-            <span className={`stats-kpi-val ${scoreClass(globalAvg)}`}>{globalAvg !== null ? globalAvg.toFixed(1) : '—'}</span>
-            <span className="stats-kpi-unit">/5</span>
-          </div>
-          <div className="stats-kpi-sub">{scoredFiches} fiches notées · {masteredCount} maîtrisée{masteredCount > 1 ? 's' : ''}</div>
-        </div>
-        <div className="stats-kpi">
-          <div className="stats-kpi-label">Cette semaine</div>
-          <div className="stats-kpi-row">
-            <span className="stats-kpi-val">{last7Count}</span>
-            <span className="stats-kpi-unit">révisions</span>
-          </div>
-          <div className={`stats-kpi-sub ${week7Delta > 0 ? 'pos' : week7Delta < 0 ? 'neg' : ''}`}>
-            {prev7Count === 0 && last7Count === 0 ? 'Aucune activité' : `${week7Delta > 0 ? '+' : ''}${week7Delta} vs sem. précédente`}
+      <div className="stats-totals">
+        <div className="stats-total">
+          <div className="stats-total-label">Révisions totales</div>
+          <div className="stats-total-val">{totalRevs}</div>
+          <div className="stats-total-sub">
+            {firstDay ? `depuis ${fmtDate(firstDay)}` : 'aucune révision encore'}
           </div>
         </div>
-        <div className="stats-kpi">
-          <div className="stats-kpi-label">Fiches fragiles</div>
-          <div className="stats-kpi-row">
-            <span className={`stats-kpi-val ${fragileCount > 0 ? 's2' : 's4'}`}>{fragileCount}</span>
-            <span className="stats-kpi-unit">à retravailler</span>
+        <div className="stats-total">
+          <div className="stats-total-label">Jours actifs</div>
+          <div className="stats-total-val">{activeDays}</div>
+          <div className="stats-total-sub">
+            {daySpan > 0 ? `sur ${daySpan} jours · ${Math.round((activeDays / daySpan) * 100)}%` : '—'}
           </div>
-          <div className="stats-kpi-sub">{fragileCount === 0 ? 'Aucune fragile · tu gères' : `avg < ${FRAGILE_THRESHOLD}`}</div>
         </div>
-        <div className="stats-kpi">
-          <div className="stats-kpi-label">Projection 8 sem.</div>
-          <div className="stats-kpi-row">
-            <span className="stats-kpi-val">{projection8w}</span>
-            <span className="stats-kpi-unit">révisions</span>
+        <div className="stats-total">
+          <div className="stats-total-label">Plus longue série</div>
+          <div className="stats-total-val">{longestStreak.length}</div>
+          <div className="stats-total-sub">
+            {longestStreak.length >= 2 && longestStreak.start && longestStreak.end
+              ? `jours · ${fmtDate(longestStreak.start)} → ${fmtDate(longestStreak.end)}`
+              : 'jour'}
           </div>
-          <div className="stats-kpi-sub">à ton rythme actuel ({recent4wRate.toFixed(1)}/sem.)</div>
+        </div>
+        <div className="stats-total">
+          <div className="stats-total-label">Fiches maîtrisées</div>
+          <div className="stats-total-val">{masteredCount}</div>
+          <div className="stats-total-sub">
+            sur {totalFiches} · avg ≥ 4 sur 5+ J
+          </div>
         </div>
       </div>
 
       <div className="stats-card">
-        <div className="stats-card-title">Activité de l&apos;année <span className="stats-card-sub">52 dernières semaines</span></div>
+        <div className="stats-card-title">
+          Activité de l&apos;année
+          <span className="stats-card-sub">52 dernières semaines · plus la case est verte, plus tu as révisé</span>
+        </div>
         <div className="stats-heatmap-wrap">
           <div className="stats-heatmap-months">
             {monthLabels.map((m, idx) => (
@@ -494,7 +477,18 @@ export default function StatsPage() {
 
       <div className="stats-row stats-row-2">
         <div className="stats-card">
-          <div className="stats-card-title">Maîtrise par palier J <span className="stats-card-sub">officiel uniquement</span></div>
+          <div className="stats-card-title">
+            Évolution de ta moyenne
+            <span className="stats-card-sub">12 dernières semaines</span>
+          </div>
+          <Sparkline data={weeklyAvg} />
+        </div>
+
+        <div className="stats-card">
+          <div className="stats-card-title">
+            Maîtrise par palier J
+            <span className="stats-card-sub">officiel uniquement</span>
+          </div>
           <div className="stats-jbar">
             {jStats.map((j, i) => {
               const pct = j.avg !== null ? (j.avg / 5) * 100 : 0
@@ -511,76 +505,81 @@ export default function StatsPage() {
             })}
           </div>
         </div>
-
-        <div className="stats-card">
-          <div className="stats-card-title">Évolution moyenne <span className="stats-card-sub">12 dernières semaines</span></div>
-          <Sparkline data={weeklyAvg} />
-        </div>
       </div>
 
-      <div className="stats-row stats-row-2">
-        <div className="stats-card">
-          <div className="stats-card-title">Maîtrise par matière</div>
-          {matiereStats.length === 0 ? (
-            <div className="stats-empty">Pas encore de matière notée pour ce semestre.</div>
-          ) : (
-            <div className="stats-mat-list">
-              {matiereStats.map(m => {
-                const pct = m.avg !== null ? (m.avg / 5) * 100 : 0
-                const cls = scoreClass(m.avg)
-                return (
-                  <div key={m.system.id} className="stats-mat">
-                    <div className="stats-mat-name">{m.system.name}</div>
-                    <div className="stats-mat-bar">
-                      <div className={`stats-mat-fill ${cls}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className={`stats-mat-val ${cls}`}>{m.avg !== null ? m.avg.toFixed(1) : '—'}</div>
-                    <div className="stats-mat-counts">
-                      {m.scoredFiches}/{m.totalFiches} f.
-                      {m.fragileCount > 0 && <span className="stats-mat-fragile"> · {m.fragileCount} fragile{m.fragileCount > 1 ? 's' : ''}</span>}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+      <div className="stats-card">
+        <div className="stats-card-title">
+          Comparaison · il y a 1 mois → aujourd&apos;hui
+          <span className="stats-card-sub">par matière · point gris = il y a 1 mois, point coloré = maintenant</span>
         </div>
-
-        <div className="stats-card">
-          <div className="stats-card-title">Top fragiles <span className="stats-card-sub">{topFragiles.length > 0 ? '5 plus faibles' : ''}</span></div>
-          {topFragiles.length === 0 ? (
-            <div className="stats-empty">Aucune fiche notée 2+ fois.</div>
-          ) : (
-            <div className="stats-frag-list">
-              {topFragiles.map(a => {
-                const sys = systems.find(s => s.id === a.lesson.system_id)
-                const cls = scoreClass(a.avg)
-                return (
-                  <Link key={a.lesson.id} href={`/dashboard/focus?lessons=${a.lesson.id}`} className="stats-frag">
-                    <div className="stats-frag-info">
-                      <div className="stats-frag-name">{a.lesson.name}</div>
-                      <div className="stats-frag-sys">{sys?.name ?? '—'} · {a.scoredCount} révision{a.scoredCount > 1 ? 's' : ''}</div>
-                    </div>
-                    <div className={`stats-frag-chip ${cls}`}>{a.avg !== null ? a.avg.toFixed(1) : '—'}</div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        <DumbbellChart rows={comparison} />
       </div>
 
-      {insights.length > 0 && (
-        <div className="stats-card">
-          <div className="stats-card-title">Insights</div>
-          <ul className="stats-insights">
-            {insights.map((ins, i) => (
-              <li key={i} className={`stats-insight ${ins.kind}`}>{ins.text}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+    </div>
+  )
+}
 
+// ===================== DUMBBELL =====================
+function DumbbellChart({ rows }: { rows: MatiereComparison[] }) {
+  if (rows.length === 0) {
+    return <div className="stats-empty">Pas encore assez de données pour comparer.</div>
+  }
+
+  return (
+    <div className="stats-dumb">
+      {rows.map(r => {
+        if (r.avgNow === null) return null
+        const nowPct = ((r.avgNow - 1) / 4) * 100
+        const thenPct = r.avgThen !== null ? ((r.avgThen - 1) / 4) * 100 : null
+        const delta = r.delta
+        let trendCls: 'up' | 'down' | 'flat' = 'flat'
+        if (delta !== null) {
+          if (delta >= 0.15) trendCls = 'up'
+          else if (delta <= -0.15) trendCls = 'down'
+        }
+        const lineLeft = thenPct !== null ? Math.min(thenPct, nowPct) : nowPct
+        const lineWidth = thenPct !== null ? Math.abs(nowPct - thenPct) : 0
+        const deltaLabel = delta !== null
+          ? (delta > 0 ? `+${delta.toFixed(1)}` : delta < 0 ? delta.toFixed(1).replace('-', '−') : '0.0')
+          : 'nouveau'
+
+        return (
+          <div key={r.system.id} className="stats-dumb-row">
+            <div className="stats-dumb-name">{r.system.name}</div>
+            <div className="stats-dumb-track">
+              <div className="stats-dumb-axis" />
+              <div className="stats-dumb-grid" style={{ left: '0%' }} />
+              <div className="stats-dumb-grid" style={{ left: '25%' }} />
+              <div className="stats-dumb-grid" style={{ left: '50%' }} />
+              <div className="stats-dumb-grid" style={{ left: '75%' }} />
+              <div className="stats-dumb-grid" style={{ left: '100%' }} />
+              {thenPct !== null && lineWidth > 0 && (
+                <div className={`stats-dumb-line ${trendCls}`} style={{ left: `${lineLeft}%`, width: `${lineWidth}%` }} />
+              )}
+              {thenPct !== null && (
+                <div
+                  className="stats-dumb-dot then"
+                  style={{ left: `${thenPct}%` }}
+                  title={`il y a 1 mois : ${r.avgThen!.toFixed(1)}/5`}
+                />
+              )}
+              <div
+                className={`stats-dumb-dot now ${trendCls}`}
+                style={{ left: `${nowPct}%` }}
+                title={`aujourd'hui : ${r.avgNow.toFixed(1)}/5`}
+              />
+            </div>
+            <div className={`stats-dumb-delta ${trendCls}`}>{deltaLabel}</div>
+          </div>
+        )
+      })}
+      <div className="stats-dumb-scale">
+        <div />
+        <div className="stats-dumb-ticks">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+        </div>
+        <div />
+      </div>
     </div>
   )
 }
@@ -588,8 +587,8 @@ export default function StatsPage() {
 // ===================== SPARKLINE =====================
 function Sparkline({ data }: { data: { weekStart: string; avg: number | null; count: number }[] }) {
   const w = 320
-  const h = 120
-  const pad = 16
+  const h = 160
+  const pad = 18
   const validIndices = data.map((d, i) => d.avg !== null ? i : -1).filter(i => i >= 0)
   if (validIndices.length < 2) {
     return <div className="stats-empty">Pas assez de données pour tracer une tendance.</div>
@@ -598,7 +597,6 @@ function Sparkline({ data }: { data: { weekStart: string; avg: number | null; co
   const xs = data.map((_, i) => pad + (i / Math.max(1, data.length - 1)) * (w - 2 * pad))
   const ys = data.map(d => d.avg === null ? null : h - pad - ((d.avg - 1) / 4) * (h - 2 * pad))
 
-  // Construit un path linéaire en sautant les null
   const segments: string[] = []
   let current: string[] = []
   for (let i = 0; i < ys.length; i++) {
