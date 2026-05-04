@@ -212,9 +212,14 @@ function buildQueue(
     baseQueue = computeTodayQueue(sysLessons, today)
   } else {
     const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
-    const sem = semRaw === '1' ? 1 : 2
-    const semSystemIds = new Set(systems.filter(s => s.semestre === sem).map(s => s.id))
-    const semLessons = lessons.filter(l => semSystemIds.has(l.system_id))
+    const sem: 1 | 2 | 'year' = semRaw === '1' ? 1 : semRaw === 'year' ? 'year' : 2
+    // En mode 'year' : pas de filtre par semestre, on prend toutes les leçons
+    const semLessons = sem === 'year'
+      ? lessons
+      : lessons.filter(l => {
+          const sys = systems.find(s => s.id === l.system_id)
+          return sys?.semestre === sem
+        })
     baseQueue = computeTodayQueue(semLessons, today)
   }
 
