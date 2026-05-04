@@ -1,0 +1,222 @@
+@charset "UTF-8";
+/* src/components/source-lightbox.css
+   Lightbox MedRev pour ouvrir vidéo/PDF source. Préfixe scope : .srcl-* */
+
+.srcl-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 19, 16, .5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  animation: srcl-fade-in .15s ease;
+}
+
+@keyframes srcl-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.srcl-card {
+  width: min(960px, 100%);
+  max-height: 92vh;
+  background: #fff;
+  border: 1px solid var(--border, #E1DDD3);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px -20px rgba(17, 19, 16, .4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: srcl-slide-in .18s ease;
+}
+
+@keyframes srcl-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Head ---- */
+.srcl-head {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border, #E1DDD3);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.srcl-title {
+  margin: 0;
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--dark, #111310);
+  letter-spacing: -.005em;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.srcl-title em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--gm, #2D6A4F);
+  font-weight: 500;
+  font-size: 17px;
+}
+
+/* ---- Tabs (vidéo / PDF) ---- */
+.srcl-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--soft, #FAF8F2);
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #E1DDD3);
+  flex-shrink: 0;
+}
+
+.srcl-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--gray, #6B6F6A);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  letter-spacing: .02em;
+}
+.srcl-tab.active {
+  background: var(--green, #1B4332);
+  color: #fff;
+}
+.srcl-tab:not(.active):hover {
+  color: var(--dark, #111310);
+}
+
+/* ---- Close ---- */
+.srcl-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #E1DDD3);
+  background: #fff;
+  color: var(--gray, #6B6F6A);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.srcl-close:hover {
+  color: var(--dark, #111310);
+  border-color: var(--gray, #6B6F6A);
+}
+
+/* ---- Body ---- */
+.srcl-body {
+  flex: 1;
+  overflow: auto;
+  background: var(--bg, #EDEAE3);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.srcl-state {
+  width: 100%;
+  padding: 80px 24px;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--gray, #6B6F6A);
+  font-size: 16px;
+}
+.srcl-state.error {
+  color: var(--rose, #C75050);
+}
+
+/* ---- Vidéo HTML5 ---- */
+.srcl-video {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  background: #000;
+  display: block;
+  outline: none;
+}
+
+/* ---- PDF iframe ---- */
+.srcl-pdf {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  display: block;
+  background: #fff;
+}
+
+/* ---- Foot ---- */
+.srcl-foot {
+  padding: 12px 22px;
+  border-top: 1px solid var(--border, #E1DDD3);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.srcl-foot-meta {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--gray, #6B6F6A);
+  font-size: 13.5px;
+}
+.srcl-foot-meta em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--gm, #2D6A4F);
+  font-weight: 500;
+  font-size: 13.5px;
+}
+
+.srcl-back {
+  margin-left: auto;
+  appearance: none;
+  border: none;
+  background: var(--green, #1B4332);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  letter-spacing: .01em;
+}
+.srcl-back:hover {
+  background: var(--gm, #2D6A4F);
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 640px) {
+  .srcl-overlay { padding: 12px; }
+  .srcl-head {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+  .srcl-title { font-size: 15px; flex-basis: 100%; }
+  .srcl-title em { font-size: 15px; }
+  .srcl-foot { padding: 10px 16px; flex-wrap: wrap; }
+}
