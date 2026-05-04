@@ -28,9 +28,9 @@ const MAX_VIDEO_SIZE = 100 * 1024 * 1024  // 100 Mo
 const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 20 Mo total req)
 
 const FORMAT_DESC: Record<string, string> = {
-  mixed: 'un mélange équilibré de QCM classiques (4 options A/B/C/D), KFP (vignette clinique courte + questions liées) et Vrai/Faux raisonnés',
-  qcm:   'des QCM classiques avec 4 options (A/B/C/D), une seule bonne réponse par question',
-  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis questions précises',
+  mixed: 'un mélange équilibré de QCM classiques (5 options A/B/C/D/E, standard PASS), KFP (vignette clinique courte + questions liées 5 options) et Vrai/Faux raisonnés',
+  qcm:   'des QCM classiques avec 5 options (A/B/C/D/E) — standard des examens PASS en médecine — une seule bonne réponse par question',
+  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis questions précises (5 options A-E)',
   vf:    'des questions Vrai/Faux avec justification dans l\'explication',
 }
 
@@ -382,18 +382,19 @@ ${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déj�
 - Pas de questions évidentes ou triviales.
 - Langue : français médical rigoureux.
 
-RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), exactement ce format :
+RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), exactement ce format. CHAQUE question doit avoir EXACTEMENT 5 OPTIONS A à E (standard PASS) :
 [
   {
     "question": "Question précise ?",
-    "options": ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
+    "options": ["A. Option A", "B. Option B", "C. Option C", "D. Option D", "E. Option E"],
     "answer": 0,
     "explanation": "Explication pédagogique citant la source.",
     "source_ref": { "pdf_page": 4, "video_ts": 2528 }
   }
 ]
 
-"answer" est l'index (0-based) de la bonne réponse dans "options".`
+"answer" est l'index (0-based) de la bonne réponse dans "options" (donc 0, 1, 2, 3 ou 4).
+RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
 
     parts.push({ text: prompt })
 
