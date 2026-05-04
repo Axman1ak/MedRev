@@ -109,6 +109,33 @@ async function waitForGeminiFile(name: string, maxWaitMs = 45000): Promise<Gemin
 }
 
 // ============================================================
+// Helpers : shuffle + dédup (questions sémantiquement proches)
+// ============================================================
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = a[i]; a[i] = a[j]; a[j] = tmp
+  }
+  return a
+}
+
+// Clé de comparaison pour dédup stricte :
+// - lowercase
+// - sans accents
+// - sans ponctuation
+// - whitespace normalisé
+// → garantit "même question = même clé", sans toucher aux questions juste similaires.
+function questionKey(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // strip accents
+    .replace(/[^\w\s]/g, ' ')                           // strip ponctuation
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// ============================================================
 // Sanitisation des questions retournées par Gemini
 // ============================================================
 type SanitizedQuestion = {
@@ -347,10 +374,39 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks),
     }
 
     // 8. Sanitize
-    const sanitized = sanitizeQuestions(parsed, nbQ)
+    let sanitized = sanitizeQuestions(parsed, nbQ)
     if (sanitized.length === 0) {
       throw new Error('Aucune question valide générée')
     }
+
+    // 8b. Dédup INTERNE au batch (Gemini répète parfois)
+    {
+      const seen = new Set<string>()
+      sanitized = sanitized.filter(q => {
+        const fp = questionKey(q.question)
+        if (seen.has(fp)) return false
+        seen.add(fp)
+        return true
+      })
+    }
+
+    // 8c. Dédup vs. questions déjà présentes (mode append uniquement)
+    let droppedDuplicates = 0
+    if (mode === 'append' && existingQuestions.length > 0) {
+      const existingFps = new Set(
+        existingQuestions.map(q => questionKey(String(q.question || q.stem || '')))
+      )
+      const before = sanitized.length
+      sanitized = sanitized.filter(q => !existingFps.has(questionKey(q.question)))
+      droppedDuplicates = before - sanitized.length
+    }
+
+    if (sanitized.length === 0) {
+      throw new Error('Toutes les questions générées étaient des doublons des existantes — réessaie ou lance la génération sur d\'autres sources.')
+    }
+
+    // 8d. Mélange l'ordre du batch (sinon Gemini sort par ordre de pages source)
+    sanitized = shuffle(sanitized)
 
     // 9. Si mode append, concaténer aux existantes ; sinon remplacer
     const finalQuestions = mode === 'append'
