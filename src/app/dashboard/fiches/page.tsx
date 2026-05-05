@@ -703,8 +703,8 @@ export default function FichesPage() {
 
       {/* ---- MODAL : Nouvelle matière ---- */}
       {showNewSystem && (
-        <div className="fi-overlay" onClick={() => setShowNewSystem(false)}>
-          <div className="fi-modal" onClick={e => e.stopPropagation()}>
+        <div className="fi-overlay" style={{ zIndex: 10000 }} onClick={() => setShowNewSystem(false)}>
+          <div className="fi-modal" data-tour="matiere-form" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">Nouvelle matière</div>
             <div style={{ marginBottom: 16 }}>
               <label className="fi-label">Nom de la matière</label>
@@ -754,8 +754,8 @@ export default function FichesPage() {
 
       {/* ---- MODAL : Nouvelle fiche ---- */}
       {showNewLesson && (
-        <div className="fi-overlay" onClick={() => setShowNewLesson(false)}>
-          <div className="fi-modal" onClick={e => e.stopPropagation()}>
+        <div className="fi-overlay" style={{ zIndex: 10000 }} onClick={() => setShowNewLesson(false)}>
+          <div className="fi-modal" data-tour="fiche-form" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">Nouvelle fiche</div>
             <div style={{ marginBottom: 16 }}>
               <label className="fi-label">Intitulé de la fiche</label>
@@ -790,7 +790,7 @@ export default function FichesPage() {
 
       {/* ---- MODAL : Renommer ---- */}
       {editing && (
-        <div className="fi-overlay" onClick={() => setEditing(null)}>
+        <div className="fi-overlay" style={{ zIndex: 10000 }} onClick={() => setEditing(null)}>
           <div className="fi-modal" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">
               Renommer {editing.type === 'system' ? 'la matière' : 'la fiche'}
@@ -823,7 +823,7 @@ export default function FichesPage() {
 
       {/* ---- MODAL : Confirmation de suppression ---- */}
       {deleting && (
-        <div className="fi-overlay" onClick={() => setDeleting(null)}>
+        <div className="fi-overlay" style={{ zIndex: 10000 }} onClick={() => setDeleting(null)}>
           <div className="fi-modal" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">
               Supprimer {deleting.type === 'system' ? 'cette matière' : 'cette fiche'} ?
