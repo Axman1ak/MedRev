@@ -257,6 +257,34 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* AIDE */}
+        <section className="set-card">
+          <div className="set-card-h">Aide</div>
+
+          <div className="set-row">
+            <label className="set-label">Tutoriel d&apos;introduction</label>
+            <p className="set-hint">
+              Revoir le tour guidé qui présente la courbe J, le système de notation
+              et la création de tes premières fiches.
+            </p>
+          </div>
+
+          <div className="set-actions">
+            <button
+              className="set-btn"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  // Reset le state local du tour pour repartir de zéro
+                  localStorage.removeItem('medrev-onboarding-phase')
+                  window.dispatchEvent(new Event('medrev-onboarding-replay'))
+                }
+              }}
+            >
+              Revoir le tutoriel
+            </button>
+          </div>
+        </section>
+
         {/* DÉCONNEXION */}
         <section className="set-card set-card-danger">
           <div className="set-card-h">Session</div>
