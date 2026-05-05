@@ -1,41 +1,42 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev — 100% spotlight/coachmark, 15 étapes structurées en 3 phases :
+// Tour MedRev — 100% spotlight/coachmark, 15 étapes en 3 phases.
+// Objectif : montrer les fonctionnalités. Pas de création forcée — un simple
+// clic sur le bouton mis en avant suffit pour passer à l'étape suivante.
 //
 //   PHASE 1 — Accueil
 //     1. Sidebar              — Welcome + intro
 //     2. Toggle semestres     — S1/S2/Année
 //
-//   PHASE 2 — Mes matières (le principal, on commence ici)
+//   PHASE 2 — Mes matières (le principal)
 //     3. nav-fiches           — "On commence par Mes matières"
-//     4. + Matière            — ACTION (clic forcé pour créer)
-//     5. + Nouvelle fiche     — ACTION
-//     6. Carte fiche          — Courbe J 14 paliers + notation 1-5
-//     7. Carte fiche          — ACTION : clic pour ouvrir la modale
+//     4. + Matière            — wait-click sur le bouton (ouvre le formulaire)
+//     5. + Nouvelle fiche     — wait-click sur le bouton
+//     6. Carte fiche          — explication courbe J + notation
+//     7. Carte fiche          — wait-click sur la fiche (ouvre la modale)
 //     8. Picker J             — choisir le palier à noter
 //     9. Sources vidéo/PDF    — upload + Premium (30 min / 20 Mo en Free)
 //    10. QCM IA               — génération + Premium (5 free)
 //
-//   PHASE 3 — Tour des autres onglets (les répercussions)
-//    11. nav-dashboard        — "Voici ton Tableau de bord, ta fiche apparaît dans Aujourd'hui"
-//    12. nav-calendar         — "Programmée à J0, J1, J3..."
-//    13. nav-focus            — "Bibliothèque gamifiée"
-//    14. nav-simu             — Simulateur + Premium (1 session free)
-//    15. nav-stats            — Stats + Premium (heatmap, dumbbell)
+//   PHASE 3 — Tour des autres onglets
+//    11. nav-dashboard, 12. nav-calendar, 13. nav-focus, 14. nav-simu, 15. nav-stats
 //
-// Sur les wait-action (4, 5, 7), aucun bouton "Passer" — l'user doit faire
-// l'action. ESC reste comme sortie d'urgence (avec confirm).
+// Mécanisme :
+//  - Walkthrough (1, 2, 3, 6, 8-15) : bouton Suivant + Passer + Précédent.
+//  - Wait-click (4, 5, 7) : aucun bouton — le tour avance dès que l'user
+//    clique sur le bouton/élément mis en avant (capture phase document-level).
+//    ESC reste accessible comme sortie d'urgence partout.
+//  - Si l'élément cible est introuvable (pas de fiche encore par exemple),
+//    fallback automatique avec Suivant + Passer pour ne pas bloquer.
 //
 // Mounted dans dashboard/layout.tsx, persiste entre toutes les pages.
 
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import './onboarding-tour.css'
 
-type StepKind = 'walkthrough' | 'wait-action'
-type WaitCondition = 'systems' | 'lessons' | 'modal-open'
+type StepKind = 'walkthrough' | 'wait-click'
 type TipPos = 'right' | 'bottom' | 'top' | 'left'
 
 interface Step {
@@ -44,7 +45,6 @@ interface Step {
   path: string
   title: (firstName: string) => string
   body: React.ReactNode
-  waitFor?: WaitCondition
   tipPos?: TipPos
   spotPad?: number
 }
@@ -98,34 +98,33 @@ const STEPS: Step[] = [
     spotPad: 4,
   },
   {
-    kind: 'wait-action',
+    kind: 'wait-click',
     selector: '[data-tour="add-system"]',
     path: '/dashboard/fiches',
-    title: () => 'Ta première matière',
+    title: () => 'Créer une matière',
     body: (
       <>
-        Crée une <strong>matière</strong> (Anatomie, Biochimie, Histologie…) —
-        c&apos;est le conteneur qui regroupera tes fiches. Clique sur{' '}
-        <strong>+ Matière</strong>.
+        Clique sur <strong>+ Matière</strong> pour ouvrir le formulaire. Tu
+        pourras choisir le nom, la couleur et le semestre. (Tu peux aussi juste
+        regarder, pas besoin de créer maintenant.)
       </>
     ),
-    waitFor: 'systems',
     tipPos: 'bottom',
     spotPad: 6,
   },
   {
-    kind: 'wait-action',
+    kind: 'wait-click',
     selector: '[data-tour="add-lesson"]',
     path: '/dashboard/fiches',
-    title: () => 'Ta première fiche',
+    title: () => 'Ajouter une fiche',
     body: (
       <>
-        Maintenant une <strong>fiche</strong> dans cette matière (ex : «
-        Glycolyse — étapes »). La date d&apos;apprentissage par défaut est
-        aujourd&apos;hui — c&apos;est ton J0.
+        Clique sur <strong>+ Nouvelle fiche</strong> pour voir le formulaire
+        d&apos;ajout. Tu donnes un nom à la fiche, choisis la matière et une
+        date d&apos;apprentissage (J0). MedRev programme automatiquement
+        toutes les révisions à venir.
       </>
     ),
-    waitFor: 'lessons',
     tipPos: 'bottom',
     spotPad: 6,
   },
@@ -136,28 +135,29 @@ const STEPS: Step[] = [
     title: () => 'La courbe J et la notation',
     body: (
       <>
-        Les <strong>14 cases</strong> sous le titre sont les 14 paliers : J0,
-        J1, J3, J5, J7, J15, J21, J30, J45, J60, J75, J90, J105, J120. À chaque
-        échéance, tu notes ta révision de <strong>1</strong> (à revoir) à{' '}
-        <strong>5</strong> (acquis). Un 5 fait sauter des paliers, un 1 te
-        repropose dès demain.
+        Chaque fiche affiche <strong>14 cases</strong> sous son titre — ce sont
+        les 14 paliers : J0, J1, J3, J5, J7, J15, J21, J30, J45, J60, J75, J90,
+        J105, J120. À chaque échéance, tu notes ta révision de{' '}
+        <strong>1</strong> (à revoir) à <strong>5</strong> (acquis). Un 5 fait
+        sauter des paliers, un 1 te repropose dès demain.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
   },
   {
-    kind: 'wait-action',
+    kind: 'wait-click',
     selector: '[data-tour="lesson-card"]',
     path: '/dashboard/fiches',
-    title: () => 'Ouvre ta fiche',
+    title: () => 'Ouvrir une fiche',
     body: (
       <>
-        Clique sur ta fiche pour découvrir tout ce qu&apos;elle peut contenir :
-        sources vidéo/PDF, QCM générés par IA, et la modale de notation.
+        Clique sur n&apos;importe quelle fiche pour ouvrir sa modale détaillée
+        — picker des paliers J, sources vidéo/PDF, QCM générés par IA. Si tu
+        n&apos;as pas encore de fiche, clique simplement sur{' '}
+        <strong>Suivant</strong>.
       </>
     ),
-    waitFor: 'modal-open',
     tipPos: 'right',
     spotPad: 8,
   },
@@ -321,10 +321,9 @@ interface Props {
 
 interface Rect { top: number; left: number; width: number; height: number }
 
-export default function OnboardingTour({ userId, userName, onComplete, onSkip }: Props) {
+export default function OnboardingTour({ userId: _userId, userName, onComplete, onSkip }: Props) {
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
 
   const [stepIdx, setStepIdx] = useState<number>(() => {
     if (typeof window === 'undefined') return 0
@@ -339,15 +338,12 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip }:
   const tipRef = useRef<HTMLDivElement | null>(null)
   const [tipDims, setTipDims] = useState<{ w: number; h: number } | null>(null)
 
-  const baselineRef = useRef<number | null>(null)
   const firstName = (userName || 'toi').split(' ')[0]
 
   const cur = STEPS[stepIdx]
   const total = STEPS.length
 
-  // L'utilisateur a explicitement demandé : toujours attendre le clic réel
-  // pour créer matière/fiche, même en mode replay. Plus de bypass.
-  const isWaitAction = cur.kind === 'wait-action'
+  const isWaitClick = cur.kind === 'wait-click'
 
   // ---------- Persist stepIdx ----------
   useEffect(() => {
@@ -363,86 +359,27 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip }:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
-  // ---------- Event listener immédiat (création matière/fiche) ----------
-  // Plus rapide et fiable que le polling Supabase : fiches-page dispatche
-  // 'medrev-system-created' / 'medrev-lesson-created' juste après l'insert.
+  // ---------- Click listener : avance au clic sur l'élément cible ----------
+  // C'est le seul mécanisme : pas besoin que l'user finisse l'action (créer
+  // une matière, ouvrir la modale...). Le simple clic suffit.
+  // Capture phase pour intercepter avant le handler natif du bouton.
   useEffect(() => {
-    if (cur.kind !== 'wait-action') return
-    function onSystem() {
-      if (cur.waitFor === 'systems') {
+    if (!isWaitClick) return
+
+    function onClick(e: MouseEvent) {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      // closest() remonte l'arbre depuis l'élément cliqué jusqu'à trouver
+      // un élément matchant le sélecteur (ou null).
+      const matched = target.closest(cur.selector)
+      if (matched) {
         setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
       }
     }
-    function onLesson() {
-      if (cur.waitFor === 'lessons') {
-        setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
-      }
-    }
-    window.addEventListener('medrev-system-created', onSystem)
-    window.addEventListener('medrev-lesson-created', onLesson)
-    return () => {
-      window.removeEventListener('medrev-system-created', onSystem)
-      window.removeEventListener('medrev-lesson-created', onLesson)
-    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
-
-  // ---------- Polling Supabase (fallback de sécurité) ----------
-  useEffect(() => {
-    if (!isWaitAction || !cur.waitFor) {
-      baselineRef.current = null
-      return
-    }
-
-    let cancelled = false
-    let intervalId: ReturnType<typeof setInterval> | null = null
-
-    if (cur.waitFor === 'modal-open') {
-      intervalId = setInterval(() => {
-        if (cancelled) return
-        if (typeof document === 'undefined') return
-        if (document.querySelector('[data-tour="review-modal"]')) {
-          setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
-        }
-      }, 300)
-      return () => {
-        cancelled = true
-        if (intervalId) clearInterval(intervalId)
-      }
-    }
-
-    const table = cur.waitFor
-
-    async function setupAndPoll() {
-      const { count } = await supabase
-        .from(table)
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-      if (cancelled) return
-      baselineRef.current = count || 0
-
-      async function poll() {
-        const r = await supabase
-          .from(table)
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-        if (cancelled) return
-        const baseline = baselineRef.current ?? 0
-        if ((r.count || 0) > baseline) {
-          setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
-        }
-      }
-      intervalId = setInterval(poll, 1500)
-    }
-
-    setupAndPoll()
-    return () => {
-      cancelled = true
-      if (intervalId) clearInterval(intervalId)
-      baselineRef.current = null
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIdx, userId])
 
   // ---------- Compute spotlight rect ----------
   const computeRect = useCallback(() => {
@@ -492,7 +429,7 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip }:
         if (window.confirm('Quitter le tutoriel ? Tu pourras le revoir depuis Paramètres.')) {
           handleSkip()
         }
-      } else if (e.key === 'ArrowRight' && !isWaitAction) {
+      } else if (e.key === 'ArrowRight' && !isWaitClick) {
         next()
       } else if (e.key === 'ArrowLeft' && stepIdx > 0) {
         prev()
@@ -534,11 +471,19 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip }:
             Préparation de l&apos;étape suivante…
           </div>
           <div className="ont-tip-actions">
-            {!isWaitAction && (
-              <button className="ont-btn-ghost" onClick={handleSkip}>
-                Passer le tutoriel
+            {/* Fallback (élément introuvable) : on autorise toujours Skip + Suivant
+                pour permettre à l'user de débloquer le tour. */}
+            <button className="ont-btn-ghost" onClick={handleSkip}>
+              Passer le tutoriel
+            </button>
+            <div className="ont-tip-actions-right">
+              {stepIdx > 0 && (
+                <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
+              )}
+              <button className="ont-btn-primary" onClick={next}>
+                {stepIdx === STEPS.length - 1 ? 'Terminer' : 'Suivant →'}
               </button>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -598,9 +543,9 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip }:
 
   const isFirst = stepIdx === 0
   const isLast = stepIdx === STEPS.length - 1
-  const showWaitHint = isWaitAction
-  const showNextBtn = !isWaitAction
-  const showSkipBtn = !isWaitAction
+  const showWaitHint = isWaitClick
+  const showNextBtn = !isWaitClick
+  const showSkipBtn = !isWaitClick
 
   return (
     <div className="ont-root" role="dialog" aria-modal="true" aria-label="Tutoriel d'introduction">
