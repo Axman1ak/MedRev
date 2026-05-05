@@ -1,18 +1,18 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev — 26 étapes en 3 phases.
+// Tour MedRev — 24 étapes en 3 phases.
 // L'utilisateur clique LUI-MÊME chaque lien/bouton pour naviguer (pas
-// d'auto-route). Le tour le guide partout, y compris pour fermer la modale
-// de fiche et changer d'onglet.
+// d'auto-route). Le tour le guide partout.
 //
-// Les boutons "Créer la matière" et "Créer la fiche" sont BLOQUÉS pendant
-// le tour (blockSelectors sur les steps form). L'utilisateur doit cliquer
-// Annuler pour avancer (étapes 6 et 9 = wait-click sur le bouton Annuler).
-// Hors du tour, les listeners sont cleanup → les boutons fonctionnent normalement.
+// Les étapes form (matière + fiche) FORCENT la création réelle :
+//  - waitForCreate: 'system' / 'lesson' sur les steps walkthrough
+//  - tour avance UNIQUEMENT quand l'event medrev-{system,lesson}-created fire
+//  - si l'user clique Annuler, fallback "Réouvre le formulaire" sans Suivant
+//    (le tour ne peut pas être skip à cette étape — il faut créer ou ESC)
 //
-// Si l'user n'a pas créé de fiche → no-fiche fallback consolide les étapes
-// 10-14 et saute directement à la phase Calendrier (setStepIdx 14).
+// Pas de blocage du bouton Créer — l'user doit pouvoir cliquer dessus.
+// Hors du tour : les listeners sont cleanup → tout fonctionne normalement.
 //
 //   PHASE 1 — Accueil
 //     1. Sidebar              — Welcome
@@ -69,6 +69,10 @@ interface Step {
   // Si true, le tour avance automatiquement quand le selector disparaît du DOM
   // (ex: le user crée OU annule la matière → le form se ferme → on avance)
   autoAdvanceOnUnmount?: boolean
+  // Force la création réelle d'une matière/fiche : le tour avance UNIQUEMENT
+  // quand l'event correspondant est dispatché. Si l'user clique Annuler,
+  // le fallback "Réouvre le formulaire" s'affiche sans Suivant disponible.
+  waitForCreate?: 'system' | 'lesson'
 }
 
 const STEPS: Step[] = [
@@ -130,36 +134,21 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="matiere-form"]',
-    title: () => 'Le formulaire de matière',
+    title: () => 'Crée ta première matière',
     body: (
       <>
-        <strong>Nom</strong> — Anatomie, Biochimie, Histologie...
-        <br />
-        <strong>Couleur</strong> — pour distinguer la matière dans le calendrier.
-        <br />
-        <strong>Semestre</strong> — pour t&apos;organiser entre S1 et S2.
+        Saisis un <strong>nom</strong> (ex : Anatomie, Biochimie, Histologie...),
+        choisis une <strong>couleur</strong> (pour la repérer dans le calendrier)
+        et le <strong>semestre</strong>.
         <br /><br />
-        Pendant le tutoriel, le bouton <strong>Créer la matière</strong> est
-        désactivé. Clique sur <strong>Annuler</strong> pour continuer le tour.
+        Puis clique <strong>Créer la matière</strong> pour continuer le tour.
+        Cette matière débloque toutes les étapes suivantes (calendrier, dashboard,
+        session focus, simulateur).
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
-    blockSelectors: ['[data-tour="matiere-create"]'],
-  },
-  {
-    // Forcer Annuler pour fermer le form proprement
-    kind: 'wait-click',
-    selector: '[data-tour="matiere-cancel"]',
-    title: () => 'Ferme le formulaire',
-    body: (
-      <>
-        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
-        continuer le tour.
-      </>
-    ),
-    tipPos: 'top',
-    spotPad: 6,
+    waitForCreate: 'system',
   },
   {
     kind: 'wait-click',
@@ -177,37 +166,22 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="fiche-form"]',
-    title: () => 'Le formulaire de fiche',
+    title: () => 'Crée ta première fiche',
     body: (
       <>
-        <strong>Titre</strong> — « Glycolyse — étapes et régulation ».
-        <br />
-        <strong>Matière</strong> — où la fiche est rangée.
-        <br />
-        <strong>Date d&apos;apprentissage (J0)</strong> — à partir de cette
-        date, MedRev programme automatiquement les J1, J3, J5, J7, J15...
-        jusqu&apos;à J120.
+        Saisis un <strong>titre</strong> (ex : « Glycolyse — étapes et
+        régulation »), vérifie la <strong>matière</strong>, et garde la{' '}
+        <strong>date d&apos;apprentissage</strong> sur aujourd&apos;hui (c&apos;est
+        ton J0).
         <br /><br />
-        Pendant le tutoriel, le bouton <strong>Créer la fiche</strong> est
-        désactivé. Clique sur <strong>Annuler</strong> pour continuer le tour.
+        Puis clique <strong>Créer la fiche</strong> pour continuer le tour. À
+        partir de J0, MedRev programme automatiquement les J1, J3, J5, J7...
+        jusqu&apos;à J120.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
-    blockSelectors: ['[data-tour="fiche-create"]'],
-  },
-  {
-    kind: 'wait-click',
-    selector: '[data-tour="fiche-cancel"]',
-    title: () => 'Ferme le formulaire',
-    body: (
-      <>
-        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
-        continuer le tour.
-      </>
-    ),
-    tipPos: 'top',
-    spotPad: 6,
+    waitForCreate: 'lesson',
   },
   {
     // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
@@ -537,6 +511,22 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
+  // ---------- Listener events de création ----------
+  // Sur les steps avec waitForCreate, on n'avance QUE si l'event de création
+  // est dispatché (medrev-system-created / medrev-lesson-created depuis fiches-page).
+  // L'utilisateur DOIT créer pour avancer — pas de skip possible.
+  useEffect(() => {
+    if (!cur.waitForCreate) return
+    const eventName =
+      cur.waitForCreate === 'system' ? 'medrev-system-created' : 'medrev-lesson-created'
+    function onCreated() {
+      setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
+    }
+    window.addEventListener(eventName, onCreated)
+    return () => window.removeEventListener(eventName, onCreated)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIdx])
+
   // ---------- Click blocker pour les walkthrough avec interactions sensibles ----------
   // Deux mécanismes :
   //   - blockTargetClicks=true : bloque tout clic à l'intérieur du target principal
@@ -721,10 +711,51 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
 
   // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
-    // Cas spécial : utilisateur sans fiche encore créée. La phase lesson-card
-    // (étapes 10-14, indices 9-13) ne peut pas s'afficher. On consolide ces 5
+    // Cas spécial 1 : step waitForCreate, l'user a fermé le form sans créer.
+    // On force un retour : pas de Suivant, juste un message pour rouvrir le form.
+    if (cur.waitForCreate) {
+      const itemLabel = cur.waitForCreate === 'system' ? 'matière' : 'fiche'
+      const buttonLabel = cur.waitForCreate === 'system' ? '+ Matière' : '+ Nouvelle fiche'
+      return (
+        <div className="ont-root" role="dialog" aria-modal="true">
+          <div
+            className="ont-tip ont-tip-corner"
+            ref={tipRef}
+            style={{ top: 24, right: 24, width: 360 }}
+          >
+            <div className="ont-tip-step">Étape {stepIdx + 1} sur {total}</div>
+            <h4 className="ont-tip-title">Réouvre le formulaire</h4>
+            <div className="ont-tip-body">
+              Tu as fermé le formulaire sans créer de {itemLabel}. Pour continuer
+              le tutoriel, tu dois créer une {itemLabel}.
+              <br /><br />
+              Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à droite
+              pour rouvrir le formulaire.
+            </div>
+            <div className="ont-tip-hint">
+              <span className="ont-tip-pulse" /> En attente de la création…
+            </div>
+            <ProgressBars count={total} active={stepIdx} />
+            <div className="ont-tip-actions">
+              <button className="ont-btn-ghost" onClick={handleSkip}>
+                Passer le tutoriel
+              </button>
+              <div className="ont-tip-actions-right">
+                {stepIdx > 0 && (
+                  <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
+                )}
+                {/* PAS de bouton Suivant — l'user doit créer */}
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Cas spécial 2 : utilisateur sans fiche encore créée. La phase lesson-card
+    // (étapes 8-12, indices 7-11) ne peut pas s'afficher. On consolide ces 5
     // étapes en un aperçu unique et on saute directement à la phase 3 (Calendrier).
-    const inLessonRange = stepIdx >= 9 && stepIdx <= 13
+    const inLessonRange = stepIdx >= 7 && stepIdx <= 11
     const onFichesPage = pathname === '/dashboard/fiches'
     const noLessonCardInDom =
       typeof document !== 'undefined' &&
@@ -768,7 +799,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 )}
                 <button
                   className="ont-btn-primary"
-                  onClick={() => setStepIdx(14)}
+                  onClick={() => setStepIdx(12)}
                 >
                   Continuer le tour →
                 </button>
