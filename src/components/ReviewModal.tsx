@@ -404,7 +404,7 @@ export default function ReviewModal({
               {lesson.learn_date && <> · appris le {frenchDate(lesson.learn_date)}</>}
             </div>
           </div>
-          <button className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
+          <button data-tour="rmod-close" className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
         </div>
 
         {/* ---- ÉTAPE 1 : Picker J + Sources + QCM ---- */}
