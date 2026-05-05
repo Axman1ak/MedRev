@@ -1,10 +1,15 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev — 23 étapes en 3 phases.
+// Tour MedRev — 24 étapes en 3 phases.
 // L'utilisateur clique LUI-MÊME chaque lien/bouton pour naviguer (pas
 // d'auto-route). Le tour le guide partout, y compris pour fermer la modale
 // de fiche et changer d'onglet.
+//
+// Les étapes form (matière + fiche) auto-avancent quand le form se ferme
+// (que l'user ait cliqué Créer ou Annuler). Si l'user crée → tout le reste
+// du tour fonctionne (calendrier, dashboard, focus se remplissent). Sinon
+// un fallback consolidé saute la phase lesson-card.
 //
 //   PHASE 1 — Accueil
 //     1. Sidebar              — Welcome
@@ -58,6 +63,9 @@ interface Step {
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
   blockTargetClicks?: boolean // si true, bloque les clics à l'intérieur du target pendant cette étape
   blockSelectors?: string[] // sélecteurs additionnels à bloquer pendant cette étape (ex: bouton Créer pendant l'explication du form)
+  // Si true, le tour avance automatiquement quand le selector disparaît du DOM
+  // (ex: le user crée OU annule la matière → le form se ferme → on avance)
+  autoAdvanceOnUnmount?: boolean
 }
 
 const STEPS: Step[] = [
@@ -119,36 +127,23 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="matiere-form"]',
-    title: () => 'Le formulaire de matière',
+    title: () => 'Crée ta première matière',
     body: (
       <>
-        <strong>Nom</strong> — Anatomie, Biochimie, Histologie...
-        <br />
-        <strong>Couleur</strong> — pour distinguer la matière dans le calendrier.
-        <br />
-        <strong>Semestre</strong> — pour t&apos;organiser entre S1 et S2.
+        Saisis un <strong>nom</strong> (ex : Anatomie, Biochimie...), choisis
+        une <strong>couleur</strong> et le <strong>semestre</strong>, puis
+        clique <strong>Créer la matière</strong>.
         <br /><br />
-        Pendant le tutoriel, le bouton <strong>Créer la matière</strong> est
-        désactivé — clique sur <strong>Annuler</strong> pour continuer le tour.
+        En créant ta première matière, tu débloques le calendrier, le tableau
+        de bord et la session focus pour la suite du tour.
+        <br /><br />
+        (Tu peux aussi cliquer Annuler pour passer — mais certaines étapes
+        seront sautées.)
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
-    blockSelectors: ['[data-tour="matiere-create"]'],
-  },
-  {
-    // Forcer la fermeture du form pour éviter qu'il reste en arrière-plan
-    kind: 'wait-click',
-    selector: '[data-tour="matiere-cancel"]',
-    title: () => 'Ferme le formulaire',
-    body: (
-      <>
-        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
-        continuer le tour.
-      </>
-    ),
-    tipPos: 'top',
-    spotPad: 6,
+    autoAdvanceOnUnmount: true,
   },
   {
     kind: 'wait-click',
@@ -166,37 +161,21 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="fiche-form"]',
-    title: () => 'Le formulaire de fiche',
+    title: () => 'Crée ta première fiche',
     body: (
       <>
-        <strong>Titre</strong> — « Glycolyse — étapes et régulation ».
-        <br />
-        <strong>Matière</strong> — où la fiche est rangée.
-        <br />
-        <strong>Date d&apos;apprentissage (J0)</strong> — à partir de cette
-        date, MedRev programme automatiquement les J1, J3, J5, J7, J15...
-        jusqu&apos;à J120.
+        Saisis un <strong>titre</strong> (ex : Glycolyse — étapes), vérifie la{' '}
+        <strong>matière</strong>, et garde la <strong>date d&apos;apprentissage</strong>{' '}
+        sur aujourd&apos;hui (c&apos;est ton J0). Puis clique{' '}
+        <strong>Créer la fiche</strong>.
         <br /><br />
-        Pendant le tutoriel, le bouton <strong>Créer la fiche</strong> est
-        désactivé — clique sur <strong>Annuler</strong> pour continuer le tour.
+        À partir de J0, MedRev programme automatiquement toutes les révisions
+        (J1, J3, J5, J7... jusqu&apos;à J120) dans ton calendrier.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
-    blockSelectors: ['[data-tour="fiche-create"]'],
-  },
-  {
-    kind: 'wait-click',
-    selector: '[data-tour="fiche-cancel"]',
-    title: () => 'Ferme le formulaire',
-    body: (
-      <>
-        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
-        continuer le tour.
-      </>
-    ),
-    tipPos: 'top',
-    spotPad: 6,
+    autoAdvanceOnUnmount: true,
   },
   {
     // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
@@ -526,6 +505,32 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
+  // ---------- Auto-advance quand le selector disparaît du DOM ----------
+  // Utilisé sur les form modals (matière/fiche) : que l'user clique Créer
+  // ou Annuler, le form se ferme → on avance.
+  useEffect(() => {
+    if (!cur.autoAdvanceOnUnmount || !cur.selector) return
+    let cancelled = false
+    let wasFound = false
+    let pollCount = 0
+    const id = setInterval(() => {
+      if (cancelled) return
+      pollCount++
+      const el = document.querySelector(cur.selector!)
+      if (el) {
+        wasFound = true
+      } else if (wasFound) {
+        // L'élément était là et a disparu → l'user a fermé le form
+        setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
+      } else if (pollCount > 30) {
+        // 6 secondes sans jamais trouver l'élément : on avance par sécurité
+        setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
+      }
+    }, 200)
+    return () => { cancelled = true; clearInterval(id) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIdx])
+
   // ---------- Click blocker pour les walkthrough avec interactions sensibles ----------
   // Deux mécanismes :
   //   - blockTargetClicks=true : bloque tout clic à l'intérieur du target principal
@@ -711,9 +716,9 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
     // Cas spécial : utilisateur sans fiche encore créée. La phase lesson-card
-    // (étapes 10-14) ne peut pas s'afficher. On consolide ces 5 étapes en
-    // un aperçu unique et on saute directement à la phase 3 (Calendrier).
-    const inLessonRange = stepIdx >= 9 && stepIdx <= 13
+    // (étapes 8-12, indices 7-11) ne peut pas s'afficher. On consolide ces 5
+    // étapes en un aperçu unique et on saute directement à la phase 3 (Calendrier).
+    const inLessonRange = stepIdx >= 7 && stepIdx <= 11
     const onFichesPage = pathname === '/dashboard/fiches'
     const noLessonCardInDom =
       typeof document !== 'undefined' &&
@@ -757,7 +762,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 )}
                 <button
                   className="ont-btn-primary"
-                  onClick={() => setStepIdx(14)}
+                  onClick={() => setStepIdx(12)}
                 >
                   Continuer le tour →
                 </button>
