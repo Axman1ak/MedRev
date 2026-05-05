@@ -1,18 +1,19 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev — 24 étapes en 3 phases.
-// L'utilisateur clique LUI-MÊME chaque lien/bouton pour naviguer (pas
-// d'auto-route). Le tour le guide partout.
+// Tour MedRev — 25 étapes en 3 phases.
+// L'utilisateur clique LUI-MÊME chaque lien/bouton pour naviguer.
 //
-// Les étapes form (matière + fiche) FORCENT la création réelle :
-//  - waitForCreate: 'system' / 'lesson' sur les steps walkthrough
-//  - tour avance UNIQUEMENT quand l'event medrev-{system,lesson}-created fire
-//  - si l'user clique Annuler, fallback "Réouvre le formulaire" sans Suivant
-//    (le tour ne peut pas être skip à cette étape — il faut créer ou ESC)
+// Étape matière (5+6) : le bouton "Créer la matière" est BLOQUÉ pendant le
+// tour. L'user doit cliquer Annuler pour avancer (étape 6).
 //
-// Pas de blocage du bouton Créer — l'user doit pouvoir cliquer dessus.
-// Hors du tour : les listeners sont cleanup → tout fonctionne normalement.
+// Étape fiche (8) : la création est FORCÉE via waitForCreate='lesson'. Le
+// tour avance uniquement quand l'event medrev-lesson-created fire. Si l'user
+// clique Annuler, fallback "Réouvre le formulaire" sans Suivant.
+//
+// Cas spécial : si l'user n'a aucune matière (a annulé l'étape 5), le
+// fallback fiche affiche un message "Pas de matière disponible" + Suivant
+// qui saute toute la phase fiche jusqu'à Calendrier (idx 13).
 //
 //   PHASE 1 — Accueil
 //     1. Sidebar              — Welcome
@@ -134,21 +135,36 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="matiere-form"]',
-    title: () => 'Crée ta première matière',
+    title: () => 'Le formulaire de matière',
     body: (
       <>
-        Saisis un <strong>nom</strong> (ex : Anatomie, Biochimie, Histologie...),
-        choisis une <strong>couleur</strong> (pour la repérer dans le calendrier)
-        et le <strong>semestre</strong>.
+        <strong>Nom</strong> — Anatomie, Biochimie, Histologie...
+        <br />
+        <strong>Couleur</strong> — pour distinguer la matière dans le calendrier.
+        <br />
+        <strong>Semestre</strong> — pour t&apos;organiser entre S1 et S2.
         <br /><br />
-        Puis clique <strong>Créer la matière</strong> pour continuer le tour.
-        Cette matière débloque toutes les étapes suivantes (calendrier, dashboard,
-        session focus, simulateur).
+        Pendant le tutoriel, le bouton <strong>Créer la matière</strong> est
+        désactivé. Clique sur <strong>Annuler</strong> pour continuer le tour.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
-    waitForCreate: 'system',
+    blockSelectors: ['[data-tour="matiere-create"]'],
+  },
+  {
+    // Forcer Annuler pour fermer le form proprement
+    kind: 'wait-click',
+    selector: '[data-tour="matiere-cancel"]',
+    title: () => 'Ferme le formulaire',
+    body: (
+      <>
+        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
+        continuer le tour.
+      </>
+    ),
+    tipPos: 'top',
+    spotPad: 6,
   },
   {
     kind: 'wait-click',
@@ -712,10 +728,18 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
     // Cas spécial 1 : step waitForCreate, l'user a fermé le form sans créer.
-    // On force un retour : pas de Suivant, juste un message pour rouvrir le form.
+    // Pour la fiche : si l'user n'a aucune matière (ex: nouveau compte qui a
+    // annulé la création matière), il ne peut PAS créer de fiche. On laisse
+    // alors un bouton Suivant qui saute toute la phase fiche.
     if (cur.waitForCreate) {
       const itemLabel = cur.waitForCreate === 'system' ? 'matière' : 'fiche'
       const buttonLabel = cur.waitForCreate === 'system' ? '+ Matière' : '+ Nouvelle fiche'
+      // Détection : a-t-on au moins une matière en DOM (tab .mtab) ?
+      const hasMatiere =
+        typeof document !== 'undefined' &&
+        document.querySelector('.mtab') !== null
+      const cantCreate = cur.waitForCreate === 'lesson' && !hasMatiere
+
       return (
         <div className="ont-root" role="dialog" aria-modal="true">
           <div
@@ -724,17 +748,32 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
             style={{ top: 24, right: 24, width: 360 }}
           >
             <div className="ont-tip-step">Étape {stepIdx + 1} sur {total}</div>
-            <h4 className="ont-tip-title">Réouvre le formulaire</h4>
+            <h4 className="ont-tip-title">
+              {cantCreate ? 'Pas de matière disponible' : 'Réouvre le formulaire'}
+            </h4>
             <div className="ont-tip-body">
-              Tu as fermé le formulaire sans créer de {itemLabel}. Pour continuer
-              le tutoriel, tu dois créer une {itemLabel}.
-              <br /><br />
-              Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à droite
-              pour rouvrir le formulaire.
+              {cantCreate ? (
+                <>
+                  Tu n&apos;as pas créé de matière, donc tu ne peux pas créer de
+                  fiche pour l&apos;instant. On saute la phase fiche pour
+                  continuer le tour. Tu pourras créer matière + fiche après le
+                  tutoriel.
+                </>
+              ) : (
+                <>
+                  Tu as fermé le formulaire sans créer de {itemLabel}. Pour
+                  continuer le tutoriel, tu dois créer une {itemLabel}.
+                  <br /><br />
+                  Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à
+                  droite pour rouvrir le formulaire.
+                </>
+              )}
             </div>
-            <div className="ont-tip-hint">
-              <span className="ont-tip-pulse" /> En attente de la création…
-            </div>
+            {!cantCreate && (
+              <div className="ont-tip-hint">
+                <span className="ont-tip-pulse" /> En attente de la création…
+              </div>
+            )}
             <ProgressBars count={total} active={stepIdx} />
             <div className="ont-tip-actions">
               <button className="ont-btn-ghost" onClick={handleSkip}>
@@ -744,7 +783,14 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 {stepIdx > 0 && (
                   <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
                 )}
-                {/* PAS de bouton Suivant — l'user doit créer */}
+                {cantCreate && (
+                  <button
+                    className="ont-btn-primary"
+                    onClick={() => setStepIdx(13)}
+                  >
+                    Continuer le tour →
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -753,9 +799,9 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
     }
 
     // Cas spécial 2 : utilisateur sans fiche encore créée. La phase lesson-card
-    // (étapes 8-12, indices 7-11) ne peut pas s'afficher. On consolide ces 5
+    // (étapes 9-13, indices 8-12) ne peut pas s'afficher. On consolide ces 5
     // étapes en un aperçu unique et on saute directement à la phase 3 (Calendrier).
-    const inLessonRange = stepIdx >= 7 && stepIdx <= 11
+    const inLessonRange = stepIdx >= 8 && stepIdx <= 12
     const onFichesPage = pathname === '/dashboard/fiches'
     const noLessonCardInDom =
       typeof document !== 'undefined' &&
@@ -799,7 +845,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 )}
                 <button
                   className="ont-btn-primary"
-                  onClick={() => setStepIdx(12)}
+                  onClick={() => setStepIdx(13)}
                 >
                   Continuer le tour →
                 </button>
