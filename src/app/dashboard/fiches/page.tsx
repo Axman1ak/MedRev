@@ -742,7 +742,7 @@ export default function FichesPage() {
               </div>
             </div>
             <div className="fi-modal-actions">
-              <button className="fi-btn-o" onClick={() => setShowNewSystem(false)}>Annuler</button>
+              <button data-tour="matiere-cancel" className="fi-btn-o" onClick={() => setShowNewSystem(false)}>Annuler</button>
               <button className="fi-btn-g" onClick={createSystem} disabled={!newSysName.trim() || sysLoading}
                 style={{ opacity: !newSysName.trim() ? .5 : 1 }}>
                 {sysLoading ? 'Création…' : 'Créer la matière'}
@@ -778,7 +778,7 @@ export default function FichesPage() {
               </p>
             </div>
             <div className="fi-modal-actions">
-              <button className="fi-btn-o" onClick={() => setShowNewLesson(false)}>Annuler</button>
+              <button data-tour="fiche-cancel" className="fi-btn-o" onClick={() => setShowNewLesson(false)}>Annuler</button>
               <button className="fi-btn-g" onClick={createLesson} disabled={!newLesName.trim() || !newLesSysId || lesLoading}
                 style={{ opacity: (!newLesName.trim() || !newLesSysId) ? .5 : 1 }}>
                 {lesLoading ? 'Création…' : 'Créer la fiche'}
