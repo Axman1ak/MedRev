@@ -1,41 +1,47 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev — 18 étapes en 3 phases.
-// Objectif : montrer toutes les fonctionnalités, sans voile sombre global
-// pour que l'utilisateur voie réellement le contenu de chaque page.
+// Tour MedRev — 23 étapes en 3 phases.
+// L'utilisateur clique LUI-MÊME chaque lien/bouton pour naviguer (pas
+// d'auto-route). Le tour le guide partout, y compris pour fermer la modale
+// de fiche et changer d'onglet.
 //
 //   PHASE 1 — Accueil
 //     1. Sidebar              — Welcome
-//     2. Toggle semestres     — S1/S2/Année
-//     3. nav-fiches           — "On commence par Mes matières"
+//     2. Toggle semestres
+//     3. Clic Mes matières (nav)
 //
-//   PHASE 2 — Mes matières (avec explications de formulaires)
-//     4. + Matière            — wait-click (ouvre formulaire)
-//     5. matiere-form         — tooltip-only (explique le formulaire)
-//     6. + Nouvelle fiche     — wait-click
-//     7. fiche-form           — tooltip-only
-//     8. lesson-card          — courbe J + notation 1-5
-//     9. lesson-card          — wait-click (ouvre la modale détaillée)
-//    10. picker-j             — picker des paliers
-//    11. sources              — vidéo/PDF + Premium
-//    12. qcm-section          — QCM IA + Premium
+//   PHASE 2 — Mes matières (avec spot sur les formulaires qui apparaissent)
+//     4. Clic + Matière
+//     5. Spot sur le formulaire matière qui s'ouvre — explique les champs
+//     6. Clic + Nouvelle fiche
+//     7. Spot sur le formulaire fiche — explique les champs
+//     8. Carte fiche — courbe J + notation
+//     9. Clic carte fiche (ouvre la modale détaillée)
+//    10. Picker J
+//    11. Sources vidéo/PDF + Premium
+//    12. QCM IA + Premium + dépendance Simulateur
+//    13. Clic croix pour fermer la modale
 //
-//   PHASE 3 — Tour des onglets (matière → calendrier → dashboard → focus → simu → stats)
-//    13. Calendrier           — tooltip-only, J auto
-//    14. Tableau de bord      — tooltip-only, centralise le quotidien
-//    15. bib-area             — wait-click sur la bibliothèque dans le dashboard
-//    16. Focus / Bibliothèque — tooltip-only, gamification 1500 livres
-//    17. Simulateur           — tooltip-only + Premium
-//    18. Statistiques         — tooltip-only + Premium
+//   PHASE 3 — Tour des onglets (l'élève clique chaque nav link lui-même)
+//    14. Clic Calendrier (nav)
+//    15. Calendrier — J auto
+//    16. Clic Tableau de bord (nav)
+//    17. Tableau de bord — centralise quotidien
+//    18. Clic zone Bibliothèque
+//    19. Bibliothèque — 1500 livres
+//    20. Clic Simulateur (nav)
+//    21. Simulateur — utilise les QCM générés + Premium
+//    22. Clic Statistiques (nav)
+//    23. Statistiques — Premium
 //
 // 3 kinds d'étapes :
-//  - walkthrough : spot léger (halo, pas de voile global) + tooltip à côté + bouton Suivant
-//  - wait-click  : spot léger + tooltip + avance dès qu'on clique l'élément cible
-//  - tooltip-only : aucun spot, juste un tooltip en haut à droite (l'utilisateur voit toute la page)
+//  - walkthrough  : spot + voile léger contrôlé + tooltip à côté + Suivant
+//  - wait-click   : spot + voile + tooltip + avance au clic de l'élément
+//  - tooltip-only : aucun spot, aucun voile, tooltip en haut à droite
 
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import './onboarding-tour.css'
 
 type StepKind = 'walkthrough' | 'wait-click' | 'tooltip-only'
@@ -43,12 +49,13 @@ type TipPos = 'right' | 'bottom' | 'top' | 'left'
 
 interface Step {
   kind: StepKind
-  selector?: string  // optionnel pour tooltip-only
-  path: string
+  selector?: string
+  path?: string  // informatif seulement (plus d'auto-route)
   title: (firstName: string) => string
   body: React.ReactNode
   tipPos?: TipPos
   spotPad?: number
+  dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
 }
 
 const STEPS: Step[] = [
@@ -56,7 +63,6 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="sidebar"]',
-    path: '/dashboard',
     title: (n) => `Bienvenue, ${n}`,
     body: (
       <>
@@ -70,7 +76,6 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="sem-toggle"]',
-    path: '/dashboard',
     title: () => 'Tes semestres',
     body: (
       <>
@@ -83,14 +88,13 @@ const STEPS: Step[] = [
     spotPad: 6,
   },
   {
-    kind: 'walkthrough',
+    kind: 'wait-click',
     selector: '[data-tour="nav-fiches"]',
-    path: '/dashboard',
-    title: () => 'On commence par Mes matières',
+    title: () => 'Va sur Mes matières',
     body: (
       <>
-        C&apos;est <strong>l&apos;onglet principal</strong> — tout part de tes
-        fiches. Le reste de MedRev s&apos;articule autour.
+        Clique sur <strong>Mes matières</strong> dans la sidebar — c&apos;est
+        l&apos;onglet principal, tout part de là.
       </>
     ),
     tipPos: 'right',
@@ -101,26 +105,22 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="add-system"]',
-    path: '/dashboard/fiches',
-    title: () => 'Créer une matière',
+    title: () => 'Crée une matière',
     body: (
       <>
-        Clique sur <strong>+ Matière</strong> pour ouvrir le formulaire de
-        création.
+        Clique sur <strong>+ Matière</strong> pour ouvrir le formulaire.
       </>
     ),
     tipPos: 'bottom',
     spotPad: 6,
   },
   {
-    kind: 'tooltip-only',
+    // Spot sur le formulaire qui vient de s'ouvrir
+    kind: 'walkthrough',
     selector: '[data-tour="matiere-form"]',
-    path: '/dashboard/fiches',
     title: () => 'Le formulaire de matière',
     body: (
       <>
-        Voici ce que tu peux y faire :
-        <br />
         <strong>Nom</strong> — Anatomie, Biochimie, Histologie...
         <br />
         <strong>Couleur</strong> — pour distinguer la matière dans le calendrier.
@@ -130,12 +130,13 @@ const STEPS: Step[] = [
         Tu peux fermer sans créer si tu veux juste explorer.
       </>
     ),
+    tipPos: 'right',
+    spotPad: 8,
   },
   {
     kind: 'wait-click',
     selector: '[data-tour="add-lesson"]',
-    path: '/dashboard/fiches',
-    title: () => 'Ajouter une fiche',
+    title: () => 'Ajoute une fiche',
     body: (
       <>
         Clique sur <strong>+ Nouvelle fiche</strong> pour découvrir le
@@ -146,9 +147,8 @@ const STEPS: Step[] = [
     spotPad: 6,
   },
   {
-    kind: 'tooltip-only',
+    kind: 'walkthrough',
     selector: '[data-tour="fiche-form"]',
-    path: '/dashboard/fiches',
     title: () => 'Le formulaire de fiche',
     body: (
       <>
@@ -157,14 +157,16 @@ const STEPS: Step[] = [
         <strong>Matière</strong> — où la fiche est rangée.
         <br />
         <strong>Date d&apos;apprentissage (J0)</strong> — à partir de cette
-        date, MedRev programme automatiquement les J1, J3, J5, J7, J15... jusqu&apos;à J120.
+        date, MedRev programme automatiquement les J1, J3, J5, J7, J15...
+        jusqu&apos;à J120.
       </>
     ),
+    tipPos: 'right',
+    spotPad: 8,
   },
   {
     kind: 'walkthrough',
     selector: '[data-tour="lesson-card"]',
-    path: '/dashboard/fiches',
     title: () => 'La courbe J et la notation',
     body: (
       <>
@@ -181,8 +183,7 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="lesson-card"]',
-    path: '/dashboard/fiches',
-    title: () => 'Ouvrir la fiche',
+    title: () => 'Ouvre la fiche',
     body: (
       <>
         Clique sur la fiche pour ouvrir sa modale détaillée — picker des
@@ -195,7 +196,6 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="picker-j"]',
-    path: '/dashboard/fiches',
     title: () => 'Le picker des paliers J',
     body: (
       <>
@@ -210,7 +210,6 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="sources"]',
-    path: '/dashboard/fiches',
     title: () => 'Vidéo et PDF du cours',
     body: (
       <>
@@ -230,13 +229,14 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="qcm-section"]',
-    path: '/dashboard/fiches',
     title: () => 'QCM générés par IA',
     body: (
       <>
-        Dès qu&apos;une source est uploadée, MedRev peut générer{' '}
-        <strong>30 QCM</strong> automatiquement. Lance une session de révision
-        quand tu veux.
+        MedRev génère automatiquement <strong>30 QCM</strong> par fiche dès
+        qu&apos;une source est uploadée. Lance des sessions de révision ici.
+        <br /><br />
+        Important : <strong>ces QCM alimentent aussi le Simulateur</strong> —
+        sans QCM générés, pas d&apos;examen blanc possible.
         <br /><br />
         <em className="ont-premium-note">
           Plan Gratuit : 5 générations IA totales sur tout le compte.{' '}
@@ -247,11 +247,35 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 6,
   },
+  {
+    kind: 'wait-click',
+    selector: '[data-tour="rmod-close"]',
+    title: () => 'Ferme la modale',
+    body: (
+      <>
+        Clique sur la <strong>croix</strong> en haut à droite pour fermer la
+        modale et continuer le tour.
+      </>
+    ),
+    tipPos: 'left',
+    spotPad: 6,
+  },
 
   // ============ PHASE 3 — TOUR DES ONGLETS ============
   {
+    kind: 'wait-click',
+    selector: '[data-tour="nav-calendar"]',
+    title: () => 'Va sur Calendrier',
+    body: (
+      <>
+        Clique sur <strong>Calendrier</strong> dans la sidebar.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
+  {
     kind: 'tooltip-only',
-    path: '/dashboard/calendar',
     title: () => 'Le Calendrier',
     body: (
       <>
@@ -263,8 +287,19 @@ const STEPS: Step[] = [
     ),
   },
   {
+    kind: 'wait-click',
+    selector: '[data-tour="nav-dashboard"]',
+    title: () => 'Va sur Tableau de bord',
+    body: (
+      <>
+        Clique sur <strong>Tableau de bord</strong> dans la sidebar.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
+  {
     kind: 'tooltip-only',
-    path: '/dashboard',
     title: () => 'Le Tableau de bord',
     body: (
       <>
@@ -283,12 +318,11 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="bib-area"]',
-    path: '/dashboard',
-    title: () => 'La Bibliothèque',
+    title: () => 'Découvre la Bibliothèque',
     body: (
       <>
-        Clique sur la <strong>zone Bibliothèque</strong> pour découvrir la
-        session focus gamifiée.
+        Clique sur la <strong>zone Bibliothèque</strong> à droite pour
+        l&apos;ouvrir en grand.
       </>
     ),
     tipPos: 'left',
@@ -296,7 +330,6 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
-    path: '/dashboard/focus',
     title: () => 'L’objectif : 1500 livres',
     body: (
       <>
@@ -308,14 +341,28 @@ const STEPS: Step[] = [
     ),
   },
   {
+    kind: 'wait-click',
+    selector: '[data-tour="nav-simu"]',
+    title: () => 'Va sur Simulateur',
+    body: (
+      <>
+        Clique sur <strong>Simulateur</strong> dans la sidebar.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
+  {
     kind: 'tooltip-only',
-    path: '/dashboard/simulateur',
     title: () => 'Le Simulateur',
     body: (
       <>
-        QCM <strong>type concours</strong>. Mode{' '}
-        <strong>Apprentissage</strong> avec corrections après chaque question,
-        ou <strong>Examen blanc</strong> avec timer et grille concours.
+        QCM <strong>type concours</strong>, tirés directement des{' '}
+        <strong>QCM générés sur tes fiches</strong>. Pense à en générer
+        plusieurs pour avoir des sessions variées.
+        <br /><br />
+        Mode <strong>Apprentissage</strong> avec corrections, ou{' '}
+        <strong>Examen blanc</strong> avec timer et grille concours.
         <br /><br />
         <em className="ont-premium-note">
           Plan Gratuit : 1 session totale en Apprentissage.{' '}
@@ -325,8 +372,19 @@ const STEPS: Step[] = [
     ),
   },
   {
+    kind: 'wait-click',
+    selector: '[data-tour="nav-stats"]',
+    title: () => 'Va sur Statistiques',
+    body: (
+      <>
+        Clique sur <strong>Statistiques</strong> dans la sidebar.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
+  {
     kind: 'tooltip-only',
-    path: '/dashboard/stats',
     title: () => 'Les Statistiques',
     body: (
       <>
@@ -355,7 +413,6 @@ interface Props {
 interface Rect { top: number; left: number; width: number; height: number }
 
 export default function OnboardingTour({ userId: _userId, userName, onComplete, onSkip }: Props) {
-  const router = useRouter()
   const pathname = usePathname()
 
   const [stepIdx, setStepIdx] = useState<number>(() => {
@@ -378,6 +435,9 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   const isWaitClick = cur.kind === 'wait-click'
   const isTooltipOnly = cur.kind === 'tooltip-only'
   const isWalkthrough = cur.kind === 'walkthrough'
+  // Voile léger : par défaut sur walkthrough/wait-click, off pour tooltip-only.
+  // Override possible via cur.dimmed.
+  const dimmed = cur.dimmed ?? !isTooltipOnly
 
   // ---------- Persist stepIdx ----------
   useEffect(() => {
@@ -385,13 +445,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
     localStorage.setItem(LS_KEY, String(stepIdx))
   }, [stepIdx])
 
-  // ---------- Auto-route ----------
-  useEffect(() => {
-    if (cur.path !== pathname) {
-      router.push(cur.path)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIdx])
+  // (PAS d'auto-route — l'utilisateur clique chaque nav link lui-même)
 
   // ---------- Click listener (wait-click uniquement) ----------
   useEffect(() => {
@@ -410,7 +464,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
-  // ---------- Compute spotlight rect (walkthrough/wait-click avec selector) ----------
+  // ---------- Compute spotlight rect ----------
   const computeRect = useCallback(() => {
     if (typeof document === 'undefined') return
     if (isTooltipOnly || !cur.selector) {
@@ -448,14 +502,14 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
     }
   }, [computeRect])
 
-  // ---------- Mesure tooltip après render ----------
+  // ---------- Mesure tooltip ----------
   useLayoutEffect(() => {
     if (!tipRef.current) return
     const r = tipRef.current.getBoundingClientRect()
     setTipDims({ w: r.width, h: r.height })
   }, [stepIdx, rect])
 
-  // ---------- ESC handler ----------
+  // ---------- ESC ----------
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -496,7 +550,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   //                       RENDU PAR KIND
   // =================================================================
 
-  // --- TOOLTIP-ONLY : juste un tooltip en haut à droite, aucun voile ---
+  // --- TOOLTIP-ONLY : tooltip en haut à droite, aucun voile ---
   if (isTooltipOnly) {
     return (
       <div className="ont-root" role="dialog" aria-modal="true" aria-label="Tutoriel">
@@ -527,8 +581,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
     )
   }
 
-  // --- WALKTHROUGH / WAIT-CLICK : spot léger + tooltip à côté ---
-  // Fallback si l'élément n'est pas (encore) trouvé : tooltip dans le coin
+  // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
     return (
       <div className="ont-root" role="dialog" aria-modal="true">
@@ -561,7 +614,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
     )
   }
 
-  // ---------- Tooltip position avec dims réelles ----------
+  // ---------- Tooltip position ----------
   const TIP_W_PREF = 340
   const tipW = tipDims?.w || TIP_W_PREF
   const tipH = tipDims?.h || 360
@@ -611,11 +664,12 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
 
   const isFirst = stepIdx === 0
   const isLast = stepIdx === STEPS.length - 1
+  const spotClassName = `ont-spot${dimmed ? ' ont-spot-dim' : ''}`
 
   return (
     <div className="ont-root" role="dialog" aria-modal="true" aria-label="Tutoriel">
       <div
-        className="ont-spot"
+        className={spotClassName}
         style={{
           top: rect.top - pad,
           left: rect.left - pad,
