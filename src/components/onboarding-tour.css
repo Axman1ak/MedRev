@@ -75,6 +75,10 @@
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
   pointer-events: auto;
   animation: ont-tip-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* max-height : tooltip ne peut pas dépasser le viewport */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  /* Smooth transitions de position quand on change d'étape */
   transition:
     top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
     left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
