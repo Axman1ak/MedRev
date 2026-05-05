@@ -589,6 +589,7 @@ export default function FichesPage() {
               return (
                 <div
                   key={lesson.id}
+                  data-tour="lesson-card"
                   className={`card st-${st.cls} clickable`}
                   onClick={() => openReview(lesson)}
                   role="button"
