@@ -728,18 +728,11 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
     // Cas spécial 1 : step waitForCreate, l'user a fermé le form sans créer.
-    // Pour la fiche : si l'user n'a aucune matière (ex: nouveau compte qui a
-    // annulé la création matière), il ne peut PAS créer de fiche. On laisse
-    // alors un bouton Suivant qui saute toute la phase fiche.
+    // PAS d'échappatoire — l'utilisateur doit créer pour avancer.
+    // Seules issues de secours : Précédent ou Passer le tutoriel (skip total).
     if (cur.waitForCreate) {
       const itemLabel = cur.waitForCreate === 'system' ? 'matière' : 'fiche'
       const buttonLabel = cur.waitForCreate === 'system' ? '+ Matière' : '+ Nouvelle fiche'
-      // Détection : a-t-on au moins une matière en DOM (tab .mtab) ?
-      const hasMatiere =
-        typeof document !== 'undefined' &&
-        document.querySelector('.mtab') !== null
-      const cantCreate = cur.waitForCreate === 'lesson' && !hasMatiere
-
       return (
         <div className="ont-root" role="dialog" aria-modal="true">
           <div
@@ -748,32 +741,17 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
             style={{ top: 24, right: 24, width: 360 }}
           >
             <div className="ont-tip-step">Étape {stepIdx + 1} sur {total}</div>
-            <h4 className="ont-tip-title">
-              {cantCreate ? 'Pas de matière disponible' : 'Réouvre le formulaire'}
-            </h4>
+            <h4 className="ont-tip-title">Réouvre le formulaire</h4>
             <div className="ont-tip-body">
-              {cantCreate ? (
-                <>
-                  Tu n&apos;as pas créé de matière, donc tu ne peux pas créer de
-                  fiche pour l&apos;instant. On saute la phase fiche pour
-                  continuer le tour. Tu pourras créer matière + fiche après le
-                  tutoriel.
-                </>
-              ) : (
-                <>
-                  Tu as fermé le formulaire sans créer de {itemLabel}. Pour
-                  continuer le tutoriel, tu dois créer une {itemLabel}.
-                  <br /><br />
-                  Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à
-                  droite pour rouvrir le formulaire.
-                </>
-              )}
+              Tu as fermé le formulaire sans créer de {itemLabel}. Pour
+              continuer le tutoriel, tu dois créer une {itemLabel}.
+              <br /><br />
+              Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à
+              droite pour rouvrir le formulaire.
             </div>
-            {!cantCreate && (
-              <div className="ont-tip-hint">
-                <span className="ont-tip-pulse" /> En attente de la création…
-              </div>
-            )}
+            <div className="ont-tip-hint">
+              <span className="ont-tip-pulse" /> En attente de la création…
+            </div>
             <ProgressBars count={total} active={stepIdx} />
             <div className="ont-tip-actions">
               <button className="ont-btn-ghost" onClick={handleSkip}>
@@ -783,14 +761,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 {stepIdx > 0 && (
                   <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
                 )}
-                {cantCreate && (
-                  <button
-                    className="ont-btn-primary"
-                    onClick={() => setStepIdx(13)}
-                  >
-                    Continuer le tour →
-                  </button>
-                )}
+                {/* Aucun bouton Suivant — la création est obligatoire */}
               </div>
             </div>
           </div>
