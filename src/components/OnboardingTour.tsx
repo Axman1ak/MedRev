@@ -44,7 +44,7 @@ import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react
 import { usePathname } from 'next/navigation'
 import './onboarding-tour.css'
 
-type StepKind = 'walkthrough' | 'wait-click' | 'tooltip-only'
+type StepKind = 'walkthrough' | 'wait-click' | 'tooltip-only' | 'celebration'
 type TipPos = 'right' | 'bottom' | 'top' | 'left'
 
 interface Step {
@@ -115,7 +115,6 @@ const STEPS: Step[] = [
     spotPad: 6,
   },
   {
-    // Spot sur le formulaire qui vient de s'ouvrir
     kind: 'walkthrough',
     selector: '[data-tour="matiere-form"]',
     title: () => 'Le formulaire de matière',
@@ -132,6 +131,20 @@ const STEPS: Step[] = [
     ),
     tipPos: 'right',
     spotPad: 8,
+  },
+  {
+    // Forcer la fermeture du form pour éviter qu'il reste en arrière-plan
+    kind: 'wait-click',
+    selector: '[data-tour="matiere-cancel"]',
+    title: () => 'Ferme le formulaire',
+    body: (
+      <>
+        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
+        continuer le tour.
+      </>
+    ),
+    tipPos: 'top',
+    spotPad: 6,
   },
   {
     kind: 'wait-click',
@@ -165,7 +178,21 @@ const STEPS: Step[] = [
     spotPad: 8,
   },
   {
-    kind: 'walkthrough',
+    kind: 'wait-click',
+    selector: '[data-tour="fiche-cancel"]',
+    title: () => 'Ferme le formulaire',
+    body: (
+      <>
+        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
+        continuer le tour.
+      </>
+    ),
+    tipPos: 'top',
+    spotPad: 6,
+  },
+  {
+    // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
+    kind: 'wait-click',
     selector: '[data-tour="lesson-card"]',
     title: () => 'La courbe J et la notation',
     body: (
@@ -173,21 +200,10 @@ const STEPS: Step[] = [
         Chaque fiche affiche <strong>14 cases</strong> : les paliers J0, J1,
         J3, J5, J7, J15, J21, J30, J45, J60, J75, J90, J105, J120. À chaque
         échéance, tu notes ta révision de <strong>1</strong> (à revoir) à{' '}
-        <strong>5</strong> (acquis). Un 5 fait sauter des paliers, un 1 te
-        repropose dès demain.
-      </>
-    ),
-    tipPos: 'right',
-    spotPad: 8,
-  },
-  {
-    kind: 'wait-click',
-    selector: '[data-tour="lesson-card"]',
-    title: () => 'Ouvre la fiche',
-    body: (
-      <>
-        Clique sur la fiche pour ouvrir sa modale détaillée — picker des
-        paliers J, sources vidéo/PDF, QCM générés par IA.
+        <strong>5</strong> (acquis).
+        <br /><br />
+        <strong>Clique sur la fiche</strong> pour ouvrir sa modale détaillée
+        (picker des paliers, sources vidéo/PDF, QCM générés par IA).
       </>
     ),
     tipPos: 'right',
@@ -317,12 +333,12 @@ const STEPS: Step[] = [
   },
   {
     kind: 'wait-click',
-    selector: '[data-tour="bib-area"]',
+    selector: '[data-tour="bib-link"]',
     title: () => 'Découvre la Bibliothèque',
     body: (
       <>
-        Clique sur la <strong>zone Bibliothèque</strong> à droite pour
-        l&apos;ouvrir en grand.
+        Clique sur <strong>Voir ma bibliothèque entièrement →</strong> pour
+        ouvrir la bibliothèque en grand.
       </>
     ),
     tipPos: 'left',
@@ -339,6 +355,20 @@ const STEPS: Step[] = [
         livres. Objectif : 1500 livres pour boucler la P1.
       </>
     ),
+  },
+  {
+    // Fermer la fullscreen avant de passer au Simulateur
+    kind: 'wait-click',
+    selector: '[data-tour="bib-fullscreen-close"]',
+    title: () => 'Ferme la Bibliothèque',
+    body: (
+      <>
+        Clique sur la <strong>croix</strong> en haut à droite pour fermer la
+        vue Bibliothèque et continuer.
+      </>
+    ),
+    tipPos: 'left',
+    spotPad: 6,
   },
   {
     kind: 'wait-click',
@@ -398,6 +428,24 @@ const STEPS: Step[] = [
       </>
     ),
   },
+
+  // ============ FÉLICITATIONS ============
+  {
+    kind: 'celebration',
+    title: (n) => `Bravo ${n} !`,
+    body: (
+      <>
+        Tu as fait le tour de MedRev. Maintenant, à toi de jouer : crée tes
+        matières, ajoute tes fiches, note tes révisions au fil des paliers J,
+        et regarde ta <strong>bibliothèque se remplir</strong> jour après
+        jour.
+        <br /><br />
+        Tu peux revoir ce tutoriel à tout moment depuis tes Paramètres.
+        <br /><br />
+        <strong>Bonne P1.</strong>
+      </>
+    ),
+  },
 ]
 
 const LS_KEY = 'medrev-onboarding-step'
@@ -435,9 +483,10 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   const isWaitClick = cur.kind === 'wait-click'
   const isTooltipOnly = cur.kind === 'tooltip-only'
   const isWalkthrough = cur.kind === 'walkthrough'
+  const isCelebration = cur.kind === 'celebration'
   // Voile léger : par défaut sur walkthrough/wait-click, off pour tooltip-only.
   // Override possible via cur.dimmed.
-  const dimmed = cur.dimmed ?? !isTooltipOnly
+  const dimmed = cur.dimmed ?? (!isTooltipOnly && !isCelebration)
 
   // ---------- Persist stepIdx ----------
   useEffect(() => {
@@ -549,6 +598,34 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // =================================================================
   //                       RENDU PAR KIND
   // =================================================================
+
+  // --- CELEBRATION : popup centré final avec confettis CSS ---
+  if (isCelebration) {
+    return (
+      <div className="ont-root" role="dialog" aria-modal="true" aria-label="Félicitations">
+        <div className="ont-celebration-overlay">
+          <div className="ont-confetti" aria-hidden="true">
+            {Array.from({ length: 18 }).map((_, i) => (
+              <span key={i} className={`ont-confetti-piece c-${i % 6}`} style={{ left: `${(i * 5.5) % 100}%`, animationDelay: `${(i % 7) * 0.15}s` }} />
+            ))}
+          </div>
+          <div className="ont-celebration-card" ref={tipRef}>
+            <div className="ont-celebration-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64" width="64" height="64">
+                <circle cx="32" cy="32" r="28" fill="#D8EAE0" />
+                <path d="M20 33 L29 42 L46 22" stroke="#1B4332" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h3 className="ont-celebration-title">{cur.title(firstName)}</h3>
+            <div className="ont-celebration-body">{cur.body}</div>
+            <button className="ont-btn-primary ont-celebration-btn" onClick={handleComplete}>
+              C&apos;est parti
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // --- TOOLTIP-ONLY : tooltip en haut à droite, aucun voile ---
   if (isTooltipOnly) {
