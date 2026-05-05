@@ -269,6 +269,10 @@ export default function FichesPage() {
       setSystems(prev => [...prev, data as System])
       // En mode 'year' on auto-sélectionne ; sinon seulement si le sem matche
       if (semester === 'year' || (data as any).semestre === semester) setSelectedSystemId(data.id)
+      // Notifie le tour onboarding (event listener écoute pour avancer)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('medrev-system-created'))
+      }
     }
     // Reset du form : si on est en 'year', on retombe sur le sem 2 par défaut
     setShowNewSystem(false); setNewSysName(''); setNewSysColor(SUBJ_COLORS[0])
@@ -283,7 +287,13 @@ export default function FichesPage() {
       learn_date: newLesDate || today, steps: new Array(J.length).fill(null), ai_questions: [],
     }).select().single()
     setLesLoading(false)
-    if (data) setLessons(prev => [...prev, data as Lesson])
+    if (data) {
+      setLessons(prev => [...prev, data as Lesson])
+      // Notifie le tour onboarding
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('medrev-lesson-created'))
+      }
+    }
     setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
   }
 
