@@ -433,14 +433,22 @@ export default function FichesPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            <button className="fi-btn-o" onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}>
+            <button
+              data-tour="add-system"
+              className="fi-btn-o"
+              onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}
+            >
               + Matière
             </button>
-            <button className="fi-btn-g" onClick={() => {
-              setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? ''))
-              setNewLesDate(today)
-              setShowNewLesson(true)
-            }}>
+            <button
+              data-tour="add-lesson"
+              className="fi-btn-g"
+              onClick={() => {
+                setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? ''))
+                setNewLesDate(today)
+                setShowNewLesson(true)
+              }}
+            >
               + Nouvelle fiche
             </button>
           </div>
