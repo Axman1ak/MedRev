@@ -26,8 +26,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Onboarding state
   // - tourOpen : tour activement affiché
   // - replayKey : sert à remonter le composant (force restart) lors d'un replay
+  // - isReplay : true si l'user a déclenché le replay depuis Paramètres ;
+  //              dans ce cas, les étapes wait-action passent en walkthrough
+  //              (pas de polling, bouton Suivant explicite).
   const [tourOpen, setTourOpen] = useState(false)
   const [replayKey, setReplayKey] = useState(0)
+  const [isReplay, setIsReplay] = useState(false)
 
   // Load persisted semester on mount
   useEffect(() => {
@@ -61,12 +65,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             setProfile(enrichedProfile)
 
             // Trigger onboarding au 1er login (onboarded_at null)
-            // OU si une phase d'action est déjà commencée et qu'on a refresh
+            // OU si une étape est déjà commencée et qu'on a refresh
             // (récupération via localStorage côté composant)
-            const lsPhase = typeof window !== 'undefined'
-              ? localStorage.getItem('medrev-onboarding-phase')
+            const lsStep = typeof window !== 'undefined'
+              ? localStorage.getItem('medrev-onboarding-step')
               : null
-            if (!data.onboarded_at || lsPhase) {
+            if (!data.onboarded_at || lsStep) {
               setTourOpen(true)
             }
           }
@@ -79,6 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     function handleReplay() {
       setReplayKey(k => k + 1)
+      setIsReplay(true)
       setTourOpen(true)
     }
     window.addEventListener('medrev-onboarding-replay', handleReplay)
@@ -177,14 +182,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       `}</style>
 
       {/* SIDEBAR */}
-      <aside style={{
-        width: 220, flexShrink: 0,
-        background: '#111310',
-        display: 'flex', flexDirection: 'column',
-        padding: '22px 0',
-        position: 'sticky', top: 0, height: '100vh',
-        overflowY: 'auto'
-      }}>
+      <aside
+        data-tour="sidebar"
+        style={{
+          width: 220, flexShrink: 0,
+          background: '#111310',
+          display: 'flex', flexDirection: 'column',
+          padding: '22px 0',
+          position: 'sticky', top: 0, height: '100vh',
+          overflowY: 'auto'
+        }}
+      >
         {/* Logo */}
         <div style={{
           fontFamily: "'Fraunces', Georgia, serif",
@@ -196,7 +204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Semester toggle */}
-        <div className="db-sem">
+        <div className="db-sem" data-tour="sem-toggle">
           <button
             className={semester === 1 ? 'active' : ''}
             onClick={() => chooseSemester(1)}
@@ -233,6 +241,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               key={n.href}
               href={n.href}
+              data-tour={n.href === '/dashboard' ? 'nav-dashboard' : undefined}
               className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
             >
               <i className="ic">{n.icon}</i>
@@ -305,6 +314,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           key={replayKey}
           userId={profile.id}
           userName={profile.name || ''}
+          isReplay={isReplay}
           onComplete={handleTourComplete}
           onSkip={handleTourSkip}
         />
