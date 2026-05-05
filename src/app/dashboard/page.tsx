@@ -634,9 +634,10 @@ export default function DashboardPage() {
 
   // Point faible principal
   const weakest = matiereStats[0] ?? null
-  // On affiche les 3 fiches les plus faibles de la matière (toutes, pas seulement
+  // On affiche les 2 fiches les plus faibles de la matière (toutes, pas seulement
   // les fragiles avg < 3) — sinon la card est vide quand il n'y a qu'une fragile.
-  const weakestFragile = weakest?.weakestFiches.slice(0, 3) ?? []
+  // Limite à 2 pour éviter le chevauchement avec le bouton "Retravailler" en bas.
+  const weakestFragile = weakest?.weakestFiches.slice(0, 2) ?? []
 
   // Charge : peak
   const loadMax = Math.max(1, ...upcomingLoad.map(w => w.count))
@@ -735,10 +736,12 @@ export default function DashboardPage() {
         {/* ZONES 2, 3, 4 */}
         <div className="dash-row">
 
-          {/* ZONE 2 : POINT FAIBLE — refonte lisibilité.
-              1 chiffre dominant (le score moyen, 44px), 1 visualisation (5 dots du score),
-              max 2 fiches fragiles avec leur score, CTA en bas. */}
-          <div className="dash-card weak-card">
+          {/* ZONE 2 : POINT FAIBLE — flex column propre pour éviter
+              chevauchement entre la liste de fiches et le CTA "Retravailler" */}
+          <div
+            className="dash-card weak-card"
+            style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+          >
             <div className="dash-card-title with-action">
               Point faible
               {matiereStats.length > 0 && (
@@ -766,7 +769,10 @@ export default function DashboardPage() {
                 </div>
 
                 {weakestFragile.length > 0 ? (
-                  <div className="weak-list">
+                  <div
+                    className="weak-list"
+                    style={{ flex: '1 1 auto', overflowY: 'auto', minHeight: 0 }}
+                  >
                     {weakestFragile.map(f => {
                       const cls = scoreClass(f.avg)
                       return (
@@ -781,20 +787,19 @@ export default function DashboardPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="weak-noframe">Aucune fiche notée dans cette matière.</div>
+                  <div className="weak-noframe" style={{ flex: '1 1 auto' }}>
+                    Aucune fiche notée dans cette matière.
+                  </div>
                 )}
 
                 <Link
                   href={
-                    // On retravaille les fiches affichées (les plus faibles de la matière),
-                    // qu'elles soient strictement fragiles (avg < 3) ou non. Si aucune
-                    // n'est scorée encore, fallback sur la matière entière.
                     weakestFragile.length > 0
                       ? `/dashboard/focus?lessons=${weakestFragile.map(f => f.lesson.id).join(',')}`
                       : `/dashboard/focus?system=${weakest.system.id}`
                   }
                   className="weak-cta"
-                  style={{ textDecoration: 'none' }}
+                  style={{ textDecoration: 'none', marginTop: 'auto', flexShrink: 0 }}
                 >
                   Retravailler {weakestFragile.length > 0 ? 'ces fiches' : 'cette matière'}
                 </Link>
@@ -822,7 +827,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="reg-heat-wrap">
-              <div className="reg-heat-headers">
+              {/* Grille unique 7×5 (1 ligne d'en-têtes + 4 semaines).
+                  La semaine courante est la dernière ligne ; les cases s'allument
+                  de gauche (lundi) à droite (dimanche). À la fin de la semaine,
+                  toutes les lignes remontent et une nouvelle semaine apparaît en bas. */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: 4,
+                  marginBottom: 6,
+                }}
+              >
                 <div className="reg-heat-day">L</div>
                 <div className="reg-heat-day">M</div>
                 <div className="reg-heat-day">M</div>
@@ -830,20 +846,16 @@ export default function DashboardPage() {
                 <div className="reg-heat-day">V</div>
                 <div className="reg-heat-day">S</div>
                 <div className="reg-heat-day">D</div>
+                {heatmap.flat().map((cell, idx) => {
+                  const cls = [
+                    'reg-heat-cell',
+                    cell.active && !cell.inFuture ? 'done' : '',
+                    cell.isToday ? 'today' : '',
+                    cell.inFuture ? 'future' : '',
+                  ].filter(Boolean).join(' ')
+                  return <div key={idx} className={cls} title={cell.date} />
+                })}
               </div>
-              {heatmap.map((week, wi) => (
-                <div key={wi} className="reg-heatmap">
-                  {week.map((cell, ci) => {
-                    const cls = [
-                      'reg-heat-cell',
-                      cell.active && !cell.inFuture ? 'done' : '',
-                      cell.isToday ? 'today' : '',
-                      cell.inFuture ? 'future' : '',
-                    ].filter(Boolean).join(' ')
-                    return <div key={ci} className={cls} />
-                  })}
-                </div>
-              ))}
               <div className="reg-heat-axis">
                 <span>il y a 4 sem.</span>
                 <span>aujourd&apos;hui {'↑'}</span>
