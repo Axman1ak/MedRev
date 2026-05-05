@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import OnboardingTour from '@/components/OnboardingTour'
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
@@ -21,6 +22,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [profile, setProfile] = useState<Profile | null>(null)
   const [todayCount, setTodayCount] = useState(0)
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
+
+  // Onboarding state
+  // - tourOpen : tour activement affiché
+  // - replayKey : sert à remonter le composant (force restart) lors d'un replay
+  const [tourOpen, setTourOpen] = useState(false)
+  const [replayKey, setReplayKey] = useState(0)
 
   // Load persisted semester on mount
   useEffect(() => {
@@ -50,10 +57,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               data.name ||
               user.email?.split('@')[0] ||
               '...'
-            setProfile({ ...data, name: displayName })
+            const enrichedProfile = { ...data, name: displayName } as Profile
+            setProfile(enrichedProfile)
+
+            // Trigger onboarding au 1er login (onboarded_at null)
+            // OU si une phase d'action est déjà commencée et qu'on a refresh
+            // (récupération via localStorage côté composant)
+            const lsPhase = typeof window !== 'undefined'
+              ? localStorage.getItem('medrev-onboarding-phase')
+              : null
+            if (!data.onboarded_at || lsPhase) {
+              setTourOpen(true)
+            }
           }
         })
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Listen for replay events triggered from Settings
+  useEffect(() => {
+    function handleReplay() {
+      setReplayKey(k => k + 1)
+      setTourOpen(true)
+    }
+    window.addEventListener('medrev-onboarding-replay', handleReplay)
+    return () => window.removeEventListener('medrev-onboarding-replay', handleReplay)
   }, [])
 
   useEffect(() => {
@@ -63,10 +92,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .then(({ data }) => {
         if (!data) return
         let cnt = 0
-        const J = [0,1,3,5,7,15,21,30,45,60,75,90,105,120]
+        const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
         data.forEach(l => {
           if (!l.learn_date) return
-          const steps = l.steps as (null|object)[]
+          const steps = l.steps as (null | object)[]
           J.forEach((off, i) => {
             const d = new Date(l.learn_date + 'T12:00:00')
             d.setDate(d.getDate() + off)
@@ -87,12 +116,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return pathname.startsWith(href)
   }
 
+  // ---------- Onboarding callbacks ----------
+  async function markOnboarded() {
+    if (!profile) return
+    await supabase.from('profiles')
+      .update({ onboarded_at: new Date().toISOString() })
+      .eq('id', profile.id)
+    setProfile({ ...profile, onboarded_at: new Date().toISOString() } as Profile)
+  }
+
+  async function handleTourComplete() {
+    await markOnboarded()
+    setTourOpen(false)
+  }
+
+  async function handleTourSkip() {
+    await markOnboarded()
+    setTourOpen(false)
+  }
+
   const initials = profile?.name?.slice(0, 2).toUpperCase() || '?'
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#EDEAE3', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap');
         .db-nav-item {
           display: flex; align-items: center; gap: 9px;
           padding: 8px 10px; border-radius: 7px; cursor: pointer;
@@ -244,6 +292,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main style={{ flex: 1, overflowY: 'auto' }}>
         {children}
       </main>
+
+      {/* ONBOARDING TOUR — overlay full-screen */}
+      {tourOpen && profile && (
+        <OnboardingTour
+          key={replayKey}
+          userId={profile.id}
+          userName={profile.name || ''}
+          onComplete={handleTourComplete}
+          onSkip={handleTourSkip}
+        />
+      )}
     </div>
   )
 }
