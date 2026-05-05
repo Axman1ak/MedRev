@@ -17,8 +17,9 @@
 }
 
 /* ============================================================
- * SPOTLIGHT — juste un halo lumineux autour de la cible.
- * Pas de voile global → l'utilisateur voit toute la page.
+ * SPOTLIGHT — halo lumineux autour de la cible.
+ * Variante .ont-spot-dim : ajoute un voile gris léger autour
+ * (contrôlé par le composant via la prop `dimmed` du step).
  * pointer-events: none → l'user peut cliquer le vrai bouton dessous.
  * ============================================================ */
 .ont-spot {
@@ -37,6 +38,14 @@
     height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Variante avec voile gris léger contrôlé (box-shadow géant) */
+.ont-spot-dim {
+  box-shadow:
+    0 0 0 9999px rgba(17, 19, 16, 0.32),
+    0 0 0 4px rgba(122, 165, 107, 0.22),
+    0 0 30px 6px rgba(27, 67, 50, 0.35);
+}
+
 @keyframes ont-pulse {
   0%, 100% {
     box-shadow:
@@ -46,6 +55,28 @@
   }
   50% {
     box-shadow:
+      0 0 0 4px rgba(122, 165, 107, 0.22),
+      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 0 18px rgba(122, 165, 107, 0);
+  }
+}
+
+/* Override de l'animation pulse pour la variante avec voile */
+.ont-spot-dim {
+  animation: ont-pulse-dim 2.4s ease-in-out infinite;
+}
+
+@keyframes ont-pulse-dim {
+  0%, 100% {
+    box-shadow:
+      0 0 0 9999px rgba(17, 19, 16, 0.32),
+      0 0 0 4px rgba(122, 165, 107, 0.22),
+      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 0 0 rgba(122, 165, 107, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9999px rgba(17, 19, 16, 0.32),
       0 0 0 4px rgba(122, 165, 107, 0.22),
       0 0 30px 6px rgba(27, 67, 50, 0.35),
       0 0 0 18px rgba(122, 165, 107, 0);
