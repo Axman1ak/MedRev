@@ -363,7 +363,31 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip }:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
-  // ---------- Polling pour wait-action ----------
+  // ---------- Event listener immédiat (création matière/fiche) ----------
+  // Plus rapide et fiable que le polling Supabase : fiches-page dispatche
+  // 'medrev-system-created' / 'medrev-lesson-created' juste après l'insert.
+  useEffect(() => {
+    if (cur.kind !== 'wait-action') return
+    function onSystem() {
+      if (cur.waitFor === 'systems') {
+        setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
+      }
+    }
+    function onLesson() {
+      if (cur.waitFor === 'lessons') {
+        setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
+      }
+    }
+    window.addEventListener('medrev-system-created', onSystem)
+    window.addEventListener('medrev-lesson-created', onLesson)
+    return () => {
+      window.removeEventListener('medrev-system-created', onSystem)
+      window.removeEventListener('medrev-lesson-created', onLesson)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIdx])
+
+  // ---------- Polling Supabase (fallback de sécurité) ----------
   useEffect(() => {
     if (!isWaitAction || !cur.waitFor) {
       baselineRef.current = null
