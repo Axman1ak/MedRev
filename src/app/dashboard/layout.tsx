@@ -106,11 +106,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
   }, [profile])
 
-  async function logout() {
-    await supabase.auth.signOut()
-    router.push('/')
-  }
-
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href
     return pathname.startsWith(href)
@@ -252,20 +247,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* User card */}
+        {/* User card — clic → Paramètres (logout y est accessible) */}
         <div style={{
           marginTop: 'auto', padding: '14px 9px 0',
           borderTop: '1px solid rgba(255,255,255,.07)'
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: 9, borderRadius: 9,
-            background: 'rgba(255,255,255,.05)',
-            cursor: 'pointer',
-            position: 'relative'
-          }}
-            onClick={logout}
-            title="Se déconnecter"
+          <Link
+            href="/dashboard/settings"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: 9, borderRadius: 9,
+              background: 'rgba(255,255,255,.05)',
+              cursor: 'pointer',
+              position: 'relative',
+              textDecoration: 'none',
+              transition: 'background .15s'
+            }}
+            title="Voir les paramètres"
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,.09)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,.05)' }}
           >
             <div style={{
               width: 30, height: 30, borderRadius: '50%',
@@ -275,8 +275,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}>
               {initials}
             </div>
-            <div>
-              <div style={{ fontSize: '12.5px', fontWeight: 500, color: 'white' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '12.5px', fontWeight: 500, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {profile?.name || '...'}
               </div>
               <div style={{ fontSize: '10.5px', color: 'rgba(255,255,255,.35)' }}>
@@ -284,7 +284,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {profile?.fac ? ` · ${profile.fac}` : ''}
               </div>
             </div>
-          </div>
+            <span style={{
+              fontSize: 14,
+              color: 'rgba(255,255,255,.35)',
+              marginLeft: 'auto',
+              flexShrink: 0
+            }}>{'›'}</span>
+          </Link>
         </div>
       </aside>
 
