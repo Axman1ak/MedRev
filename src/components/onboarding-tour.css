@@ -1,0 +1,463 @@
+@charset "UTF-8";
+/* src/components/onboarding-tour.css
+ * Tour guidé MedRev — toutes classes préfixées .ont-* (scope dédié)
+ */
+
+/* ============================================================
+ * ROOT — overlay plein écran, transparent aux clics par défaut.
+ * Les sous-éléments interactifs réactivent pointer-events.
+ * ============================================================ */
+.ont-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: #111310;
+}
+
+/* ============================================================
+ * DIM — overlay sombre plein écran (concept + final)
+ * ============================================================ */
+.ont-dim {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 19, 16, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: auto;
+  animation: ont-fadein 0.25s ease;
+}
+
+/* ============================================================
+ * SPOTLIGHT — découpe visuelle autour du bouton ciblé.
+ * pointer-events: none → l'utilisateur peut cliquer le vrai bouton
+ * dessous. Le box-shadow géant simule un dim partout sauf ici.
+ * ============================================================ */
+.ont-spot {
+  position: fixed;
+  border: 2px solid #7AA56B;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(17, 19, 16, 0.55),
+    0 0 0 4px rgba(122, 165, 107, 0.18);
+  pointer-events: none;
+  animation: ont-pulse 2.4s ease-in-out infinite;
+  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes ont-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 9999px rgba(17, 19, 16, 0.55),
+      0 0 0 4px rgba(122, 165, 107, 0.18),
+      0 0 0 0 rgba(122, 165, 107, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9999px rgba(17, 19, 16, 0.55),
+      0 0 0 4px rgba(122, 165, 107, 0.18),
+      0 0 0 14px rgba(122, 165, 107, 0);
+  }
+}
+
+/* ============================================================
+ * TOOLTIP — petite carte flottante à côté du spotlight
+ * ============================================================ */
+.ont-tip {
+  position: fixed;
+  background: #FAF8F2;
+  border: 1px solid #E1DDD3;
+  border-radius: 12px;
+  padding: 18px 20px 16px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  animation: ont-tip-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes ont-tip-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ont-tip-step {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #2D6A4F;
+  margin-bottom: 6px;
+}
+
+.ont-tip-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  line-height: 1.2;
+  color: #111310;
+}
+
+.ont-tip-body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #111310;
+  margin-bottom: 14px;
+}
+
+.ont-tip-body strong {
+  color: #1B4332;
+  font-weight: 600;
+}
+
+.ont-tip-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #6B6F6A;
+  margin-bottom: 14px;
+}
+
+.ont-tip-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7AA56B;
+  animation: ont-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes ont-blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.ont-tip-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #E1DDD3;
+  padding-top: 12px;
+}
+
+/* ============================================================
+ * MODAL WRAP + MODAL — pour les phases concept et final
+ * ============================================================ */
+.ont-modal-wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  pointer-events: none;
+}
+
+.ont-modal {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 580px;
+  background: #EDEAE3;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+  animation: ont-modal-in 0.35s cubic-bezier(0.34, 1.32, 0.64, 1);
+}
+
+@keyframes ont-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ont-modal-head {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #E1DDD3;
+  background: #FAF8F2;
+}
+
+.ont-modal-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ont-pill {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #2D6A4F;
+  background: #D8EAE0;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.ont-pill-done {
+  background: #1B4332;
+  color: #EDEAE3;
+}
+
+.ont-modal-step-x {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: #6B6F6A;
+  font-size: 14px;
+}
+
+.ont-modal-close {
+  background: none;
+  border: none;
+  color: #6B6F6A;
+  font-size: 22px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ont-modal-close:hover {
+  background: #E1DDD3;
+  color: #111310;
+}
+
+.ont-illust {
+  padding: 28px 24px 4px;
+  display: grid;
+  place-items: center;
+  min-height: 110px;
+}
+
+.ont-modal-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 400;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 12px 32px 12px;
+  color: #111310;
+}
+
+.ont-modal-body {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #111310;
+  margin: 0 32px 18px;
+}
+
+.ont-modal-body strong {
+  color: #1B4332;
+  font-weight: 600;
+}
+
+.ont-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ont-list li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 14px;
+  color: #111310;
+  line-height: 1.5;
+}
+
+.ont-list li::before {
+  content: '\2713'; /* checkmark */
+  position: absolute;
+  left: 0;
+  top: 1px;
+  color: #2D6A4F;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ont-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid #E1DDD3;
+  background: #FAF8F2;
+}
+
+.ont-modal-actions-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ============================================================
+ * BOUTONS
+ * ============================================================ */
+.ont-btn-primary {
+  background: #1B4332;
+  color: #EDEAE3;
+  border: 1px solid #1B4332;
+  padding: 10px 20px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.005em;
+}
+
+.ont-btn-primary:hover {
+  background: #2D6A4F;
+  border-color: #2D6A4F;
+}
+
+.ont-btn-ghost {
+  background: transparent;
+  color: #6B6F6A;
+  border: 1px solid transparent;
+  padding: 10px 14px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ont-btn-ghost:hover {
+  background: #E1DDD3;
+  color: #111310;
+}
+
+/* ============================================================
+ * PROGRESS BARS (modal)
+ * ============================================================ */
+.ont-bars {
+  display: flex;
+  gap: 5px;
+  padding: 0 32px 18px;
+}
+
+.ont-bar {
+  flex: 1;
+  height: 3px;
+  background: #E1DDD3;
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+
+.ont-bar.done { background: #1B4332; }
+.ont-bar.cur { background: #2D6A4F; }
+
+/* ============================================================
+ * SCORING ILLUSTRATION (5 cartes)
+ * ============================================================ */
+.ont-scores {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.ont-score {
+  position: relative;
+  background: #FAF8F2;
+  border: 1px solid #E1DDD3;
+  border-radius: 10px;
+  padding: 14px 6px 10px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.ont-score-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.ont-score.s1 .ont-score-bar { background: #C75050; }
+.ont-score.s2 .ont-score-bar { background: #E08B3C; }
+.ont-score.s3 .ont-score-bar { background: #D9B24A; }
+.ont-score.s4 .ont-score-bar { background: #7AA56B; }
+.ont-score.s5 .ont-score-bar { background: #1B4332; }
+
+.ont-score-n {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.ont-score.s1 .ont-score-n { color: #C75050; }
+.ont-score.s2 .ont-score-n { color: #E08B3C; }
+.ont-score.s3 .ont-score-n { color: #D9B24A; }
+.ont-score.s4 .ont-score-n { color: #7AA56B; }
+.ont-score.s5 .ont-score-n { color: #1B4332; }
+
+.ont-score-l {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ont-score.s1 .ont-score-l { color: #C75050; }
+.ont-score.s2 .ont-score-l { color: #E08B3C; }
+.ont-score.s3 .ont-score-l { color: #D9B24A; }
+.ont-score.s4 .ont-score-l { color: #7AA56B; }
+.ont-score.s5 .ont-score-l { color: #1B4332; }
+
+/* ============================================================
+ * Animations communes
+ * ============================================================ */
+@keyframes ont-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ============================================================
+ * Responsive — sécurité minimale (mobile improvera plus tard)
+ * ============================================================ */
+@media (max-width: 640px) {
+  .ont-modal {
+    max-width: 100%;
+  }
+  .ont-modal-title {
+    font-size: 26px;
+    margin: 8px 22px 10px;
+  }
+  .ont-modal-body {
+    margin: 0 22px 16px;
+  }
+  .ont-bars {
+    padding: 0 22px 16px;
+  }
+  .ont-tip {
+    width: calc(100vw - 32px) !important;
+    left: 16px !important;
+  }
+}
