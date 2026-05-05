@@ -632,7 +632,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
         if (window.confirm('Quitter le tutoriel ? Tu pourras le revoir depuis Paramètres.')) {
           handleSkip()
         }
-      } else if (e.key === 'ArrowRight' && !isWaitClick) {
+      } else if (e.key === 'ArrowRight' && !isWaitClick && !cur.waitForCreate) {
         next()
       } else if (e.key === 'ArrowLeft' && stepIdx > 0) {
         prev()
@@ -908,6 +908,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
 
   const isFirst = stepIdx === 0
   const isLast = stepIdx === STEPS.length - 1
+  const isWaitingForCreate = !!cur.waitForCreate
   const spotClassName = `ont-spot${dimmed ? ' ont-spot-dim' : ''}`
 
   return (
@@ -929,9 +930,10 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
         <h4 className="ont-tip-title">{cur.title(firstName)}</h4>
         <div className="ont-tip-body">{cur.body}</div>
 
-        {isWaitClick && (
+        {(isWaitClick || isWaitingForCreate) && (
           <div className="ont-tip-hint">
-            <span className="ont-tip-pulse" /> En attente de ton clic…
+            <span className="ont-tip-pulse" />{' '}
+            {isWaitingForCreate ? 'En attente de la création…' : 'En attente de ton clic…'}
           </div>
         )}
 
@@ -951,7 +953,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 ← Préc.
               </button>
             )}
-            {isWalkthrough && (
+            {isWalkthrough && !isWaitingForCreate && (
               <button className="ont-btn-primary" onClick={next}>
                 {isLast ? 'Terminer' : 'Suivant →'}
               </button>
