@@ -57,6 +57,7 @@ interface Step {
   spotPad?: number
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
   blockTargetClicks?: boolean // si true, bloque les clics à l'intérieur du target pendant cette étape
+  blockSelectors?: string[] // sélecteurs additionnels à bloquer pendant cette étape (ex: bouton Créer pendant l'explication du form)
 }
 
 const STEPS: Step[] = [
@@ -127,11 +128,13 @@ const STEPS: Step[] = [
         <br />
         <strong>Semestre</strong> — pour t&apos;organiser entre S1 et S2.
         <br /><br />
-        Tu peux fermer sans créer si tu veux juste explorer.
+        Pendant le tutoriel, le bouton <strong>Créer la matière</strong> est
+        désactivé — clique sur <strong>Annuler</strong> pour continuer le tour.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
+    blockSelectors: ['[data-tour="matiere-create"]'],
   },
   {
     // Forcer la fermeture du form pour éviter qu'il reste en arrière-plan
@@ -173,10 +176,14 @@ const STEPS: Step[] = [
         <strong>Date d&apos;apprentissage (J0)</strong> — à partir de cette
         date, MedRev programme automatiquement les J1, J3, J5, J7, J15...
         jusqu&apos;à J120.
+        <br /><br />
+        Pendant le tutoriel, le bouton <strong>Créer la fiche</strong> est
+        désactivé — clique sur <strong>Annuler</strong> pour continuer le tour.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
+    blockSelectors: ['[data-tour="fiche-create"]'],
   },
   {
     kind: 'wait-click',
@@ -520,17 +527,35 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   }, [stepIdx])
 
   // ---------- Click blocker pour les walkthrough avec interactions sensibles ----------
-  // Ex: étape picker-j où cliquer un palier J ferait basculer la modale en
-  // mode notation et casserait le tour.
+  // Deux mécanismes :
+  //   - blockTargetClicks=true : bloque tout clic à l'intérieur du target principal
+  //     (ex: étape picker-j — cliquer un palier ferait basculer la modale en notation)
+  //   - blockSelectors=[...] : bloque les clics matchant ces sélecteurs spécifiques
+  //     (ex: étape matiere-form — bloquer le bouton "Créer la matière" pour forcer
+  //     l'utilisateur à passer par "Annuler")
   useEffect(() => {
-    if (!cur.blockTargetClicks || !cur.selector) return
+    const targetBlocked = cur.blockTargetClicks && cur.selector
+    const selectorsBlocked = cur.blockSelectors && cur.blockSelectors.length > 0
+    if (!targetBlocked && !selectorsBlocked) return
+
     function blockClick(e: MouseEvent) {
       const target = e.target as HTMLElement | null
       if (!target) return
-      const matched = target.closest(cur.selector!)
-      if (matched) {
+      // Bloque si le target match
+      if (targetBlocked && target.closest(cur.selector!)) {
         e.stopPropagation()
         e.preventDefault()
+        return
+      }
+      // Bloque si l'un des blockSelectors match
+      if (selectorsBlocked) {
+        for (const sel of cur.blockSelectors!) {
+          if (target.closest(sel)) {
+            e.stopPropagation()
+            e.preventDefault()
+            return
+          }
+        }
       }
     }
     document.addEventListener('click', blockClick, true)
@@ -685,6 +710,64 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
 
   // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
+    // Cas spécial : utilisateur sans fiche encore créée. La phase lesson-card
+    // (étapes 10-14) ne peut pas s'afficher. On consolide ces 5 étapes en
+    // un aperçu unique et on saute directement à la phase 3 (Calendrier).
+    const inLessonRange = stepIdx >= 9 && stepIdx <= 13
+    const onFichesPage = pathname === '/dashboard/fiches'
+    const noLessonCardInDom =
+      typeof document !== 'undefined' &&
+      !document.querySelector('[data-tour="lesson-card"]')
+
+    if (inLessonRange && onFichesPage && noLessonCardInDom) {
+      return (
+        <div className="ont-root" role="dialog" aria-modal="true">
+          <div
+            className="ont-tip ont-tip-corner"
+            ref={tipRef}
+            style={{ top: 24, right: 24, width: 360 }}
+          >
+            <div className="ont-tip-step">
+              Aperçu (étapes {stepIdx + 1} à 14)
+            </div>
+            <h4 className="ont-tip-title">Aucune fiche encore créée</h4>
+            <div className="ont-tip-body">
+              Tu n&apos;as pas encore de fiche. Voici un aperçu de ce que tu
+              trouveras une fois que tu en auras créé une :
+              <br /><br />
+              <strong>Carte fiche</strong> — 14 cases représentent les 14
+              paliers J0 → J120. Notation de <strong>1</strong> (à revoir) à{' '}
+              <strong>5</strong> (acquis) à chaque échéance.
+              <br /><br />
+              <strong>Modale détaillée</strong> (clic sur une fiche) :
+              <br />• picker des paliers J pour noter
+              <br />• upload <strong>vidéo</strong> + <strong>PDF</strong> du cours
+              <br />• <strong>QCM générés par IA</strong> à partir des sources
+              <br /><br />
+              On passe directement au reste du tour.
+            </div>
+            <ProgressBars count={total} active={stepIdx} />
+            <div className="ont-tip-actions">
+              <button className="ont-btn-ghost" onClick={handleSkip}>
+                Passer le tutoriel
+              </button>
+              <div className="ont-tip-actions-right">
+                {stepIdx > 0 && (
+                  <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
+                )}
+                <button
+                  className="ont-btn-primary"
+                  onClick={() => setStepIdx(14)}
+                >
+                  Continuer le tour →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="ont-root" role="dialog" aria-modal="true">
         <div
