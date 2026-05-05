@@ -491,12 +491,13 @@ function DashGarden({
           </span>
         </div>
         <Link
-          href={queueLength > 0 ? startHref : '#'}
+          data-tour="bib-cta"
+          href={startHref}
           className={`dash-bib-cta${queueLength === 0 ? ' disabled' : ''}`}
-          aria-disabled={queueLength === 0}
+          style={{ pointerEvents: 'auto' }}
         >
           {queueLength === 0
-            ? 'Aucune révision aujourd\'hui'
+            ? 'Voir la session focus'
             : `Démarrer · ${queueLength} ${queueLength > 1 ? 'fiches' : 'fiche'}`}
         </Link>
         <button
