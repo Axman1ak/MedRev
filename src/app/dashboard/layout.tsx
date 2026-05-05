@@ -52,50 +52,62 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
-      supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => {
-          if (data) {
-            const displayName =
-              user.user_metadata?.username ||
-              user.user_metadata?.name ||
-              data.name ||
-              user.email?.split('@')[0] ||
-              '...'
-            const enrichedProfile = { ...data, name: displayName } as Profile
-            setProfile(enrichedProfile)
 
-            // Trigger onboarding au 1er login (onboarded_at null)
-            // OU si une étape est déjà commencée et qu'on a refresh
-            // (récupération via localStorage côté composant)
-            const lsStep = typeof window !== 'undefined'
-              ? localStorage.getItem('medrev-onboarding-step')
-              : null
-            if (!data.onboarded_at || lsStep) {
-              setTourOpen(true)
-              // Compte les fiches existantes pour décider si on force la création
-              supabase.from('lessons')
-                .select('id', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .then(({ count }) => {
-                  setExistingLessonCount(count || 0)
-                })
-            }
+      // Charge en parallèle : profile + count des lessons (toujours, pour
+      // que le tour ait la bonne valeur même au replay)
+      Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('lessons').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      ]).then(([profileRes, lessonsRes]) => {
+        const data = profileRes.data
+        // Set lesson count toujours (même si tour ne s'ouvre pas)
+        setExistingLessonCount(lessonsRes.count || 0)
+
+        if (data) {
+          const displayName =
+            user.user_metadata?.username ||
+            user.user_metadata?.name ||
+            data.name ||
+            user.email?.split('@')[0] ||
+            '...'
+          const enrichedProfile = { ...data, name: displayName } as Profile
+          setProfile(enrichedProfile)
+
+          // Trigger onboarding au 1er login (onboarded_at null)
+          // OU si une étape est déjà commencée et qu'on a refresh
+          const lsStep = typeof window !== 'undefined'
+            ? localStorage.getItem('medrev-onboarding-step')
+            : null
+          if (!data.onboarded_at || lsStep) {
+            setTourOpen(true)
           }
-        })
+        }
+      })
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Listen for replay events triggered from Settings
   useEffect(() => {
-    function handleReplay() {
+    async function handleReplay() {
+      // Refresh le count des lessons avant de replay : si l'user a créé
+      // des fiches depuis le 1er login, on doit le savoir pour ne pas
+      // forcer la création à nouveau.
+      if (profile) {
+        const { count } = await supabase
+          .from('lessons')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', profile.id)
+        setExistingLessonCount(count || 0)
+      }
       setReplayKey(k => k + 1)
       setIsReplay(true)
       setTourOpen(true)
     }
     window.addEventListener('medrev-onboarding-replay', handleReplay)
     return () => window.removeEventListener('medrev-onboarding-replay', handleReplay)
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile])
 
   useEffect(() => {
     if (!profile) return
