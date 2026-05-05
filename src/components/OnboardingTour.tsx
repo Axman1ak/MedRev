@@ -150,10 +150,15 @@ const STEPS: Step[] = [
     ),
     tipPos: 'right',
     spotPad: 8,
-    blockSelectors: ['[data-tour="matiere-create"]'],
+    // Bloque les DEUX boutons : Créer (pas de matière à créer dans le tour)
+    // et Annuler (l'user doit cliquer Suivant dans le tour pour avancer).
+    blockSelectors: [
+      '[data-tour="matiere-create"]',
+      '[data-tour="matiere-cancel"]',
+    ],
   },
   {
-    // Forcer Annuler pour fermer le form proprement
+    // Étape suivante : c'est ici que l'user clique enfin sur Annuler.
     kind: 'wait-click',
     selector: '[data-tour="matiere-cancel"]',
     title: () => 'Ferme le formulaire',
@@ -198,6 +203,9 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 8,
     waitForCreate: 'lesson',
+    // Bloque Annuler — l'user doit créer (sauf s'il a déjà des fiches,
+    // dans ce cas le bouton Suivant apparaît dans le tour pour skipper).
+    blockSelectors: ['[data-tour="fiche-cancel"]'],
   },
   {
     // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
@@ -470,11 +478,18 @@ interface Props {
   onComplete: () => void
   onSkip: () => void
   isReplay?: boolean
+  existingLessonCount?: number // si > 0, l'user a déjà des fiches → pas de force creation
 }
 
 interface Rect { top: number; left: number; width: number; height: number }
 
-export default function OnboardingTour({ userId: _userId, userName, onComplete, onSkip }: Props) {
+export default function OnboardingTour({
+  userId: _userId,
+  userName,
+  onComplete,
+  onSkip,
+  existingLessonCount = 0,
+}: Props) {
   const pathname = usePathname()
 
   const [stepIdx, setStepIdx] = useState<number>(() => {
@@ -632,7 +647,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
         if (window.confirm('Quitter le tutoriel ? Tu pourras le revoir depuis Paramètres.')) {
           handleSkip()
         }
-      } else if (e.key === 'ArrowRight' && !isWaitClick && !cur.waitForCreate) {
+      } else if (e.key === 'ArrowRight' && !isWaitClick && !shouldForceCreate) {
         next()
       } else if (e.key === 'ArrowLeft' && stepIdx > 0) {
         prev()
@@ -728,8 +743,8 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
   // --- Fallback (élément introuvable) : tooltip dans le coin, pas de voile ---
   if (!rect) {
     // Cas spécial 1 : step waitForCreate, l'user a fermé le form sans créer.
-    // PAS d'échappatoire — l'utilisateur doit créer pour avancer.
-    // Seules issues de secours : Précédent ou Passer le tutoriel (skip total).
+    // - shouldForceCreate=true (nouveau compte) : pas de Suivant, doit créer.
+    // - sinon (user a déjà des fiches) : Suivant disponible pour skipper.
     if (cur.waitForCreate) {
       const itemLabel = cur.waitForCreate === 'system' ? 'matière' : 'fiche'
       const buttonLabel = cur.waitForCreate === 'system' ? '+ Matière' : '+ Nouvelle fiche'
@@ -743,15 +758,27 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
             <div className="ont-tip-step">Étape {stepIdx + 1} sur {total}</div>
             <h4 className="ont-tip-title">Réouvre le formulaire</h4>
             <div className="ont-tip-body">
-              Tu as fermé le formulaire sans créer de {itemLabel}. Pour
-              continuer le tutoriel, tu dois créer une {itemLabel}.
-              <br /><br />
-              Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à
-              droite pour rouvrir le formulaire.
+              Tu as fermé le formulaire sans créer de {itemLabel}.
+              {shouldForceCreate ? (
+                <>
+                  {' '}Pour continuer le tutoriel, tu dois créer une {itemLabel}.
+                  <br /><br />
+                  Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à
+                  droite pour rouvrir le formulaire.
+                </>
+              ) : (
+                <>
+                  {' '}Tu peux soit cliquer à nouveau sur{' '}
+                  <strong>{buttonLabel}</strong> pour le rouvrir, soit passer
+                  cette étape (tu as déjà des fiches existantes).
+                </>
+              )}
             </div>
-            <div className="ont-tip-hint">
-              <span className="ont-tip-pulse" /> En attente de la création…
-            </div>
+            {shouldForceCreate && (
+              <div className="ont-tip-hint">
+                <span className="ont-tip-pulse" /> En attente de la création…
+              </div>
+            )}
             <ProgressBars count={total} active={stepIdx} />
             <div className="ont-tip-actions">
               <button className="ont-btn-ghost" onClick={handleSkip}>
@@ -761,7 +788,11 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 {stepIdx > 0 && (
                   <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
                 )}
-                {/* Aucun bouton Suivant — la création est obligatoire */}
+                {!shouldForceCreate && (
+                  <button className="ont-btn-primary" onClick={next}>
+                    Suivant →
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -908,7 +939,10 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
 
   const isFirst = stepIdx === 0
   const isLast = stepIdx === STEPS.length - 1
+  // shouldForceCreate : on force la création UNIQUEMENT si l'user n'a pas
+  // déjà de fiche existante. Sinon le tour propose Suivant pour skipper.
   const isWaitingForCreate = !!cur.waitForCreate
+  const shouldForceCreate = isWaitingForCreate && existingLessonCount === 0
   const spotClassName = `ont-spot${dimmed ? ' ont-spot-dim' : ''}`
 
   return (
@@ -953,7 +987,7 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
                 ← Préc.
               </button>
             )}
-            {isWalkthrough && !isWaitingForCreate && (
+            {isWalkthrough && !shouldForceCreate && (
               <button className="ont-btn-primary" onClick={next}>
                 {isLast ? 'Terminer' : 'Suivant →'}
               </button>
