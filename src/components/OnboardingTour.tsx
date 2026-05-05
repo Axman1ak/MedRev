@@ -1,27 +1,31 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev étendu — 100% spotlight/coachmark, 14 étapes couvrant
-// l'ensemble des fonctionnalités du site.
+// Tour MedRev — 100% spotlight/coachmark, 15 étapes structurées en 3 phases :
 //
-// 1.  Sidebar               — Welcome + 5 espaces
-// 2.  Toggle semestres      — S1/S2/Année
-// 3.  + Matière             — ACTION (pas de Passer, clic forcé)
-// 4.  + Nouvelle fiche      — ACTION
-// 5.  Carte fiche           — Courbe J 14 paliers + notation 1-5
-// 6.  Carte fiche           — ACTION : clic pour ouvrir la modale
-// 7.  Picker J (dans modale) — choisir le palier à noter
-// 8.  Sources vidéo/PDF     — upload + mention Premium (limites Free)
-// 9.  QCM générés par IA    — génération + mention Premium (5 free)
-// 10. Page Focus            — La Bibliothèque gamifiée
-// 11. Page Calendrier       — vue semaine groupée
-// 12. Page Simulateur       — modes + Premium (1 session free)
-// 13. Page Stats            — base + Premium (heatmap, dumbbell)
-// 14. Retour Dashboard      — final, bonne révision
+//   PHASE 1 — Accueil
+//     1. Sidebar              — Welcome + intro
+//     2. Toggle semestres     — S1/S2/Année
 //
-// Sur les étapes wait-action (3, 4, 6), le bouton "Passer le tutoriel"
-// est volontairement absent — l'user doit accomplir l'action. ESC reste
-// disponible en sortie d'urgence (avec confirm).
+//   PHASE 2 — Mes matières (le principal, on commence ici)
+//     3. nav-fiches           — "On commence par Mes matières"
+//     4. + Matière            — ACTION (clic forcé pour créer)
+//     5. + Nouvelle fiche     — ACTION
+//     6. Carte fiche          — Courbe J 14 paliers + notation 1-5
+//     7. Carte fiche          — ACTION : clic pour ouvrir la modale
+//     8. Picker J             — choisir le palier à noter
+//     9. Sources vidéo/PDF    — upload + Premium (30 min / 20 Mo en Free)
+//    10. QCM IA               — génération + Premium (5 free)
+//
+//   PHASE 3 — Tour des autres onglets (les répercussions)
+//    11. nav-dashboard        — "Voici ton Tableau de bord, ta fiche apparaît dans Aujourd'hui"
+//    12. nav-calendar         — "Programmée à J0, J1, J3..."
+//    13. nav-focus            — "Bibliothèque gamifiée"
+//    14. nav-simu             — Simulateur + Premium (1 session free)
+//    15. nav-stats            — Stats + Premium (heatmap, dumbbell)
+//
+// Sur les wait-action (4, 5, 7), aucun bouton "Passer" — l'user doit faire
+// l'action. ESC reste comme sortie d'urgence (avec confirm).
 //
 // Mounted dans dashboard/layout.tsx, persiste entre toutes les pages.
 
@@ -46,7 +50,7 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  // 1 — Sidebar
+  // ============== PHASE 1 — ACCUEIL ==============
   {
     kind: 'walkthrough',
     selector: '[data-tour="sidebar"]',
@@ -55,13 +59,12 @@ const STEPS: Step[] = [
     body: (
       <>
         Trois minutes pour comprendre MedRev. Tu vois ici ta navigation —{' '}
-        <strong>cinq espaces</strong> pour réviser, toujours visibles.
+        <strong>six espaces</strong> pour réviser, toujours visibles.
       </>
     ),
     tipPos: 'right',
     spotPad: 4,
   },
-  // 2 — Toggle semestres
   {
     kind: 'walkthrough',
     selector: '[data-tour="sem-toggle"]',
@@ -77,7 +80,23 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 6,
   },
-  // 3 — Action création matière
+
+  // ============== PHASE 2 — MES MATIÈRES (le principal) ==============
+  {
+    kind: 'walkthrough',
+    selector: '[data-tour="nav-fiches"]',
+    path: '/dashboard',
+    title: () => 'On commence par Mes matières',
+    body: (
+      <>
+        C&apos;est <strong>l&apos;onglet principal</strong> — c&apos;est ici
+        que tu crées tes matières et toutes tes fiches. Tout le reste de
+        MedRev se construit autour de ces fiches.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
   {
     kind: 'wait-action',
     selector: '[data-tour="add-system"]',
@@ -85,16 +104,15 @@ const STEPS: Step[] = [
     title: () => 'Ta première matière',
     body: (
       <>
-        Tout commence ici. Crée une <strong>matière</strong> (Anatomie,
-        Biochimie, Histologie…) — c&apos;est le conteneur qui regroupera tes
-        fiches. Clique sur <strong>+ Matière</strong>.
+        Crée une <strong>matière</strong> (Anatomie, Biochimie, Histologie…) —
+        c&apos;est le conteneur qui regroupera tes fiches. Clique sur{' '}
+        <strong>+ Matière</strong>.
       </>
     ),
     waitFor: 'systems',
     tipPos: 'bottom',
     spotPad: 6,
   },
-  // 4 — Action création fiche
   {
     kind: 'wait-action',
     selector: '[data-tour="add-lesson"]',
@@ -102,16 +120,15 @@ const STEPS: Step[] = [
     title: () => 'Ta première fiche',
     body: (
       <>
-        Bien joué. Maintenant une <strong>fiche</strong> dans cette matière (ex
-        : « Glycolyse — étapes et régulation »). La date d&apos;apprentissage
-        par défaut est aujourd&apos;hui — c&apos;est ton J0.
+        Maintenant une <strong>fiche</strong> dans cette matière (ex : «
+        Glycolyse — étapes »). La date d&apos;apprentissage par défaut est
+        aujourd&apos;hui — c&apos;est ton J0.
       </>
     ),
     waitFor: 'lessons',
     tipPos: 'bottom',
     spotPad: 6,
   },
-  // 5 — Carte fiche : courbe J + notation
   {
     kind: 'walkthrough',
     selector: '[data-tour="lesson-card"]',
@@ -129,7 +146,6 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 8,
   },
-  // 6 — Action : ouvrir la modale
   {
     kind: 'wait-action',
     selector: '[data-tour="lesson-card"]',
@@ -145,7 +161,6 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 8,
   },
-  // 7 — Picker J dans modale
   {
     kind: 'walkthrough',
     selector: '[data-tour="picker-j"]',
@@ -154,15 +169,13 @@ const STEPS: Step[] = [
     body: (
       <>
         Voici les 14 paliers de cette fiche. Les J <strong>passés ou
-        d&apos;aujourd&apos;hui</strong> sont notables. Les J{' '}
-        <strong>futurs</strong> sont verrouillés — ils se débloquent à la bonne
-        date.
+        aujourd&apos;hui</strong> sont notables. Les J <strong>futurs</strong>{' '}
+        sont verrouillés — ils se débloquent à la bonne date.
       </>
     ),
     tipPos: 'right',
     spotPad: 6,
   },
-  // 8 — Sources vidéo/PDF + Premium mention
   {
     kind: 'walkthrough',
     selector: '[data-tour="sources"]',
@@ -170,9 +183,9 @@ const STEPS: Step[] = [
     title: () => 'Vidéo et PDF du cours',
     body: (
       <>
-        Upload ta <strong>vidéo</strong> (cours filmé) et le <strong>PDF</strong>{' '}
-        du polycopié. C&apos;est ce qui sert de base à l&apos;IA pour générer
-        tes QCM.
+        Upload ta <strong>vidéo</strong> (cours filmé) et le{' '}
+        <strong>PDF</strong> du polycopié. C&apos;est ce qui sert de base à
+        l&apos;IA pour générer tes QCM.
         <br />
         <br />
         <em className="ont-premium-note">
@@ -184,7 +197,6 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 6,
   },
-  // 9 — QCM IA + Premium mention
   {
     kind: 'walkthrough',
     selector: '[data-tour="qcm-section"]',
@@ -192,7 +204,7 @@ const STEPS: Step[] = [
     title: () => 'QCM générés par IA',
     body: (
       <>
-        Dès que tu as ajouté une source, MedRev peut générer{' '}
+        Dès qu&apos;une source est uploadée, MedRev peut générer{' '}
         <strong>30 QCM</strong> automatiquement. Lance une session de révision
         quand tu veux.
         <br />
@@ -206,10 +218,41 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 6,
   },
-  // 10 — Page Focus / Bibliothèque
+
+  // ============== PHASE 3 — RÉPERCUSSIONS SUR LES AUTRES ONGLETS ==============
   {
     kind: 'walkthrough',
-    selector: '[data-tour="page-main"]',
+    selector: '[data-tour="nav-dashboard"]',
+    path: '/dashboard',
+    title: () => 'Le Tableau de bord',
+    body: (
+      <>
+        Ta fiche apparaît automatiquement dans <strong>Aujourd&apos;hui</strong>{' '}
+        si elle est due. Tu y verras aussi ton <strong>point faible</strong>,
+        ta <strong>régularité</strong> et ta <strong>charge à venir</strong>.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
+  {
+    kind: 'walkthrough',
+    selector: '[data-tour="nav-calendar"]',
+    path: '/dashboard/calendar',
+    title: () => 'Le Calendrier',
+    body: (
+      <>
+        Ta fiche est <strong>programmée automatiquement</strong> à J0, J1, J3,
+        J5, J7… jusqu&apos;à J120. Vue semaine groupée par matière, max 10
+        fiches par jour pour ne pas être noyé.
+      </>
+    ),
+    tipPos: 'right',
+    spotPad: 4,
+  },
+  {
+    kind: 'walkthrough',
+    selector: '[data-tour="nav-focus"]',
     path: '/dashboard/focus',
     title: () => 'La Bibliothèque',
     body: (
@@ -220,85 +263,49 @@ const STEPS: Step[] = [
         <strong>1500 livres</strong> pour boucler la P1.
       </>
     ),
-    tipPos: 'left',
-    spotPad: 0,
+    tipPos: 'right',
+    spotPad: 4,
   },
-  // 11 — Page Calendrier
   {
     kind: 'walkthrough',
-    selector: '[data-tour="page-main"]',
-    path: '/dashboard/calendar',
-    title: () => 'Le Calendrier',
-    body: (
-      <>
-        Vue <strong>semaine</strong> par défaut, groupée par matière. Max 10
-        fiches par jour pour ne pas être noyé. Clique sur n&apos;importe quelle
-        ligne pour ouvrir la modale de notation, comme depuis Mes matières.
-      </>
-    ),
-    tipPos: 'left',
-    spotPad: 0,
-  },
-  // 12 — Page Simulateur + Premium
-  {
-    kind: 'walkthrough',
-    selector: '[data-tour="page-main"]',
+    selector: '[data-tour="nav-simu"]',
     path: '/dashboard/simulateur',
     title: () => 'Le Simulateur',
     body: (
       <>
         QCM <strong>type concours</strong>. Deux modes :{' '}
-        <strong>Apprentissage</strong> (avec corrections après chaque question)
-        ou <strong>Examen blanc</strong> (timer, grille type concours, ressenti
-        par question).
+        <strong>Apprentissage</strong> (avec corrections) ou{' '}
+        <strong>Examen blanc</strong> (timer, grille concours, ressenti).
         <br />
         <br />
         <em className="ont-premium-note">
           Plan Gratuit : 1 session totale en Apprentissage.{' '}
-          <strong>Premium</strong> : sessions illimitées + mode Examen blanc.
+          <strong>Premium</strong> : sessions illimitées + Examen blanc.
         </em>
       </>
     ),
-    tipPos: 'left',
-    spotPad: 0,
+    tipPos: 'right',
+    spotPad: 4,
   },
-  // 13 — Page Stats + Premium
   {
     kind: 'walkthrough',
-    selector: '[data-tour="page-main"]',
+    selector: '[data-tour="nav-stats"]',
     path: '/dashboard/stats',
     title: () => 'Tes Statistiques',
     body: (
       <>
         Bilan annuel : nombre de révisions, jours actifs, fiches maîtrisées,
-        régularité.
+        régularité. Tout se remplit au fil de tes notes.
         <br />
         <br />
         <em className="ont-premium-note">
-          <strong>Premium</strong> : heatmap année 52 semaines, sparkline 12
-          sem, dumbbell par matière (comparaison 1 mois vs maintenant).
+          <strong>Premium</strong> : heatmap année 52 sem, sparkline 12 sem,
+          dumbbell par matière (comparaison 1 mois vs maintenant).
         </em>
       </>
     ),
-    tipPos: 'left',
-    spotPad: 0,
-  },
-  // 14 — Final sur Tableau de bord
-  {
-    kind: 'walkthrough',
-    selector: '[data-tour="page-main"]',
-    path: '/dashboard',
-    title: () => 'Bonne révision !',
-    body: (
-      <>
-        Tu as fait le tour. Le <strong>Tableau de bord</strong> te montre ce
-        qu&apos;il faut faire chaque jour : ta queue d&apos;aujourd&apos;hui,
-        ton point faible, ta régularité, ta charge à venir. À toi de jouer — et
-        bonne P1 !
-      </>
-    ),
-    tipPos: 'left',
-    spotPad: 0,
+    tipPos: 'right',
+    spotPad: 4,
   },
 ]
 
@@ -314,7 +321,7 @@ interface Props {
 
 interface Rect { top: number; left: number; width: number; height: number }
 
-export default function OnboardingTour({ userId, userName, onComplete, onSkip, isReplay = false }: Props) {
+export default function OnboardingTour({ userId, userName, onComplete, onSkip }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -327,20 +334,20 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
     return n
   })
   const [rect, setRect] = useState<Rect | null>(null)
+
+  // Mesure réelle du tooltip pour clamper la position et éviter overflow
+  const tipRef = useRef<HTMLDivElement | null>(null)
+  const [tipDims, setTipDims] = useState<{ w: number; h: number } | null>(null)
+
   const baselineRef = useRef<number | null>(null)
   const firstName = (userName || 'toi').split(' ')[0]
 
   const cur = STEPS[stepIdx]
   const total = STEPS.length
 
-  // En replay : les wait-action 'systems' et 'lessons' deviennent walkthrough
-  // (l'user a déjà des données, pas besoin de forcer création).
-  // 'modal-open' reste un wait-action même en replay (le DOM doit avoir
-  // la modale ouverte pour que les étapes 7-9 fonctionnent).
-  const canBypassInReplay =
-    cur.waitFor === 'systems' || cur.waitFor === 'lessons'
-  const isEffectiveWaitAction =
-    cur.kind === 'wait-action' && !(isReplay && canBypassInReplay)
+  // L'utilisateur a explicitement demandé : toujours attendre le clic réel
+  // pour créer matière/fiche, même en mode replay. Plus de bypass.
+  const isWaitAction = cur.kind === 'wait-action'
 
   // ---------- Persist stepIdx ----------
   useEffect(() => {
@@ -348,7 +355,7 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
     localStorage.setItem(LS_KEY, String(stepIdx))
   }, [stepIdx])
 
-  // ---------- Auto-route si l'étape attend un autre pathname ----------
+  // ---------- Auto-route ----------
   useEffect(() => {
     if (cur.path !== pathname) {
       router.push(cur.path)
@@ -358,7 +365,7 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
 
   // ---------- Polling pour wait-action ----------
   useEffect(() => {
-    if (!isEffectiveWaitAction || !cur.waitFor) {
+    if (!isWaitAction || !cur.waitFor) {
       baselineRef.current = null
       return
     }
@@ -367,7 +374,6 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     if (cur.waitFor === 'modal-open') {
-      // Polling DOM : avance dès que [data-tour="review-modal"] apparaît
       intervalId = setInterval(() => {
         if (cancelled) return
         if (typeof document === 'undefined') return
@@ -381,7 +387,6 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
       }
     }
 
-    // Polling Supabase avec baseline (systems / lessons)
     const table = cur.waitFor
 
     async function setupAndPoll() {
@@ -413,7 +418,7 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
       baselineRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIdx, userId, isEffectiveWaitAction])
+  }, [stepIdx, userId])
 
   // ---------- Compute spotlight rect ----------
   const computeRect = useCallback(() => {
@@ -449,14 +454,21 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
     }
   }, [computeRect])
 
-  // ---------- ESC handler (sortie d'urgence) ----------
+  // ---------- Mesure du tooltip (post-render) ----------
+  useLayoutEffect(() => {
+    if (!tipRef.current) return
+    const r = tipRef.current.getBoundingClientRect()
+    setTipDims({ w: r.width, h: r.height })
+  }, [stepIdx, rect])
+
+  // ---------- ESC handler ----------
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         if (window.confirm('Quitter le tutoriel ? Tu pourras le revoir depuis Paramètres.')) {
           handleSkip()
         }
-      } else if (e.key === 'ArrowRight' && !isEffectiveWaitAction) {
+      } else if (e.key === 'ArrowRight' && !isWaitAction) {
         next()
       } else if (e.key === 'ArrowLeft' && stepIdx > 0) {
         prev()
@@ -486,20 +498,19 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
     onComplete()
   }
 
-  // ---------- Fallback chargement si l'élément n'est pas (encore) trouvé ----------
+  // ---------- Fallback chargement ----------
   if (!rect) {
     return (
       <div className="ont-root" role="dialog" aria-modal="true">
         <div className="ont-dim" />
-        <div className="ont-tip ont-tip-center">
+        <div className="ont-tip ont-tip-center" ref={tipRef}>
           <div className="ont-tip-step">Étape {stepIdx + 1} sur {total}</div>
           <h4 className="ont-tip-title">Chargement…</h4>
           <div className="ont-tip-body" style={{ color: '#6B6F6A' }}>
             Préparation de l&apos;étape suivante…
           </div>
           <div className="ont-tip-actions">
-            {/* Sur les wait-action, pas de bouton Passer (forcé). Sinon bouton dispo */}
-            {!isEffectiveWaitAction && (
+            {!isWaitAction && (
               <button className="ont-btn-ghost" onClick={handleSkip}>
                 Passer le tutoriel
               </button>
@@ -510,48 +521,62 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
     )
   }
 
-  // ---------- Tooltip position ----------
-  const TIP_W = 340
-  const TIP_H_EST = 240
+  // ---------- Tooltip position avec dims réelles ----------
+  const TIP_W_PREF = 340
+  const tipW = tipDims?.w || TIP_W_PREF
+  const tipH = tipDims?.h || 360 // estimation initiale large
   const GAP = 16
+  const MARGIN = 16
   const pad = cur.spotPad ?? 6
-  let tipStyle: React.CSSProperties = { width: TIP_W }
 
   function clamp(v: number, min: number, max: number) {
+    if (max < min) return min
     return Math.max(min, Math.min(max, v))
   }
+
+  let tipStyle: React.CSSProperties = { width: TIP_W_PREF }
 
   if (typeof window !== 'undefined') {
     const vw = window.innerWidth
     const vh = window.innerHeight
-    let pos: TipPos = cur.tipPos || 'right'
-    if (pos === 'right' && rect.left + rect.width + GAP + TIP_W > vw - 16) pos = 'left'
-    if (pos === 'left' && rect.left - GAP - TIP_W < 16) pos = 'bottom'
-    if (pos === 'bottom' && rect.top + rect.height + GAP + TIP_H_EST > vh - 16) pos = 'top'
-    if (pos === 'top' && rect.top - GAP - TIP_H_EST < 16) pos = 'right'
 
-    let top = 0, left = 0
-    if (pos === 'right') {
-      top = clamp(rect.top, 16, vh - TIP_H_EST - 16)
-      left = rect.left + rect.width + GAP
-    } else if (pos === 'left') {
-      top = clamp(rect.top, 16, vh - TIP_H_EST - 16)
-      left = rect.left - GAP - TIP_W
-    } else if (pos === 'bottom') {
-      top = rect.top + rect.height + GAP
-      left = clamp(rect.left, 16, vw - TIP_W - 16)
-    } else {
-      top = rect.top - GAP - TIP_H_EST
-      left = clamp(rect.left, 16, vw - TIP_W - 16)
+    // Choix de la position : test pos préférée → fallback
+    const candidates: TipPos[] = [cur.tipPos || 'right', 'right', 'bottom', 'left', 'top']
+    let chosen: TipPos = candidates[0]
+    for (const c of candidates) {
+      if (c === 'right' && rect.left + rect.width + GAP + tipW <= vw - MARGIN) { chosen = c; break }
+      if (c === 'left' && rect.left - GAP - tipW >= MARGIN) { chosen = c; break }
+      if (c === 'bottom' && rect.top + rect.height + GAP + tipH <= vh - MARGIN) { chosen = c; break }
+      if (c === 'top' && rect.top - GAP - tipH >= MARGIN) { chosen = c; break }
     }
-    tipStyle = { top, left, width: TIP_W }
+
+    let top = MARGIN, left = MARGIN
+    if (chosen === 'right') {
+      top = clamp(rect.top, MARGIN, vh - tipH - MARGIN)
+      left = rect.left + rect.width + GAP
+    } else if (chosen === 'left') {
+      top = clamp(rect.top, MARGIN, vh - tipH - MARGIN)
+      left = rect.left - GAP - tipW
+    } else if (chosen === 'bottom') {
+      top = rect.top + rect.height + GAP
+      left = clamp(rect.left, MARGIN, vw - tipW - MARGIN)
+    } else if (chosen === 'top') {
+      top = rect.top - GAP - tipH
+      left = clamp(rect.left, MARGIN, vw - tipW - MARGIN)
+    }
+
+    // Clamp final pour garantir aucune sortie
+    top = clamp(top, MARGIN, Math.max(MARGIN, vh - tipH - MARGIN))
+    left = clamp(left, MARGIN, Math.max(MARGIN, vw - tipW - MARGIN))
+
+    tipStyle = { top, left, width: TIP_W_PREF }
   }
 
   const isFirst = stepIdx === 0
   const isLast = stepIdx === STEPS.length - 1
-  const showWaitHint = isEffectiveWaitAction
-  const showNextBtn = !isEffectiveWaitAction
-  const showSkipBtn = !isEffectiveWaitAction // jamais sur les wait-action
+  const showWaitHint = isWaitAction
+  const showNextBtn = !isWaitAction
+  const showSkipBtn = !isWaitAction
 
   return (
     <div className="ont-root" role="dialog" aria-modal="true" aria-label="Tutoriel d'introduction">
@@ -565,7 +590,7 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
         }}
       />
 
-      <div className="ont-tip" style={tipStyle}>
+      <div className="ont-tip" ref={tipRef} style={tipStyle}>
         <div className="ont-tip-step">
           Étape {stepIdx + 1} sur {total}
         </div>
@@ -586,7 +611,7 @@ export default function OnboardingTour({ userId, userName, onComplete, onSkip, i
               Passer le tutoriel
             </button>
           ) : (
-            <span /> // espace réservé pour garder l'alignement flex
+            <span />
           )}
           <div className="ont-tip-actions-right">
             {!isFirst && (
