@@ -471,7 +471,7 @@ function DashGarden({
 
   return (
     <>
-      <aside className="dash-bib-side" aria-label="Ma bibliothèque">
+      <aside className="dash-bib-side" data-tour="bib-area" aria-label="Ma bibliothèque">
         <div className="dash-bib-thumb">
           <BibliothecaSvg fichesCount={fichesCount} />
         </div>
