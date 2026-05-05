@@ -8,8 +8,9 @@ import OnboardingTour from '@/components/OnboardingTour'
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
-  { href: '/dashboard/calendar', label: 'Calendrier', icon: '▦' },
   { href: '/dashboard/fiches', label: 'Mes matières', icon: '▤' },
+  { href: '/dashboard/calendar', label: 'Calendrier', icon: '▦' },
+  { href: '/dashboard/focus', label: 'Bibliothèque', icon: '✦' },
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
   { href: '/dashboard/settings', label: 'Paramètres', icon: '⚙' },
@@ -237,20 +238,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding: '0 9px', marginBottom: 5
           }}>Navigation</div>
 
-          {NAV.map(n => (
-            <Link
-              key={n.href}
-              href={n.href}
-              data-tour={n.href === '/dashboard' ? 'nav-dashboard' : undefined}
-              className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
-            >
-              <i className="ic">{n.icon}</i>
-              {n.label}
-              {n.href === '/dashboard/calendar' && todayCount > 0 && (
-                <span className="badge">{todayCount}</span>
-              )}
-            </Link>
-          ))}
+          {NAV.map(n => {
+            // data-tour pour chaque item de nav (le tour spotlight ces liens)
+            const tourTag =
+              n.href === '/dashboard' ? 'nav-dashboard' :
+              n.href === '/dashboard/fiches' ? 'nav-fiches' :
+              n.href === '/dashboard/calendar' ? 'nav-calendar' :
+              n.href === '/dashboard/focus' ? 'nav-focus' :
+              n.href === '/dashboard/simulateur' ? 'nav-simu' :
+              n.href === '/dashboard/stats' ? 'nav-stats' :
+              undefined
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                data-tour={tourTag}
+                className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
+              >
+                <i className="ic">{n.icon}</i>
+                {n.label}
+                {n.href === '/dashboard/calendar' && todayCount > 0 && (
+                  <span className="badge">{todayCount}</span>
+                )}
+              </Link>
+            )
+          })}
         </div>
 
         {/* Spacer */}
