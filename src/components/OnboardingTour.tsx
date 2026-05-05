@@ -513,6 +513,10 @@ export default function OnboardingTour({
   const isTooltipOnly = cur.kind === 'tooltip-only'
   const isWalkthrough = cur.kind === 'walkthrough'
   const isCelebration = cur.kind === 'celebration'
+  const isWaitingForCreate = !!cur.waitForCreate
+  // shouldForceCreate : on force la création UNIQUEMENT si l'user n'a pas
+  // déjà de fiche existante. Sinon le tour propose Suivant pour skipper.
+  const shouldForceCreate = isWaitingForCreate && existingLessonCount === 0
   // Voile léger : par défaut sur walkthrough/wait-click, off pour tooltip-only.
   // Override possible via cur.dimmed.
   const dimmed = cur.dimmed ?? (!isTooltipOnly && !isCelebration)
@@ -939,10 +943,6 @@ export default function OnboardingTour({
 
   const isFirst = stepIdx === 0
   const isLast = stepIdx === STEPS.length - 1
-  // shouldForceCreate : on force la création UNIQUEMENT si l'user n'a pas
-  // déjà de fiche existante. Sinon le tour propose Suivant pour skipper.
-  const isWaitingForCreate = !!cur.waitForCreate
-  const shouldForceCreate = isWaitingForCreate && existingLessonCount === 0
   const spotClassName = `ont-spot${dimmed ? ' ont-spot-dim' : ''}`
 
   return (
