@@ -25,12 +25,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Onboarding state
   // - tourOpen : tour activement affiché
   // - replayKey : sert à remonter le composant (force restart) lors d'un replay
-  // - isReplay : true si l'user a déclenché le replay depuis Paramètres ;
-  //              dans ce cas, les étapes wait-action passent en walkthrough
-  //              (pas de polling, bouton Suivant explicite).
+  // - isReplay : true si l'user a déclenché le replay depuis Paramètres
+  // - existingLessonCount : nb de fiches existantes au démarrage du tour
+  //   (utilisé pour décider si on force la création de fiche au step 8)
   const [tourOpen, setTourOpen] = useState(false)
   const [replayKey, setReplayKey] = useState(0)
   const [isReplay, setIsReplay] = useState(false)
+  const [existingLessonCount, setExistingLessonCount] = useState(0)
 
   // Load persisted semester on mount
   useEffect(() => {
@@ -71,6 +72,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               : null
             if (!data.onboarded_at || lsStep) {
               setTourOpen(true)
+              // Compte les fiches existantes pour décider si on force la création
+              supabase.from('lessons')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .then(({ count }) => {
+                  setExistingLessonCount(count || 0)
+                })
             }
           }
         })
@@ -324,6 +332,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           userId={profile.id}
           userName={profile.name || ''}
           isReplay={isReplay}
+          existingLessonCount={existingLessonCount}
           onComplete={handleTourComplete}
           onSkip={handleTourSkip}
         />
