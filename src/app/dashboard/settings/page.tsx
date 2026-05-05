@@ -275,7 +275,8 @@ export default function SettingsPage() {
               onClick={() => {
                 if (typeof window !== 'undefined') {
                   // Reset le state local du tour pour repartir de zéro
-                  localStorage.removeItem('medrev-onboarding-phase')
+                  localStorage.removeItem('medrev-onboarding-step')
+                  localStorage.removeItem('medrev-onboarding-phase') // legacy
                   window.dispatchEvent(new Event('medrev-onboarding-replay'))
                 }
               }}
