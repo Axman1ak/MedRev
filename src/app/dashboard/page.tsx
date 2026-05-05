@@ -500,6 +500,7 @@ function DashGarden({
             : `Démarrer · ${queueLength} ${queueLength > 1 ? 'fiches' : 'fiche'}`}
         </Link>
         <button
+          data-tour="bib-link"
           type="button"
           className="dash-bib-link"
           onClick={() => setShowFullscreen(true)}
@@ -516,6 +517,7 @@ function DashGarden({
           onClick={() => setShowFullscreen(false)}
         >
           <button
+            data-tour="bib-fullscreen-close"
             type="button"
             className="dash-bib-fullscreen-close"
             onClick={() => setShowFullscreen(false)}
