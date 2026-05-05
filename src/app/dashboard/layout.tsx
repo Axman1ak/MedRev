@@ -304,7 +304,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* MAIN CONTENT */}
-      <main style={{ flex: 1, overflowY: 'auto' }}>
+      <main data-tour="page-main" style={{ flex: 1, overflowY: 'auto' }}>
         {children}
       </main>
 
