@@ -390,7 +390,7 @@ export default function ReviewModal({
   const qcmCount = aiQuestions.length
 
   return (
-    <div className="rmod-overlay" onClick={onClose}>
+    <div className="rmod-overlay" data-tour="review-modal" onClick={onClose}>
       <div className="rmod-card" onClick={e => e.stopPropagation()}>
 
         <div className="rmod-header">
@@ -417,7 +417,7 @@ export default function ReviewModal({
               </div>
             )}
 
-            <div className="rmod-jpicker">
+            <div className="rmod-jpicker" data-tour="picker-j">
               {J.map((jVal, i) => {
                 const s = getStampState(lesson, i, today)
                 const ds = lesson.learn_date ? stepDate(lesson, i) : ''
@@ -468,6 +468,7 @@ export default function ReviewModal({
             {/*  Bloc Sources (vidéo + PDF)                    */}
             {/* ─────────────────────────────────────────────── */}
             <div className="rmod-divider" />
+            <div data-tour="sources">
             <div className="rmod-block-label">Sources</div>
 
             {/* Vidéo */}
@@ -571,11 +572,13 @@ export default function ReviewModal({
             {uploadError && (
               <div className="rmod-upload-error">{uploadError}</div>
             )}
+            </div>{/* /data-tour="sources" */}
 
             {/* ─────────────────────────────────────────────── */}
             {/*  Bloc QCM générés                              */}
             {/* ─────────────────────────────────────────────── */}
             <div className="rmod-divider" />
+            <div data-tour="qcm-section">
             <div className="rmod-block-label">QCM générés depuis ces sources</div>
 
             {qcmCount > 0 ? (
@@ -628,6 +631,7 @@ export default function ReviewModal({
             {genInfo && (
               <div className="rmod-gen-info">{genInfo}</div>
             )}
+            </div>{/* /data-tour="qcm-section" */}
           </>
         )}
 
