@@ -56,6 +56,7 @@ interface Step {
   tipPos?: TipPos
   spotPad?: number
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
+  blockTargetClicks?: boolean // si true, bloque les clics à l'intérieur du target pendant cette étape
 }
 
 const STEPS: Step[] = [
@@ -218,10 +219,14 @@ const STEPS: Step[] = [
         Voici les 14 paliers de cette fiche. Les J <strong>passés ou
         d&apos;aujourd&apos;hui</strong> sont notables. Les J{' '}
         <strong>futurs</strong> sont verrouillés — ils se débloquent à la bonne date.
+        <br /><br />
+        (Pendant le tutoriel, ces paliers sont juste pour la démo —
+        clique <strong>Suivant</strong> pour continuer.)
       </>
     ),
     tipPos: 'right',
     spotPad: 6,
+    blockTargetClicks: true,
   },
   {
     kind: 'walkthrough',
@@ -333,12 +338,13 @@ const STEPS: Step[] = [
   },
   {
     kind: 'wait-click',
-    selector: '[data-tour="bib-link"]',
-    title: () => 'Découvre la Bibliothèque',
+    selector: '[data-tour="bib-cta"]',
+    title: () => 'Lance la session focus',
     body: (
       <>
-        Clique sur <strong>Voir ma bibliothèque entièrement →</strong> pour
-        ouvrir la bibliothèque en grand.
+        Clique sur le bouton vert <strong>Démarrer</strong> (ou{' '}
+        <strong>Voir la session focus</strong> si tu n&apos;as pas encore de
+        fiche due) pour découvrir la session focus gamifiée.
       </>
     ),
     tipPos: 'left',
@@ -357,14 +363,14 @@ const STEPS: Step[] = [
     ),
   },
   {
-    // Fermer la fullscreen avant de passer au Simulateur
+    // Quitter la session focus avant de passer au Simulateur
     kind: 'wait-click',
-    selector: '[data-tour="bib-fullscreen-close"]',
-    title: () => 'Ferme la Bibliothèque',
+    selector: '[data-tour="focus-quit"]',
+    title: () => 'Quitte la session focus',
     body: (
       <>
-        Clique sur la <strong>croix</strong> en haut à droite pour fermer la
-        vue Bibliothèque et continuer.
+        Clique sur la <strong>croix</strong> en haut à droite de la session
+        focus pour revenir au tableau de bord et continuer le tour.
       </>
     ),
     tipPos: 'left',
@@ -510,6 +516,25 @@ export default function OnboardingTour({ userId: _userId, userName, onComplete, 
     }
     document.addEventListener('click', onClick, true)
     return () => document.removeEventListener('click', onClick, true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIdx])
+
+  // ---------- Click blocker pour les walkthrough avec interactions sensibles ----------
+  // Ex: étape picker-j où cliquer un palier J ferait basculer la modale en
+  // mode notation et casserait le tour.
+  useEffect(() => {
+    if (!cur.blockTargetClicks || !cur.selector) return
+    function blockClick(e: MouseEvent) {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      const matched = target.closest(cur.selector!)
+      if (matched) {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('click', blockClick, true)
+    return () => document.removeEventListener('click', blockClick, true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
