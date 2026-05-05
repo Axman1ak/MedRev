@@ -124,6 +124,31 @@
   font-weight: 600;
 }
 
+/* Note Premium — encart accent doré pour les mentions de quotas */
+.ont-premium-note {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #6B6F6A;
+  background: rgba(196, 123, 43, 0.08);
+  border-left: 2px solid #C47B2B;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.ont-premium-note strong {
+  color: #C47B2B;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-style: normal;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .ont-tip-hint {
   display: flex;
   align-items: center;
