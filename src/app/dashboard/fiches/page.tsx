@@ -172,12 +172,14 @@ export default function FichesPage() {
   const [newSysSemestre, setNewSysSemestre] = useState<1 | 2>(2)
   const [newSysColor, setNewSysColor] = useState(SUBJ_COLORS[0])
   const [sysLoading, setSysLoading] = useState(false)
+  const [sysError, setSysError] = useState<string | null>(null)
 
   // New lesson form
   const [newLesName, setNewLesName] = useState('')
   const [newLesDate, setNewLesDate] = useState('')
   const [newLesSysId, setNewLesSysId] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
+  const [lesError, setLesError] = useState<string | null>(null)
 
   // Review session : on délègue tout au composant partagé ReviewModal.
   // On ne garde que la fiche en cours (null = modal fermé).
@@ -256,6 +258,7 @@ export default function FichesPage() {
   async function createSystem() {
     if (!userId || !newSysName.trim()) return
     setSysLoading(true)
+    setSysError(null)
     const payload: any = {
       user_id: userId,
       name: newSysName.trim(),
@@ -263,18 +266,20 @@ export default function FichesPage() {
       color: newSysColor,
       icon: '',
     }
-    const { data } = await supabase.from('systems').insert(payload).select().single()
+    const { data, error } = await supabase.from('systems').insert(payload).select().single()
     setSysLoading(false)
-    if (data) {
-      setSystems(prev => [...prev, data as System])
-      // En mode 'year' on auto-sélectionne ; sinon seulement si le sem matche
-      if (semester === 'year' || (data as any).semestre === semester) setSelectedSystemId(data.id)
-      // Notifie le tour onboarding (event listener écoute pour avancer)
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('medrev-system-created'))
-      }
+    if (error || !data) {
+      // On garde le form ouvert et on affiche l'erreur pour diagnostiquer.
+      console.error('[createSystem] Erreur Supabase:', error, 'data:', data)
+      setSysError(error?.message || 'La création a échoué (data null). Vérifie les RLS Supabase.')
+      return
     }
-    // Reset du form : si on est en 'year', on retombe sur le sem 2 par défaut
+    setSystems(prev => [...prev, data as System])
+    if (semester === 'year' || (data as any).semestre === semester) setSelectedSystemId(data.id)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('medrev-system-created'))
+    }
+    // Reset du form : succès uniquement
     setShowNewSystem(false); setNewSysName(''); setNewSysColor(SUBJ_COLORS[0])
     setNewSysSemestre(semester === 'year' ? 2 : semester)
   }
@@ -282,17 +287,20 @@ export default function FichesPage() {
   async function createLesson() {
     if (!userId || !newLesName.trim() || !newLesSysId) return
     setLesLoading(true)
-    const { data } = await supabase.from('lessons').insert({
+    setLesError(null)
+    const { data, error } = await supabase.from('lessons').insert({
       user_id: userId, system_id: newLesSysId, name: newLesName.trim(),
       learn_date: newLesDate || today, steps: new Array(J.length).fill(null), ai_questions: [],
     }).select().single()
     setLesLoading(false)
-    if (data) {
-      setLessons(prev => [...prev, data as Lesson])
-      // Notifie le tour onboarding
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('medrev-lesson-created'))
-      }
+    if (error || !data) {
+      console.error('[createLesson] Erreur Supabase:', error, 'data:', data)
+      setLesError(error?.message || 'La création a échoué (data null). Vérifie les RLS Supabase.')
+      return
+    }
+    setLessons(prev => [...prev, data as Lesson])
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('medrev-lesson-created'))
     }
     setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
   }
@@ -741,8 +749,21 @@ export default function FichesPage() {
                 ))}
               </div>
             </div>
+            {sysError && (
+              <div style={{
+                background: '#FEE2E2',
+                color: '#991B1B',
+                padding: '8px 10px',
+                borderRadius: 6,
+                marginBottom: 12,
+                fontSize: 13,
+                lineHeight: 1.4,
+              }}>
+                <strong>Erreur :</strong> {sysError}
+              </div>
+            )}
             <div className="fi-modal-actions">
-              <button data-tour="matiere-cancel" className="fi-btn-o" onClick={() => setShowNewSystem(false)}>Annuler</button>
+              <button data-tour="matiere-cancel" className="fi-btn-o" onClick={() => { setSysError(null); setShowNewSystem(false) }}>Annuler</button>
               <button data-tour="matiere-create" className="fi-btn-g" onClick={createSystem} disabled={!newSysName.trim() || sysLoading}
                 style={{ opacity: !newSysName.trim() ? .5 : 1 }}>
                 {sysLoading ? 'Création…' : 'Créer la matière'}
@@ -777,8 +798,21 @@ export default function FichesPage() {
                 MedRev planifiera les révisions J+1, J+3, J+5… à partir de cette date.
               </p>
             </div>
+            {lesError && (
+              <div style={{
+                background: '#FEE2E2',
+                color: '#991B1B',
+                padding: '8px 10px',
+                borderRadius: 6,
+                marginBottom: 12,
+                fontSize: 13,
+                lineHeight: 1.4,
+              }}>
+                <strong>Erreur :</strong> {lesError}
+              </div>
+            )}
             <div className="fi-modal-actions">
-              <button data-tour="fiche-cancel" className="fi-btn-o" onClick={() => setShowNewLesson(false)}>Annuler</button>
+              <button data-tour="fiche-cancel" className="fi-btn-o" onClick={() => { setLesError(null); setShowNewLesson(false) }}>Annuler</button>
               <button data-tour="fiche-create" className="fi-btn-g" onClick={createLesson} disabled={!newLesName.trim() || !newLesSysId || lesLoading}
                 style={{ opacity: (!newLesName.trim() || !newLesSysId) ? .5 : 1 }}>
                 {lesLoading ? 'Création…' : 'Créer la fiche'}
