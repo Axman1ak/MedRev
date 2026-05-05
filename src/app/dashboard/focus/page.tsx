@@ -828,7 +828,7 @@ function FocusPageBody() {
           <div className="focus-brand">MedRev <span className="focus-brand-mode">focus</span></div>
           <div className="focus-topbar-right">
             <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-            <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
           </div>
         </div>
         <div className="focus-stage">
@@ -880,7 +880,7 @@ function FocusPageBody() {
           </div>
           <div className="focus-topbar-right">
             <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-            <Link href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
           </div>
         </div>
 
@@ -1032,7 +1032,7 @@ function FocusPageBody() {
             </button>
           )}
           <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-          <Link href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
+          <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
         </div>
       </div>
 
