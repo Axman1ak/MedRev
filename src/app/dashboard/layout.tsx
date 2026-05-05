@@ -8,12 +8,10 @@ import OnboardingTour from '@/components/OnboardingTour'
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
-  { href: '/dashboard/fiches', label: 'Mes matières', icon: '▤' },
   { href: '/dashboard/calendar', label: 'Calendrier', icon: '▦' },
-  { href: '/dashboard/focus', label: 'Bibliothèque', icon: '✦' },
+  { href: '/dashboard/fiches', label: 'Mes matières', icon: '▤' },
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
-  { href: '/dashboard/settings', label: 'Paramètres', icon: '⚙' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -244,7 +242,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               n.href === '/dashboard' ? 'nav-dashboard' :
               n.href === '/dashboard/fiches' ? 'nav-fiches' :
               n.href === '/dashboard/calendar' ? 'nav-calendar' :
-              n.href === '/dashboard/focus' ? 'nav-focus' :
               n.href === '/dashboard/simulateur' ? 'nav-simu' :
               n.href === '/dashboard/stats' ? 'nav-stats' :
               undefined
