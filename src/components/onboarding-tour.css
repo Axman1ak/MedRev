@@ -1,11 +1,11 @@
 @charset "UTF-8";
 /* src/components/onboarding-tour.css
- * Tour MedRev — 100% spotlight/coachmark. Toutes classes préfixées .ont-*
+ * Tour MedRev — spotlight léger (sans voile global) + tooltip flottant.
+ * Toutes classes préfixées .ont-*
  */
 
 /* ============================================================
  * ROOT — overlay plein écran, transparent aux clics par défaut
- * (les sous-éléments interactifs réactivent pointer-events).
  * ============================================================ */
 .ont-root {
   position: fixed;
@@ -17,28 +17,17 @@
 }
 
 /* ============================================================
- * DIM — overlay sombre (utilisé uniquement en fallback chargement)
- * ============================================================ */
-.ont-dim {
-  position: fixed;
-  inset: 0;
-  background: rgba(17, 19, 16, 0.55);
-  pointer-events: auto;
-  animation: ont-fadein 0.25s ease;
-}
-
-/* ============================================================
- * SPOTLIGHT — découpe visuelle autour de l'élément ciblé.
- * pointer-events: none → user peut cliquer le vrai bouton dessous.
- * Le box-shadow géant assombrit tout sauf le rect du spot.
+ * SPOTLIGHT — juste un halo lumineux autour de la cible.
+ * Pas de voile global → l'utilisateur voit toute la page.
+ * pointer-events: none → l'user peut cliquer le vrai bouton dessous.
  * ============================================================ */
 .ont-spot {
   position: fixed;
   border: 2px solid #7AA56B;
   border-radius: 12px;
   box-shadow:
-    0 0 0 9999px rgba(17, 19, 16, 0.55),
-    0 0 0 4px rgba(122, 165, 107, 0.18);
+    0 0 0 4px rgba(122, 165, 107, 0.22),
+    0 0 30px 6px rgba(27, 67, 50, 0.35);
   pointer-events: none;
   animation: ont-pulse 2.4s ease-in-out infinite;
   transition:
@@ -51,20 +40,20 @@
 @keyframes ont-pulse {
   0%, 100% {
     box-shadow:
-      0 0 0 9999px rgba(17, 19, 16, 0.55),
-      0 0 0 4px rgba(122, 165, 107, 0.18),
-      0 0 0 0 rgba(122, 165, 107, 0.42);
+      0 0 0 4px rgba(122, 165, 107, 0.22),
+      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 0 0 rgba(122, 165, 107, 0.45);
   }
   50% {
     box-shadow:
-      0 0 0 9999px rgba(17, 19, 16, 0.55),
-      0 0 0 4px rgba(122, 165, 107, 0.18),
-      0 0 0 14px rgba(122, 165, 107, 0);
+      0 0 0 4px rgba(122, 165, 107, 0.22),
+      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 0 18px rgba(122, 165, 107, 0);
   }
 }
 
 /* ============================================================
- * TOOLTIP — carte flottante à côté du spotlight
+ * TOOLTIP — carte flottante (à côté du spot ou en haut à droite)
  * ============================================================ */
 .ont-tip {
   position: fixed;
@@ -75,26 +64,23 @@
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
   pointer-events: auto;
   animation: ont-tip-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  /* max-height : tooltip ne peut pas dépasser le viewport */
   max-height: calc(100vh - 32px);
   overflow-y: auto;
-  /* Smooth transitions de position quand on change d'étape */
   transition:
     top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
     left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Tooltip dans le coin (mode tooltip-only) */
+.ont-tip-corner {
+  /* top et right inline depuis le composant */
+  /* Pas de transition top/left pour éviter slide depuis 0,0 au mount */
+  transition: none;
+}
+
 @keyframes ont-tip-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* tooltip centré (fallback chargement) */
-.ont-tip-center {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 320px;
 }
 
 .ont-tip-step {
@@ -128,7 +114,7 @@
   font-weight: 600;
 }
 
-/* Note Premium — encart accent doré pour les mentions de quotas */
+/* Mention Premium — encart accent doré */
 .ont-premium-note {
   display: block;
   font-family: 'Cormorant Garamond', serif;
@@ -239,11 +225,11 @@
 }
 
 /* ============================================================
- * PROGRESS BARS — sous le body, avant les actions
+ * PROGRESS BARS
  * ============================================================ */
 .ont-bars {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   margin-bottom: 10px;
 }
 
@@ -259,22 +245,12 @@
 .ont-bar.cur { background: #2D6A4F; }
 
 /* ============================================================
- * Animations communes
- * ============================================================ */
-@keyframes ont-fadein {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ============================================================
- * Responsive — sécurité minimale
+ * Responsive
  * ============================================================ */
 @media (max-width: 640px) {
   .ont-tip {
     width: calc(100vw - 32px) !important;
     left: 16px !important;
-  }
-  .ont-tip-center {
-    transform: translate(0, -50%) !important;
+    right: 16px !important;
   }
 }
