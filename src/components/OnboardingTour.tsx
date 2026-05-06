@@ -1,7 +1,7 @@
 'use client'
 // src/components/OnboardingTour.tsx
 //
-// Tour MedRev — 25 étapes en 3 phases.
+// Tour MedRev — 26 étapes en 3 phases.
 // L'utilisateur clique LUI-MÊME chaque lien/bouton pour naviguer.
 //
 // Étape matière (5+6) : le bouton "Créer la matière" est BLOQUÉ pendant le
@@ -72,9 +72,16 @@ interface Step {
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
   blockTargetClicks?: boolean // si true, bloque les clics à l'intérieur du target pendant cette étape
   blockSelectors?: string[] // sélecteurs additionnels à bloquer pendant cette étape (ex: bouton Créer pendant l'explication du form)
+  // Sélecteurs à bloquer dans la version "alt" (= user avec fiches existantes
+  // sur un step waitForCreate). Permet de bloquer DIFFÉREMMENT selon le profil.
+  blockSelectorsAlt?: string[]
   // Si true, le tour avance automatiquement quand le selector disparaît du DOM
   // (ex: le user crée OU annule la matière → le form se ferme → on avance)
   autoAdvanceOnUnmount?: boolean
+  // Si true, le tour avance après 800ms si le selector n'est PAS trouvé dans
+  // le DOM. Utile pour les steps qui ne s'appliquent qu'à certains users
+  // (ex: clic Annuler qui n'a pas lieu pour les new users qui ont créé).
+  autoAdvanceIfTargetMissing?: boolean
   // Force la création réelle d'une matière/fiche : le tour avance UNIQUEMENT
   // quand l'event correspondant est dispatché. Si l'user clique Annuler,
   // le fallback "Réouvre le formulaire" s'affiche sans Suivant disponible.
@@ -229,9 +236,29 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 8,
     waitForCreate: 'lesson',
-    // Bloque Annuler UNIQUEMENT si l'user n'a pas de fiche (force creation).
-    // Si l'user a des fiches, on ne bloque pas — il peut Annuler librement.
+    // New user (force creation) : bloque Annuler, laisse Créer.
     blockSelectors: ['[data-tour="fiche-cancel"]'],
+    // Returning user (alt content) : bloque Créer ET Annuler, l'user
+    // doit cliquer Suivant dans le tour pour avancer.
+    blockSelectorsAlt: ['[data-tour="fiche-create"]', '[data-tour="fiche-cancel"]'],
+  },
+  {
+    // Step intermédiaire pour les returning users : forcer le clic Annuler
+    // pour fermer le form proprement avant de passer à lesson-card.
+    // Pour les new users (qui ont créé via Créer), le form est déjà fermé →
+    // autoAdvanceIfTargetMissing skip cette étape automatiquement.
+    kind: 'wait-click',
+    selector: '[data-tour="fiche-cancel"]',
+    title: () => 'Ferme le formulaire',
+    body: (
+      <>
+        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
+        continuer le tour.
+      </>
+    ),
+    tipPos: 'top',
+    spotPad: 6,
+    autoAdvanceIfTargetMissing: true,
   },
   {
     // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
@@ -577,6 +604,21 @@ export default function OnboardingTour({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
+  // ---------- Auto-advance si le target est introuvable ----------
+  // Utilisé par exemple pour le step "Clique Annuler" qui n'a pas lieu
+  // pour les new users (form déjà fermé via Créer). On skip après 800ms.
+  useEffect(() => {
+    if (!cur.autoAdvanceIfTargetMissing || !cur.selector) return
+    const id = setTimeout(() => {
+      if (typeof document === 'undefined') return
+      if (!document.querySelector(cur.selector!)) {
+        setStepIdx(i => Math.min(STEPS.length - 1, i + 1))
+      }
+    }, 800)
+    return () => clearTimeout(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIdx])
+
   // ---------- Listener events de création ----------
   // Sur les steps avec waitForCreate, on n'avance QUE si l'event de création
   // est dispatché (medrev-system-created / medrev-lesson-created depuis fiches-page).
@@ -603,9 +645,13 @@ export default function OnboardingTour({
   // cliquable — le user peut Annuler librement.
   useEffect(() => {
     const targetBlocked = cur.blockTargetClicks && cur.selector
+    // Pour waitForCreate avec user qui a déjà des fiches (alt content),
+    // on utilise blockSelectorsAlt (bloque Créer ET Annuler).
+    // Pour waitForCreate avec new user (force creation), blockSelectors
+    // (bloque Annuler, laisse Créer cliquable).
     const effectiveBlockSelectors =
       cur.waitForCreate && !shouldForceCreate
-        ? undefined
+        ? cur.blockSelectorsAlt
         : cur.blockSelectors
     const selectorsBlocked =
       effectiveBlockSelectors && effectiveBlockSelectors.length > 0
@@ -840,9 +886,9 @@ export default function OnboardingTour({
     }
 
     // Cas spécial 2 : utilisateur sans fiche encore créée. La phase lesson-card
-    // (étapes 9-13, indices 8-12) ne peut pas s'afficher. On consolide ces 5
+    // (étapes 10-14, indices 9-13) ne peut pas s'afficher. On consolide ces 5
     // étapes en un aperçu unique et on saute directement à la phase 3 (Calendrier).
-    const inLessonRange = stepIdx >= 8 && stepIdx <= 12
+    const inLessonRange = stepIdx >= 9 && stepIdx <= 13
     const onFichesPage = pathname === '/dashboard/fiches'
     const noLessonCardInDom =
       typeof document !== 'undefined' &&
@@ -886,7 +932,7 @@ export default function OnboardingTour({
                 )}
                 <button
                   className="ont-btn-primary"
-                  onClick={() => setStepIdx(13)}
+                  onClick={() => setStepIdx(14)}
                 >
                   Continuer le tour →
                 </button>
