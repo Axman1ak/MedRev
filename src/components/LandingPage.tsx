@@ -132,7 +132,6 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ---- Mot de passe oublié ----
   const [forgotMode, setForgotMode] = useState(false)
   const [forgotMsg, setForgotMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
@@ -220,7 +219,6 @@ export default function LandingPage() {
   }
 
   const totalSteps = selectedFac?.hasOptions ? 3 : 2
-  const currentStepNum = step === 'form' ? 1 : step === 'fac' ? 2 : 3
 
   return (
     <>
@@ -228,21 +226,26 @@ export default function LandingPage() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
 
         *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-          --cream: #F5F1EA;
-          --dark: #111310;
-          --green: #1B4332;
-          --gm: #2D6A4F;
-          --gl: #D8EAE0;
-          --amber: #C47B2B;
-          --al: #FBF0E0;
-          --gray: #6B7280;
-          --border: #DDD8CE;
+
+        /* Aliases vers les tokens globaux du design system (src/app/globals.css).
+           La landing suit le thème clair / sombre comme le reste de l'app. */
+        .lp {
+          --cream: var(--bg-app);
+          --dark: var(--text-primary);
+          --green: var(--accent-primary);
+          --gm: var(--accent-medium);
+          --gl: var(--accent-soft);
+          --amber: var(--warning);
+          --al: var(--warning-soft);
+          --gray: var(--text-secondary);
+          --border: var(--border-subtle);
           --fh: 'Fraunces', Georgia, serif;
           --fb: 'Plus Jakarta Sans', sans-serif;
+          font-family: var(--fb);
+          background: var(--cream);
+          color: var(--dark);
+          overflow-x: hidden;
         }
-
-        .lp { font-family: var(--fb); background: var(--cream); color: var(--dark); overflow-x: hidden; }
 
         /* NAV */
         .lp-nav { display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 64px; border-bottom: 1px solid var(--border); background: var(--cream); position: sticky; top: 0; z-index: 100; }
@@ -251,74 +254,74 @@ export default function LandingPage() {
         .lp-nav-links { display: flex; gap: 28px; }
         .lp-nav-links a { font-size: 14px; color: var(--gray); text-decoration: none; font-weight: 500; }
         .lp-nav-links a:hover { color: var(--dark); }
-        .lp-nav-cta { background: var(--green); color: white; border: none; font-family: var(--fb); font-size: 14px; font-weight: 600; padding: 10px 22px; border-radius: 8px; cursor: pointer; }
-        .lp-nav-cta:hover { background: #1a3d2e; }
+        .lp-nav-cta { background: var(--green); color: white; border: none; font-family: var(--fb); font-size: 14px; font-weight: 600; padding: 10px 22px; border-radius: 8px; cursor: pointer; transition: filter .15s; }
+        .lp-nav-cta:hover { filter: brightness(.9); }
 
         /* HERO */
         .lp-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding: 72px 48px 80px; max-width: 1160px; margin: 0 auto; }
-        .lp-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; color: var(--amber); text-transform: uppercase; letter-spacing: .09em; background: var(--al); border: 1px solid #E8C89A; border-radius: 4px; padding: 4px 11px; margin-bottom: 24px; }
+        .lp-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; color: var(--amber); text-transform: uppercase; letter-spacing: .09em; background: var(--al); border: 1px solid var(--amber); border-radius: 4px; padding: 4px 11px; margin-bottom: 24px; }
         .lp-h1 { font-family: var(--fh); font-size: clamp(36px, 4vw, 52px); line-height: 1.1; font-weight: 500; color: var(--dark); margin-bottom: 20px; }
         .lp-h1 em { font-style: italic; color: var(--gm); }
         .lp-hero-p { font-size: 16px; line-height: 1.75; color: var(--gray); margin-bottom: 32px; }
         .lp-hero-btns { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; flex-wrap: wrap; }
-        .lp-btn { background: var(--green); color: white; border: none; font-family: var(--fb); font-size: 15px; font-weight: 600; padding: 13px 26px; border-radius: 9px; cursor: pointer; }
-        .lp-btn:hover { background: #1a3d2e; }
+        .lp-btn { background: var(--green); color: white; border: none; font-family: var(--fb); font-size: 15px; font-weight: 600; padding: 13px 26px; border-radius: 9px; cursor: pointer; transition: filter .15s; }
+        .lp-btn:hover { filter: brightness(.9); }
         .lp-btn-outline { background: transparent; border: 1.5px solid var(--border); font-family: var(--fb); font-size: 15px; font-weight: 500; padding: 12px 20px; border-radius: 9px; cursor: pointer; color: var(--dark); display: flex; align-items: center; gap: 8px; }
-        .lp-btn-play { width: 20px; height: 20px; background: var(--dark); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 7px; }
+        .lp-btn-play { width: 20px; height: 20px; background: var(--dark); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--cream); font-size: 7px; }
         .lp-trust { display: flex; gap: 20px; flex-wrap: wrap; }
         .lp-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--gray); }
         .lp-trust-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gm); }
 
         /* APP PREVIEW */
-        .lp-app-preview { background: white; border: 1px solid var(--border); border-radius: 15px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.07); }
-        .lp-app-bar { background: #F3F0E8; border-bottom: 1px solid var(--border); padding: 10px 14px; display: flex; align-items: center; gap: 6px; }
+        .lp-app-preview { background: var(--bg-card); border: 1px solid var(--border); border-radius: 15px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.07); }
+        .lp-app-bar { background: var(--bg-soft); border-bottom: 1px solid var(--border); padding: 10px 14px; display: flex; align-items: center; gap: 6px; }
         .lp-dot { width: 9px; height: 9px; border-radius: 50%; }
         .lp-dot-r { background: #FF5F57; }
         .lp-dot-y { background: #FFBD2E; }
         .lp-dot-g { background: #28CA41; }
         .lp-app-bar span { margin-left: 8px; font-size: 11.5px; color: var(--gray); }
         .lp-app-body { padding: 16px; }
-        .lp-upload-zone { border: 1.5px dashed var(--border); border-radius: 9px; padding: 22px 14px; text-align: center; margin-bottom: 12px; background: #FAFAF8; }
+        .lp-upload-zone { border: 1.5px dashed var(--border); border-radius: 9px; padding: 22px 14px; text-align: center; margin-bottom: 12px; background: var(--bg-soft); }
         .lp-upload-zone strong { font-size: 13.5px; font-weight: 600; color: var(--dark); display: block; margin-bottom: 5px; }
         .lp-upload-zone p { font-size: 12px; color: var(--gray); line-height: 1.5; }
         .lp-upload-tags { display: flex; gap: 5px; justify-content: center; margin-top: 9px; flex-wrap: wrap; }
         .lp-tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
-        .lp-tag-g { background: var(--gl); color: var(--green); }
+        .lp-tag-g { background: var(--gl); color: var(--accent-on-soft); }
         .lp-tag-a { background: var(--al); color: var(--amber); }
         .lp-qcm-box { background: var(--gl); border-radius: 9px; padding: 13px; }
-        .lp-qcm-label { font-size: 10px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 7px; }
+        .lp-qcm-label { font-size: 10px; font-weight: 700; color: var(--accent-on-soft); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 7px; }
         .lp-qcm-q { font-size: 12.5px; font-weight: 600; color: var(--dark); margin-bottom: 9px; line-height: 1.4; }
         .lp-qcm-opts { display: flex; flex-direction: column; gap: 4px; }
-        .lp-qcm-opt { font-size: 11.5px; padding: 6px 10px; border-radius: 6px; background: white; color: var(--gray); }
+        .lp-qcm-opt { font-size: 11.5px; padding: 6px 10px; border-radius: 6px; background: var(--bg-card); color: var(--gray); }
         .lp-qcm-opt-ok { background: var(--green); color: white; font-weight: 600; }
-        .lp-qcm-opt-ko { background: #FEE2E2; color: #B91C1C; text-decoration: line-through; }
+        .lp-qcm-opt-ko { background: var(--danger-soft); color: var(--danger); text-decoration: line-through; }
         .lp-qcm-src { margin-top: 7px; font-size: 11px; color: var(--gm); font-weight: 500; }
-        .lp-qcm-src span { background: white; border-radius: 4px; padding: 2px 7px; }
+        .lp-qcm-src span { background: var(--bg-card); border-radius: 4px; padding: 2px 7px; }
 
         /* SECTIONS */
         .lp-section { padding: 72px 48px; max-width: 1160px; margin: 0 auto; }
-        .lp-section-white { background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .lp-section-white { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
         .lp-section-label { font-size: 11px; font-weight: 700; color: var(--gm); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
         .lp-section-title { font-family: var(--fh); font-size: clamp(28px, 3vw, 36px); font-weight: 500; line-height: 1.15; color: var(--dark); max-width: 480px; margin-bottom: 44px; }
 
         /* STEPS */
         .lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .lp-step { padding: 24px; background: white; border: 1px solid var(--border); border-radius: 13px; }
-        .lp-step-num { width: 32px; height: 32px; border-radius: 8px; background: var(--gl); color: var(--green); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 13px; }
-        .lp-step h3 { font-family: var(--fh); font-size: 18px; font-weight: 500; margin-bottom: 7px; }
+        .lp-step { padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 13px; }
+        .lp-step-num { width: 32px; height: 32px; border-radius: 8px; background: var(--gl); color: var(--accent-on-soft); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 13px; }
+        .lp-step h3 { font-family: var(--fh); font-size: 18px; font-weight: 500; margin-bottom: 7px; color: var(--dark); }
         .lp-step p { font-size: 13px; color: var(--gray); line-height: 1.6; }
         .lp-new-tag { display: inline-block; margin-top: 9px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 20px; background: var(--al); color: var(--amber); }
 
         /* DIFF */
         .lp-diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
         .lp-diff-cards { display: flex; flex-direction: column; gap: 11px; }
-        .lp-diff-card { display: flex; align-items: flex-start; gap: 13px; padding: 17px; background: white; border: 1px solid var(--border); border-radius: 11px; }
-        .lp-diff-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 8px; background: var(--gl); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--green); }
-        .lp-diff-card h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+        .lp-diff-card { display: flex; align-items: flex-start; gap: 13px; padding: 17px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; }
+        .lp-diff-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 8px; background: var(--gl); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--accent-on-soft); }
+        .lp-diff-card h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; color: var(--dark); }
         .lp-diff-card p { font-size: 12.5px; color: var(--gray); line-height: 1.5; }
 
-        /* PRICING */
-        .lp-pricing-bg { background: var(--dark); padding: 72px 48px; }
+        /* PRICING — bloc dark assumé comme contraste volontaire */
+        .lp-pricing-bg { background: #0F141A; padding: 72px 48px; }
         .lp-pricing-inner { max-width: 1160px; margin: 0 auto; }
         .lp-pricing-title { font-family: var(--fh); font-size: clamp(28px, 3vw, 36px); font-weight: 500; color: white; text-align: center; margin-bottom: 7px; }
         .lp-pricing-sub { font-size: 15px; color: rgba(255,255,255,.42); text-align: center; margin-bottom: 40px; }
@@ -326,43 +329,44 @@ export default function LandingPage() {
         .lp-pcard { border-radius: 15px; padding: 26px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
         .lp-pcard-ft { background: white; border-color: white; }
         .lp-pcard-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.38); margin-bottom: 16px; }
-        .lp-pcard-ft .lp-pcard-name { color: var(--gm); }
+        .lp-pcard-ft .lp-pcard-name { color: #2D6A4F; }
         .lp-pcard-price { font-family: var(--fh); font-size: 44px; font-weight: 500; color: white; line-height: 1; margin-bottom: 5px; }
-        .lp-pcard-ft .lp-pcard-price { color: var(--dark); }
+        .lp-pcard-ft .lp-pcard-price { color: #1A1A1A; }
         .lp-pcard-price sub { font-family: var(--fb); font-size: 14px; }
         .lp-pcard-desc { font-size: 12.5px; color: rgba(255,255,255,.32); margin-bottom: 20px; }
-        .lp-pcard-ft .lp-pcard-desc { color: var(--gray); }
+        .lp-pcard-ft .lp-pcard-desc { color: #5C5C5A; }
         .lp-pcard-features { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
         .lp-pcard-features li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: rgba(255,255,255,.62); }
-        .lp-pcard-ft .lp-pcard-features li { color: var(--dark); }
-        .lp-pcard-features li::before { content: '✓'; color: var(--gm); font-weight: 700; font-size: 12px; margin-top: 1px; }
+        .lp-pcard-ft .lp-pcard-features li { color: #1A1A1A; }
+        .lp-pcard-features li::before { content: '✓'; color: #2D6A4F; font-weight: 700; font-size: 12px; margin-top: 1px; }
         .lp-pcard-btn { width: 100%; padding: 11px; border-radius: 8px; font-family: var(--fb); font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid rgba(255,255,255,.16); background: transparent; color: white; }
-        .lp-pcard-ft .lp-pcard-btn { background: var(--green); border-color: var(--green); color: white; }
+        .lp-pcard-ft .lp-pcard-btn { background: #1B4332; border-color: #1B4332; color: white; }
 
         /* AUTH */
         .lp-auth { padding: 72px 48px; background: var(--cream); }
         .lp-auth-wrap { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
-        .lp-auth-left-title { font-family: var(--fh); font-size: 32px; font-weight: 500; line-height: 1.2; margin-bottom: 12px; }
+        .lp-auth-left-title { font-family: var(--fh); font-size: 32px; font-weight: 500; line-height: 1.2; margin-bottom: 12px; color: var(--dark); }
         .lp-auth-left-title em { font-style: italic; color: var(--gm); }
         .lp-auth-left-sub { font-size: 14px; color: var(--gray); line-height: 1.6; margin-bottom: 24px; }
-        .lp-auth-testi { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+        .lp-auth-testi { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
         .lp-auth-stars { color: #F59E0B; font-size: 13px; margin-bottom: 8px; }
         .lp-auth-testi-text { font-size: 13px; color: var(--dark); line-height: 1.6; margin-bottom: 8px; }
         .lp-auth-testi-author { font-size: 11.5px; color: var(--gray); font-weight: 500; }
-        .lp-auth-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
-        .lp-auth-tabs { display: flex; gap: 4px; background: #F0EDE6; border-radius: 9px; padding: 4px; margin-bottom: 22px; }
+        .lp-auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
+        .lp-auth-tabs { display: flex; gap: 4px; background: var(--bg-soft); border-radius: 9px; padding: 4px; margin-bottom: 22px; }
         .lp-auth-tab { flex: 1; padding: 8px; border-radius: 7px; border: none; font-family: var(--fb); font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: var(--gray); }
-        .lp-auth-tab-active { background: white; color: var(--dark); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-        .lp-auth-error { background: #FEE2E2; color: #B91C1C; font-size: 12.5px; padding: 10px 13px; border-radius: 8px; margin-bottom: 14px; border: 1px solid #FCA5A5; }
+        .lp-auth-tab-active { background: var(--bg-card); color: var(--dark); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+        .lp-auth-error { background: var(--danger-soft); color: var(--danger); font-size: 12.5px; padding: 10px 13px; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--danger); }
         .lp-prog-dots { display: flex; gap: 6px; margin-bottom: 16px; }
-        .lp-prog-dot { width: 8px; height: 8px; border-radius: 50%; background: #E5E0D8; }
+        .lp-prog-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
         .lp-prog-dot-on { background: var(--gm); width: 20px; border-radius: 4px; }
         .lp-prog-dot-done { background: var(--gm); }
         .lp-form-group { margin-bottom: 14px; }
         .lp-label { display: block; font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 5px; }
-        .lp-input { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--fb); font-size: 13.5px; color: var(--dark); outline: none; background: white; }
+        .lp-input { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--fb); font-size: 13.5px; color: var(--dark); outline: none; background: var(--bg-card); }
         .lp-input:focus { border-color: var(--gm); }
-        .lp-submit { width: 100%; padding: 11px; border-radius: 8px; border: none; background: var(--green); color: white; font-family: var(--fb); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+        .lp-submit { width: 100%; padding: 11px; border-radius: 8px; border: none; background: var(--green); color: white; font-family: var(--fb); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; transition: filter .15s; }
+        .lp-submit:hover:not(:disabled) { filter: brightness(.9); }
         .lp-submit:disabled { opacity: .6; cursor: not-allowed; }
         .lp-terms { font-size: 11.5px; color: var(--gray); text-align: center; margin-top: 10px; }
         .lp-terms a { color: var(--gm); text-decoration: none; }
@@ -370,19 +374,19 @@ export default function LandingPage() {
         .lp-step-sub { font-size: 12.5px; color: var(--gray); margin-bottom: 14px; }
         .lp-back-btn { background: none; border: none; font-family: var(--fb); font-size: 12.5px; color: var(--gray); cursor: pointer; padding: 0; margin-bottom: 12px; }
         .lp-fac-grid { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
-        .lp-fac-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 500; background: white; }
-        .lp-fac-item-sel { border-color: var(--gm); background: var(--gl); color: var(--green); }
-        .lp-fac-badge { font-size: 10px; font-weight: 700; background: var(--gl); color: var(--green); border-radius: 20px; padding: 2px 8px; }
-        .lp-fac-item-sel .lp-fac-badge { background: white; }
+        .lp-fac-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 500; background: var(--bg-card); color: var(--dark); }
+        .lp-fac-item-sel { border-color: var(--gm); background: var(--gl); color: var(--accent-on-soft); }
+        .lp-fac-badge { font-size: 10px; font-weight: 700; background: var(--gl); color: var(--accent-on-soft); border-radius: 20px; padding: 2px 8px; }
+        .lp-fac-item-sel .lp-fac-badge { background: var(--bg-card); }
         .lp-opt-grid { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
-        .lp-opt-card { padding: 14px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; background: white; }
+        .lp-opt-card { padding: 14px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; background: var(--bg-card); }
         .lp-opt-card-sel { border-color: var(--gm); background: var(--gl); }
         .lp-opt-card-title { font-size: 13.5px; font-weight: 600; color: var(--dark); margin-bottom: 3px; }
         .lp-opt-card-desc { font-size: 11.5px; color: var(--gray); }
         .lp-opt-card-matieres { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-        .lp-opt-matiere { font-size: 10px; font-weight: 600; background: var(--gl); color: var(--green); border-radius: 20px; padding: 2px 7px; }
+        .lp-opt-matiere { font-size: 10px; font-weight: 600; background: var(--gl); color: var(--accent-on-soft); border-radius: 20px; padding: 2px 7px; }
 
-        /* Forgot password link */
+        /* Forgot password */
         .lp-forgot-link {
           background: none; border: none; cursor: pointer;
           color: var(--gray); font-size: 12.5px; font-weight: 500;
@@ -391,9 +395,9 @@ export default function LandingPage() {
         }
         .lp-forgot-link:hover { color: var(--dark); }
         .lp-forgot-msg-ok {
-          background: var(--gl); color: var(--green); border-color: #7AA56B;
+          background: var(--gl); color: var(--accent-on-soft); border-color: var(--gm);
           font-size: 12.5px; padding: 10px 13px; border-radius: 8px;
-          margin-bottom: 14px; border: 1px solid #7AA56B;
+          margin-bottom: 14px; border: 1px solid var(--gm);
         }
 
         /* FOOTER */
