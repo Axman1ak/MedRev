@@ -162,28 +162,32 @@ export default function QcmSessionPage() {
   // chiffres immédiatement.
   async function persistSessionResults() {
     if (!lesson) return
-    const allQs = Array.isArray(lesson.ai_questions)
-      ? ([...(lesson.ai_questions as AiQuestion[])])
+    // Type local étendu : AiQuestion + compteurs optionnels. Évite que
+    // TypeScript râle sur les champs `attempts`/`correct` non déclarés
+    // dans l'interface AiQuestion d'origine.
+    type QWithStats = AiQuestion & { attempts?: number; correct?: number }
+    const allQs: QWithStats[] = Array.isArray(lesson.ai_questions)
+      ? ([...(lesson.ai_questions as QWithStats[])])
       : []
 
     answers.forEach((ans, sessIdx) => {
       if (ans?.selected === null || ans?.selected === undefined) return
       const origIdx = origIndices[sessIdx]
       if (origIdx === undefined || origIdx < 0 || origIdx >= allQs.length) return
-      const cur = allQs[origIdx] as AiQuestion & { attempts?: number; correct?: number }
+      const cur = allQs[origIdx]
       const newAttempts = (cur.attempts || 0) + 1
       const newCorrect = (cur.correct || 0) + (ans.isCorrect ? 1 : 0)
       allQs[origIdx] = { ...cur, attempts: newAttempts, correct: newCorrect }
     })
 
     // Update local d'abord pour rendu instantané
-    setLesson(prev => (prev ? { ...prev, ai_questions: allQs } : prev))
+    setLesson(prev => (prev ? { ...prev, ai_questions: allQs as AiQuestion[] } : prev))
 
     // Puis persistance DB (best-effort)
     try {
       await supabase
         .from('lessons')
-        .update({ ai_questions: allQs })
+        .update({ ai_questions: allQs as AiQuestion[] })
         .eq('id', lesson.id)
     } catch (e) {
       console.error('[qcm] persist results failed:', e)
