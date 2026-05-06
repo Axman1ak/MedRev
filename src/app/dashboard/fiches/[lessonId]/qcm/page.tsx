@@ -210,9 +210,14 @@ export default function QcmSessionPage() {
       }))
       .filter(x => x.attempts > 0 && x.correct < x.attempts)
       .sort((a, b) => {
-        const failsA = a.attempts - a.correct
-        const failsB = b.attempts - b.correct
-        if (failsB !== failsA) return failsB - failsA
+        // Tri par ratio raté/réussi décroissant : une question avec
+        // 4 ratées sur 5 attempts (ratio 4) passe devant une question
+        // avec 4 ratées sur 10 (ratio 0.67). Les questions jamais
+        // réussies (correct = 0) montent automatiquement en tête.
+        const ratioA = a.correct === 0 ? Number.MAX_SAFE_INTEGER : (a.attempts - a.correct) / a.correct
+        const ratioB = b.correct === 0 ? Number.MAX_SAFE_INTEGER : (b.attempts - b.correct) / b.correct
+        if (ratioB !== ratioA) return ratioB - ratioA
+        // Tie-break : plus d'attempts = ratio plus fiable
         return b.attempts - a.attempts
       })
       .slice(0, 3)
@@ -311,9 +316,14 @@ export default function QcmSessionPage() {
       }))
       .filter(x => x.attempts > 0 && x.correct < x.attempts)
       .sort((a, b) => {
-        const failsA = a.attempts - a.correct
-        const failsB = b.attempts - b.correct
-        if (failsB !== failsA) return failsB - failsA
+        // Tri par ratio raté/réussi décroissant : une question avec
+        // 4 ratées sur 5 attempts (ratio 4) passe devant une question
+        // avec 4 ratées sur 10 (ratio 0.67). Les questions jamais
+        // réussies (correct = 0) montent automatiquement en tête.
+        const ratioA = a.correct === 0 ? Number.MAX_SAFE_INTEGER : (a.attempts - a.correct) / a.correct
+        const ratioB = b.correct === 0 ? Number.MAX_SAFE_INTEGER : (b.attempts - b.correct) / b.correct
+        if (ratioB !== ratioA) return ratioB - ratioA
+        // Tie-break : plus d'attempts = ratio plus fiable
         return b.attempts - a.attempts
       })
       .slice(0, 3)
