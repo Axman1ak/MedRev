@@ -112,3 +112,17 @@ export function stepDate(lesson: Lesson, i: number): string | null {
   if (!lesson.learn_date) return null
   return addDays(lesson.learn_date, J_STEPS[i])
 }
+ 
+export interface TranscriptSegment {
+  start: number  // secondes
+  end: number    // secondes
+  text: string
+}
+ 
+export interface LessonMedia {
+  // ... champs existants (video_path, video_duration_s, etc.)
+  // AJOUTER :
+  transcript?: TranscriptSegment[]
+  transcript_generated_at?: string
+}
+ 
