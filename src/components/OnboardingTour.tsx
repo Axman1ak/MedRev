@@ -62,6 +62,11 @@ interface Step {
   path?: string  // informatif seulement (plus d'auto-route)
   title: (firstName: string) => string
   body: React.ReactNode
+  // Title et body alternatifs utilisés UNIQUEMENT pour les steps avec
+  // waitForCreate quand l'user a déjà des fiches (existingLessonCount > 0).
+  // Permet d'afficher un tooltip différent qui ne demande pas de créer.
+  titleAlt?: (firstName: string) => string
+  bodyAlt?: React.ReactNode
   tipPos?: TipPos
   spotPad?: number
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
@@ -73,6 +78,7 @@ interface Step {
   // Force la création réelle d'une matière/fiche : le tour avance UNIQUEMENT
   // quand l'event correspondant est dispatché. Si l'user clique Annuler,
   // le fallback "Réouvre le formulaire" s'affiche sans Suivant disponible.
+  // NB : la "force" ne s'applique que si l'user n'a pas déjà l'item en DB.
   waitForCreate?: 'system' | 'lesson'
 }
 
@@ -200,11 +206,31 @@ const STEPS: Step[] = [
         jusqu&apos;à J120.
       </>
     ),
+    // Tooltip alternatif si l'user a déjà des fiches (replay) : on ne
+    // demande PAS de créer, on explique juste le formulaire.
+    titleAlt: () => 'Le formulaire de fiche',
+    bodyAlt: (
+      <>
+        Voici le formulaire pour créer une nouvelle fiche :
+        <br />
+        <strong>Titre</strong> — « Glycolyse — étapes et régulation »
+        <br />
+        <strong>Matière</strong> — où la fiche est rangée
+        <br />
+        <strong>Date d&apos;apprentissage (J0)</strong> — à partir de cette
+        date, les J1, J3, J5, J7... jusqu&apos;à J120 se programment
+        automatiquement.
+        <br /><br />
+        Tu as déjà des fiches en compte, donc tu n&apos;as pas besoin d&apos;en
+        créer une nouvelle. Clique sur <strong>Annuler</strong> ou{' '}
+        <strong>Suivant</strong> pour continuer le tour.
+      </>
+    ),
     tipPos: 'right',
     spotPad: 8,
     waitForCreate: 'lesson',
-    // Bloque Annuler — l'user doit créer (sauf s'il a déjà des fiches,
-    // dans ce cas le bouton Suivant apparaît dans le tour pour skipper).
+    // Bloque Annuler UNIQUEMENT si l'user n'a pas de fiche (force creation).
+    // Si l'user a des fiches, on ne bloque pas — il peut Annuler librement.
     blockSelectors: ['[data-tour="fiche-cancel"]'],
   },
   {
@@ -517,6 +543,11 @@ export default function OnboardingTour({
   // shouldForceCreate : on force la création UNIQUEMENT si l'user n'a pas
   // déjà de fiche existante. Sinon le tour propose Suivant pour skipper.
   const shouldForceCreate = isWaitingForCreate && existingLessonCount === 0
+  // Pour les steps waitForCreate, si l'user n'est pas forcé (a déjà des
+  // fiches), on utilise le tooltip alternatif (ne demande pas de créer).
+  const useAltContent = isWaitingForCreate && !shouldForceCreate && cur.bodyAlt
+  const stepTitle = useAltContent && cur.titleAlt ? cur.titleAlt(firstName) : cur.title(firstName)
+  const stepBody = useAltContent && cur.bodyAlt ? cur.bodyAlt : cur.body
   // Voile léger : par défaut sur walkthrough/wait-click, off pour tooltip-only.
   // Override possible via cur.dimmed.
   const dimmed = cur.dimmed ?? (!isTooltipOnly && !isCelebration)
@@ -565,27 +596,31 @@ export default function OnboardingTour({
   // ---------- Click blocker pour les walkthrough avec interactions sensibles ----------
   // Deux mécanismes :
   //   - blockTargetClicks=true : bloque tout clic à l'intérieur du target principal
-  //     (ex: étape picker-j — cliquer un palier ferait basculer la modale en notation)
   //   - blockSelectors=[...] : bloque les clics matchant ces sélecteurs spécifiques
-  //     (ex: étape matiere-form — bloquer le bouton "Créer la matière" pour forcer
-  //     l'utilisateur à passer par "Annuler")
+  //
+  // Pour les steps waitForCreate, on n'applique blockSelectors QUE si on force
+  // la création (shouldForceCreate). Sinon (user a des fiches), on laisse tout
+  // cliquable — le user peut Annuler librement.
   useEffect(() => {
     const targetBlocked = cur.blockTargetClicks && cur.selector
-    const selectorsBlocked = cur.blockSelectors && cur.blockSelectors.length > 0
+    const effectiveBlockSelectors =
+      cur.waitForCreate && !shouldForceCreate
+        ? undefined
+        : cur.blockSelectors
+    const selectorsBlocked =
+      effectiveBlockSelectors && effectiveBlockSelectors.length > 0
     if (!targetBlocked && !selectorsBlocked) return
 
     function blockClick(e: MouseEvent) {
       const target = e.target as HTMLElement | null
       if (!target) return
-      // Bloque si le target match
       if (targetBlocked && target.closest(cur.selector!)) {
         e.stopPropagation()
         e.preventDefault()
         return
       }
-      // Bloque si l'un des blockSelectors match
       if (selectorsBlocked) {
-        for (const sel of cur.blockSelectors!) {
+        for (const sel of effectiveBlockSelectors!) {
           if (target.closest(sel)) {
             e.stopPropagation()
             e.preventDefault()
@@ -597,7 +632,7 @@ export default function OnboardingTour({
     document.addEventListener('click', blockClick, true)
     return () => document.removeEventListener('click', blockClick, true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIdx])
+  }, [stepIdx, shouldForceCreate])
 
   // ---------- Compute spotlight rect ----------
   const computeRect = useCallback(() => {
@@ -870,9 +905,9 @@ export default function OnboardingTour({
           style={{ top: 24, right: 24, width: 340 }}
         >
           <div className="ont-tip-step">Étape {stepIdx + 1} sur {total}</div>
-          <h4 className="ont-tip-title">{cur.title(firstName)}</h4>
+          <h4 className="ont-tip-title">{stepTitle}</h4>
           <div className="ont-tip-body" style={{ color: '#6B6F6A' }}>
-            {cur.body}
+            {stepBody}
           </div>
           <ProgressBars count={total} active={stepIdx} />
           <div className="ont-tip-actions">
@@ -961,13 +996,13 @@ export default function OnboardingTour({
         <div className="ont-tip-step">
           Étape {stepIdx + 1} sur {total}
         </div>
-        <h4 className="ont-tip-title">{cur.title(firstName)}</h4>
-        <div className="ont-tip-body">{cur.body}</div>
+        <h4 className="ont-tip-title">{stepTitle}</h4>
+        <div className="ont-tip-body">{stepBody}</div>
 
-        {(isWaitClick || isWaitingForCreate) && (
+        {(isWaitClick || shouldForceCreate) && (
           <div className="ont-tip-hint">
             <span className="ont-tip-pulse" />{' '}
-            {isWaitingForCreate ? 'En attente de la création…' : 'En attente de ton clic…'}
+            {shouldForceCreate ? 'En attente de la création…' : 'En attente de ton clic…'}
           </div>
         )}
 
