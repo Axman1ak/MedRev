@@ -151,8 +151,6 @@
 }
 .cal-day.cal-today {
   background: linear-gradient(180deg, var(--cal-gl) 0%, var(--cal-card) 30%);
-  border-color: var(--cal-gm);
-  box-shadow: 0 0 0 1px var(--cal-gm);
 }
 .cal-day.cal-past {
   background: var(--cal-soft);
