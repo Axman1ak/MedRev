@@ -40,6 +40,25 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
+  // Apparence (mode clair / sombre)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = localStorage.getItem('medrev-theme')
+    const t: 'light' | 'dark' = stored === 'dark' ? 'dark' : 'light'
+    setTheme(t)
+    document.documentElement.setAttribute('data-theme', t)
+  }, [])
+
+  function chooseTheme(t: 'light' | 'dark') {
+    setTheme(t)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('medrev-theme', t)
+      document.documentElement.setAttribute('data-theme', t)
+    }
+  }
+
   // ------------ LOAD ------------
   useEffect(() => {
     let cancelled = false
@@ -254,6 +273,56 @@ export default function SettingsPage() {
             >
               {savingPassword ? 'Modification…' : 'Modifier le mot de passe'}
             </button>
+          </div>
+        </section>
+
+        {/* APPARENCE */}
+        <section className="set-card">
+          <div className="set-card-h">Apparence</div>
+
+          <div className="set-row">
+            <label className="set-label">Thème</label>
+            <p className="set-hint">
+              Choisis le mode clair pour le confort en journée, ou le mode
+              sombre pour les sessions de révision tardives.
+            </p>
+            <div className="set-theme-grid">
+              <button
+                type="button"
+                className={`set-theme-card${theme === 'light' ? ' on' : ''}`}
+                onClick={() => chooseTheme('light')}
+                aria-pressed={theme === 'light'}
+              >
+                <div className="set-theme-preview light">
+                  <span className="ttp-bg" />
+                  <span className="ttp-card" />
+                  <span className="ttp-line a" />
+                  <span className="ttp-line b" />
+                </div>
+                <div className="set-theme-meta">
+                  <strong>Clair</strong>
+                  <span>Fond off-white doux</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`set-theme-card${theme === 'dark' ? ' on' : ''}`}
+                onClick={() => chooseTheme('dark')}
+                aria-pressed={theme === 'dark'}
+              >
+                <div className="set-theme-preview dark">
+                  <span className="ttp-bg" />
+                  <span className="ttp-card" />
+                  <span className="ttp-line a" />
+                  <span className="ttp-line b" />
+                </div>
+                <div className="set-theme-meta">
+                  <strong>Sombre</strong>
+                  <span>Anthracite reposant</span>
+                </div>
+              </button>
+            </div>
           </div>
         </section>
 
