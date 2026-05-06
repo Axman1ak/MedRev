@@ -69,6 +69,10 @@ interface Step {
   bodyAlt?: React.ReactNode
   tipPos?: TipPos
   spotPad?: number
+  // Forme du spotlight : rect (par défaut) ou circle (utile pour les boutons
+  // ronds comme la croix de fermeture). Si circle, force un carré dont le
+  // côté = max(width, height) + 2*spotPad et applique border-radius: 50%.
+  spotShape?: 'rect' | 'circle'
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
   blockTargetClicks?: boolean // si true, bloque les clics à l'intérieur du target pendant cette étape
   blockSelectors?: string[] // sélecteurs additionnels à bloquer pendant cette étape (ex: bouton Créer pendant l'explication du form)
@@ -348,7 +352,8 @@ const STEPS: Step[] = [
       </>
     ),
     tipPos: 'left',
-    spotPad: 6,
+    spotPad: 8,
+    spotShape: 'circle',
   },
 
   // ============ PHASE 3 — TOUR DES ONGLETS ============
@@ -1026,17 +1031,32 @@ export default function OnboardingTour({
   const isLast = stepIdx === STEPS.length - 1
   const spotClassName = `ont-spot${dimmed ? ' ont-spot-dim' : ''}`
 
+  // Pour spotShape='circle' : on force un carré (côté = max(w,h) + 2*pad)
+  // centré sur le centre du rect, avec border-radius: 50%.
+  let spotStyle: React.CSSProperties
+  if (cur.spotShape === 'circle') {
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const size = Math.max(rect.width, rect.height) + pad * 2
+    spotStyle = {
+      top: cy - size / 2,
+      left: cx - size / 2,
+      width: size,
+      height: size,
+      borderRadius: '50%',
+    }
+  } else {
+    spotStyle = {
+      top: rect.top - pad,
+      left: rect.left - pad,
+      width: rect.width + pad * 2,
+      height: rect.height + pad * 2,
+    }
+  }
+
   return (
     <div className="ont-root" role="dialog" aria-modal="true" aria-label="Tutoriel">
-      <div
-        className={spotClassName}
-        style={{
-          top: rect.top - pad,
-          left: rect.left - pad,
-          width: rect.width + pad * 2,
-          height: rect.height + pad * 2,
-        }}
-      />
+      <div className={spotClassName} style={spotStyle} />
 
       <div className="ont-tip" ref={tipRef} style={tipStyle}>
         <div className="ont-tip-step">
