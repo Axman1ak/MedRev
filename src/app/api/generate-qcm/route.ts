@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const maxDuration = 60
+export const maxDuration = 300 // Pro plan max ; transcript+PDF prend ~15-30s, vidéo upload peut prendre 60-90s
 export const dynamic = 'force-dynamic'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
