@@ -221,6 +221,34 @@ type SanitizedQuestion = {
   source_ref: { pdf_page?: number; video_ts?: number } | null
 }
 
+// Réordonne aléatoirement les 5 options d'une question pour casser le biais
+// positionnel des LLMs (Gemini place souvent la bonne réponse en B/C).
+// Strip le préfixe "A. ", "B. " etc., shuffle, puis ré-applique A-E dans
+// l'ordre nouveau. L'index `answer` est mis à jour pour pointer sur la
+// nouvelle position de la bonne réponse.
+function reletterAndShuffleOptions(q: SanitizedQuestion): SanitizedQuestion {
+  // Strip le préfixe lettré au début de chaque option
+  const stripped = q.options.map(opt => opt.replace(/^\s*[A-E][.)]\s*/, '').trim())
+
+  // Construit un tableau d'indices et shuffle (Fisher-Yates)
+  const idx = stripped.map((_, i) => i)
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = idx[i]; idx[i] = idx[j]; idx[j] = tmp
+  }
+
+  // Ré-applique les lettres A-E dans le nouvel ordre
+  const newOptions = idx.map((origPos, newPos) => {
+    const letter = String.fromCharCode(65 + newPos) // 65 = 'A'
+    return `${letter}. ${stripped[origPos]}`
+  })
+
+  // Trouve la nouvelle position de la bonne réponse
+  const newAnswer = idx.indexOf(q.answer)
+
+  return { ...q, options: newOptions, answer: newAnswer }
+}
+
 function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
   const out: SanitizedQuestion[] = []
   for (const q of raw) {
@@ -252,7 +280,13 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
       }
     }
 
-    out.push({ question, options, answer, explanation, source_ref: sourceRef })
+    // Shuffle des options pour neutraliser le biais positionnel de Gemini.
+    // Sans ça, la bonne réponse tombe ~40% du temps en B ou C.
+    const shuffled = reletterAndShuffleOptions({
+      question, options, answer, explanation, source_ref: sourceRef,
+    })
+
+    out.push(shuffled)
     if (out.length >= maxN) break
   }
   return out
