@@ -23,8 +23,10 @@ const GEMINI_FILES_UPLOAD_URL = `https://generativelanguage.googleapis.com/uploa
 const GEMINI_FILE_GET_URL = (name: string) =>
   `https://generativelanguage.googleapis.com/v1beta/${name}?key=${GEMINI_API_KEY}`
 
-// Limite vidéo (Vercel serverless memory + Gemini upload time)
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024  // 100 Mo
+// Limite vidéo : 250 Mo permet d'encaisser une vidéo d'1h compressée 720p
+// (typique : 200-300 Mo). Au-delà, la mémoire Vercel (1 Go sur Pro) devient
+// tendue car on a le blob ET son ArrayBuffer en mémoire simultanément.
+const MAX_VIDEO_SIZE = 250 * 1024 * 1024  // 250 Mo
 const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 20 Mo total req)
 
 // Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
