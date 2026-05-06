@@ -2,6 +2,114 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================================
+   MedRev Design Tokens â€” Ã  coller en tÃªte de src/app/globals.css
+   Source de vÃ©ritÃ© unique pour le thÃ¨me clair / sombre.
+   ============================================================================ */
+
+:root, [data-theme="light"] {
+  /* surfaces */
+  --bg-app: #FAFAF7;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-soft: #F2F1ED;
+  --bg-muted: #EBEAE5;
+
+  /* bordures */
+  --border-subtle: #E8E6E0;
+  --border-strong: #D2CFC7;
+
+  /* texte */
+  --text-primary: #1A1A1A;
+  --text-secondary: #5C5C5A;
+  --text-tertiary: #9A9A98;
+
+  /* accent vert MedRev */
+  --accent-primary: #1B4332;
+  --accent-medium: #2D6A4F;
+  --accent-soft: #DDECE3;
+  --accent-on-soft: #1B4332;
+
+  /* sÃ©mantique */
+  --warning: #C47B2B;
+  --warning-soft: #F5E5D2;
+  --danger: #C75050;
+  --danger-soft: #F5DADA;
+  --success: #2D6A4F;
+  --success-soft: #DDECE3;
+
+  /* sidebar â€” suit le thÃ¨me */
+  --sb-bg: #F0EEE9;
+  --sb-text: #1A1A1A;
+  --sb-text-muted: #5C5C5A;
+  --sb-text-dim: #9A9A98;
+  --sb-hover: rgba(0, 0, 0, .04);
+  --sb-active: rgba(0, 0, 0, .06);
+  --sb-border: rgba(0, 0, 0, .06);
+  --sb-accent: #2D6A4F;
+
+  /* shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, .06);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, .08);
+
+  /* overlay (modales) */
+  --overlay: rgba(17, 19, 16, .55);
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg-app: #0F141A;
+  --bg-card: #1A2230;
+  --bg-elevated: #232C3D;
+  --bg-soft: #161D27;
+  --bg-muted: #1F2632;
+
+  --border-subtle: #2A3445;
+  --border-strong: #3D4960;
+
+  --text-primary: #E8EAED;
+  --text-secondary: #9CA3AE;
+  --text-tertiary: #6B7380;
+
+  --accent-primary: #34D399;
+  --accent-medium: #10B981;
+  --accent-soft: #133124;
+  --accent-on-soft: #6EE7B7;
+
+  --warning: #E0954A;
+  --warning-soft: #3D2D1A;
+  --danger: #EF6B6B;
+  --danger-soft: #3D1F1F;
+  --success: #34D399;
+  --success-soft: #133124;
+
+  --sb-bg: #1A2230;
+  --sb-text: #E8EAED;
+  --sb-text-muted: #9CA3AE;
+  --sb-text-dim: #6B7380;
+  --sb-hover: rgba(255, 255, 255, .05);
+  --sb-active: rgba(255, 255, 255, .08);
+  --sb-border: rgba(255, 255, 255, .05);
+  --sb-accent: #34D399;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, .5);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, .6);
+
+  --overlay: rgba(0, 0, 0, .65);
+
+  color-scheme: dark;
+}
+
+/* Background app par dÃ©faut, change automatiquement avec data-theme */
+html, body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  transition: background-color .25s ease, color .25s ease;
+}
  
 :root {
   --bg: #fafaf8;
