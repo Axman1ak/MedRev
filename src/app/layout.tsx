@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr"> suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <head>
         {/* Anti-flash : pose data-theme avant le render React */}
         <script
