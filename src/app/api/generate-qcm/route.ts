@@ -44,6 +44,16 @@ const DIFF_DESC: Record<string, string> = {
 }
 
 // ============================================================
+// Helper : format timestamp (s → "MM:SS" pour le prompt)
+// ============================================================
+function formatTs(s: number): string {
+  const total = Math.floor(s)
+  const mm = Math.floor(total / 60)
+  const ss = total % 60
+  return `${mm.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`
+}
+
+// ============================================================
 // Gemini Files API helpers
 // ============================================================
 type GeminiFile = {
@@ -295,7 +305,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
 
-    const media = (lesson.media ?? {}) as { video_path?: string; pdf_path?: string }
+    type TranscriptSegment = { start: number; end: number; text: string }
+    const media = (lesson.media ?? {}) as {
+      video_path?: string
+      pdf_path?: string
+      transcript?: TranscriptSegment[]
+    }
     if (!media.video_path && !media.pdf_path) {
       return NextResponse.json(
         { error: "Aucune source uploadée. Ajoute une vidéo ou un PDF avant de générer." },
@@ -329,10 +344,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Vidéo (toujours via Files API, avec garde-fou de taille)
+    // Vidéo : si on a un transcript pré-calculé, on l'utilise (texte → ~95% moins
+    // cher qu'envoyer la vidéo brute). Sinon fallback sur l'upload vidéo (legacy).
     let videoIncluded = false
+    let transcriptIncluded = false
     let videoSkipReason: string | null = null
-    if (media.video_path) {
+
+    if (media.transcript && Array.isArray(media.transcript) && media.transcript.length > 0) {
+      // Mode transcript : on injecte le texte avec timestamps comme part text.
+      // Gemini reçoit le contenu de la vidéo via le transcript + timing pour
+      // produire des source_ref.video_ts précis.
+      const transcriptText = media.transcript
+        .map(s => `[${formatTs(s.start)}–${formatTs(s.end)}] ${s.text}`)
+        .join('\n')
+      parts.push({
+        text: `TRANSCRIPT VIDÉO (avec timestamps en secondes — utilise ces timings pour video_ts dans source_ref) :\n\n${transcriptText}`,
+      })
+      transcriptIncluded = true
+    } else if (media.video_path) {
       const { data: videoBlob, error: vidErr } = await supabase.storage
         .from('lesson-media')
         .download(media.video_path)
@@ -355,7 +384,8 @@ export async function POST(req: NextRequest) {
     // 5. Prompt
     const sources: string[] = []
     if (media.pdf_path) sources.push('le polycopié du cours (PDF)')
-    if (videoIncluded) sources.push('la vidéo du cours (audio + image)')
+    if (transcriptIncluded) sources.push('le transcript audio de la vidéo du cours (avec timestamps)')
+    else if (videoIncluded) sources.push('la vidéo du cours (audio + image)')
     const sourcesStr = sources.join(' et ')
 
     // En mode append, on récupère les questions déjà générées pour les passer
@@ -491,6 +521,7 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
       mode,
       questions: sanitized,
       videoIncluded,
+      transcriptIncluded,
       videoSkipReason,
     })
   } catch (error) {
