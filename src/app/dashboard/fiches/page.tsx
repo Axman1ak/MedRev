@@ -378,8 +378,21 @@ export default function FichesPage() {
 
   const colorOfSystem = useMemo(() => {
     const map = new Map<string, string>()
+    // Détecte si toutes les matières ont la même couleur en base
+    // (signe que le picker n'a jamais été utilisé consciemment — la default est
+    // SUBJ_COLORS[0] rouge, donc à la création toutes les matières héritent du
+    // rouge sauf si l'utilisateur clique explicitement sur une autre couleur).
+    // Dans ce cas on bascule sur la palette par index pour avoir des couleurs
+    // distinctes visuelles.
+    const distinctColors = new Set(
+      semSystems.map(s => (s as any).color).filter(Boolean)
+    )
+    const allSameColor = distinctColors.size <= 1 && semSystems.length > 1
+
     semSystems.forEach((s, idx) => {
-      const c = (s as any).color || SUBJ_COLORS[idx % SUBJ_COLORS.length]
+      const c = allSameColor
+        ? SUBJ_COLORS[idx % SUBJ_COLORS.length]
+        : ((s as any).color || SUBJ_COLORS[idx % SUBJ_COLORS.length])
       map.set(s.id, c)
     })
     return map
