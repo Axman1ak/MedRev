@@ -739,9 +739,9 @@ export default function FichesPage() {
                 {([1, 2] as (1 | 2)[]).map(s => (
                   <button key={s} onClick={() => setNewSysSemestre(s)} style={{
                     flex: 1, padding: '9px', borderRadius: 8,
-                    border: `1.5px solid ${newSysSemestre === s ? '#2D6A4F' : 'var(--border)'}`,
-                    background: newSysSemestre === s ? '#D8EAE0' : 'white',
-                    color: newSysSemestre === s ? '#1B4332' : 'var(--gray)',
+                    border: `1.5px solid ${newSysSemestre === s ? 'var(--accent-medium)' : 'var(--border)'}`,
+                    background: newSysSemestre === s ? 'var(--accent-soft)' : 'var(--card)',
+                    color: newSysSemestre === s ? 'var(--accent-on-soft)' : 'var(--gray)',
                     fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
                   }}>
                     Semestre {s}
@@ -751,8 +751,8 @@ export default function FichesPage() {
             </div>
             {sysError && (
               <div style={{
-                background: '#FEE2E2',
-                color: '#991B1B',
+                background: 'var(--danger-soft)',
+                color: 'var(--danger)',
                 padding: '8px 10px',
                 borderRadius: 6,
                 marginBottom: 12,
@@ -800,8 +800,8 @@ export default function FichesPage() {
             </div>
             {lesError && (
               <div style={{
-                background: '#FEE2E2',
-                color: '#991B1B',
+                background: 'var(--danger-soft)',
+                color: 'var(--danger)',
                 padding: '8px 10px',
                 borderRadius: 6,
                 marginBottom: 12,
