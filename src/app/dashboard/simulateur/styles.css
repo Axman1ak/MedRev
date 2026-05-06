@@ -3,31 +3,32 @@
  *
  * Simulateur d'examen — refonte complète.
  * Toutes les classes préfixées .sim-* pour scope.
- * Aligné avec le design system du dashboard (Fraunces + Plus Jakarta Sans + Cormorant,
- * palette beige, score colors, hero numbers Fraunces vert).
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
 
 .sim-page {
-  /* === Tokens hérités du dashboard === */
-  --bg: #EDEAE3;
-  --card: #FFFFFF;
-  --soft: #FAF8F2;
-  --dark: #111310;
-  --gray: #6B6F6A;
-  --dim: #9CA09A;
-  --border: #E1DDD3;
-  --green: #1B4332;
-  --gm: #2D6A4F;
-  --gl: #D8EAE0;
-  --amber: #C47B2B;
-  --amber-soft: #F5E5D2;
-  --rose: #C75050;
-  --rose-soft: #F5DADA;
+  /* === Tokens hérités du design system global (src/app/globals.css) === */
+  --bg: var(--bg-app);
+  --card: var(--bg-card);
+  --soft: var(--bg-soft);
+  --dark: var(--text-primary);
+  --gray: var(--text-secondary);
+  --dim: var(--text-tertiary);
+  --border: var(--border-subtle);
+  --green: var(--accent-primary);
+  --gm: var(--accent-medium);
+  --gl: var(--accent-soft);
+  --amber: var(--warning);
+  --amber-soft: var(--warning-soft);
+  --rose: var(--danger);
+  --rose-soft: var(--danger-soft);
+
+  /* Palette gold (explications apprentissage) — fixe */
   --gold: #B8860B;
   --gold-soft: #F2E6C2;
 
+  /* Palette scores fixe */
   --s1: #C75050;
   --s2: #E08B3C;
   --s3: #D9B24A;
@@ -53,6 +54,11 @@
   line-height: 1.4;
 }
 .sim-page * { box-sizing: border-box; }
+
+/* En mode sombre on assombrit le gold-soft pour rester lisible */
+[data-theme="dark"] .sim-page {
+  --gold-soft: #3D331A;
+}
 
 .sim-loading {
   flex: 1;
@@ -197,7 +203,7 @@
   width: 16px; height: 16px;
   border-radius: 4px;
   border: 1.5px solid var(--border);
-  background: white;
+  background: var(--card);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -315,7 +321,7 @@
 .sim-opt-pill.sel {
   background: var(--dark);
   border-color: var(--dark);
-  color: white;
+  color: var(--bg-card);
 }
 
 /* MODE — 2 grosses pills avec mini-visuels */
@@ -436,6 +442,7 @@
   border-left: 2px solid var(--gold);
   overflow: hidden;
 }
+[data-theme="dark"] .sim-mp-app-explain { color: var(--gold); }
 
 /* Examen blanc : auto + 5×1fr + auto */
 .sim-mp-vis-ex {
@@ -880,6 +887,8 @@
   color: #3D2516;
   font-weight: 500;
 }
+[data-theme="dark"] .sim-ses-explain-text { color: var(--gold-soft); }
+[data-theme="dark"] .sim-ses-explain-text strong { color: var(--text-primary); }
 .sim-ses-explain-link {
   margin-top: 8px;
   display: inline-flex;
@@ -922,10 +931,10 @@
 .sim-ses-rate-btn.r1:hover, .sim-ses-rate-btn.r1.on { background: var(--rose-soft); }
 .sim-ses-rate-btn.r2 { border: 1.5px solid var(--amber); color: var(--amber); }
 .sim-ses-rate-btn.r2:hover, .sim-ses-rate-btn.r2.on { background: var(--amber-soft); }
-.sim-ses-rate-btn.r3 { border: 1.5px solid #7AA56B; color: #5A8050; }
-.sim-ses-rate-btn.r3:hover, .sim-ses-rate-btn.r3.on { background: #DDEAD3; }
+.sim-ses-rate-btn.r3 { border: 1.5px solid var(--s4); color: var(--s4); }
+.sim-ses-rate-btn.r3:hover, .sim-ses-rate-btn.r3.on { background: var(--s4-soft); }
 .sim-ses-rate-btn.r4 { border: 1.5px solid var(--gm); background: var(--gl); color: var(--green); }
-.sim-ses-rate-btn.r4:hover, .sim-ses-rate-btn.r4.on { background: #C7DEC9; }
+.sim-ses-rate-btn.r4:hover, .sim-ses-rate-btn.r4.on { filter: brightness(.95); }
 
 /* Nav buttons */
 .sim-ses-nav {
@@ -955,11 +964,12 @@
 .sim-ses-nav-btn.primary {
   background: var(--dark);
   border-color: var(--dark);
-  color: white;
+  color: var(--bg-card);
 }
 .sim-ses-nav-btn.primary:hover:not(:disabled) {
   background: var(--green);
   border-color: var(--green);
+  color: white;
 }
 
 /* ANSWER GRID (right) */
@@ -1035,8 +1045,9 @@
   gap: 6px;
   align-items: center;
   padding: 4px 0;
-  border-bottom: 1px solid rgba(225, 221, 211, .5);
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
+  opacity: .8;
 }
 .sim-ses-sheet-row:last-child { border-bottom: none; }
 .sim-ses-sheet-row.current {
@@ -1044,6 +1055,7 @@
   border-radius: 5px;
   padding: 4px 6px;
   margin: 0 -6px;
+  opacity: 1;
 }
 .sim-ses-sheet-row.current .sim-ses-sheet-num {
   color: var(--gm);
@@ -1287,7 +1299,7 @@
 .sim-res-rates-segment { height: 100%; }
 .sim-res-rates-segment.r1 { background: var(--rose); }
 .sim-res-rates-segment.r2 { background: var(--amber); }
-.sim-res-rates-segment.r3 { background: #7AA56B; }
+.sim-res-rates-segment.r3 { background: var(--s4); }
 .sim-res-rates-segment.r4 { background: var(--gm); }
 .sim-res-rates-list {
   display: grid;
@@ -1306,7 +1318,7 @@
 }
 .sim-res-rate-dot.r1 { background: var(--rose); }
 .sim-res-rate-dot.r2 { background: var(--amber); }
-.sim-res-rate-dot.r3 { background: #7AA56B; }
+.sim-res-rate-dot.r3 { background: var(--s4); }
 .sim-res-rate-dot.r4 { background: var(--gm); }
 .sim-res-rate-num {
   font-family: 'Fraunces', serif;
