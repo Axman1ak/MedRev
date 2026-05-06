@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const maxDuration = 60
+export const maxDuration = 300 // Pro plan max ; transcription d'1h de vidéo peut prendre 60-120s
 export const dynamic = 'force-dynamic'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
@@ -22,7 +22,7 @@ const GEMINI_FILES_UPLOAD_URL = `https://generativelanguage.googleapis.com/uploa
 const GEMINI_FILE_GET_URL = (name: string) =>
   `https://generativelanguage.googleapis.com/v1beta/${name}?key=${GEMINI_API_KEY}`
 
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100 Mo (cohérent avec generate-qcm)
+const MAX_VIDEO_SIZE = 250 * 1024 * 1024 // 250 Mo (cohérent avec generate-qcm)
 
 // ============================================================
 // Reuse des helpers Files API (mêmes que generate-qcm)
