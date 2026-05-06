@@ -58,7 +58,7 @@
 .qcm-empty-btn {
   appearance: none;
   border: 1px solid var(--border, #E1DDD3);
-  background: #fff;
+  background: var(--card, #fff);
   color: var(--green, #1B4332);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
@@ -82,7 +82,7 @@
   width: 28px; height: 28px;
   border-radius: 999px;
   border: 1px solid var(--border, #E1DDD3);
-  background: #fff;
+  background: var(--card, #fff);
   color: var(--gray, #6B6F6A);
   font-size: 14px;
   cursor: pointer;
@@ -182,7 +182,7 @@
 }
 .qcm-option {
   appearance: none;
-  background: #fff;
+  background: var(--card, #fff);
   border: 1px solid var(--border, #E1DDD3);
   border-radius: 12px;
   padding: 14px 16px;
@@ -232,7 +232,7 @@
 
 .qcm-option.selected {
   border-color: var(--gm, #2D6A4F);
-  background: rgba(45, 106, 79, .06);
+  background: var(--gl, #D8EAE0);
 }
 .qcm-option.selected .qcm-letter {
   background: var(--gm, #2D6A4F);
@@ -253,7 +253,7 @@
 
 .qcm-option.wrong {
   border-color: var(--rose, #C75050);
-  background: rgba(199, 80, 80, .06);
+  background: var(--rose-soft, #F5DADA);
 }
 .qcm-option.wrong .qcm-letter {
   background: var(--rose, #C75050);
@@ -269,7 +269,7 @@
 .qcm-feedback {
   margin-top: 24px;
   padding: 18px 20px;
-  background: #fff;
+  background: var(--card, #fff);
   border: 1px solid var(--border, #E1DDD3);
   border-radius: 14px;
 }
@@ -423,7 +423,7 @@
   grid-template-columns: repeat(4, 1fr);
 }
 .qcm-end-stat {
-  background: #fff;
+  background: var(--card, #fff);
   border: 1px solid var(--border, #E1DDD3);
   border-radius: 14px;
   padding: 16px 12px;
