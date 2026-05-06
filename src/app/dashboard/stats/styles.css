@@ -2,31 +2,29 @@
 /* src/app/dashboard/stats/styles.css
  *
  * Bilan annuel — Direction 2 : hero "X révisions" + 3 secondaires.
- * Full-width comme le dashboard, identité visuelle 100% alignée
- * (Fraunces + Plus Jakarta Sans + Cormorant, palette beige, hero numbers verts).
- *
  * Toutes les classes restent préfixées .stats- pour scope.
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
 
 .stats-page {
-  /* === Tokens hérités du dashboard === */
-  --bg: #EDEAE3;
-  --card: #FFFFFF;
-  --soft: #FAF8F2;
-  --dark: #111310;
-  --gray: #6B6F6A;
-  --dim: #9CA09A;
-  --border: #E1DDD3;
-  --green: #1B4332;
-  --gm: #2D6A4F;
-  --gl: #D8EAE0;
-  --amber: #C47B2B;
-  --amber-soft: #F5E5D2;
-  --rose: #C75050;
-  --rose-soft: #F5DADA;
+  /* === Tokens hérités du design system global (src/app/globals.css) === */
+  --bg: var(--bg-app);
+  --card: var(--bg-card);
+  --soft: var(--bg-soft);
+  --dark: var(--text-primary);
+  --gray: var(--text-secondary);
+  --dim: var(--text-tertiary);
+  --border: var(--border-subtle);
+  --green: var(--accent-primary);
+  --gm: var(--accent-medium);
+  --gl: var(--accent-soft);
+  --amber: var(--warning);
+  --amber-soft: var(--warning-soft);
+  --rose: var(--danger);
+  --rose-soft: var(--danger-soft);
 
+  /* Palette scores fixe (rouge/orange/jaune/vert) */
   --s1: #C75050;
   --s2: #E08B3C;
   --s3: #D9B24A;
@@ -38,14 +36,39 @@
   --s4-soft: #DDEAD3;
   --s5-soft: #D8EAE0;
 
+  /* Heatmap : 5 niveaux d'intensité (clair → vert foncé) */
+  --hm-0: var(--bg-muted);
+  --hm-1: var(--accent-soft);
+  --hm-2: #B0CFB8;
+  --hm-3: var(--accent-medium);
+  --hm-4: var(--accent-primary);
+  --hm-1-border: #BDD9C7;
+  --hm-2-border: #8FB89A;
+
   background: var(--bg);
   min-height: 100vh;
-  /* Full width comme le dashboard, padding identique */
   padding: 22px 28px;
   color: var(--dark);
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   line-height: 1.5;
+}
+
+/* En mode sombre on remplace la palette heatmap par des tons emerald lumineux */
+[data-theme="dark"] .stats-page {
+  --hm-0: var(--bg-muted);
+  --hm-1: #1A3B2D;
+  --hm-2: #2A5C44;
+  --hm-3: var(--accent-medium);
+  --hm-4: var(--accent-primary);
+  --hm-1-border: #2A5C44;
+  --hm-2-border: var(--accent-medium);
+
+  --s1-soft: #3D1F1F;
+  --s2-soft: #3D2D1A;
+  --s3-soft: #3D331A;
+  --s4-soft: #1F2D1A;
+  --s5-soft: #133124;
 }
 
 .stats-loading {
@@ -347,7 +370,7 @@
 .stats-heatmap-cell {
   aspect-ratio: 1;
   border-radius: 2px;
-  background: #EFEBE2;
+  background: var(--hm-0);
   border: 1px solid var(--border);
   transition: transform .12s;
 }
@@ -356,18 +379,18 @@
   z-index: 5;
   position: relative;
 }
-.stats-heatmap-cell.i0 { background: #EFEBE2; border-color: var(--border); }
-.stats-heatmap-cell.i1 { background: var(--gl); border-color: #BDD9C7; }
-.stats-heatmap-cell.i2 { background: #B0CFB8; border-color: #8FB89A; }
-.stats-heatmap-cell.i3 { background: var(--gm); border-color: var(--gm); }
-.stats-heatmap-cell.i4 { background: var(--green); border-color: var(--green); }
+.stats-heatmap-cell.i0 { background: var(--hm-0); border-color: var(--border); }
+.stats-heatmap-cell.i1 { background: var(--hm-1); border-color: var(--hm-1-border); }
+.stats-heatmap-cell.i2 { background: var(--hm-2); border-color: var(--hm-2-border); }
+.stats-heatmap-cell.i3 { background: var(--hm-3); border-color: var(--hm-3); }
+.stats-heatmap-cell.i4 { background: var(--hm-4); border-color: var(--hm-4); }
 .stats-heatmap-cell.future {
   background: transparent;
   border-style: dashed;
   opacity: .45;
 }
 .stats-heatmap-cell.today {
-  box-shadow: 0 0 0 1.5px rgba(45, 106, 79, .55);
+  box-shadow: 0 0 0 1.5px var(--accent-medium);
   z-index: 2;
   position: relative;
 }
@@ -531,7 +554,7 @@
   cursor: help;
 }
 .stats-dumb-dot.then {
-  background: #EFEBE2;
+  background: var(--bg-muted);
   box-shadow: 0 0 0 1px var(--border);
 }
 .stats-dumb-dot.now.up   { background: var(--gm); }
