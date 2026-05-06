@@ -54,6 +54,10 @@ export default function QcmSessionPage() {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [system, setSystem] = useState<System | null>(null)
   const [questions, setQuestions] = useState<AiQuestion[]>([])
+  // Indices d'origine des questions de la session, dans le tableau
+  // ai_questions de la fiche. Permet de reporter les compteurs
+  // attempts/correct sur la bonne entrée après shuffle.
+  const [origIndices, setOrigIndices] = useState<number[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [phase, setPhase] = useState<Phase>('loading')
@@ -108,10 +112,13 @@ export default function QcmSessionPage() {
         return
       }
 
-      // Mélange les questions à chaque ouverture : ordre différent à chaque session.
-      const shuffledQs = shuffleArr(aiQs)
-      setQuestions(shuffledQs)
-      setAnswers(shuffledQs.map(() => ({ selected: null, isCorrect: null })))
+      // Mélange les questions à chaque ouverture (ordre différent par session)
+      // tout en conservant l'index d'origine pour reporter les compteurs.
+      const indexed = aiQs.map((q, i) => ({ q, idx: i }))
+      const shuffledIndexed = shuffleArr(indexed)
+      setQuestions(shuffledIndexed.map(x => x.q))
+      setOrigIndices(shuffledIndexed.map(x => x.idx))
+      setAnswers(shuffledIndexed.map(() => ({ selected: null, isCorrect: null })))
       setStartTime(Date.now())
       setPhase('question')
     }
@@ -142,8 +149,82 @@ export default function QcmSessionPage() {
       setCurrentIdx(currentIdx + 1)
       setPhase('question')
     } else {
+      // Fin de session : on persiste les compteurs (attempts / correct) sur
+      // les questions concernées AVANT d'afficher l'écran de fin, pour que
+      // les stats cumulées soient à jour.
+      void persistSessionResults()
       setPhase('end')
     }
+  }
+
+  // Met à jour attempts/correct sur les questions répondues, sauve en DB,
+  // et met à jour le state local pour que l'écran de fin voie les nouveaux
+  // chiffres immédiatement.
+  async function persistSessionResults() {
+    if (!lesson) return
+    const allQs = Array.isArray(lesson.ai_questions)
+      ? ([...(lesson.ai_questions as AiQuestion[])])
+      : []
+
+    answers.forEach((ans, sessIdx) => {
+      if (ans?.selected === null || ans?.selected === undefined) return
+      const origIdx = origIndices[sessIdx]
+      if (origIdx === undefined || origIdx < 0 || origIdx >= allQs.length) return
+      const cur = allQs[origIdx] as AiQuestion & { attempts?: number; correct?: number }
+      const newAttempts = (cur.attempts || 0) + 1
+      const newCorrect = (cur.correct || 0) + (ans.isCorrect ? 1 : 0)
+      allQs[origIdx] = { ...cur, attempts: newAttempts, correct: newCorrect }
+    })
+
+    // Update local d'abord pour rendu instantané
+    setLesson(prev => (prev ? { ...prev, ai_questions: allQs } : prev))
+
+    // Puis persistance DB (best-effort)
+    try {
+      await supabase
+        .from('lessons')
+        .update({ ai_questions: allQs })
+        .eq('id', lesson.id)
+    } catch (e) {
+      console.error('[qcm] persist results failed:', e)
+    }
+  }
+
+  // Démarre une mini-session ciblée sur les questions où l'élève rate
+  // chroniquement (sur l'ensemble de ses sessions, pas juste la dernière).
+  function restartChronicallyMissed() {
+    if (!lesson) return
+    const allQs = Array.isArray(lesson.ai_questions)
+      ? (lesson.ai_questions as Array<AiQuestion & { attempts?: number; correct?: number }>)
+      : []
+    const ranked = allQs
+      .map((q, i) => ({
+        q,
+        idx: i,
+        attempts: q.attempts || 0,
+        correct: q.correct || 0,
+      }))
+      .filter(x => x.attempts > 0 && x.correct < x.attempts)
+      .sort((a, b) => {
+        const failsA = a.attempts - a.correct
+        const failsB = b.attempts - b.correct
+        if (failsB !== failsA) return failsB - failsA
+        return b.attempts - a.attempts
+      })
+      .slice(0, 3)
+
+    if (ranked.length === 0) {
+      quitToFiches()
+      return
+    }
+    const focusedIndexed = ranked.map(x => ({ q: x.q, idx: x.idx }))
+    const shuffled = shuffleArr(focusedIndexed)
+    setQuestions(shuffled.map(x => x.q))
+    setOrigIndices(shuffled.map(x => x.idx))
+    setAnswers(shuffled.map(() => ({ selected: null, isCorrect: null })))
+    setCurrentIdx(0)
+    setStartTime(Date.now())
+    setPhase('question')
   }
 
   function quitToFiches() {
@@ -208,6 +289,31 @@ export default function QcmSessionPage() {
       score >= 50 ? 'tu progresses, continue.' :
       'c\'est en faisant les fautes qu\'on apprend.'
 
+    // Stats cumulées sur l'ensemble des sessions de cette fiche
+    const allQuestions = Array.isArray(lesson?.ai_questions)
+      ? (lesson!.ai_questions as Array<AiQuestion & { attempts?: number; correct?: number }>)
+      : []
+    const cumAttempts = allQuestions.reduce((sum, q) => sum + (q.attempts || 0), 0)
+    const cumCorrect = allQuestions.reduce((sum, q) => sum + (q.correct || 0), 0)
+    const cumPct = cumAttempts > 0 ? Math.round((cumCorrect / cumAttempts) * 100) : 0
+
+    // Top 3 questions chroniquement ratées
+    const chronicallyFailed = allQuestions
+      .map((q, i) => ({
+        q,
+        idx: i,
+        attempts: q.attempts || 0,
+        correct: q.correct || 0,
+      }))
+      .filter(x => x.attempts > 0 && x.correct < x.attempts)
+      .sort((a, b) => {
+        const failsA = a.attempts - a.correct
+        const failsB = b.attempts - b.correct
+        if (failsB !== failsA) return failsB - failsA
+        return b.attempts - a.attempts
+      })
+      .slice(0, 3)
+
     return (
       <div className="qcm-page">
         <div className="qcm-topbar">
@@ -242,15 +348,96 @@ export default function QcmSessionPage() {
             )}
           </div>
 
+          {/* Stats cumulées sur toutes les sessions de cette fiche */}
+          {cumAttempts > 0 && (
+            <div style={{
+              background: '#FAF8F2',
+              border: '1px solid #E1DDD3',
+              borderRadius: 12,
+              padding: '14px 18px',
+              margin: '20px 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              textAlign: 'left',
+              maxWidth: 540,
+            }}>
+              <div style={{
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontWeight: 500,
+                fontSize: 28,
+                color: cumPct >= 70 ? '#1B4332' : cumPct >= 50 ? '#C47B2B' : '#C75050',
+                lineHeight: 1,
+                minWidth: 60,
+              }}>{cumPct} %</div>
+              <div style={{ flex: 1, fontSize: 12, color: '#6B6F6A', lineHeight: 1.5 }}>
+                de réussite cumulée sur {cumAttempts} réponse{cumAttempts > 1 ? 's' : ''} données pour cette fiche
+              </div>
+            </div>
+          )}
+
+          {/* Liste des questions chroniquement ratées */}
+          {chronicallyFailed.length > 0 && (
+            <div style={{ margin: '20px 0 0', textAlign: 'left', maxWidth: 540 }}>
+              <div style={{
+                fontWeight: 600,
+                fontSize: 11,
+                color: '#6B6F6A',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: 10,
+              }}>Questions que tu rates encore systématiquement</div>
+              {chronicallyFailed.map(({ q, attempts, correct }, i) => {
+                const fails = attempts - correct
+                const isHigh = fails >= 3
+                return (
+                  <div key={i} style={{
+                    background: 'white',
+                    border: '1px solid #E1DDD3',
+                    borderLeft: `3px solid ${isHigh ? '#C75050' : '#E08B3C'}`,
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    marginBottom: 6,
+                    fontSize: 12.5,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}>
+                    <div style={{ flex: 1, color: '#111310', lineHeight: 1.4 }}>
+                      {q.question.length > 90 ? q.question.slice(0, 90) + '…' : q.question}
+                    </div>
+                    <div style={{
+                      color: isHigh ? '#C75050' : '#E08B3C',
+                      fontSize: 11,
+                      fontWeight: 500,
+                      flexShrink: 0,
+                    }}>{fails}× ratée{fails > 1 ? 's' : ''}</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="qcm-end-actions">
             <button className="qcm-end-btn ghost" onClick={quitToFiches}>Retour à la fiche</button>
-            <button
-              className="qcm-end-btn primary"
-              onClick={restartMissed}
-              disabled={wrongCount === 0}
-            >
-              {wrongCount > 0 ? `Refaire les ${wrongCount} ratée${wrongCount > 1 ? 's' : ''} →` : 'Aucune ratée'}
-            </button>
+            {chronicallyFailed.length > 0 ? (
+              <button
+                className="qcm-end-btn primary"
+                onClick={restartChronicallyMissed}
+              >
+                Refaire ces {chronicallyFailed.length} question{chronicallyFailed.length > 1 ? 's' : ''} →
+              </button>
+            ) : wrongCount > 0 ? (
+              <button
+                className="qcm-end-btn primary"
+                onClick={restartMissed}
+              >
+                Refaire les {wrongCount} ratée{wrongCount > 1 ? 's' : ''} →
+              </button>
+            ) : (
+              <button className="qcm-end-btn primary" disabled>Aucune ratée</button>
+            )}
           </div>
         </div>
       </div>
