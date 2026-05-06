@@ -3,22 +3,29 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-:root {
-  --bg: #EDEAE3;
-  --card: #FFFFFF;
-  --soft: #FAF8F2;
-  --dark: #111310;
-  --gray: #6B6F6A;
-  --dim: #9CA09A;
-  --border: #E1DDD3;
-  --green: #1B4332;
-  --gm: #2D6A4F;
-  --gl: #D8EAE0;
-  --amber: #C47B2B;
-  --amber-soft: #F5E5D2;
-  --rose: #C75050;
-  --rose-soft: #F5DADA;
+/* ============================================================================
+   Tokens locaux : aliases vers les tokens globaux du design system.
+   Ne pas redéfinir les hex ici — la source de vérité est dans globals.css.
+   En modifiant le thème (data-theme="dark"), ces aliases se mettent à jour
+   automatiquement parce qu'ils pointent vers les tokens globaux.
+   ============================================================================ */
+.dash-page {
+  --bg: var(--bg-app);
+  --card: var(--bg-card);
+  --soft: var(--bg-soft);
+  --dark: var(--text-primary);
+  --gray: var(--text-secondary);
+  --dim: var(--text-tertiary);
+  --border: var(--border-subtle);
+  --green: var(--accent-primary);
+  --gm: var(--accent-medium);
+  --gl: var(--accent-soft);
+  --amber: var(--warning);
+  --amber-soft: var(--warning-soft);
+  --rose: var(--danger);
+  --rose-soft: var(--danger-soft);
 
+  /* Palette scores (notation J0-J120) — palette dédiée, pas affectée par le thème */
   --s1: #C75050;
   --s2: #E08B3C;
   --s3: #D9B24A;
@@ -26,6 +33,12 @@
   --s5: #1B4332;
   --s1-soft: #F5DADA;
   --s2-soft: #F7E3CE;
+}
+
+/* En mode sombre, on ajuste les tons "soft" des scores pour rester lisibles */
+[data-theme="dark"] .dash-page {
+  --s1-soft: #3D1F1F;
+  --s2-soft: #3D2D1A;
 }
 
 /* =========== PAGE WRAPPER (no scroll) =========== */
@@ -246,12 +259,12 @@
 }
 .today-item.highlight {
   background: var(--rose-soft);
-  border-color: #EFC7C7;
+  border-color: var(--rose);
 }
 .today-item-icon {
   width: 26px; height: 26px;
   border-radius: 50%;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -281,7 +294,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.today-item.highlight .today-item-name { color: #5A2020; font-weight: 600; }
+.today-item.highlight .today-item-name { color: var(--rose); font-weight: 600; }
 .today-item-meta {
   font-size: 10.5px;
   color: var(--gray);
@@ -291,9 +304,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.today-item.highlight .today-item-meta { color: #7A3535; }
+.today-item.highlight .today-item-meta { color: var(--rose); }
 .today-item-meta strong { color: var(--rose); font-weight: 700; }
-.today-item.highlight .today-item-meta strong { color: #5A2020; }
+.today-item.highlight .today-item-meta strong { color: var(--rose); }
 .today-item-arrow { color: var(--dim); font-size: 13px; }
 .today-item.highlight .today-item-arrow { color: var(--rose); }
 
@@ -612,8 +625,8 @@
   margin-top: 14px;
   padding: 9px 12px;
   background: var(--gl);
-  color: var(--green);
-  border: 1px solid #BDD9C7;
+  color: var(--accent-on-soft);
+  border: 1px solid var(--accent-medium);
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
@@ -624,9 +637,9 @@
   align-items: center;
   width: 100%;
   text-align: left;
-  transition: background .12s;
+  transition: filter .12s, background .12s;
 }
-.weak-cta:hover { background: #C7DECD; }
+.weak-cta:hover { filter: brightness(.95); }
 .weak-cta::after { content: '\2192'; font-size: 14px; }
 
 .weak-empty {
@@ -723,7 +736,7 @@
 .reg-heat-cell {
   height: 26px;
   border-radius: 5px;
-  background: #EFEBE2;
+  background: var(--bg-muted);
   border: 1px solid var(--border);
 }
 .reg-heat-cell.done {
@@ -854,7 +867,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(17,19,16,.55);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -914,7 +927,7 @@
 .full-close {
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -1014,7 +1027,7 @@
   gap: 6px;
   padding: 5px 12px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--card);
   color: var(--gray);
   border-radius: 20px;
   font-size: 11px;
@@ -1045,7 +1058,7 @@
 .full-row-num {
   width: 30px; height: 30px;
   border-radius: 50%;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -1070,7 +1083,7 @@
   color: var(--dark);
   line-height: 1.25;
 }
-.full-row.highlight .full-row-name { color: #5A2020; font-weight: 600; }
+.full-row.highlight .full-row-name { color: var(--rose); font-weight: 600; }
 .full-row-meta {
   font-size: 11px;
   color: var(--gray);
@@ -1078,7 +1091,7 @@
   letter-spacing: .02em;
 }
 .full-row-meta strong { color: var(--rose); font-weight: 700; }
-.full-row.highlight .full-row-meta { color: #7A3535; }
+.full-row.highlight .full-row-meta { color: var(--rose); }
 
 .score-chip {
   width: 28px; height: 28px;
@@ -1096,7 +1109,7 @@
 .score-chip.s3 { background: var(--s3); }
 .score-chip.s4 { background: var(--s4); }
 .score-chip.s5 { background: var(--s5); }
-.score-chip.none { background: white; border: 1.5px dashed var(--border); color: var(--dim); font-weight: 500; font-family: 'Fraunces', serif; font-style: italic; font-size: 10px; }
+.score-chip.none { background: var(--card); border: 1.5px dashed var(--border); color: var(--dim); font-weight: 500; font-family: 'Fraunces', serif; font-style: italic; font-size: 10px; }
 
 .full-row-actions {
   display: flex;
@@ -1104,7 +1117,7 @@
 }
 .row-btn {
   padding: 6px 12px;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 7px;
   font-size: 10.5px;
@@ -1117,7 +1130,7 @@
 }
 .row-btn:hover { border-color: var(--gm); color: var(--gm); }
 .row-btn.go { background: var(--green); color: white; border-color: transparent; }
-.row-btn.go:hover { background: #143226; color: white; }
+.row-btn.go:hover { filter: brightness(.92); }
 
 .full-empty {
   padding: 60px 28px;
@@ -1197,7 +1210,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  background: white;
+  background: var(--card);
 }
 .mat-head {
   display: grid;
@@ -1312,7 +1325,7 @@
   align-items: center;
   transition: background .15s;
 }
-.mat-fiche-cta:hover { background: #143226; }
+.mat-fiche-cta:hover { filter: brightness(.92); }
 .mat-note {
   font-size: 11.5px;
   color: var(--gray);
