@@ -261,7 +261,10 @@ export default function ReviewModal({
       if (upErr) throw upErr
 
       // Update lessons.media
-      const newMedia: LessonMedia = { ...existingMedia }
+      const newMedia: LessonMedia & {
+      transcript?: { start: number; end: number; text: string }[]
+      transcript_generated_at?: string
+    } = { ...existingMedia }
       if (kind === 'video') {
         newMedia.video_path = path
         newMedia.video_duration_s = durationS
@@ -346,7 +349,10 @@ export default function ReviewModal({
       // on continue même si le fichier physique a déjà été supprimé manuellement
     }
 
-    const newMedia: LessonMedia = { ...existingMedia }
+    const newMedia: LessonMedia & {
+      transcript?: { start: number; end: number; text: string }[]
+      transcript_generated_at?: string
+    } = { ...existingMedia }
     if (kind === 'video') {
       delete newMedia.video_path
       delete newMedia.video_duration_s
@@ -396,8 +402,20 @@ export default function ReviewModal({
           mode,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erreur génération')
+      // Lecture résiliente : si le serveur a renvoyé une page d'erreur HTML
+      // (Vercel timeout / build error / etc.), on capture le texte brut au
+      // lieu de crasher sur res.json().
+      const rawText = await res.text()
+      let data: { error?: string; count?: number; total?: number; videoSkipReason?: string } = {}
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        const head = rawText.slice(0, 200).replace(/<[^>]+>/g, '').trim()
+        throw new Error(
+          `Réponse non-JSON du serveur (HTTP ${res.status}). Détail : ${head || 'aucun contenu'}`
+        )
+      }
+      if (!res.ok) throw new Error(data.error || `Erreur génération (HTTP ${res.status})`)
 
       // Recharge la lesson pour récupérer les ai_questions à jour
       const { data: updated } = await supabase
@@ -426,7 +444,14 @@ export default function ReviewModal({
   // ============================================================
   //  Données dérivées pour l'UI
   // ============================================================
-  const media = (lesson.media ?? {}) as LessonMedia
+  // Type local étendu : LessonMedia + transcript (pour éviter de dépendre de
+  // types/index.ts qui n'a peut-être pas encore été mis à jour). Le runtime
+  // fonctionne même si LessonMedia n'a pas le champ transcript.
+  type LessonMediaExt = LessonMedia & {
+    transcript?: { start: number; end: number; text: string }[]
+    transcript_generated_at?: string
+  }
+  const media = (lesson.media ?? {}) as LessonMediaExt
   const hasVideo = !!media.video_path
   const hasPdf = !!media.pdf_path
   const hasAnySource = hasVideo || hasPdf
