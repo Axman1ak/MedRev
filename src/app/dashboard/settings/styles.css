@@ -226,3 +226,112 @@
 .set-btn.ghost-rose:not(:disabled):hover {
   background: rgba(199, 80, 80, .06);
 }
+
+/* ---- APPARENCE / THEME PICKER ---- */
+.set-theme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.set-theme-card {
+  background: var(--card, #FFFFFF);
+  border: 1.5px solid var(--border, #E1DDD3);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color .15s, box-shadow .15s, transform .12s;
+}
+.set-theme-card:hover {
+  border-color: var(--gm, #2D6A4F);
+}
+.set-theme-card.on {
+  border-color: var(--accent-medium, #2D6A4F);
+  box-shadow: 0 0 0 3px var(--accent-soft, #DDECE3);
+}
+.set-theme-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft, #DDECE3);
+}
+
+.set-theme-preview {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 80px;
+  border: 1px solid var(--border, #E1DDD3);
+}
+.set-theme-preview.light {
+  --pv-bg: #FAFAF7;
+  --pv-card: #FFFFFF;
+  --pv-border: #E8E6E0;
+  --pv-text: #1A1A1A;
+  --pv-text-soft: #9A9A98;
+  --pv-accent: #2D6A4F;
+}
+.set-theme-preview.dark {
+  --pv-bg: #0F141A;
+  --pv-card: #1A2230;
+  --pv-border: #2A3445;
+  --pv-text: #E8EAED;
+  --pv-text-soft: #6B7380;
+  --pv-accent: #34D399;
+}
+.set-theme-preview .ttp-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--pv-bg);
+}
+.set-theme-preview .ttp-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 14px;
+  bottom: 14px;
+  background: var(--pv-card);
+  border: 1px solid var(--pv-border);
+  border-radius: 5px;
+}
+.set-theme-preview .ttp-line {
+  position: absolute;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pv-text);
+}
+.set-theme-preview .ttp-line.a {
+  left: 22px;
+  right: 22px;
+  top: 26px;
+  height: 5px;
+  background: var(--pv-accent);
+  width: 26px;
+}
+.set-theme-preview .ttp-line.b {
+  left: 22px;
+  right: 22px;
+  top: 38px;
+  background: var(--pv-text-soft);
+}
+
+.set-theme-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.set-theme-meta strong {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--dark, #111310);
+}
+.set-theme-meta span {
+  font-size: 12px;
+  color: var(--gray, #6B6F6A);
+  font-style: italic;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
