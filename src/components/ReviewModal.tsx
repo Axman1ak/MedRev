@@ -151,6 +151,10 @@ export default function ReviewModal({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
+  // Transcript state (auto-déclenché après upload vidéo, regen possible)
+  const [transcribing, setTranscribing] = useState(false)
+  const [transcribeError, setTranscribeError] = useState<string | null>(null)
+
   // QCM generation state
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
@@ -282,12 +286,50 @@ export default function ReviewModal({
         setLesson(updated as Lesson)
         if (onUpdated) onUpdated(updated as Lesson)
       }
+
+      // Auto-déclenche la transcription après upload vidéo (fire-and-forget,
+      // le composant ne bloque pas dessus). Économise ~95% sur les coûts QCM.
+      if (kind === 'video') {
+        void transcribeVideo()
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erreur inconnue'
       setUploadError(`Échec de l'upload : ${msg}`)
     } finally {
       if (kind === 'video') setUploadingVideo(false)
       else setUploadingPdf(false)
+    }
+  }
+
+  // ---- Transcript : extraction Gemini en background ----
+  async function transcribeVideo() {
+    setTranscribing(true)
+    setTranscribeError(null)
+    try {
+      const res = await fetch('/api/transcribe-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: lesson.id }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(json?.error || `HTTP ${res.status}`)
+      }
+      // Re-fetch la fiche pour récupérer le transcript inscrit en DB
+      const { data: refreshed } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('id', lesson.id)
+        .single()
+      if (refreshed) {
+        setLesson(refreshed as Lesson)
+        if (onUpdated) onUpdated(refreshed as Lesson)
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue'
+      setTranscribeError(msg)
+    } finally {
+      setTranscribing(false)
     }
   }
 
@@ -310,6 +352,9 @@ export default function ReviewModal({
       delete newMedia.video_duration_s
       delete newMedia.video_size
       delete newMedia.video_uploaded_at
+      // Le transcript est lié à la vidéo : on l'invalide aussi
+      delete newMedia.transcript
+      delete newMedia.transcript_generated_at
     } else {
       delete newMedia.pdf_path
       delete newMedia.pdf_pages
@@ -507,6 +552,70 @@ export default function ReviewModal({
                 <span className="rmod-src-plus">+</span>
                 <span>{uploadingVideo ? 'Upload de la vidéo…' : 'Ajouter la vidéo du cours'}</span>
               </button>
+            )}
+
+            {/* Transcript : statut + bouton regen, affiché seulement si vidéo présente */}
+            {hasVideo && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '4px 10px',
+                fontSize: 12,
+                color: 'var(--gray)',
+                fontFamily: "'Cormorant Garamond', serif",
+                fontStyle: 'italic',
+                marginTop: -4,
+                marginBottom: 4,
+              }}>
+                {transcribing ? (
+                  <>
+                    <span style={{ color: '#C47B2B' }}>{'…'}</span>
+                    Transcription en cours (1-2 min pour 1h de vidéo)
+                  </>
+                ) : transcribeError ? (
+                  <>
+                    <span style={{ color: '#C75050' }}>Erreur transcript : {transcribeError}.</span>
+                    <button
+                      type="button"
+                      onClick={() => void transcribeVideo()}
+                      style={{
+                        background: 'none', border: 'none', color: '#2D6A4F',
+                        cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
+                        padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
+                      }}
+                    >Réessayer</button>
+                  </>
+                ) : media.transcript && media.transcript.length > 0 ? (
+                  <>
+                    <span style={{ color: '#2D6A4F' }}>{'✓'}</span>
+                    Transcript prêt · {media.transcript.length} segments
+                    <button
+                      type="button"
+                      onClick={() => void transcribeVideo()}
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--gray)',
+                        cursor: 'pointer', fontSize: 11, textDecoration: 'underline',
+                        padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
+                        marginLeft: 'auto',
+                      }}
+                    >Regénérer</button>
+                  </>
+                ) : (
+                  <>
+                    <span>Pas de transcript</span>
+                    <button
+                      type="button"
+                      onClick={() => void transcribeVideo()}
+                      style={{
+                        background: 'none', border: 'none', color: '#2D6A4F',
+                        cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
+                        padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
+                      }}
+                    >Générer maintenant</button>
+                  </>
+                )}
+              </div>
             )}
 
             {/* PDF */}
