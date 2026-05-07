@@ -891,6 +891,7 @@ function FocusPageBody() {
             <BibliothecaSvg
               fichesCount={dayGarden.fichesCount}
               className="focus-garden-svg"
+              preserveAspectRatio="xMidYMid slice"
             />
           </div>
 
@@ -1044,6 +1045,7 @@ function FocusPageBody() {
           <BibliothecaSvg
             fichesCount={dayGarden.fichesCount}
             className="focus-garden-svg"
+            preserveAspectRatio="xMidYMid slice"
           />
         </div>
 
