@@ -686,7 +686,14 @@ export default function BibliothecaSvg({
   fichesCount,
   className,
   style,
-  viewBox = '0 0 1600 1100',
+  // viewBox élargi à 2000×1100 (ratio 1.82) au lieu de 1600×1100 (1.45) :
+  // le meuble reste centré entre x=130 et x=1470, mais on ajoute 200 unités
+  // de "wall" transparent à gauche (de -200 à 0) et à droite (de 1600 à 1800).
+  // Sur un écran 16:9 (1.78) ou ultra-wide (1.92), le SVG colle au container
+  // sans gros letterbox / sans crop massif top-bottom comme avant. Les zones
+  // transparentes laissent passer le fond du focus-stage qui matche déjà la
+  // palette du mur (parchemin → parquet en érudit, anthracite en archive).
+  viewBox = '-200 0 2000 1100',
   preserveAspectRatio = 'xMidYMid meet',
   theme: themeProp,
 }: BibliothecaSvgProps) {
@@ -908,10 +915,10 @@ export default function BibliothecaSvg({
       {theme === 'erudit' ? (
         <>
           {/* === ARRIÈRE-PLAN (mur clair derrière le meuble) === */}
-          <rect width="1600" height="1100" fill="url(#bib-wallGrad-erudit)" />
+          <rect x="-200" y="0" width="2000" height="1100" fill="url(#bib-wallGrad-erudit)" />
 
           {/* === SOL (parquet en perspective légère) === */}
-          <rect x="0" y="945" width="1600" height="155" fill="url(#bib-floorGrad-erudit)" />
+          <rect x="-200" y="945" width="2000" height="155" fill="url(#bib-floorGrad-erudit)" />
           <g stroke="#5C3A21" strokeWidth="0.8" opacity="0.6">
             <line x1="160" y1="945" x2="120" y2="1100" />
             <line x1="380" y1="945" x2="350" y2="1100" />
@@ -1009,10 +1016,10 @@ export default function BibliothecaSvg({
       ) : (
         <>
           {/* === ARRIÈRE-PLAN (mur très sombre) === */}
-          <rect width="1600" height="1100" fill="url(#bib-wallGrad-archive)" />
+          <rect x="-200" y="0" width="2000" height="1100" fill="url(#bib-wallGrad-archive)" />
 
           {/* === SOL (dalles polies sombres) === */}
-          <rect x="0" y="945" width="1600" height="155" fill="url(#bib-floorGrad-archive)" />
+          <rect x="-200" y="945" width="2000" height="155" fill="url(#bib-floorGrad-archive)" />
           <g stroke="#1A1E24" strokeWidth="0.8" opacity="0.85">
             <line x1="160" y1="945" x2="120" y2="1100" />
             <line x1="380" y1="945" x2="350" y2="1100" />
