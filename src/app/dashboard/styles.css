@@ -828,11 +828,11 @@
 }
 .load-col-bar {
   width: 100%;
-  background: linear-gradient(180deg, #BEDDC3, var(--gm));
+  background: linear-gradient(180deg, var(--gl), var(--gm));
   border-radius: 6px 6px 0 0;
   transition: height .3s;
 }
-.load-col-bar.peak { background: linear-gradient(180deg, #F0C880, var(--amber)); }
+.load-col-bar.peak { background: linear-gradient(180deg, var(--amber-soft), var(--amber)); }
 .load-col-count {
   font-family: 'Fraunces', serif;
   font-size: 16px;
