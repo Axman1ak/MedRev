@@ -1133,15 +1133,29 @@
    (théme jardin/ciel) sont surchargées par celles-ci.
 */
 
-/* --- Background plein écran : noyer profond --- */
+/* --- Background plein écran : aligné sur la structure du BibliothecaSvg
+       en mode archive (mur anthracite → dalles polies sombres). --- */
 .focus-root {
-  background: #0E0805;
+  background: linear-gradient(
+    180deg,
+    #0A0E14 0%,
+    #06080B 55%,
+    #03050A 86%,
+    #050708 100%
+  );
   color: #E8DDC5;
 }
 
-/* --- Stage : fallback gradient walnut au lieu du ciel --- */
+/* --- Stage : fond aligné sur la structure verticale du BibliothecaSvg
+       (mode archive en dark, sinon mode érudit via override plus bas) --- */
 .focus-stage {
-  background: linear-gradient(180deg, #1A0F08 0%, #0E0805 60%, #050302 100%);
+  background: linear-gradient(
+    180deg,
+    #0A0E14 0%,
+    #06080B 55%,
+    #03050A 86%,
+    #050708 100%
+  );
 }
 
 /* --- Topbar progress chip : verre parchemin sur fond sombre --- */
@@ -1556,12 +1570,35 @@
 */
 
 :not([data-theme="dark"]) .focus-root {
-  background: #B89366;
+  /* Même gradient que .focus-stage : mur parchemin → parquet noyer.
+     Comme ça la zone topbar (où .focus-root est visible derrière) et
+     les bandes left/right dues au letterbox du SVG sont raccord. */
+  background: linear-gradient(
+    180deg,
+    #FAFAF7 0%,
+    #F0EAD8 55%,
+    #E5DCC2 86%,
+    #A48159 86%,
+    #5C3A21 100%
+  );
   color: #2A1810;
 }
 
+/* Le fond du stage matche la structure verticale du BibliothecaSvg (mode érudit) :
+   - mur parchemin/cream du haut jusqu'à ~80% de la hauteur
+   - parquet noyer sur les 14% restants
+   Comme ça les bandes left/right qui apparaissent quand le SVG fait un letterbox
+   (preserveAspectRatio meet sur écran large) ressemblent à un prolongement
+   du mur et du parquet, pas à des "bords" qui cassent l'immersion. */
 :not([data-theme="dark"]) .focus-stage {
-  background: linear-gradient(180deg, #D4B58A 0%, #B89366 50%, #8C6839 100%);
+  background: linear-gradient(
+    180deg,
+    #FAFAF7 0%,
+    #F0EAD8 55%,
+    #E5DCC2 86%,
+    #A48159 86%,
+    #5C3A21 100%
+  );
 }
 
 /* TOPBAR — chip parchemin sur fond noyer clair */
