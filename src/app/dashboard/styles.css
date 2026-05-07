@@ -1,7 +1,7 @@
 @charset "UTF-8";
 /* src/app/dashboard/styles.css */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ============================================================================
    Tokens locaux : aliases vers les tokens globaux du design system.
@@ -331,7 +331,7 @@
   min-width: 0;
 }
 .dash-bib-thumb {
-  aspect-ratio: 1600 / 1100;
+  aspect-ratio: 2000 / 1100;
   width: 100%;
   background: #FAFAF7;
   border-radius: 8px;
@@ -1388,46 +1388,78 @@
     inset 0 1px 0 rgba(120, 200, 220, 0.06);
 }
 
+/* En archive (dark), on remplace les fonts érudites (Fraunces/Cormorant/Cinzel)
+   par du mono technique (JetBrains Mono) + sans clean (Plus Jakarta Sans) pour
+   coller à l'ambiance "musée du futur / terminal data". Les couleurs passent au
+   cyan LED + texte blanc cassé. */
 [data-theme="dark"] .dash-bib-stats {
-  color: #F0DDB8;
+  color: #E8F4F8;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+[data-theme="dark"] .dash-bib-stats-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 [data-theme="dark"] .dash-bib-stats-tot {
-  color: #A88058;
+  color: rgba(232, 244, 248, 0.45);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 [data-theme="dark"] .dash-bib-stats-lbl {
-  color: #A88058;
+  color: rgba(120, 200, 220, 0.7);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 2px;
 }
 
 [data-theme="dark"] .dash-bib-tres {
-  color: #C8A878;
+  color: rgba(232, 244, 248, 0.85);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 [data-theme="dark"] .dash-bib-tres-dot {
-  background: rgba(216, 168, 72, 0.20);
-  border: 1px solid rgba(216, 168, 72, 0.30);
+  background: rgba(120, 200, 220, 0.10);
+  border: 1px solid rgba(120, 200, 220, 0.30);
+  border-radius: 2px;
 }
 [data-theme="dark"] .dash-bib-tres-dot.on {
-  background: #D8A848;
-  border-color: #D8A848;
-  box-shadow: 0 0 6px rgba(216, 168, 72, 0.55);
+  background: #5BE3F0;
+  border-color: #5BE3F0;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(91, 227, 240, 0.65);
 }
 
 [data-theme="dark"] .dash-bib-cta {
-  background: #F0DDB8;
-  color: #3D2516;
+  background: rgba(120, 200, 220, 0.10);
+  color: #5BE3F0;
+  border: 1px solid rgba(120, 200, 220, 0.40);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  letter-spacing: 1.8px;
   box-shadow: none;
 }
 [data-theme="dark"] .dash-bib-cta:hover {
-  background: #FFE598;
+  background: rgba(120, 200, 220, 0.18);
+  border-color: rgba(120, 200, 220, 0.65);
+  color: #8BEEF8;
 }
 [data-theme="dark"] .dash-bib-cta.disabled {
-  background: rgba(232, 200, 152, 0.4);
-  color: #5C4A35;
+  background: rgba(120, 200, 220, 0.04);
+  border-color: rgba(120, 200, 220, 0.15);
+  color: rgba(120, 200, 220, 0.4);
 }
 
 [data-theme="dark"] .dash-bib-link {
-  color: #A88058;
+  color: rgba(120, 200, 220, 0.7);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-style: normal;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
   font-weight: 400;
 }
 [data-theme="dark"] .dash-bib-link:hover {
-  color: #D8A848;
+  color: #5BE3F0;
 }
