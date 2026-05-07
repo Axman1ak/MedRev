@@ -131,6 +131,8 @@ function formatTime(s: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
+const PALETTE = ['#7AA56B', '#60A5FA', '#F59E0B', '#A78BFA', '#F472B6', '#2D6A4F', '#9CA3AF']
+
 export default function SimulateurPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -190,6 +192,26 @@ export default function SimulateurPage() {
     [systems, semester]
   )
 
+  // Map ID matière → couleur effective. Si toutes les matières ont la même
+  // couleur en base (signe que le picker n'a jamais été utilisé consciemment),
+  // on bascule sur PALETTE[idx] pour avoir des couleurs distinctes.
+  const colorOfSystem = useMemo(() => {
+    const map = new Map<string, string>()
+    const distinctColors = new Set(
+      systems.map(s => (s as unknown as { color?: string }).color).filter(Boolean)
+    )
+    const allSameColor = distinctColors.size <= 1 && systems.length > 1
+
+    systems.forEach((s, idx) => {
+      const baseColor = (s as unknown as { color?: string }).color
+      const c = allSameColor
+        ? PALETTE[idx % PALETTE.length]
+        : (baseColor || PALETTE[idx % PALETTE.length])
+      map.set(s.id, c)
+    })
+    return map
+  }, [systems])
+
   useEffect(() => {
     setSelectedSysIds(new Set(semSystems.map(s => s.id)))
   }, [semSystems])
@@ -223,17 +245,9 @@ export default function SimulateurPage() {
 
   const totalAvailable = availableQuestions.length
 
-  // ============================================================
-  // TIMER — un SEUL effet, géré par décrément. timeLeft est initialisé
-  // dans launchSession() avant le passage en phase 'session', donc pas
-  // de race condition.
-  // ============================================================
   useEffect(() => {
     if (phase !== 'session' || duration === null) return
     if (timeLeft <= 0) {
-      // 0 atteint après décrément depuis valeur positive : timer expiré.
-      // Si on vient de switcher en phase session sans avoir initialisé
-      // (ne devrait pas arriver, mais filet de sécurité), on ne fait rien.
       if (sessionQuestions.length > 0) endSession()
       return
     }
@@ -269,8 +283,6 @@ export default function SimulateurPage() {
     setAnswers(new Array(qs.length).fill(null))
     setRevealed(new Array(qs.length).fill(false))
     setSelfRatings(new Array(qs.length).fill(''))
-    // Init timeLeft AVANT setPhase pour éviter la race condition
-    // entre l'effet timer et l'effet d'init du timeLeft (bug fixe 2026-05).
     if (duration !== null) {
       setTimeLeft(duration * 60)
     } else {
@@ -399,10 +411,10 @@ export default function SimulateurPage() {
               <div className="sim-mat-grid">
                 {semSystems.length === 0 ? (
                   <div className="sim-mat-empty">Aucune matière pour {semester === 'year' ? 'l\'année' : `le semestre ${semester}`}.</div>
-                ) : semSystems.map((sys, i) => {
+                ) : semSystems.map((sys) => {
                   const isSel = selectedSysIds.has(sys.id)
                   const qCount = countQuestionsForSystem(sys.id)
-                  const sysColor = (sys as unknown as { color?: string }).color || PALETTE[i % PALETTE.length]
+                  const sysColor = colorOfSystem.get(sys.id) ?? PALETTE[0]
                   const avg = avgForSystem(sys.id)
                   const scoreCls = scoreClass(avg)
                   const fillPct = avg !== null ? (avg / 5) * 100 : 0
@@ -636,8 +648,6 @@ export default function SimulateurPage() {
             </div>
             <div className="sim-ses-q-text">{q.question}</div>
 
-            {/* Bug 3 fix : options NON cliquables. Réponse via la grille à droite uniquement.
-                On garde l'affichage (lettre + texte + état) mais sans onClick et toujours disabled. */}
             <div className="sim-ses-q-options">
               {q.options.map((opt, i) => {
                 const isSelected = selectedAnswer === i
@@ -824,7 +834,6 @@ export default function SimulateurPage() {
 
 // ============================================================
 // SHEET GRID — bug 4 fix : header A B C D E par colonne
-// pour qu'ils soient alignés avec leurs bulles respectives.
 // ============================================================
 function SheetGrid({
   questions,
@@ -884,7 +893,6 @@ function SheetGrid({
     )
   }
 
-  // Header réutilisable (utilisé en haut de chaque colonne)
   const headerJsx = (
     <div
       className="sim-ses-sheet-headers"
@@ -914,5 +922,3 @@ function SheetGrid({
     </div>
   )
 }
-
-const PALETTE = ['#7AA56B', '#60A5FA', '#F59E0B', '#A78BFA', '#F472B6', '#2D6A4F', '#9CA3AF']
