@@ -47,7 +47,7 @@
 
 /* ---- CARDS ---- */
 .set-card {
-  background: #FFFFFF;
+  background: var(--card, #FFFFFF);
   border: 1px solid var(--border, #E1DDD3);
   border-radius: 14px;
   padding: 22px 24px;
@@ -104,7 +104,7 @@
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   color: var(--dark, #111310);
-  background: #FFFFFF;
+  background: var(--card, #FFFFFF);
   outline: none;
   transition: border-color .12s;
 }
@@ -280,7 +280,7 @@
   --pv-border: #2A3445;
   --pv-text: #E8EAED;
   --pv-text-soft: #6B7380;
-  --pv-accent: #34D399;
+  --pv-accent: #5DD39E;
 }
 .set-theme-preview .ttp-bg {
   position: absolute;
