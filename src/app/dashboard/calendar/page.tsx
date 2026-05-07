@@ -17,6 +17,12 @@ const MONTH_FULL_FR = [
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ]
 
+// Palette par défaut pour les matières si aucune couleur n'est définie en base
+const SUBJ_COLORS = [
+  '#C75050', '#5B8ED4', '#8D6BB0', '#A06840',
+  '#C47B2B', '#3A8F8A', '#7AA56B', '#D9B24A',
+]
+
 // ============= Types =============
 type Score = 1 | 2 | 3 | 4 | 5
 type ScoreCls = 's1' | 's2' | 's3' | 's4' | 's5' | 'none'
@@ -172,7 +178,6 @@ export default function CalendarPage() {
   }, [])
 
   // ============= Derived =============
-  // En mode 'year' : tous les systèmes ; sinon filtre par semestre
   const semSystems = useMemo(
     () => semester === 'year' ? systems : systems.filter(s => s.semestre === semester),
     [systems, semester]
@@ -183,6 +188,26 @@ export default function CalendarPage() {
   const systemsById = useMemo(() => {
     const map = new Map<string, System>()
     systems.forEach(s => map.set(s.id, s))
+    return map
+  }, [systems])
+
+  // Map ID matière → couleur effective. Si toutes les matières ont la même
+  // couleur en base (signe que le picker n'a jamais été utilisé consciemment),
+  // on bascule sur SUBJ_COLORS[idx] pour avoir des couleurs distinctes.
+  const colorOfSystem = useMemo(() => {
+    const map = new Map<string, string>()
+    const distinctColors = new Set(
+      systems.map(s => (s as unknown as { color?: string }).color).filter(Boolean)
+    )
+    const allSameColor = distinctColors.size <= 1 && systems.length > 1
+
+    systems.forEach((s, idx) => {
+      const baseColor = (s as unknown as { color?: string }).color
+      const c = allSameColor
+        ? SUBJ_COLORS[idx % SUBJ_COLORS.length]
+        : (baseColor || SUBJ_COLORS[idx % SUBJ_COLORS.length])
+      map.set(s.id, c)
+    })
     return map
   }, [systems])
 
@@ -251,21 +276,15 @@ export default function CalendarPage() {
 
   // ============= Handlers =============
   function openReview(occ: FicheOccurrence) {
-    // Ouvre le modal directement en notation si le J est passé/aujourd'hui,
-    // sinon ouvre le picker (J futur verrouillé)
     const isFuture = occ.date > today
     setReviewing({
       lesson: occ.lesson,
-      stepIdx: isFuture ? -1 : occ.stepIndex, // -1 signifie "picker"
+      stepIdx: isFuture ? -1 : occ.stepIndex,
     })
-    // On ferme le modal overflow si ouvert
     setShowAllForDay(null)
   }
 
   function handleUpdated(updatedLesson: Lesson) {
-    // Met à jour la liste principale. On ne touche PAS à reviewing.lesson :
-    // le modal gère son propre état interne et on éviterait sinon un cycle
-    // qui fait disparaître le toast "note enregistrée" juste après notation.
     setLessons(prev => prev.map(l => l.id === updatedLesson.id ? updatedLesson : l))
   }
 
@@ -285,7 +304,6 @@ export default function CalendarPage() {
   }
 
   function clickMonthDay(d: Date) {
-    // Passe en vue semaine sur cette date
     const thisMonday = getMondayOfWeek(new Date())
     const targetMonday = getMondayOfWeek(d)
     const diffDays = Math.round((targetMonday.getTime() - thisMonday.getTime()) / 86400000)
@@ -329,9 +347,9 @@ export default function CalendarPage() {
             >Mois</button>
           </div>
           <div className="cal-nav">
-            <button onClick={prev} aria-label="Précédent">{'\u2039'}</button>
+            <button onClick={prev} aria-label="Précédent">{'‹'}</button>
             <button className="cal-today-btn" onClick={goToday}>Aujourd&apos;hui</button>
-            <button onClick={next} aria-label="Suivant">{'\u203A'}</button>
+            <button onClick={next} aria-label="Suivant">{'›'}</button>
           </div>
         </div>
       </div>
@@ -352,8 +370,6 @@ export default function CalendarPage() {
             const occs = byDate.get(dateStr) ?? []
             const isToday = dateStr === today
             const isPast = dateStr < today
-            // Groupement par matière, dans l'ordre d'apparition (tri parent conservé).
-            // Plafond total de 8 fiches visibles sur le jour, réparties sur les groupes.
             const MAX_PER_DAY = 10
             const groupsMap = new Map<string, FicheOccurrence[]>()
             occs.forEach(o => {
@@ -369,7 +385,7 @@ export default function CalendarPage() {
               const take = groupOccs.slice(0, remaining)
               visibleCount += take.length
               const sys = systemsById.get(sysId)
-              const sysColor = (sys as { color?: string } | undefined)?.color ?? ''
+              const sysColor = colorOfSystem.get(sysId) ?? ''
               visibleGroups.push({
                 systemId: sysId,
                 systemName: sys?.name ?? 'Matière',
@@ -400,7 +416,7 @@ export default function CalendarPage() {
                 </div>
 
                 {occs.length === 0 ? (
-                  <div className="cal-day-empty">{'\u2014'}</div>
+                  <div className="cal-day-empty">{'—'}</div>
                 ) : (
                   <>
                     <div className="cal-day-list">
@@ -469,7 +485,6 @@ export default function CalendarPage() {
               const occs = byDate.get(dateStr) ?? []
               const isToday = dateStr === today
               const isPast = dateStr < today
-              // Jusqu'à 5 dots par jour (résumé visuel)
               const dotOccs = occs.slice(0, 8)
               const classes = [
                 'cal-month-cell',
@@ -546,7 +561,7 @@ export default function CalendarPage() {
                   className="cal-overflow-close"
                   onClick={() => setShowAllForDay(null)}
                   aria-label="Fermer"
-                >{'\u00D7'}</button>
+                >{'×'}</button>
               </div>
               <div className="cal-overflow-list">
                 {(() => {
@@ -559,7 +574,7 @@ export default function CalendarPage() {
                   const groups: { systemId: string; systemName: string; systemColor: string; occs: FicheOccurrence[] }[] = []
                   groupsMap.forEach((groupOccs, sysId) => {
                     const sys = systemsById.get(sysId)
-                    const sysColor = (sys as { color?: string } | undefined)?.color ?? ''
+                    const sysColor = colorOfSystem.get(sysId) ?? ''
                     groups.push({
                       systemId: sysId,
                       systemName: sys?.name ?? 'Matière',
