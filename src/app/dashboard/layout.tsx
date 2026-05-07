@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import OnboardingTour from '@/components/OnboardingTour'
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
@@ -20,6 +21,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [profile, setProfile] = useState<Profile | null>(null)
   const [todayCount, setTodayCount] = useState(0)
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
+
+  // Onboarding state — overlay tour piloté depuis Settings (event 'medrev-onboarding-replay')
+  // ou auto-déclenché au 1er login (onboarded_at null).
+  const [tourOpen, setTourOpen] = useState(false)
+  const [replayKey, setReplayKey] = useState(0)
+  const [isReplay, setIsReplay] = useState(false)
+  const [existingLessonCount, setExistingLessonCount] = useState(0)
 
   // Load persisted semester on mount
   useEffect(() => {
@@ -40,20 +48,75 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
-      supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => {
-          if (data) {
-            const displayName =
-              user.user_metadata?.username ||
-              user.user_metadata?.name ||
-              data.name ||
-              user.email?.split('@')[0] ||
-              '...'
-            setProfile({ ...data, name: displayName })
+      // Charge en parallèle profile + count des lessons (toujours, pour que
+      // le tour ait la bonne valeur même au replay).
+      Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('lessons').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      ]).then(([profileRes, lessonsRes]) => {
+        const data = profileRes.data
+        setExistingLessonCount(lessonsRes.count || 0)
+        if (data) {
+          const displayName =
+            user.user_metadata?.username ||
+            user.user_metadata?.name ||
+            data.name ||
+            user.email?.split('@')[0] ||
+            '...'
+          setProfile({ ...data, name: displayName })
+
+          // Auto-open du tour : 1er login (onboarded_at null) OU étape déjà
+          // commencée (refresh en plein milieu du tour).
+          const lsStep = typeof window !== 'undefined'
+            ? localStorage.getItem('medrev-onboarding-step')
+            : null
+          if (!data.onboarded_at || lsStep) {
+            setTourOpen(true)
           }
-        })
+        }
+      })
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Listener pour le replay déclenché depuis Settings → "Revoir le tutoriel".
+  // L'event 'medrev-onboarding-replay' est dispatché par settings/page.tsx.
+  useEffect(() => {
+    async function handleReplay() {
+      // Refresh le count des lessons : si l'user a créé des fiches depuis
+      // le 1er login, le tour ne doit pas re-forcer la création.
+      if (profile) {
+        const { count } = await supabase
+          .from('lessons')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', profile.id)
+        setExistingLessonCount(count || 0)
+      }
+      setReplayKey(k => k + 1)
+      setIsReplay(true)
+      setTourOpen(true)
+    }
+    window.addEventListener('medrev-onboarding-replay', handleReplay)
+    return () => window.removeEventListener('medrev-onboarding-replay', handleReplay)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile])
+
+  // Onboarding callbacks : marquer onboarded_at en DB et fermer l'overlay.
+  async function markOnboarded() {
+    if (!profile) return
+    await supabase.from('profiles')
+      .update({ onboarded_at: new Date().toISOString() })
+      .eq('id', profile.id)
+    setProfile({ ...profile, onboarded_at: new Date().toISOString() } as Profile)
+  }
+  async function handleTourComplete() {
+    await markOnboarded()
+    setTourOpen(false)
+  }
+  async function handleTourSkip() {
+    await markOnboarded()
+    setTourOpen(false)
+  }
 
   useEffect(() => {
     if (!profile) return
@@ -339,9 +402,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="db-main">
+      <main className="db-main" data-tour="page-main">
         {children}
       </main>
+
+      {/* ONBOARDING TOUR — overlay full-screen piloté par Settings ou 1er login */}
+      {tourOpen && profile && (
+        <OnboardingTour
+          key={replayKey}
+          userId={profile.id}
+          userName={profile.name || ''}
+          isReplay={isReplay}
+          existingLessonCount={existingLessonCount}
+          onComplete={handleTourComplete}
+          onSkip={handleTourSkip}
+        />
+      )}
     </div>
   )
 }
