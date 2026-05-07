@@ -25,13 +25,9 @@
   --rose: var(--danger);
   --rose-soft: var(--danger-soft);
 
-  /* Alerte douce — rouge moins criard que --rose, utilisé pour signaler
-     une fiche en retard (urgence sans agressivité). À ne pas confondre
-     avec --rose qui reste réservé aux vraies erreurs. */
-  --alert: #BE6E6E;
-  --alert-soft: #F5DEDE;
-
-  /* Palette scores (notation J0-J120) — palette dédiée, pas affectée par le thème */
+  /* Palette scores (notation J0-J120) — palette dédiée, pas affectée par le thème.
+     --s1 sert aussi de couleur "à revoir / en retard" partout dans l'app
+     (badge dans Mes matières, card highlight Aujourd'hui, etc.). */
   --s1: #C75050;
   --s2: #E08B3C;
   --s3: #D9B24A;
@@ -45,8 +41,6 @@
 [data-theme="dark"] .dash-page {
   --s1-soft: #3D1F1F;
   --s2-soft: #3D2D1A;
-  --alert: #C57878;
-  --alert-soft: #3A1F1F;
 }
 
 /* =========== PAGE WRAPPER (no scroll) =========== */
@@ -266,8 +260,8 @@
   flex: 0 0 auto;
 }
 .today-item.highlight {
-  background: var(--alert-soft);
-  border-color: var(--alert);
+  background: var(--s1-soft);
+  border-color: var(--s1);
 }
 .today-item-icon {
   width: 26px; height: 26px;
@@ -284,8 +278,8 @@
   flex-shrink: 0;
 }
 .today-item.highlight .today-item-icon {
-  background: var(--alert);
-  border-color: var(--alert);
+  background: var(--s1);
+  border-color: var(--s1);
   color: white;
   font-weight: 700;
   font-family: 'Plus Jakarta Sans', sans-serif;
@@ -302,7 +296,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.today-item.highlight .today-item-name { color: var(--alert); font-weight: 600; }
+.today-item.highlight .today-item-name { color: var(--s1); font-weight: 600; }
 .today-item-meta {
   font-size: 10.5px;
   color: var(--gray);
@@ -312,11 +306,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.today-item.highlight .today-item-meta { color: var(--alert); }
-.today-item-meta strong { color: var(--alert); font-weight: 700; }
-.today-item.highlight .today-item-meta strong { color: var(--alert); }
+.today-item.highlight .today-item-meta { color: var(--s1); }
+.today-item-meta strong { color: var(--s1); font-weight: 700; }
+.today-item.highlight .today-item-meta strong { color: var(--s1); }
 .today-item-arrow { color: var(--dim); font-size: 13px; }
-.today-item.highlight .today-item-arrow { color: var(--alert); }
+.today-item.highlight .today-item-arrow { color: var(--s1); }
 
 /* =========== ZONE 1 BIS : MINI BIBLIOTHÈQUE (colonne droite du today panel) ===========
    La bibliothèque se loge dans la 2e colonne (320px) du .today grid. Aspect ratio
@@ -1060,8 +1054,8 @@
   margin-bottom: 6px;
 }
 .full-row.highlight {
-  background: var(--alert-soft);
-  border-color: var(--alert);
+  background: var(--s1-soft);
+  border-color: var(--s1);
 }
 .full-row-num {
   width: 30px; height: 30px;
@@ -1077,8 +1071,8 @@
   font-weight: 500;
 }
 .full-row.highlight .full-row-num {
-  background: var(--alert);
-  border-color: var(--alert);
+  background: var(--s1);
+  border-color: var(--s1);
   color: white;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
@@ -1091,15 +1085,15 @@
   color: var(--dark);
   line-height: 1.25;
 }
-.full-row.highlight .full-row-name { color: var(--alert); font-weight: 600; }
+.full-row.highlight .full-row-name { color: var(--s1); font-weight: 600; }
 .full-row-meta {
   font-size: 11px;
   color: var(--gray);
   margin-top: 3px;
   letter-spacing: .02em;
 }
-.full-row-meta strong { color: var(--alert); font-weight: 700; }
-.full-row.highlight .full-row-meta { color: var(--alert); }
+.full-row-meta strong { color: var(--s1); font-weight: 700; }
+.full-row.highlight .full-row-meta { color: var(--s1); }
 
 .score-chip {
   width: 28px; height: 28px;
