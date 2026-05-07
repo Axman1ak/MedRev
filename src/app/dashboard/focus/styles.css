@@ -1543,3 +1543,251 @@
   .bib-treasure-name { display: none; }
   .bib-treasures-right { right: 14px; left: 14px; }
 }
+
+/* ============================================================
+   ============ THEME LIGHT — cabinet d'érudit clair ===========
+   ============================================================
+   Override quand data-theme="light" : transforme l'ambiance
+   walnut sombre par défaut en "cabinet d'érudit français" :
+   noyer clair, parchemin lumineux, dorures. Les livres du SVG
+   BibliothecaSvg restent identiques (mêmes 18 cuirs vintage),
+   mais le décor du focus passe en mode jour.
+*/
+
+[data-theme="light"] .focus-root {
+  background: #B89366;
+  color: #2A1810;
+}
+
+[data-theme="light"] .focus-stage {
+  background: linear-gradient(180deg, #D4B58A 0%, #B89366 50%, #8C6839 100%);
+}
+
+/* TOPBAR — chip parchemin sur fond noyer clair */
+[data-theme="light"] .focus-progress-chip {
+  background: rgba(245, 232, 200, 0.85);
+  border: 1px solid rgba(193, 149, 66, 0.55);
+  color: #2A1810;
+  text-shadow: none;
+  box-shadow: 0 4px 14px rgba(92, 58, 33, 0.18);
+}
+[data-theme="light"] .focus-progress-chip-divider {
+  background: rgba(193, 149, 66, 0.4);
+}
+
+[data-theme="light"] .focus-brand {
+  color: #2A1810;
+  text-shadow: 0 1px 2px rgba(245, 232, 200, 0.5);
+}
+[data-theme="light"] .focus-brand-dot {
+  background: #C19542;
+  box-shadow: 0 0 8px rgba(193, 149, 66, 0.55);
+}
+[data-theme="light"] .focus-brand-mode { color: #8C6839; }
+
+[data-theme="light"] .focus-quit {
+  background: rgba(245, 232, 200, 0.85);
+  border: 1px solid rgba(193, 149, 66, 0.55);
+  color: #5C3A21;
+  text-shadow: none;
+}
+[data-theme="light"] .focus-quit:hover {
+  background: rgba(245, 232, 200, 0.95);
+  color: #2A1810;
+}
+
+[data-theme="light"] .focus-immersive {
+  background: rgba(245, 232, 200, 0.85);
+  border: 1px solid rgba(193, 149, 66, 0.55);
+  color: #5C3A21;
+}
+[data-theme="light"] .focus-immersive:hover {
+  background: rgba(245, 232, 200, 0.95);
+  color: #2A1810;
+}
+[data-theme="light"] .focus-immersive.active {
+  background: rgba(193, 149, 66, 0.35);
+  border-color: rgba(193, 149, 66, 0.75);
+  color: #2A1810;
+  box-shadow: 0 0 0 2px rgba(193, 149, 66, 0.25);
+}
+
+/* CARD — verre parchemin sur fond noyer clair */
+[data-theme="light"] .focus-card {
+  background: rgba(245, 232, 200, 0.95);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(193, 149, 66, 0.5);
+  box-shadow:
+    0 24px 60px rgba(60, 30, 15, 0.35),
+    0 6px 18px rgba(60, 30, 15, 0.18),
+    inset 0 1px 0 rgba(255, 250, 230, 0.65);
+}
+
+[data-theme="light"] .focus-name { color: #2A1810; }
+[data-theme="light"] .focus-kicker { color: #8C6839; }
+[data-theme="light"] .focus-kicker-sys { color: #2A1810; }
+[data-theme="light"] .focus-kicker-sep { color: rgba(92, 58, 33, 0.4); }
+[data-theme="light"] .focus-kicker-status {
+  background: rgba(193, 149, 66, 0.18) !important;
+  border: 1px solid rgba(193, 149, 66, 0.4);
+}
+[data-theme="light"] .focus-kicker-status.missed { color: #9C3434; }
+[data-theme="light"] .focus-kicker-status.today { color: #5C3A21; }
+[data-theme="light"] .focus-kicker-status.fresh { color: #8C6839; }
+[data-theme="light"] .focus-last { color: #5C3A21; }
+[data-theme="light"] .focus-ask { color: #8C6839; }
+
+/* ACTIONS de la card */
+[data-theme="light"] .focus-actions { border-top: 1px solid rgba(193, 149, 66, 0.3); }
+
+[data-theme="light"] .focus-report {
+  border: 1px solid rgba(193, 149, 66, 0.5);
+  color: #8C6839;
+  background: transparent;
+}
+[data-theme="light"] .focus-report:hover:not(:disabled) {
+  border-color: #C19542;
+  color: #5C3A21;
+  background: rgba(193, 149, 66, 0.12);
+}
+
+[data-theme="light"] .focus-nav-dot {
+  background: rgba(245, 232, 200, 0.65);
+  border: 1px solid rgba(193, 149, 66, 0.45);
+  color: #5C3A21;
+}
+[data-theme="light"] .focus-nav-dot:hover:not(:disabled) {
+  background: rgba(245, 232, 200, 0.9);
+  border-color: rgba(193, 149, 66, 0.7);
+  color: #2A1810;
+}
+[data-theme="light"] .focus-nav-dot-next {
+  background: #5C3A21;
+  color: #F5E8C8;
+  border-color: transparent;
+}
+[data-theme="light"] .focus-nav-dot-next:hover:not(:disabled) {
+  background: #2A1810;
+  color: #F5E8C8;
+}
+
+/* HINT clavier */
+[data-theme="light"] .focus-hint {
+  color: rgba(92, 58, 33, 0.75);
+  text-shadow: 0 1px 2px rgba(245, 232, 200, 0.5);
+}
+[data-theme="light"] .focus-hint kbd {
+  background: rgba(245, 232, 200, 0.85);
+  border: 1px solid rgba(193, 149, 66, 0.45);
+  color: #5C3A21;
+}
+[data-theme="light"] .focus-hint-sep { color: rgba(92, 58, 33, 0.4); }
+
+/* États empty / loading */
+[data-theme="light"] .focus-loading { color: #5C3A21; }
+[data-theme="light"] .focus-empty-mark {
+  background: rgba(193, 149, 66, 0.25);
+  color: #5C3A21;
+}
+[data-theme="light"] .focus-empty-title { color: #2A1810; }
+[data-theme="light"] .focus-empty-sub { color: #5C3A21; }
+[data-theme="light"] .focus-empty-cta {
+  background: #5C3A21;
+  color: #F5E8C8;
+}
+[data-theme="light"] .focus-empty-cta:hover { background: #2A1810; }
+
+/* DONE CARD (bilan) */
+[data-theme="light"] .focus-done-card { color: #2A1810; }
+[data-theme="light"] .focus-done-kicker { color: #8C6839; }
+[data-theme="light"] .focus-done-title { color: #2A1810; }
+[data-theme="light"] .focus-done-sep { color: rgba(92, 58, 33, 0.4); }
+[data-theme="light"] .focus-done-reported { color: #C19542; }
+
+[data-theme="light"] .focus-done-recap {
+  background: rgba(193, 149, 66, 0.15);
+  border-left: 3px solid #C19542;
+}
+[data-theme="light"] .focus-done-recap-text { color: #2A1810; }
+[data-theme="light"] .focus-done-recap-empty { color: #5C3A21; }
+[data-theme="light"] .focus-done-recap-gains-lbl { color: #8C6839; }
+[data-theme="light"] .focus-done-recap-pill {
+  background: rgba(245, 232, 200, 0.85);
+  color: #2A1810;
+  border: 1px solid rgba(193, 149, 66, 0.45);
+}
+[data-theme="light"] .focus-done-recap-pill strong { color: #C19542; }
+[data-theme="light"] .focus-done-recap-pill.rare {
+  background: linear-gradient(135deg, rgba(193, 149, 66, 0.2), rgba(229, 188, 101, 0.3));
+  color: #5C3A21;
+  border-color: #C19542;
+}
+[data-theme="light"] .focus-done-recap-pill.rare strong { color: #5C3A21; }
+
+[data-theme="light"] .focus-done-list { color: #2A1810; }
+[data-theme="light"] .focus-done-row {
+  border-bottom: 1px solid rgba(193, 149, 66, 0.25);
+}
+[data-theme="light"] .focus-done-row-sys { color: #8C6839; }
+[data-theme="light"] .focus-done-cta {
+  background: rgba(92, 58, 33, 0.92);
+  color: #F5E8C8;
+  border: 1px solid rgba(193, 149, 66, 0.45);
+  text-shadow: none;
+}
+[data-theme="light"] .focus-done-cta:hover { background: #2A1810; }
+
+/* PANEL DES TRÉSORS — version parchemin clair */
+[data-theme="light"] .bib-treasures {
+  background: rgba(245, 232, 200, 0.92);
+  border: 1px solid rgba(193, 149, 66, 0.5);
+  color: #5C3A21;
+  box-shadow: 0 16px 40px rgba(60, 30, 15, 0.3),
+              inset 0 1px 0 rgba(255, 250, 230, 0.65);
+}
+[data-theme="light"] .bib-treasures-header {
+  border-bottom: 1px solid rgba(193, 149, 66, 0.4);
+}
+[data-theme="light"] .bib-treasures-kicker { color: #8C6839; }
+[data-theme="light"] .bib-treasures-count { color: #2A1810; }
+[data-theme="light"] .bib-treasures-count-sep { color: rgba(92, 58, 33, 0.4); }
+[data-theme="light"] .bib-treasures-count-tot { color: #8C6839; }
+[data-theme="light"] .bib-treasures-count-lbl { color: #8C6839; }
+[data-theme="light"] .bib-treasures-progress {
+  background: rgba(140, 104, 57, 0.15);
+}
+[data-theme="light"] .bib-treasures-progress-bar {
+  background: linear-gradient(90deg, #5C3A21, #C19542);
+}
+[data-theme="light"] .bib-treasures-title { color: #8C6839; }
+
+[data-theme="light"] .bib-treasure-threshold { color: #2A1810; }
+[data-theme="light"] .bib-treasure.unlocked .bib-treasure-marker {
+  background: linear-gradient(135deg, #E5BC65, #C19542);
+  color: #2A1810;
+  box-shadow: 0 0 0 1px rgba(193, 149, 66, 0.4), 0 1px 2px rgba(193, 149, 66, 0.3);
+}
+[data-theme="light"] .bib-treasure.unlocked .bib-treasure-name {
+  color: #2A1810;
+}
+[data-theme="light"] .bib-treasure.locked .bib-treasure-marker {
+  background: rgba(92, 58, 33, 0.12);
+  color: rgba(92, 58, 33, 0.45);
+  border: 1px solid rgba(92, 58, 33, 0.25);
+}
+[data-theme="light"] .bib-treasure.locked .bib-treasure-name {
+  color: rgba(92, 58, 33, 0.5);
+}
+[data-theme="light"] .bib-treasure.locked .bib-treasure-threshold {
+  color: rgba(92, 58, 33, 0.55);
+}
+[data-theme="light"] .bib-treasure.next .bib-treasure-marker {
+  background: rgba(193, 149, 66, 0.2);
+  color: #C19542;
+  border: 1px solid #C19542;
+}
+[data-theme="light"] .bib-treasure.next .bib-treasure-name {
+  color: #C19542;
+}
+[data-theme="light"] .bib-treasure.next .bib-treasure-threshold { color: #2A1810; }
