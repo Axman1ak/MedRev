@@ -55,9 +55,15 @@
 }
 .sim-page * { box-sizing: border-box; }
 
-/* En mode sombre on assombrit le gold-soft pour rester lisible */
+/* En mode sombre :
+   - on assombrit le gold-soft pour rester lisible
+   - on aligne --gm sur --accent-primary pour éviter l'accumulation de
+     verts saturés (l'accent-medium emerald est trop vif sur les états
+     sélectionnés). Résultat : tous les verts du simu utilisent le même
+     pastel que les gros chiffres de Stats, plus reposant pour les yeux. */
 [data-theme="dark"] .sim-page {
   --gold-soft: #3D331A;
+  --gm: var(--accent-primary);
 }
 
 .sim-loading {
