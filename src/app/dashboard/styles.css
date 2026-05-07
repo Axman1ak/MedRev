@@ -1360,3 +1360,67 @@
   .dash-bib-side { flex-direction: column; }
   .dash-bib-thumb { width: 100%; }
 }
+
+/* ============================================================
+   THEME LIGHT — mini bibliothèque dashboard (cabinet d'érudit clair)
+   ============================================================
+   Override quand data-theme="light" : transforme les couleurs walnut
+   sombre par défaut en noyer clair / parchemin / laiton, cohérent
+   avec le BibliothecaSvg en mode 'erudit'. */
+
+[data-theme="light"] .dash-bib-side {
+  background: linear-gradient(180deg, #C5A37D 0%, #8C6839 100%);
+  border-left: 1px solid #5C3A21;
+}
+
+[data-theme="light"] .dash-bib-thumb {
+  background: #F0E5C8;
+  border: 1px solid rgba(193, 149, 66, 0.5);
+  box-shadow:
+    0 4px 14px rgba(60, 30, 15, 0.25),
+    inset 0 1px 0 rgba(255, 250, 230, 0.6);
+}
+
+[data-theme="light"] .dash-bib-stats {
+  color: #2A1810;
+}
+[data-theme="light"] .dash-bib-stats-tot {
+  color: #5C3A21;
+}
+[data-theme="light"] .dash-bib-stats-lbl {
+  color: #5C3A21;
+}
+
+[data-theme="light"] .dash-bib-tres {
+  color: #2A1810;
+}
+[data-theme="light"] .dash-bib-tres-dot {
+  background: rgba(245, 232, 200, 0.5);
+  border: 1px solid rgba(193, 149, 66, 0.55);
+}
+[data-theme="light"] .dash-bib-tres-dot.on {
+  background: #C19542;
+  border-color: #C19542;
+  box-shadow: 0 0 6px rgba(193, 149, 66, 0.65);
+}
+
+[data-theme="light"] .dash-bib-cta {
+  background: #F5E8C8;
+  color: #2A1810;
+  box-shadow: 0 2px 6px rgba(60, 30, 15, 0.2);
+}
+[data-theme="light"] .dash-bib-cta:hover {
+  background: #FFF0CC;
+}
+[data-theme="light"] .dash-bib-cta.disabled {
+  background: rgba(245, 232, 200, 0.6);
+  color: rgba(60, 30, 15, 0.45);
+}
+
+[data-theme="light"] .dash-bib-link {
+  color: #2A1810;
+  font-weight: 500;
+}
+[data-theme="light"] .dash-bib-link:hover {
+  color: #5C3A21;
+}
