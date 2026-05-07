@@ -31,11 +31,11 @@
   --accent-soft: #DDECE3;
   --accent-on-soft: #1B4332;
 
-  /* sÃ©mantique */
+  /* sÃ©mantique â€” rouge adouci pour moins de criardise */
   --warning: #C47B2B;
   --warning-soft: #F5E5D2;
-  --danger: #C75050;
-  --danger-soft: #F5DADA;
+  --danger: #B85B5B;
+  --danger-soft: #F2DDDD;
   --success: #2D6A4F;
   --success-soft: #DDECE3;
 
@@ -74,17 +74,18 @@
   --text-secondary: #9CA3AE;
   --text-tertiary: #6B7380;
 
-  --accent-primary: #34D399;
-  --accent-medium: #10B981;
-  --accent-soft: #133124;
-  --accent-on-soft: #6EE7B7;
+  /* Verts adoucis : moins lumineux que #34D399, plus mat */
+  --accent-primary: #5DD39E;
+  --accent-medium: #2EA86F;
+  --accent-soft: #1B2A24;
+  --accent-on-soft: #95D9B5;
 
-  --warning: #E0954A;
-  --warning-soft: #3D2D1A;
-  --danger: #EF6B6B;
-  --danger-soft: #3D1F1F;
-  --success: #34D399;
-  --success-soft: #133124;
+  --warning: #C8965A;
+  --warning-soft: #2E2417;
+  --danger: #C97171;
+  --danger-soft: #2E1A1A;
+  --success: #5DD39E;
+  --success-soft: #1B2A24;
 
   --sb-bg: #1A2230;
   --sb-text: #E8EAED;
@@ -93,7 +94,7 @@
   --sb-hover: rgba(255, 255, 255, .05);
   --sb-active: rgba(255, 255, 255, .08);
   --sb-border: rgba(255, 255, 255, .05);
-  --sb-accent: #34D399;
+  --sb-accent: #5DD39E;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, .5);
