@@ -317,27 +317,30 @@
    1600/1100 enforced pour que la bibliothèque entière soit visible (pas de crop).
    En dessous : compteur, dots des trésors, CTA, lien vers la vue plein écran.
    Classes préfixées .dash-bib- pour scope. */
-/* DEFAULT = MODE CLAIR (cabinet d'érudit, noyer clair + parchemin)
+/* DEFAULT = MODE CLAIR (cabinet d'érudit, mur parchemin lumineux)
+   Le wrapper matche le mur du SVG BibliothecaSvg (bib-wallGrad-erudit),
+   ainsi la biblio paraît posée contre un mur, pas dans un cadre redondant.
    Le mode sombre est appliqué via [data-theme="dark"] plus bas. */
 .dash-bib-side {
-  background: linear-gradient(180deg, #C5A37D 0%, #8C6839 100%);
+  background: linear-gradient(180deg, #FAFAF7 0%, #F0EAD8 55%, #E5DCC2 100%);
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-left: 1px solid #5C3A21;
+  border-left: 1px solid rgba(193, 149, 66, 0.35);
   min-width: 0;
 }
 .dash-bib-thumb {
   aspect-ratio: 1600 / 1100;
   width: 100%;
-  background: #F0E5C8;
+  background: #FAFAF7;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(193, 149, 66, 0.5);
+  border: 1px solid rgba(193, 149, 66, 0.35);
   box-shadow:
-    0 4px 14px rgba(60, 30, 15, 0.25),
-    inset 0 1px 0 rgba(255, 250, 230, 0.6);
+    0 6px 18px rgba(92, 58, 33, 0.18),
+    0 1px 2px rgba(92, 58, 33, 0.12),
+    inset 0 1px 0 rgba(255, 250, 230, 0.7);
   flex-shrink: 0;
 }
 .dash-bib-thumb svg { display: block; width: 100%; height: 100%; }
@@ -1373,16 +1376,16 @@
    en mode 'archive'. Le défaut (sans attribut) reste mode clair érudit. */
 
 [data-theme="dark"] .dash-bib-side {
-  background: linear-gradient(180deg, #1F1208 0%, #0E0805 100%);
-  border-left: 1px solid #2D1B0E;
+  background: linear-gradient(180deg, #0A0E14 0%, #06080B 50%, #03050A 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="dark"] .dash-bib-thumb {
-  background: #0E0805;
-  border: 1px solid rgba(216, 168, 72, 0.18);
+  background: #03050A;
+  border: 1px solid rgba(120, 200, 220, 0.10);
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(216, 168, 72, 0.10);
+    0 6px 18px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(120, 200, 220, 0.06);
 }
 
 [data-theme="dark"] .dash-bib-stats {
