@@ -317,25 +317,27 @@
    1600/1100 enforced pour que la bibliothèque entière soit visible (pas de crop).
    En dessous : compteur, dots des trésors, CTA, lien vers la vue plein écran.
    Classes préfixées .dash-bib- pour scope. */
+/* DEFAULT = MODE CLAIR (cabinet d'érudit, noyer clair + parchemin)
+   Le mode sombre est appliqué via [data-theme="dark"] plus bas. */
 .dash-bib-side {
-  background: linear-gradient(180deg, #1F1208 0%, #0E0805 100%);
+  background: linear-gradient(180deg, #C5A37D 0%, #8C6839 100%);
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-left: 1px solid #2D1B0E;
+  border-left: 1px solid #5C3A21;
   min-width: 0;
 }
 .dash-bib-thumb {
   aspect-ratio: 1600 / 1100;
   width: 100%;
-  background: #0E0805;
+  background: #F0E5C8;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(216, 168, 72, 0.18);
+  border: 1px solid rgba(193, 149, 66, 0.5);
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(216, 168, 72, 0.10);
+    0 4px 14px rgba(60, 30, 15, 0.25),
+    inset 0 1px 0 rgba(255, 250, 230, 0.6);
   flex-shrink: 0;
 }
 .dash-bib-thumb svg { display: block; width: 100%; height: 100%; }
@@ -345,7 +347,7 @@
   align-items: baseline;
   gap: 4px;
   font-family: 'Fraunces', Georgia, serif;
-  color: #F0DDB8;
+  color: #2A1810;
   margin-top: 2px;
 }
 .dash-bib-stats-num {
@@ -355,7 +357,7 @@
   letter-spacing: -.02em;
 }
 .dash-bib-stats-tot {
-  color: #A88058;
+  color: #5C3A21;
   font-size: 14px;
   font-weight: 400;
 }
@@ -366,7 +368,7 @@
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #A88058;
+  color: #5C3A21;
 }
 
 .dash-bib-tres {
@@ -376,7 +378,7 @@
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 11.5px;
   font-style: italic;
-  color: #C8A878;
+  color: #2A1810;
 }
 .dash-bib-tres-dots {
   display: flex;
@@ -387,21 +389,21 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(216, 168, 72, 0.20);
-  border: 1px solid rgba(216, 168, 72, 0.30);
+  background: rgba(245, 232, 200, 0.5);
+  border: 1px solid rgba(193, 149, 66, 0.55);
 }
 .dash-bib-tres-dot.on {
-  background: #D8A848;
-  border-color: #D8A848;
-  box-shadow: 0 0 6px rgba(216, 168, 72, 0.55);
+  background: #C19542;
+  border-color: #C19542;
+  box-shadow: 0 0 6px rgba(193, 149, 66, 0.65);
 }
 .dash-bib-tres-lbl { min-width: 0; line-height: 1.3; }
 
 .dash-bib-cta {
   margin-top: auto;
   padding: 11px 16px;
-  background: #F0DDB8;
-  color: #3D2516;
+  background: #F5E8C8;
+  color: #2A1810;
   border: none;
   border-radius: 7px;
   font-family: 'Cinzel', Georgia, serif;
@@ -414,28 +416,30 @@
   text-align: center;
   display: block;
   transition: background .15s, transform .12s;
+  box-shadow: 0 2px 6px rgba(60, 30, 15, 0.2);
 }
-.dash-bib-cta:hover { background: #FFE598; transform: translateY(-1px); }
+.dash-bib-cta:hover { background: #FFF0CC; transform: translateY(-1px); }
 .dash-bib-cta.disabled {
   opacity: .55;
   pointer-events: none;
-  background: rgba(232, 200, 152, 0.4);
-  color: #5C4A35;
+  background: rgba(245, 232, 200, 0.6);
+  color: rgba(60, 30, 15, 0.45);
 }
 
 .dash-bib-link {
   background: transparent;
   border: none;
-  color: #A88058;
+  color: #2A1810;
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 11.5px;
   letter-spacing: 0.3px;
   text-align: center;
   cursor: pointer;
   padding: 4px;
+  font-weight: 500;
   transition: color .15s;
 }
-.dash-bib-link:hover { color: #D8A848; }
+.dash-bib-link:hover { color: #5C3A21; }
 
 /* === Vue plein écran : modale (Voir entièrement) === */
 .dash-bib-fullscreen {
@@ -1362,65 +1366,65 @@
 }
 
 /* ============================================================
-   THEME LIGHT — mini bibliothèque dashboard (cabinet d'érudit clair)
+   THEME DARK — mini bibliothèque dashboard (musée du futur, métal)
    ============================================================
-   Override quand data-theme="light" : transforme les couleurs walnut
-   sombre par défaut en noyer clair / parchemin / laiton, cohérent
-   avec le BibliothecaSvg en mode 'erudit'. */
+   Override quand data-theme="dark" : transforme les couleurs noyer clair
+   par défaut en métal noir / cyan LED, cohérent avec le BibliothecaSvg
+   en mode 'archive'. Le défaut (sans attribut) reste mode clair érudit. */
 
-[data-theme="light"] .dash-bib-side {
-  background: linear-gradient(180deg, #C5A37D 0%, #8C6839 100%);
-  border-left: 1px solid #5C3A21;
+[data-theme="dark"] .dash-bib-side {
+  background: linear-gradient(180deg, #1F1208 0%, #0E0805 100%);
+  border-left: 1px solid #2D1B0E;
 }
 
-[data-theme="light"] .dash-bib-thumb {
-  background: #F0E5C8;
-  border: 1px solid rgba(193, 149, 66, 0.5);
+[data-theme="dark"] .dash-bib-thumb {
+  background: #0E0805;
+  border: 1px solid rgba(216, 168, 72, 0.18);
   box-shadow:
-    0 4px 14px rgba(60, 30, 15, 0.25),
-    inset 0 1px 0 rgba(255, 250, 230, 0.6);
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(216, 168, 72, 0.10);
 }
 
-[data-theme="light"] .dash-bib-stats {
-  color: #2A1810;
+[data-theme="dark"] .dash-bib-stats {
+  color: #F0DDB8;
 }
-[data-theme="light"] .dash-bib-stats-tot {
-  color: #5C3A21;
+[data-theme="dark"] .dash-bib-stats-tot {
+  color: #A88058;
 }
-[data-theme="light"] .dash-bib-stats-lbl {
-  color: #5C3A21;
-}
-
-[data-theme="light"] .dash-bib-tres {
-  color: #2A1810;
-}
-[data-theme="light"] .dash-bib-tres-dot {
-  background: rgba(245, 232, 200, 0.5);
-  border: 1px solid rgba(193, 149, 66, 0.55);
-}
-[data-theme="light"] .dash-bib-tres-dot.on {
-  background: #C19542;
-  border-color: #C19542;
-  box-shadow: 0 0 6px rgba(193, 149, 66, 0.65);
+[data-theme="dark"] .dash-bib-stats-lbl {
+  color: #A88058;
 }
 
-[data-theme="light"] .dash-bib-cta {
-  background: #F5E8C8;
-  color: #2A1810;
-  box-shadow: 0 2px 6px rgba(60, 30, 15, 0.2);
+[data-theme="dark"] .dash-bib-tres {
+  color: #C8A878;
 }
-[data-theme="light"] .dash-bib-cta:hover {
-  background: #FFF0CC;
+[data-theme="dark"] .dash-bib-tres-dot {
+  background: rgba(216, 168, 72, 0.20);
+  border: 1px solid rgba(216, 168, 72, 0.30);
 }
-[data-theme="light"] .dash-bib-cta.disabled {
-  background: rgba(245, 232, 200, 0.6);
-  color: rgba(60, 30, 15, 0.45);
+[data-theme="dark"] .dash-bib-tres-dot.on {
+  background: #D8A848;
+  border-color: #D8A848;
+  box-shadow: 0 0 6px rgba(216, 168, 72, 0.55);
 }
 
-[data-theme="light"] .dash-bib-link {
-  color: #2A1810;
-  font-weight: 500;
+[data-theme="dark"] .dash-bib-cta {
+  background: #F0DDB8;
+  color: #3D2516;
+  box-shadow: none;
 }
-[data-theme="light"] .dash-bib-link:hover {
-  color: #5C3A21;
+[data-theme="dark"] .dash-bib-cta:hover {
+  background: #FFE598;
+}
+[data-theme="dark"] .dash-bib-cta.disabled {
+  background: rgba(232, 200, 152, 0.4);
+  color: #5C4A35;
+}
+
+[data-theme="dark"] .dash-bib-link {
+  color: #A88058;
+  font-weight: 400;
+}
+[data-theme="dark"] .dash-bib-link:hover {
+  color: #D8A848;
 }
