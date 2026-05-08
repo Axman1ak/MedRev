@@ -1561,7 +1561,7 @@
 /* ============================================================
    ============ THEME LIGHT — cabinet d'érudit clair ===========
    ============================================================
-   Sélecteur :not([data-theme="dark"]) : ces règles s'appliquent
+   Sélecteur html:not([data-theme="dark"]) : ces règles s'appliquent
    par défaut (sans attribut) ET quand data-theme="light", mais
    PAS quand data-theme="dark". Les règles bois sombre par défaut
    (sans sélecteur, plus haut dans le fichier) ne sont visibles
@@ -1569,7 +1569,7 @@
    identiques, c'est juste le décor du focus qui change.
 */
 
-:not([data-theme="dark"]) .focus-root {
+html:not([data-theme="dark"]) .focus-root {
   /* Même gradient que .focus-stage : mur parchemin → parquet noyer.
      Comme ça la zone topbar (où .focus-root est visible derrière) et
      les bandes left/right dues au letterbox du SVG sont raccord. */
@@ -1590,7 +1590,7 @@
    Comme ça les bandes left/right qui apparaissent quand le SVG fait un letterbox
    (preserveAspectRatio meet sur écran large) ressemblent à un prolongement
    du mur et du parquet, pas à des "bords" qui cassent l'immersion. */
-:not([data-theme="dark"]) .focus-stage {
+html:not([data-theme="dark"]) .focus-stage {
   background: linear-gradient(
     180deg,
     #FAFAF7 0%,
@@ -1602,48 +1602,48 @@
 }
 
 /* TOPBAR — chip parchemin sur fond noyer clair */
-:not([data-theme="dark"]) .focus-progress-chip {
+html:not([data-theme="dark"]) .focus-progress-chip {
   background: rgba(245, 232, 200, 0.85);
   border: 1px solid rgba(193, 149, 66, 0.55);
   color: #2A1810;
   text-shadow: none;
   box-shadow: 0 4px 14px rgba(92, 58, 33, 0.18);
 }
-:not([data-theme="dark"]) .focus-progress-chip-divider {
+html:not([data-theme="dark"]) .focus-progress-chip-divider {
   background: rgba(193, 149, 66, 0.4);
 }
 
-:not([data-theme="dark"]) .focus-brand {
+html:not([data-theme="dark"]) .focus-brand {
   color: #2A1810;
   text-shadow: 0 1px 2px rgba(245, 232, 200, 0.5);
 }
-:not([data-theme="dark"]) .focus-brand-dot {
+html:not([data-theme="dark"]) .focus-brand-dot {
   background: #C19542;
   box-shadow: 0 0 8px rgba(193, 149, 66, 0.55);
 }
-:not([data-theme="dark"]) .focus-brand-mode { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-brand-mode { color: #8C6839; }
 
-:not([data-theme="dark"]) .focus-quit {
+html:not([data-theme="dark"]) .focus-quit {
   background: rgba(245, 232, 200, 0.85);
   border: 1px solid rgba(193, 149, 66, 0.55);
   color: #5C3A21;
   text-shadow: none;
 }
-:not([data-theme="dark"]) .focus-quit:hover {
+html:not([data-theme="dark"]) .focus-quit:hover {
   background: rgba(245, 232, 200, 0.95);
   color: #2A1810;
 }
 
-:not([data-theme="dark"]) .focus-immersive {
+html:not([data-theme="dark"]) .focus-immersive {
   background: rgba(245, 232, 200, 0.85);
   border: 1px solid rgba(193, 149, 66, 0.55);
   color: #5C3A21;
 }
-:not([data-theme="dark"]) .focus-immersive:hover {
+html:not([data-theme="dark"]) .focus-immersive:hover {
   background: rgba(245, 232, 200, 0.95);
   color: #2A1810;
 }
-:not([data-theme="dark"]) .focus-immersive.active {
+html:not([data-theme="dark"]) .focus-immersive.active {
   background: rgba(193, 149, 66, 0.35);
   border-color: rgba(193, 149, 66, 0.75);
   color: #2A1810;
@@ -1651,7 +1651,7 @@
 }
 
 /* CARD — verre parchemin sur fond noyer clair */
-:not([data-theme="dark"]) .focus-card {
+html:not([data-theme="dark"]) .focus-card {
   background: rgba(245, 232, 200, 0.95);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -1662,170 +1662,170 @@
     inset 0 1px 0 rgba(255, 250, 230, 0.65);
 }
 
-:not([data-theme="dark"]) .focus-name { color: #2A1810; }
-:not([data-theme="dark"]) .focus-kicker { color: #8C6839; }
-:not([data-theme="dark"]) .focus-kicker-sys { color: #2A1810; }
-:not([data-theme="dark"]) .focus-kicker-sep { color: rgba(92, 58, 33, 0.4); }
-:not([data-theme="dark"]) .focus-kicker-status {
+html:not([data-theme="dark"]) .focus-name { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-kicker { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-kicker-sys { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-kicker-sep { color: rgba(92, 58, 33, 0.4); }
+html:not([data-theme="dark"]) .focus-kicker-status {
   background: rgba(193, 149, 66, 0.18) !important;
   border: 1px solid rgba(193, 149, 66, 0.4);
 }
-:not([data-theme="dark"]) .focus-kicker-status.missed { color: #9C3434; }
-:not([data-theme="dark"]) .focus-kicker-status.today { color: #5C3A21; }
-:not([data-theme="dark"]) .focus-kicker-status.fresh { color: #8C6839; }
-:not([data-theme="dark"]) .focus-last { color: #5C3A21; }
-:not([data-theme="dark"]) .focus-ask { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-kicker-status.missed { color: #9C3434; }
+html:not([data-theme="dark"]) .focus-kicker-status.today { color: #5C3A21; }
+html:not([data-theme="dark"]) .focus-kicker-status.fresh { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-last { color: #5C3A21; }
+html:not([data-theme="dark"]) .focus-ask { color: #8C6839; }
 
 /* ACTIONS de la card */
-:not([data-theme="dark"]) .focus-actions { border-top: 1px solid rgba(193, 149, 66, 0.3); }
+html:not([data-theme="dark"]) .focus-actions { border-top: 1px solid rgba(193, 149, 66, 0.3); }
 
-:not([data-theme="dark"]) .focus-report {
+html:not([data-theme="dark"]) .focus-report {
   border: 1px solid rgba(193, 149, 66, 0.5);
   color: #8C6839;
   background: transparent;
 }
-:not([data-theme="dark"]) .focus-report:hover:not(:disabled) {
+html:not([data-theme="dark"]) .focus-report:hover:not(:disabled) {
   border-color: #C19542;
   color: #5C3A21;
   background: rgba(193, 149, 66, 0.12);
 }
 
-:not([data-theme="dark"]) .focus-nav-dot {
+html:not([data-theme="dark"]) .focus-nav-dot {
   background: rgba(245, 232, 200, 0.65);
   border: 1px solid rgba(193, 149, 66, 0.45);
   color: #5C3A21;
 }
-:not([data-theme="dark"]) .focus-nav-dot:hover:not(:disabled) {
+html:not([data-theme="dark"]) .focus-nav-dot:hover:not(:disabled) {
   background: rgba(245, 232, 200, 0.9);
   border-color: rgba(193, 149, 66, 0.7);
   color: #2A1810;
 }
-:not([data-theme="dark"]) .focus-nav-dot-next {
+html:not([data-theme="dark"]) .focus-nav-dot-next {
   background: #5C3A21;
   color: #F5E8C8;
   border-color: transparent;
 }
-:not([data-theme="dark"]) .focus-nav-dot-next:hover:not(:disabled) {
+html:not([data-theme="dark"]) .focus-nav-dot-next:hover:not(:disabled) {
   background: #2A1810;
   color: #F5E8C8;
 }
 
 /* HINT clavier */
-:not([data-theme="dark"]) .focus-hint {
+html:not([data-theme="dark"]) .focus-hint {
   color: rgba(92, 58, 33, 0.75);
   text-shadow: 0 1px 2px rgba(245, 232, 200, 0.5);
 }
-:not([data-theme="dark"]) .focus-hint kbd {
+html:not([data-theme="dark"]) .focus-hint kbd {
   background: rgba(245, 232, 200, 0.85);
   border: 1px solid rgba(193, 149, 66, 0.45);
   color: #5C3A21;
 }
-:not([data-theme="dark"]) .focus-hint-sep { color: rgba(92, 58, 33, 0.4); }
+html:not([data-theme="dark"]) .focus-hint-sep { color: rgba(92, 58, 33, 0.4); }
 
 /* États empty / loading */
-:not([data-theme="dark"]) .focus-loading { color: #5C3A21; }
-:not([data-theme="dark"]) .focus-empty-mark {
+html:not([data-theme="dark"]) .focus-loading { color: #5C3A21; }
+html:not([data-theme="dark"]) .focus-empty-mark {
   background: rgba(193, 149, 66, 0.25);
   color: #5C3A21;
 }
-:not([data-theme="dark"]) .focus-empty-title { color: #2A1810; }
-:not([data-theme="dark"]) .focus-empty-sub { color: #5C3A21; }
-:not([data-theme="dark"]) .focus-empty-cta {
+html:not([data-theme="dark"]) .focus-empty-title { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-empty-sub { color: #5C3A21; }
+html:not([data-theme="dark"]) .focus-empty-cta {
   background: #5C3A21;
   color: #F5E8C8;
 }
-:not([data-theme="dark"]) .focus-empty-cta:hover { background: #2A1810; }
+html:not([data-theme="dark"]) .focus-empty-cta:hover { background: #2A1810; }
 
 /* DONE CARD (bilan) */
-:not([data-theme="dark"]) .focus-done-card { color: #2A1810; }
-:not([data-theme="dark"]) .focus-done-kicker { color: #8C6839; }
-:not([data-theme="dark"]) .focus-done-title { color: #2A1810; }
-:not([data-theme="dark"]) .focus-done-sep { color: rgba(92, 58, 33, 0.4); }
-:not([data-theme="dark"]) .focus-done-reported { color: #C19542; }
+html:not([data-theme="dark"]) .focus-done-card { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-done-kicker { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-done-title { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-done-sep { color: rgba(92, 58, 33, 0.4); }
+html:not([data-theme="dark"]) .focus-done-reported { color: #C19542; }
 
-:not([data-theme="dark"]) .focus-done-recap {
+html:not([data-theme="dark"]) .focus-done-recap {
   background: rgba(193, 149, 66, 0.15);
   border-left: 3px solid #C19542;
 }
-:not([data-theme="dark"]) .focus-done-recap-text { color: #2A1810; }
-:not([data-theme="dark"]) .focus-done-recap-empty { color: #5C3A21; }
-:not([data-theme="dark"]) .focus-done-recap-gains-lbl { color: #8C6839; }
-:not([data-theme="dark"]) .focus-done-recap-pill {
+html:not([data-theme="dark"]) .focus-done-recap-text { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-done-recap-empty { color: #5C3A21; }
+html:not([data-theme="dark"]) .focus-done-recap-gains-lbl { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-done-recap-pill {
   background: rgba(245, 232, 200, 0.85);
   color: #2A1810;
   border: 1px solid rgba(193, 149, 66, 0.45);
 }
-:not([data-theme="dark"]) .focus-done-recap-pill strong { color: #C19542; }
-:not([data-theme="dark"]) .focus-done-recap-pill.rare {
+html:not([data-theme="dark"]) .focus-done-recap-pill strong { color: #C19542; }
+html:not([data-theme="dark"]) .focus-done-recap-pill.rare {
   background: linear-gradient(135deg, rgba(193, 149, 66, 0.2), rgba(229, 188, 101, 0.3));
   color: #5C3A21;
   border-color: #C19542;
 }
-:not([data-theme="dark"]) .focus-done-recap-pill.rare strong { color: #5C3A21; }
+html:not([data-theme="dark"]) .focus-done-recap-pill.rare strong { color: #5C3A21; }
 
-:not([data-theme="dark"]) .focus-done-list { color: #2A1810; }
-:not([data-theme="dark"]) .focus-done-row {
+html:not([data-theme="dark"]) .focus-done-list { color: #2A1810; }
+html:not([data-theme="dark"]) .focus-done-row {
   border-bottom: 1px solid rgba(193, 149, 66, 0.25);
 }
-:not([data-theme="dark"]) .focus-done-row-sys { color: #8C6839; }
-:not([data-theme="dark"]) .focus-done-cta {
+html:not([data-theme="dark"]) .focus-done-row-sys { color: #8C6839; }
+html:not([data-theme="dark"]) .focus-done-cta {
   background: rgba(92, 58, 33, 0.92);
   color: #F5E8C8;
   border: 1px solid rgba(193, 149, 66, 0.45);
   text-shadow: none;
 }
-:not([data-theme="dark"]) .focus-done-cta:hover { background: #2A1810; }
+html:not([data-theme="dark"]) .focus-done-cta:hover { background: #2A1810; }
 
 /* PANEL DES TRÉSORS — version parchemin clair */
-:not([data-theme="dark"]) .bib-treasures {
+html:not([data-theme="dark"]) .bib-treasures {
   background: rgba(245, 232, 200, 0.92);
   border: 1px solid rgba(193, 149, 66, 0.5);
   color: #5C3A21;
   box-shadow: 0 16px 40px rgba(60, 30, 15, 0.3),
               inset 0 1px 0 rgba(255, 250, 230, 0.65);
 }
-:not([data-theme="dark"]) .bib-treasures-header {
+html:not([data-theme="dark"]) .bib-treasures-header {
   border-bottom: 1px solid rgba(193, 149, 66, 0.4);
 }
-:not([data-theme="dark"]) .bib-treasures-kicker { color: #8C6839; }
-:not([data-theme="dark"]) .bib-treasures-count { color: #2A1810; }
-:not([data-theme="dark"]) .bib-treasures-count-sep { color: rgba(92, 58, 33, 0.4); }
-:not([data-theme="dark"]) .bib-treasures-count-tot { color: #8C6839; }
-:not([data-theme="dark"]) .bib-treasures-count-lbl { color: #8C6839; }
-:not([data-theme="dark"]) .bib-treasures-progress {
+html:not([data-theme="dark"]) .bib-treasures-kicker { color: #8C6839; }
+html:not([data-theme="dark"]) .bib-treasures-count { color: #2A1810; }
+html:not([data-theme="dark"]) .bib-treasures-count-sep { color: rgba(92, 58, 33, 0.4); }
+html:not([data-theme="dark"]) .bib-treasures-count-tot { color: #8C6839; }
+html:not([data-theme="dark"]) .bib-treasures-count-lbl { color: #8C6839; }
+html:not([data-theme="dark"]) .bib-treasures-progress {
   background: rgba(140, 104, 57, 0.15);
 }
-:not([data-theme="dark"]) .bib-treasures-progress-bar {
+html:not([data-theme="dark"]) .bib-treasures-progress-bar {
   background: linear-gradient(90deg, #5C3A21, #C19542);
 }
-:not([data-theme="dark"]) .bib-treasures-title { color: #8C6839; }
+html:not([data-theme="dark"]) .bib-treasures-title { color: #8C6839; }
 
-:not([data-theme="dark"]) .bib-treasure-threshold { color: #2A1810; }
-:not([data-theme="dark"]) .bib-treasure.unlocked .bib-treasure-marker {
+html:not([data-theme="dark"]) .bib-treasure-threshold { color: #2A1810; }
+html:not([data-theme="dark"]) .bib-treasure.unlocked .bib-treasure-marker {
   background: linear-gradient(135deg, #E5BC65, #C19542);
   color: #2A1810;
   box-shadow: 0 0 0 1px rgba(193, 149, 66, 0.4), 0 1px 2px rgba(193, 149, 66, 0.3);
 }
-:not([data-theme="dark"]) .bib-treasure.unlocked .bib-treasure-name {
+html:not([data-theme="dark"]) .bib-treasure.unlocked .bib-treasure-name {
   color: #2A1810;
 }
-:not([data-theme="dark"]) .bib-treasure.locked .bib-treasure-marker {
+html:not([data-theme="dark"]) .bib-treasure.locked .bib-treasure-marker {
   background: rgba(92, 58, 33, 0.12);
   color: rgba(92, 58, 33, 0.45);
   border: 1px solid rgba(92, 58, 33, 0.25);
 }
-:not([data-theme="dark"]) .bib-treasure.locked .bib-treasure-name {
+html:not([data-theme="dark"]) .bib-treasure.locked .bib-treasure-name {
   color: rgba(92, 58, 33, 0.5);
 }
-:not([data-theme="dark"]) .bib-treasure.locked .bib-treasure-threshold {
+html:not([data-theme="dark"]) .bib-treasure.locked .bib-treasure-threshold {
   color: rgba(92, 58, 33, 0.55);
 }
-:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-marker {
+html:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-marker {
   background: rgba(193, 149, 66, 0.2);
   color: #C19542;
   border: 1px solid #C19542;
 }
-:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-name {
+html:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-name {
   color: #C19542;
 }
-:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-threshold { color: #2A1810; }
+html:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-threshold { color: #2A1810; }
