@@ -158,6 +158,10 @@ export default function SimulateurPage() {
   const [timeLeft, setTimeLeft] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Quota Free : vérifié serveur via /api/simulator/start avant lancement
+  const [launching, setLaunching] = useState(false)
+  const [quotaError, setQuotaError] = useState<string | null>(null)
+
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
@@ -256,9 +260,30 @@ export default function SimulateurPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, timeLeft])
 
-  function launchSession() {
-    if (totalAvailable === 0) return
+  async function launchSession() {
+    if (totalAvailable === 0 || launching) return
 
+    // 1. Check quota côté serveur AVANT de construire la session.
+    // Si le user est Free et a déjà consommé sa session, on bloque ici.
+    setLaunching(true)
+    setQuotaError(null)
+    try {
+      const resp = await fetch('/api/simulator/start', { method: 'POST' })
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}))
+        const msg = (data?.error as string)
+          || 'Impossible de lancer la session. Réessaie dans un instant.'
+        setQuotaError(msg)
+        setLaunching(false)
+        return
+      }
+    } catch {
+      setQuotaError('Connexion impossible. Vérifie ta connexion et réessaie.')
+      setLaunching(false)
+      return
+    }
+
+    // 2. Quota OK : on construit la session normalement
     let qs = [...availableQuestions]
 
     if (selectionMode === 'weak') {
@@ -289,6 +314,7 @@ export default function SimulateurPage() {
       setTimeLeft(0)
     }
     setPhase('session')
+    setLaunching(false)
   }
 
   function selectOption(optIdx: number) {
@@ -575,13 +601,34 @@ export default function SimulateurPage() {
             </div>
             <button
               className="sim-hero-cta"
-              disabled={!canLaunch}
+              disabled={!canLaunch || launching}
               onClick={launchSession}
             >
-              {!canLaunch
-                ? (totalAvailable === 0 ? 'Aucune question disponible' : 'Sélectionne au moins une matière')
-                : 'Lancer la session →'}
+              {launching
+                ? 'Lancement…'
+                : !canLaunch
+                  ? (totalAvailable === 0 ? 'Aucune question disponible' : 'Sélectionne au moins une matière')
+                  : 'Lancer la session →'}
             </button>
+            {quotaError && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: 12,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  background: 'var(--rose-soft)',
+                  color: 'var(--rose)',
+                  border: '1px solid var(--rose)',
+                  fontSize: 12.5,
+                  lineHeight: 1.4,
+                  position: 'relative',
+                  zIndex: 2,
+                }}
+              >
+                {quotaError}
+              </div>
+            )}
           </div>
         </div>
       </div>
