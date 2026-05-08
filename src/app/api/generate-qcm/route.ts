@@ -35,6 +35,13 @@ const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 
 // FREE_AI_GENERATIONS_LIMIT dans src/types/index.ts.
 const FREE_AI_GENERATIONS_LIMIT = 10
 
+// Fair use Premium : cap mensuel pour protéger des outliers qui pourraient
+// cramer la marge avec des générations massives. Reset automatique au début
+// de chaque mois calendaire (date_trunc côté DB). User normal en consomme
+// 10-20/mois max, donc 100 laisse une grosse marge avant de gêner qui que ce
+// soit de légitime.
+const PREMIUM_MONTHLY_AI_CAP = 100
+
 // Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
 // (standard PASS médecine). Le V/F est interdit, les questions à moins ou
 // plus de 5 options sont rejetées au sanitize.
@@ -314,17 +321,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // 1b. Check quota Free
-    // Lecture du plan + compteur. Si plan='free' et compteur >= 5, on refuse
-    // AVANT d'appeler Gemini (sinon on paye le coût pour rien).
+    // 1b. Check quotas avant d'appeler Gemini
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('plan, ai_generations_count')
+      .select('plan, ai_generations_count, ai_generations_month_count, ai_generations_month_started_at')
       .eq('id', user.id)
       .single()
     if (profileErr || !profile) {
       return NextResponse.json({ error: 'Profil introuvable' }, { status: 500 })
     }
+
+    // Free : check du compteur cumulatif à vie
     if (profile.plan !== 'pro' && (profile.ai_generations_count ?? 0) >= FREE_AI_GENERATIONS_LIMIT) {
       return NextResponse.json(
         {
@@ -336,6 +343,34 @@ export async function POST(req: NextRequest) {
         },
         { status: 403 }
       )
+    }
+
+    // Pro : check du cap mensuel (fair use). Le compteur est reset à la volée
+    // par la RPC quand on est dans un nouveau mois, mais le SELECT renvoie la
+    // valeur stockée — donc on calcule le compteur effectif côté JS pour le
+    // pré-check (la RPC fera le vrai reset atomique côté DB après).
+    if (profile.plan === 'pro') {
+      const startedAt = profile.ai_generations_month_started_at
+        ? new Date(profile.ai_generations_month_started_at)
+        : null
+      const now = new Date()
+      const inSameMonth = startedAt
+        && startedAt.getUTCFullYear() === now.getUTCFullYear()
+        && startedAt.getUTCMonth() === now.getUTCMonth()
+      const effectiveMonthCount = inSameMonth ? (profile.ai_generations_month_count ?? 0) : 0
+
+      if (effectiveMonthCount >= PREMIUM_MONTHLY_AI_CAP) {
+        return NextResponse.json(
+          {
+            error: `Cap mensuel atteint : ${PREMIUM_MONTHLY_AI_CAP} générations QCM IA ce mois-ci. Le compteur se reset le 1er du mois prochain. Si tu en as besoin de plus, contacte-nous.`,
+            code: 'quota_exceeded',
+            quota: 'monthly_cap',
+            limit: PREMIUM_MONTHLY_AI_CAP,
+            used: effectiveMonthCount,
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // 2. Body
@@ -581,19 +616,33 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
       throw new Error(`Sauvegarde échouée : ${updateErr.message}`)
     }
 
-    // 11. Incrémenter le compteur de générations IA (atomique via RPC).
-    // Fait APRÈS la sauvegarde pour que les générations échouées (Gemini KO,
-    // questions toutes invalides, etc.) ne consomment pas le quota du user.
-    // Si l'incrément échoue (RPC down), on log mais on ne fait pas échouer la
-    // requête : le user a eu son contenu, c'est ce qui compte.
-    let aiGenerationsAfter: number | null = null
-    if (profile.plan !== 'pro') {
-      const { data: incData, error: incErr } = await supabase.rpc('increment_ai_generations', { uid: user.id })
-      if (incErr) {
-        console.warn('[generate-qcm] increment_ai_generations RPC failed:', incErr.message)
-      } else if (typeof incData === 'number') {
-        aiGenerationsAfter = incData
-      }
+    // 11. Incrémenter le compteur (atomique via RPC try_increment_ai_generations_monthly).
+    // - Reset automatique du compteur mensuel si on est dans un nouveau mois
+    // - Pour les Pro : refuse si on a atteint PREMIUM_MONTHLY_AI_CAP ce mois
+    // - Pour les Free : on a déjà vérifié le quota total au step 1b, mais la RPC
+    //   incrémente quand même ai_generations_count pour garder le total à jour
+    //
+    // Fait APRÈS la sauvegarde pour que les générations échouées ne consomment
+    // pas le quota du user. Si l'incrément échoue, on log mais on ne fait pas
+    // échouer la requête (le user a eu son contenu, c'est ce qui compte).
+    //
+    // Note : pour les Pro qui dépassent le cap mensuel, on a un cas un peu
+    // bizarre : on a déjà servi la génération, puis on découvre le cap atteint.
+    // C'est volontaire — on préfère un cas limite OK que de re-vérifier en
+    // amont (qui demanderait 2 RPCs au lieu d'1). Le cap est un soft cap.
+    let monthlyCount: number | null = null
+    let monthlyCapHit = false
+    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_AI_GENERATIONS_LIMIT
+    const { data: incData, error: incErr } = await supabase.rpc('try_increment_ai_generations_monthly', {
+      uid: user.id,
+      monthly_limit: limitForRpc,
+    })
+    if (incErr) {
+      console.warn('[generate-qcm] try_increment_ai_generations_monthly RPC failed:', incErr.message)
+    } else if (incData && typeof incData === 'object') {
+      const d = incData as { ok?: boolean; count?: number }
+      if (typeof d.count === 'number') monthlyCount = d.count
+      if (d.ok === false) monthlyCapHit = true
     }
 
     return NextResponse.json({
@@ -604,10 +653,14 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
       videoIncluded,
       transcriptIncluded,
       videoSkipReason,
-      // Quota info pour l'UI client (toast "il vous reste X générations gratuites")
+      // Quota info pour l'UI client (toast "il vous reste X générations gratuites"
+      // ou warning Premium "tu approches le cap mensuel")
       quotaPlan: profile.plan,
-      quotaUsed: aiGenerationsAfter ?? profile.ai_generations_count,
-      quotaLimit: FREE_AI_GENERATIONS_LIMIT,
+      quotaUsed: profile.plan === 'pro'
+        ? monthlyCount ?? profile.ai_generations_month_count
+        : monthlyCount ?? profile.ai_generations_count,
+      quotaLimit: limitForRpc,
+      quotaMonthlyCapHit: monthlyCapHit,
     })
   } catch (error) {
     console.error('[generate-qcm] error:', error)
