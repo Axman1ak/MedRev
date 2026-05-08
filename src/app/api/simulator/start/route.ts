@@ -17,7 +17,11 @@ import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-const FREE_SIMULATOR_SESSIONS_LIMIT = 1
+// Révisé mai 2026 (était 1) — 1 session totale ne montrait pas la valeur du
+// simulateur sur la durée. 3 laisse l'user vraiment tester sur plusieurs
+// configurations (matières, modes, nb questions). Aligné avec
+// FREE_SIMULATOR_SESSIONS_LIMIT dans src/types/index.ts.
+const FREE_SIMULATOR_SESSIONS_LIMIT = 3
 
 export async function POST() {
   try {
