@@ -331,9 +331,12 @@
   min-width: 0;
 }
 .dash-bib-thumb {
-  aspect-ratio: 2000 / 1100;
+  /* Aspect 2109/1185 (1.78, 16:9) — matche le viewBox étendu du nouveau
+     BibliothecaSvg. Avec preserveAspectRatio="xMidYMid slice" sur le SVG,
+     la biblio remplit exactement le thumb sans letterbox. */
+  aspect-ratio: 2109 / 1185;
   width: 100%;
-  background: #FAFAF7;
+  background: transparent;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(193, 149, 66, 0.35);
