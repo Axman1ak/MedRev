@@ -165,7 +165,7 @@ function PricingContent() {
           <article className="pri-card pri-card-featured">
             <div className="pri-card-badge">Recommandé</div>
             <div className="pri-card-h">
-              <div className="pri-card-tag">Le meilleur rapport</div>
+              <div className="pri-card-tag">Économise 3 mois</div>
               <h2 className="pri-card-name">Annuel</h2>
               <div className="pri-card-price">
                 <span className="pri-price-num">69</span>
@@ -173,20 +173,20 @@ function PricingContent() {
                 <span className="pri-price-period">par an</span>
               </div>
               <div className="pri-card-monthly">
-                soit <strong>5,75 €</strong> par mois · économise 3 mois
+                Soit <strong>5,75 €</strong> par mois.
               </div>
               <p className="pri-card-desc">
-                Pour les <em>P1</em> qui veulent tout débloquer sur l&apos;année.
-                Un seul paiement, pas de gestion mensuelle.
+                Pour les <em>P1</em> qui s&apos;engagent toute l&apos;année.
+                Mêmes fonctionnalités que le Mensuel.
               </p>
             </div>
             <ul className="pri-card-list">
-              <li><span className="pri-mark gold">✦</span><strong>Tout du Gratuit</strong>, plus :</li>
-              <li><span className="pri-mark ok">✓</span>Générations QCM IA <strong>illimitées</strong></li>
-              <li><span className="pri-mark ok">✓</span>Sessions simulateur illimitées + <strong>mode Examen blanc</strong></li>
-              <li><span className="pri-mark ok">✓</span>Vidéos jusqu&apos;à 250 Mo, PDF sans limite</li>
-              <li><span className="pri-mark ok">✓</span>Stats avancées (heatmap, sparkline 12 sem, dumbbell)</li>
-              <li><span className="pri-mark ok">✓</span>Support email prioritaire</li>
+              <li><span className="pri-mark gold">✦</span><strong>Tout du Premium</strong> :</li>
+              <li><span className="pri-mark ok">✓</span>Générations QCM IA illimitées</li>
+              <li><span className="pri-mark ok">✓</span>Simulateur illimité + Examen blanc</li>
+              <li><span className="pri-mark ok">✓</span>Vidéos 250 Mo, PDF sans limite</li>
+              <li><span className="pri-mark ok">✓</span>Stats avancées</li>
+              <li><span className="pri-mark dim">·</span>Économise 30 € vs Mensuel</li>
             </ul>
             <div className="pri-card-cta">
               {isPro ? (
