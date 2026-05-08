@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia } from '@/types'
+import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import './review-modal.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -159,6 +160,10 @@ export default function ReviewModal({
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   const [genInfo, setGenInfo] = useState<string | null>(null)
+
+  // PaywallModal — ouvert quand l'API renvoie code='quota_exceeded'
+  // (5e génération QCM IA atteinte ou vidéo > 100 Mo en mode Free).
+  const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -415,7 +420,24 @@ export default function ReviewModal({
           `Réponse non-JSON du serveur (HTTP ${res.status}). Détail : ${head || 'aucun contenu'}`
         )
       }
-      if (!res.ok) throw new Error(data.error || `Erreur génération (HTTP ${res.status})`)
+      if (!res.ok) {
+        // 403 + code='quota_exceeded' → on ouvre le PaywallModal au lieu de
+        // throw (le throw afficherait juste un texte rouge basique).
+        const d = data as { code?: string; quota?: string; used?: number; limit?: number; error?: string }
+        if (res.status === 403 && d.code === 'quota_exceeded') {
+          const qType: PaywallInfo['quota'] = d.quota === 'video_size'
+            ? 'video_size'
+            : 'ai_generations'
+          setPaywall({
+            quota: qType,
+            used: d.used,
+            limit: d.limit,
+            message: d.error,
+          })
+          return
+        }
+        throw new Error(data.error || `Erreur génération (HTTP ${res.status})`)
+      }
 
       // Recharge la lesson pour récupérer les ai_questions à jour
       const { data: updated } = await supabase
@@ -460,6 +482,7 @@ export default function ReviewModal({
   const qcmCount = aiQuestions.length
 
   return (
+    <>
     <div className="rmod-overlay" data-tour="review-modal" onClick={onClose}>
       <div className="rmod-card" onClick={e => e.stopPropagation()}>
 
@@ -807,5 +830,16 @@ export default function ReviewModal({
         )}
       </div>
     </div>
+
+    {paywall && (
+      <PaywallModal
+        quota={paywall.quota}
+        used={paywall.used}
+        limit={paywall.limit}
+        message={paywall.message}
+        onClose={() => setPaywall(null)}
+      />
+    )}
+    </>
   )
 }
