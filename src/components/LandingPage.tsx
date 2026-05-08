@@ -2,6 +2,7 @@
 // src/components/LandingPage.tsx
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 const FACS = [
@@ -182,6 +183,11 @@ export default function LandingPage() {
           }))
         )
       }
+
+      // Email de bienvenue (fire-and-forget — on ne bloque pas le redirect
+      // dashboard si l'envoi échoue, et l'endpoint ne fait rien si Resend
+      // pas configuré).
+      fetch('/api/welcome-email', { method: 'POST' }).catch(() => {})
 
       window.location.href = '/dashboard'
     } catch (e: any) {
@@ -447,9 +453,9 @@ export default function LandingPage() {
               <button className="lp-btn" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
                 Commencer gratuitement →
               </button>
-              <button className="lp-btn-outline">
+              <button className="lp-btn-outline" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
                 <span className="lp-btn-play">▶</span>
-                Voir la démo
+                Voir comment ça marche
               </button>
             </div>
             <div className="lp-trust">
@@ -529,22 +535,22 @@ export default function LandingPage() {
                 <div className="lp-diff-card">
                   <div className="lp-diff-icon">◎</div>
                   <div>
-                    <h4>Apprentissage adaptatif</h4>
-                    <p>MedRev détecte tes angles morts et t&apos;attaque un même concept sous différents angles jusqu&apos;à maîtrise complète.</p>
+                    <h4>Mode angles morts</h4>
+                    <p>Le simulateur cible automatiquement les fiches où tu es faible, pour que tes sessions de révision attaquent ce qui compte vraiment.</p>
                   </div>
                 </div>
                 <div className="lp-diff-card">
                   <div className="lp-diff-icon">⊕</div>
                   <div>
-                    <h4>Decks collaboratifs par promo</h4>
-                    <p>Tes camarades importent les mêmes cours. La valeur grandit pour tout le monde, sans effort supplémentaire.</p>
+                    <h4>QCM générés depuis ton cours</h4>
+                    <p>Pas de carte à écrire à la main. Importe ta vidéo et ton PDF, MedRev génère 30 QCM avec retour direct vers le passage source.</p>
                   </div>
                 </div>
                 <div className="lp-diff-card">
                   <div className="lp-diff-icon">◷</div>
                   <div>
                     <h4>Connecté à tes vraies dates</h4>
-                    <p>Anki ne sait pas que tes partiels sont dans trois semaines. MedRev ajuste l&apos;intensité en conséquence.</p>
+                    <p>Anki ne sait pas que tes partiels sont dans trois semaines. MedRev ajuste le calendrier J en conséquence.</p>
                   </div>
                 </div>
               </div>
@@ -563,10 +569,11 @@ export default function LandingPage() {
                 <div className="lp-pcard-price">0 <sub>€</sub></div>
                 <div className="lp-pcard-desc">Pour démarrer sans risque.</div>
                 <ul className="lp-pcard-features">
-                  <li>30 QCMs générés par mois</li>
+                  <li>Matières et fiches illimitées</li>
                   <li>Répétition espacée (J0 → J+120)</li>
-                  <li>Calendrier de révision automatique</li>
-                  <li>Import PDF et vidéo (limité)</li>
+                  <li>Calendrier et bibliothèque illimités</li>
+                  <li>10 générations QCM IA</li>
+                  <li>3 sessions simulateur</li>
                 </ul>
                 <button className="lp-pcard-btn" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
                   Commencer gratuitement
@@ -574,17 +581,17 @@ export default function LandingPage() {
               </div>
               <div className="lp-pcard lp-pcard-ft">
                 <div className="lp-pcard-name">Premium</div>
-                <div className="lp-pcard-price">9<sub>,99 €/mois</sub></div>
-                <div className="lp-pcard-desc">L&apos;équivalent d&apos;une heure de prépa.</div>
+                <div className="lp-pcard-price">69<sub> €/an</sub></div>
+                <div className="lp-pcard-desc">Soit 5,75 €/mois. Aussi en mensuel à 9,99 €.</div>
                 <ul className="lp-pcard-features">
-                  <li>QCMs illimités</li>
-                  <li>Import vidéo illimité avec timestamps</li>
-                  <li>Decks collaboratifs par promo</li>
-                  <li>Coach adaptatif et angles morts</li>
-                  <li>Simulateur examen officiel</li>
+                  <li>Générations QCM IA illimitées</li>
+                  <li>Sessions simulateur illimitées + Examen blanc</li>
+                  <li>Vidéos jusqu&apos;à 250 Mo, PDF sans limite</li>
+                  <li>Stats avancées (heatmap, sparkline, dumbbell)</li>
+                  <li>Mode angles morts (cible tes points faibles)</li>
                 </ul>
                 <button className="lp-pcard-btn" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Essayer 14 jours gratuits
+                  Commencer gratuitement
                 </button>
               </div>
             </div>
