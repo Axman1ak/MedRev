@@ -29,10 +29,11 @@ const GEMINI_FILE_GET_URL = (name: string) =>
 const MAX_VIDEO_SIZE = 250 * 1024 * 1024  // 250 Mo
 const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 20 Mo total req)
 
-// Quota Free : 5 générations IA totales sur le compte. Au-delà, il faut Premium.
-// Coût observé : ~8 cents pour 4-5 générations sur PDF 4 pages → 5 free = ~10 cents
-// max par user gratuit, soutenable. Voir mémoire project_medrev_premium.
-const FREE_AI_GENERATIONS_LIMIT = 5
+// Quota Free : 10 générations IA totales sur le compte. Au-delà, il faut Premium.
+// Révisé mai 2026 (était 5) — 5 était trop restrictif, l'user épuisait en
+// novembre puis ne voyait plus la valeur récurrente. Doit rester aligné avec
+// FREE_AI_GENERATIONS_LIMIT dans src/types/index.ts.
+const FREE_AI_GENERATIONS_LIMIT = 10
 
 // Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
 // (standard PASS médecine). Le V/F est interdit, les questions à moins ou
