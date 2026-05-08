@@ -75,11 +75,17 @@ export interface Profile {
   fac: string | null
   created_at: string
   // Compteurs de quotas Free (ajoutés mai 2026, voir migration premium-quotas).
-  // Quotas Free : 5 générations IA totales, 1 session simulateur totale.
   // Toujours présents en DB (default 0), mais optionnels ici pour rétro-compat
   // avec d'éventuels SELECT partiels qui ne les remontent pas.
-  ai_generations_count?: number
-  simulator_sessions_count?: number
+  ai_generations_count?: number              // total à vie (cap Free : 10)
+  simulator_sessions_count?: number          // total à vie (cap Free : 3)
+  // Fair use Premium (ajouté mai 2026, voir migration premium-fair-use)
+  // Le compteur mensuel est reset à la volée côté API quand on entre dans un
+  // nouveau mois calendaire.
+  ai_generations_month_count?: number        // compteur mensuel (cap Pro : 100)
+  ai_generations_month_started_at?: string    // ISO timestamp du début de la période
+  // Stripe (existant dans le schéma)
+  stripe_customer_id?: string | null
 }
 
 // Quotas Free centralisés — partagés entre l'API (route.ts) et l'UI (Settings).
@@ -95,6 +101,9 @@ export const FREE_AI_GENERATIONS_LIMIT = 10
 export const FREE_SIMULATOR_SESSIONS_LIMIT = 3
 export const FREE_VIDEO_SIZE_MB = 100
 export const FREE_PDF_SIZE_MB = 20
+// Fair use Premium : cap mensuel sur les générations IA pour protéger des
+// outliers. User normal Premium fait 10-20/mois, donc 100 laisse une marge.
+export const PREMIUM_MONTHLY_AI_CAP = 100
 export const J_STEPS = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 export const FREE_LIMIT = 15
 export function jLabel(i: number): string {
