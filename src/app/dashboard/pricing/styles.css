@@ -125,12 +125,6 @@
   gap: 20px;
   margin-bottom: 56px;
 }
-.pri-cards-2 {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 760px;
-  margin-left: auto;
-  margin-right: auto;
-}
 .pri-card {
   position: relative;
   background: var(--card);
@@ -333,10 +327,21 @@
   background: var(--gm);
   color: white;
 }
-.pri-btn-primary:hover {
+.pri-btn-primary:hover:not(:disabled) {
   background: var(--green);
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(27, 67, 50, .22);
+}
+/* Bouton secondaire (mensuel) — moins prononcé que primary pour pousser
+   visuellement vers le plan annuel recommandé. */
+.pri-btn-secondary {
+  background: var(--card);
+  border: 1.5px solid var(--gm);
+  color: var(--gm);
+}
+.pri-btn-secondary:hover:not(:disabled) {
+  background: var(--gl);
+  transform: translateY(-1px);
 }
 .pri-btn-current {
   background: var(--soft);
