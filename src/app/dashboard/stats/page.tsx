@@ -10,6 +10,7 @@
 // local — la duplication a été supprimée.
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
@@ -311,6 +312,10 @@ export default function StatsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [semestre, setSemestre] = useState<Semestre>(2)
+  // Plan user — fetché en parallèle des données. Détermine si on affiche les
+  // visualisations avancées (heatmap, sparkline, j-bar, dumbbell) ou le teaser
+  // Premium qui les remplace pour les comptes Gratuit.
+  const [isPro, setIsPro] = useState(false)
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
@@ -336,13 +341,15 @@ export default function StatsPage() {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-      const [{ data: sys }, { data: les }] = await Promise.all([
+      const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id).order('semestre').order('created_at'),
         supabase.from('lessons').select('*').eq('user_id', user.id).order('created_at'),
+        supabase.from('profiles').select('plan').eq('id', user.id).single(),
       ])
       if (cancelled) return
       setSystems((sys as System[] | null) ?? [])
       setLessons((les as Lesson[] | null) ?? [])
+      setIsPro((prof?.plan as string) === 'pro')
       setLoading(false)
     })()
     return () => { cancelled = true }
@@ -476,6 +483,10 @@ export default function StatsPage() {
         </div>
       </div>
 
+{/* === STATS AVANCÉES (Premium uniquement) === */}
+      {!isPro && <PremiumStatsTeaser />}
+
+      {isPro && <>
       {/* HEATMAP */}
       <div className="stats-card">
         <div className="stats-card-title">
@@ -557,7 +568,54 @@ export default function StatsPage() {
         </div>
         <DumbbellChart rows={comparison} />
       </div>
+      </>}
 
+    </div>
+  )
+}
+
+// ===================== PREMIUM TEASER =====================
+// Remplace les 4 visualisations avancées (heatmap, sparkline, j-bar, dumbbell)
+// pour les comptes Gratuit. Présente ce qu'ils débloqueraient en Premium et
+// renvoie sur la page Pricing.
+function PremiumStatsTeaser() {
+  return (
+    <div className="stats-premium-teaser">
+      <div className="stats-premium-teaser-kicker">Stats avancées · Premium</div>
+      <h2 className="stats-premium-teaser-title">
+        Vois <em>ton année</em> en un coup d&apos;œil
+      </h2>
+      <p className="stats-premium-teaser-sub">
+        Quatre visualisations qui révèlent tes habitudes, tes progrès et
+        tes points faibles.
+      </p>
+
+      <div className="stats-premium-teaser-grid">
+        <div className="stats-premium-teaser-item">
+          <div className="stats-premium-teaser-item-icon">▦</div>
+          <div className="stats-premium-teaser-item-name">Heatmap année</div>
+          <div className="stats-premium-teaser-item-desc">52 semaines d&apos;activité, jour par jour</div>
+        </div>
+        <div className="stats-premium-teaser-item">
+          <div className="stats-premium-teaser-item-icon">∿</div>
+          <div className="stats-premium-teaser-item-name">Sparkline 12 sem</div>
+          <div className="stats-premium-teaser-item-desc">Évolution de ta moyenne semaine après semaine</div>
+        </div>
+        <div className="stats-premium-teaser-item">
+          <div className="stats-premium-teaser-item-icon">▮▮▮</div>
+          <div className="stats-premium-teaser-item-name">Maîtrise par palier J</div>
+          <div className="stats-premium-teaser-item-desc">Vois où tu lâches sur la courbe d&apos;oubli</div>
+        </div>
+        <div className="stats-premium-teaser-item">
+          <div className="stats-premium-teaser-item-icon">●─●</div>
+          <div className="stats-premium-teaser-item-name">Comparaison 1 mois</div>
+          <div className="stats-premium-teaser-item-desc">Quelles matières remontent, lesquelles décrochent</div>
+        </div>
+      </div>
+
+      <Link href="/dashboard/pricing" className="stats-premium-teaser-cta">
+        Débloquer ces stats avec Premium →
+      </Link>
     </div>
   )
 }
