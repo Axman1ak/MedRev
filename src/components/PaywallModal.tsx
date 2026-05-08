@@ -24,6 +24,7 @@
 // et l'affichage adaptatif selon le type de quota.
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import './paywall-modal.css'
 
 export type PaywallQuota = 'ai_generations' | 'simulator_sessions' | 'video_size' | 'pdf_size'
@@ -142,18 +143,21 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
           </ul>
         </div>
 
-        <div className="pw-soon">
-          Le plan Premium arrive bientôt. On te préviendra dès qu&apos;il sera disponible.
-        </div>
-
         <div className="pw-actions">
           <button
             type="button"
             className="pw-btn pw-btn-ghost"
             onClick={onClose}
           >
-            Compris
+            Plus tard
           </button>
+          <Link
+            href="/dashboard/pricing"
+            className="pw-btn pw-btn-primary"
+            onClick={onClose}
+          >
+            Découvrir Premium →
+          </Link>
         </div>
       </div>
     </div>
