@@ -216,33 +216,29 @@
   margin-top: 1px;
 }
 
-/* === NOTE "À VENIR" === */
-.pw-soon {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-size: 13px;
-  color: var(--text-tertiary);
-  text-align: center;
-  margin-bottom: 22px;
-  line-height: 1.4;
-}
-
 /* === ACTIONS === */
 .pw-actions {
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
+  gap: 10px;
 }
 .pw-btn {
+  flex: 1;
   appearance: none;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 13px;
-  padding: 11px 28px;
+  padding: 12px 18px;
   border-radius: 10px;
   cursor: pointer;
   letter-spacing: .02em;
   border: none;
   transition: all .12s;
+  text-decoration: none;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .pw-btn-ghost {
   background: var(--bg-soft);
@@ -252,6 +248,15 @@
 .pw-btn-ghost:hover {
   background: var(--bg-muted);
   border-color: var(--border-strong);
+}
+.pw-btn-primary {
+  background: var(--accent-medium);
+  color: white;
+}
+.pw-btn-primary:hover {
+  background: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(27, 67, 50, .22);
 }
 
 /* === RESPONSIVE === */
