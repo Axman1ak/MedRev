@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import './styles.css'
 
 type Semestre = 1 | 2 | 'year'
@@ -158,9 +159,12 @@ export default function SimulateurPage() {
   const [timeLeft, setTimeLeft] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Quota Free : vérifié serveur via /api/simulator/start avant lancement
+  // Quota Free : vérifié serveur via /api/simulator/start avant lancement.
+  // - quotaError : message inline pour les erreurs réseau / serveur génériques
+  // - paywall    : payload pour la modale Premium quand l'API renvoie 403 quota_exceeded
   const [launching, setLaunching] = useState(false)
   const [quotaError, setQuotaError] = useState<string | null>(null)
+  const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
 
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }] = await Promise.all([
@@ -267,10 +271,24 @@ export default function SimulateurPage() {
     // Si le user est Free et a déjà consommé sa session, on bloque ici.
     setLaunching(true)
     setQuotaError(null)
+    setPaywall(null)
     try {
       const resp = await fetch('/api/simulator/start', { method: 'POST' })
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}))
+        // 403 + code='quota_exceeded' → on ouvre le PaywallModal
+        // au lieu d'un simple message rouge inline.
+        if (resp.status === 403 && data?.code === 'quota_exceeded') {
+          setPaywall({
+            quota: 'simulator_sessions',
+            used: typeof data.used === 'number' ? data.used : undefined,
+            limit: typeof data.limit === 'number' ? data.limit : undefined,
+            message: typeof data.error === 'string' ? data.error : undefined,
+          })
+          setLaunching(false)
+          return
+        }
+        // Autres erreurs : message inline classique
         const msg = (data?.error as string)
           || 'Impossible de lancer la session. Réessaie dans un instant.'
         setQuotaError(msg)
@@ -631,6 +649,16 @@ export default function SimulateurPage() {
             )}
           </div>
         </div>
+
+        {paywall && (
+          <PaywallModal
+            quota={paywall.quota}
+            used={paywall.used}
+            limit={paywall.limit}
+            message={paywall.message}
+            onClose={() => setPaywall(null)}
+          />
+        )}
       </div>
     )
   }
