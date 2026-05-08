@@ -29,6 +29,11 @@ const GEMINI_FILE_GET_URL = (name: string) =>
 const MAX_VIDEO_SIZE = 250 * 1024 * 1024  // 250 Mo
 const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 20 Mo total req)
 
+// Quota Free : 5 générations IA totales sur le compte. Au-delà, il faut Premium.
+// Coût observé : ~8 cents pour 4-5 générations sur PDF 4 pages → 5 free = ~10 cents
+// max par user gratuit, soutenable. Voir mémoire project_medrev_premium.
+const FREE_AI_GENERATIONS_LIMIT = 5
+
 // Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
 // (standard PASS médecine). Le V/F est interdit, les questions à moins ou
 // plus de 5 options sont rejetées au sanitize.
@@ -308,6 +313,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
+    // 1b. Check quota Free
+    // Lecture du plan + compteur. Si plan='free' et compteur >= 5, on refuse
+    // AVANT d'appeler Gemini (sinon on paye le coût pour rien).
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('plan, ai_generations_count')
+      .eq('id', user.id)
+      .single()
+    if (profileErr || !profile) {
+      return NextResponse.json({ error: 'Profil introuvable' }, { status: 500 })
+    }
+    if (profile.plan !== 'pro' && (profile.ai_generations_count ?? 0) >= FREE_AI_GENERATIONS_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Limite atteinte : ${FREE_AI_GENERATIONS_LIMIT} générations QCM IA en mode Gratuit. Passe en Premium pour des générations illimitées.`,
+          code: 'quota_exceeded',
+          quota: 'ai_generations',
+          limit: FREE_AI_GENERATIONS_LIMIT,
+          used: profile.ai_generations_count ?? 0,
+        },
+        { status: 403 }
+      )
+    }
+
     // 2. Body
     const body = await req.json().catch(() => ({}))
     const {
@@ -551,6 +580,21 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
       throw new Error(`Sauvegarde échouée : ${updateErr.message}`)
     }
 
+    // 11. Incrémenter le compteur de générations IA (atomique via RPC).
+    // Fait APRÈS la sauvegarde pour que les générations échouées (Gemini KO,
+    // questions toutes invalides, etc.) ne consomment pas le quota du user.
+    // Si l'incrément échoue (RPC down), on log mais on ne fait pas échouer la
+    // requête : le user a eu son contenu, c'est ce qui compte.
+    let aiGenerationsAfter: number | null = null
+    if (profile.plan !== 'pro') {
+      const { data: incData, error: incErr } = await supabase.rpc('increment_ai_generations', { uid: user.id })
+      if (incErr) {
+        console.warn('[generate-qcm] increment_ai_generations RPC failed:', incErr.message)
+      } else if (typeof incData === 'number') {
+        aiGenerationsAfter = incData
+      }
+    }
+
     return NextResponse.json({
       count: sanitized.length,             // nb de questions générées dans cet appel
       total: finalQuestions.length,        // nb total après ajout
@@ -559,6 +603,10 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
       videoIncluded,
       transcriptIncluded,
       videoSkipReason,
+      // Quota info pour l'UI client (toast "il vous reste X générations gratuites")
+      quotaPlan: profile.plan,
+      quotaUsed: aiGenerationsAfter ?? profile.ai_generations_count,
+      quotaLimit: FREE_AI_GENERATIONS_LIMIT,
     })
   } catch (error) {
     console.error('[generate-qcm] error:', error)
