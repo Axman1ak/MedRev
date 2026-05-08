@@ -24,6 +24,11 @@ const GEMINI_FILE_GET_URL = (name: string) =>
 
 const MAX_VIDEO_SIZE = 250 * 1024 * 1024 // 250 Mo (cohérent avec generate-qcm)
 
+// Quota Free : 100 Mo (proxy de ~30 min de vidéo en 720p compressée). Au-delà,
+// la transcription est refusée pour les comptes Free (la vidéo elle-même reste
+// uploadée mais pas exploitable par l'IA → pousse l'upgrade).
+const FREE_VIDEO_SIZE_LIMIT = 100 * 1024 * 1024 // 100 Mo
+
 // ============================================================
 // Reuse des helpers Files API (mêmes que generate-qcm)
 // ============================================================
@@ -156,6 +161,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
+    // Lecture du plan pour le check de taille (en Free, 100 Mo max ≈ 30 min)
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single()
+    if (profileErr || !profile) {
+      return NextResponse.json({ error: 'Profil introuvable' }, { status: 500 })
+    }
+
     const body = await req.json().catch(() => ({}))
     const { lessonId } = body as { lessonId?: string }
     if (!lessonId) {
@@ -196,6 +211,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: `Vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > 100 Mo)` },
         { status: 400 }
+      )
+    }
+
+    // Check quota Free : 100 Mo max pour les comptes gratuits (proxy de 30 min)
+    if (profile.plan !== 'pro' && videoBlob.size > FREE_VIDEO_SIZE_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Vidéo trop longue pour le mode Gratuit (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > 100 Mo, soit ~30 min). Passe en Premium pour transcrire des vidéos plus longues.`,
+          code: 'quota_exceeded',
+          quota: 'video_size',
+          limit: FREE_VIDEO_SIZE_LIMIT,
+          actual: videoBlob.size,
+        },
+        { status: 403 }
       )
     }
 
