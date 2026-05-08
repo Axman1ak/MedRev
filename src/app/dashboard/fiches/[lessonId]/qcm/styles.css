@@ -2,7 +2,24 @@
 /* src/app/dashboard/fiches/[lessonId]/qcm/styles.css
    Page de session QCM par fiche. Préfixe scope : .qcm-* */
 
+/* Aliases vers les tokens globaux du design system (src/app/globals.css).
+   Les tokens --bg-app, --bg-card, etc. changent automatiquement avec
+   data-theme="dark", donc la page QCM suit le thème sans plus toucher. */
 .qcm-page {
+  --bg: var(--bg-app);
+  --card: var(--bg-card);
+  --soft: var(--bg-soft);
+  --dark: var(--text-primary);
+  --gray: var(--text-secondary);
+  --dim: var(--text-tertiary);
+  --border: var(--border-subtle);
+  --green: var(--accent-primary);
+  --gm: var(--accent-medium);
+  --gl: var(--accent-soft);
+  --amber: var(--warning);
+  --rose: var(--danger);
+  --rose-soft: var(--danger-soft);
+
   min-height: 100vh;
   background: var(--bg, #EDEAE3);
   font-family: 'Plus Jakarta Sans', sans-serif;
