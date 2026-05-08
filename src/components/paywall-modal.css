@@ -1,0 +1,272 @@
+@charset "UTF-8";
+/* src/components/paywall-modal.css
+ *
+ * PaywallModal — modale affichée quand un quota Free est atteint.
+ * Toutes les classes préfixées .pw-* pour scope.
+ *
+ * Suit le design system dual (cabinet d'érudit clair / archive sombre)
+ * via les tokens globaux --bg-card, --text-primary, etc.
+ */
+
+.pw-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--overlay, rgba(17, 19, 16, .55));
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: pw-overlay-in .2s ease-out;
+}
+@keyframes pw-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pw-modal {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: var(--shadow-lg, 0 18px 50px rgba(0, 0, 0, .15));
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  color: var(--text-primary);
+  animation: pw-modal-in .3s cubic-bezier(.34, 1.2, .64, 1);
+}
+@keyframes pw-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === BOUTON FERMER === */
+.pw-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  padding: 0 0 2px;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.pw-close:hover {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* === ICON ORNEMENT === */
+.pw-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-soft) 100%);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', 'Fraunces', Georgia, serif;
+  font-size: 24px;
+  color: var(--accent-medium);
+  margin: 0 auto 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+/* === HEADER === */
+.pw-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--accent-medium);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.pw-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -.01em;
+  text-align: center;
+  margin: 0 0 12px;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+.pw-intro {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0 0 22px;
+}
+
+/* === PROGRESS BAR (rempli en rouge — atteint) === */
+.pw-progress {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 22px;
+}
+.pw-progress-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.pw-progress-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-secondary);
+}
+.pw-progress-num {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.pw-progress-num strong {
+  font-family: 'Fraunces', serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--danger);
+  letter-spacing: -.01em;
+  margin-right: 2px;
+}
+.pw-progress-bar {
+  height: 5px;
+  background: var(--bg-muted);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+.pw-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--danger);
+  border-radius: 999px;
+}
+
+/* === LISTE BÉNÉFICES === */
+.pw-benefits {
+  background: var(--accent-soft);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border-subtle);
+}
+.pw-benefits-h {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--accent-primary);
+  margin-bottom: 10px;
+}
+.pw-benefits-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pw-benefits-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.pw-benefits-mark {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-medium);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* === NOTE "À VENIR" === */
+.pw-soon {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-bottom: 22px;
+  line-height: 1.4;
+}
+
+/* === ACTIONS === */
+.pw-actions {
+  display: flex;
+  justify-content: center;
+}
+.pw-btn {
+  appearance: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 11px 28px;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: .02em;
+  border: none;
+  transition: all .12s;
+}
+.pw-btn-ghost {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+.pw-btn-ghost:hover {
+  background: var(--bg-muted);
+  border-color: var(--border-strong);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 520px) {
+  .pw-modal {
+    padding: 30px 22px 22px;
+    border-radius: 14px;
+  }
+  .pw-title {
+    font-size: 19px;
+  }
+  .pw-intro {
+    font-size: 14px;
+  }
+  .pw-benefits-list li {
+    font-size: 12.5px;
+  }
+}
