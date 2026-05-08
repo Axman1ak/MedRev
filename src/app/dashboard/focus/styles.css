@@ -1061,8 +1061,10 @@
   .focus-card-zone { padding: 24px 28px 24px 20px; }
 }
 
-/* Mobile : layout en colonne, jardin en bandeau du haut (sort de l'overlay) */
-@media (max-width: 720px) {
+/* Mobile + tablette portrait : layout en colonne, jardin en bandeau du haut.
+   Sur tablette portrait (768-1024px) sans cette règle, le SVG bibliothèque
+   serait sliced à ~70% horizontalement et on perdrait les trésors latéraux. */
+@media (max-width: 720px), (max-width: 1024px) and (orientation: portrait) {
   .focus-stage { flex-direction: column; }
   .focus-garden {
     position: relative;
