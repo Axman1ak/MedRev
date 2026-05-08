@@ -87,8 +87,12 @@ export interface Profile {
 //   - src/app/api/generate-qcm/route.ts (FREE_AI_GENERATIONS_LIMIT)
 //   - src/app/api/simulator/start/route.ts (FREE_SIMULATOR_SESSIONS_LIMIT)
 //   - src/app/api/transcribe-video/route.ts (FREE_VIDEO_SIZE_LIMIT)
-export const FREE_AI_GENERATIONS_LIMIT = 5
-export const FREE_SIMULATOR_SESSIONS_LIMIT = 1
+//
+// Révision mai 2026 : 5→10 IA et 1→3 simu pour laisser le user vraiment
+// découvrir la valeur Premium avant la limite. Rester sur des "totaux à vie"
+// (pas de renouvellement mensuel) pour la simplicité d'implémentation.
+export const FREE_AI_GENERATIONS_LIMIT = 10
+export const FREE_SIMULATOR_SESSIONS_LIMIT = 3
 export const FREE_VIDEO_SIZE_MB = 100
 export const FREE_PDF_SIZE_MB = 20
 export const J_STEPS = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
