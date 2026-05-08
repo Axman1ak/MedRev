@@ -74,7 +74,23 @@ export interface Profile {
   plan: 'free' | 'pro'
   fac: string | null
   created_at: string
+  // Compteurs de quotas Free (ajoutés mai 2026, voir migration premium-quotas).
+  // Quotas Free : 5 générations IA totales, 1 session simulateur totale.
+  // Toujours présents en DB (default 0), mais optionnels ici pour rétro-compat
+  // avec d'éventuels SELECT partiels qui ne les remontent pas.
+  ai_generations_count?: number
+  simulator_sessions_count?: number
 }
+
+// Quotas Free centralisés — partagés entre l'API (route.ts) et l'UI (Settings).
+// Toute modification de ces valeurs doit aussi être appliquée dans :
+//   - src/app/api/generate-qcm/route.ts (FREE_AI_GENERATIONS_LIMIT)
+//   - src/app/api/simulator/start/route.ts (FREE_SIMULATOR_SESSIONS_LIMIT)
+//   - src/app/api/transcribe-video/route.ts (FREE_VIDEO_SIZE_LIMIT)
+export const FREE_AI_GENERATIONS_LIMIT = 5
+export const FREE_SIMULATOR_SESSIONS_LIMIT = 1
+export const FREE_VIDEO_SIZE_MB = 100
+export const FREE_PDF_SIZE_MB = 20
 export const J_STEPS = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 export const FREE_LIMIT = 15
 export function jLabel(i: number): string {
@@ -112,17 +128,3 @@ export function stepDate(lesson: Lesson, i: number): string | null {
   if (!lesson.learn_date) return null
   return addDays(lesson.learn_date, J_STEPS[i])
 }
- 
-export interface TranscriptSegment {
-  start: number  // secondes
-  end: number    // secondes
-  text: string
-}
- 
-export interface LessonMedia {
-  // ... champs existants (video_path, video_duration_s, etc.)
-  // AJOUTER :
-  transcript?: TranscriptSegment[]
-  transcript_generated_at?: string
-}
- 
