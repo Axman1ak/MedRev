@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
-import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT } from '@/types'
+import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP } from '@/types'
 import './styles.css'
 
 const FACS = [
@@ -35,6 +35,10 @@ export default function SettingsPage() {
 
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileMsg, setProfileMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+
+  // Stripe Customer Portal — bouton de gestion d'abonnement pour les Pro
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
 
   // Mot de passe
   const [newPassword, setNewPassword] = useState('')
@@ -137,6 +141,25 @@ export default function SettingsPage() {
     }
   }
 
+  // ------------ STRIPE CUSTOMER PORTAL ------------
+  async function openCustomerPortal() {
+    setPortalLoading(true)
+    setPortalError(null)
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.url) {
+        setPortalError(json?.error || 'Impossible d\'ouvrir le portail.')
+        setPortalLoading(false)
+        return
+      }
+      window.location.href = json.url as string
+    } catch {
+      setPortalError('Connexion impossible. Réessaie dans un instant.')
+      setPortalLoading(false)
+    }
+  }
+
   // ------------ LOGOUT ------------
   async function logout() {
     await supabase.auth.signOut()
@@ -235,6 +258,62 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+
+          {profile.plan === 'pro' && (() => {
+            // Calcul du compteur mensuel effectif (reset à la volée si nouveau mois)
+            const startedAt = profile.ai_generations_month_started_at
+              ? new Date(profile.ai_generations_month_started_at)
+              : null
+            const now = new Date()
+            const inSameMonth = !!startedAt
+              && startedAt.getUTCFullYear() === now.getUTCFullYear()
+              && startedAt.getUTCMonth() === now.getUTCMonth()
+            const monthCount = inSameMonth ? (profile.ai_generations_month_count ?? 0) : 0
+            // On affiche la barre seulement si l'user s'approche du cap (>50%)
+            // pour éviter de stresser inutilement les users normaux.
+            const showMonthlyCap = monthCount > PREMIUM_MONTHLY_AI_CAP * 0.5
+            return (
+              <>
+                {showMonthlyCap && (
+                  <div className="set-row">
+                    <label className="set-label">Usage IA ce mois-ci</label>
+                    <div className="set-quotas">
+                      <QuotaBar
+                        label="Générations QCM IA"
+                        used={monthCount}
+                        limit={PREMIUM_MONTHLY_AI_CAP}
+                      />
+                    </div>
+                    <p className="set-hint">
+                      Le compteur se reset le 1er du mois prochain. Cette
+                      limite haute protège l&apos;infrastructure des usages
+                      excessifs — tu ne devrais jamais l&apos;atteindre en
+                      utilisation normale.
+                    </p>
+                  </div>
+                )}
+                <div className="set-row">
+                  <label className="set-label">Gestion de l&apos;abonnement</label>
+                  <p className="set-hint">
+                    Mets à jour ta carte, télécharge tes factures ou résilie ton
+                    abonnement. Tu seras redirigé vers le portail sécurisé de Stripe.
+                  </p>
+              {portalError && (
+                <div className="set-msg err" style={{ marginTop: 8 }}>{portalError}</div>
+              )}
+              <div className="set-actions">
+                <button
+                  className="set-btn ghost"
+                  onClick={openCustomerPortal}
+                  disabled={portalLoading}
+                >
+                  {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement →'}
+                </button>
+              </div>
+            </div>
+              </>
+            )
+          })()}
 
           {profile.plan !== 'pro' && (
             <div className="set-row">
