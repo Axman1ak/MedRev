@@ -6,6 +6,7 @@
 // vers Pro n'est pas branché pour le moment).
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
@@ -228,7 +229,9 @@ export default function SettingsPage() {
             <div className="set-plan">
               <span className={`set-plan-badge ${profile.plan === 'pro' ? 'pro' : 'free'}`}>{planLabel}</span>
               {profile.plan !== 'pro' && (
-                <span className="set-hint">Le plan Premium arrive bientôt.</span>
+                <Link href="/dashboard/pricing" className="set-plan-link">
+                  Voir les formules Premium →
+                </Link>
               )}
             </div>
           </div>
@@ -251,7 +254,7 @@ export default function SettingsPage() {
               <p className="set-hint">
                 En Premium, tous les quotas sont illimités. Les vidéos
                 jusqu&apos;à 250 Mo et les PDF sans limite de taille seront
-                débloqués.
+                débloqués. <Link href="/dashboard/pricing" className="set-plan-inline-link">Voir les formules</Link>.
               </p>
             </div>
           )}
