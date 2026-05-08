@@ -333,7 +333,7 @@ const STEPS: Step[] = [
         sans QCM générés, pas d&apos;examen blanc possible.
         <br /><br />
         <em className="ont-premium-note">
-          Plan Gratuit : 5 générations IA totales sur tout le compte.{' '}
+          Plan Gratuit : 10 générations IA totales sur tout le compte.{' '}
           <strong>Premium</strong> : illimité.
         </em>
       </>
@@ -475,7 +475,7 @@ const STEPS: Step[] = [
         <strong>Examen blanc</strong> avec timer et grille concours.
         <br /><br />
         <em className="ont-premium-note">
-          Plan Gratuit : 1 session totale en Apprentissage.{' '}
+          Plan Gratuit : 3 sessions totales en Apprentissage.{' '}
           <strong>Premium</strong> : sessions illimitées + Examen blanc.
         </em>
       </>
