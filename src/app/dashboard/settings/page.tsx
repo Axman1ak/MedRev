@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT } from '@/types'
 import './styles.css'
 
 const FACS = [
@@ -231,6 +232,29 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+
+          {profile.plan !== 'pro' && (
+            <div className="set-row">
+              <label className="set-label">Quotas Gratuit</label>
+              <div className="set-quotas">
+                <QuotaBar
+                  label="Générations QCM IA"
+                  used={profile.ai_generations_count ?? 0}
+                  limit={FREE_AI_GENERATIONS_LIMIT}
+                />
+                <QuotaBar
+                  label="Sessions simulateur"
+                  used={profile.simulator_sessions_count ?? 0}
+                  limit={FREE_SIMULATOR_SESSIONS_LIMIT}
+                />
+              </div>
+              <p className="set-hint">
+                En Premium, tous les quotas sont illimités. Les vidéos
+                jusqu&apos;à 250 Mo et les PDF sans limite de taille seront
+                débloqués.
+              </p>
+            </div>
+          )}
         </section>
 
         {/* MOT DE PASSE */}
@@ -366,6 +390,28 @@ export default function SettingsPage() {
           </div>
         </section>
 
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// QuotaBar — barre de progression compacte pour les compteurs Free
+// ============================================================
+function QuotaBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const safeUsed = Math.max(0, Math.min(used, limit))
+  const pct = limit > 0 ? Math.round((safeUsed / limit) * 100) : 0
+  const exhausted = safeUsed >= limit
+  return (
+    <div className={`set-quota${exhausted ? ' exhausted' : ''}`}>
+      <div className="set-quota-row">
+        <span className="set-quota-lbl">{label}</span>
+        <span className="set-quota-num">
+          <strong>{safeUsed}</strong> / {limit}
+        </span>
+      </div>
+      <div className="set-quota-bar" aria-hidden="true">
+        <div className="set-quota-bar-fill" style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
