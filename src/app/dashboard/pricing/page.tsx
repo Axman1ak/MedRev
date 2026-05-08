@@ -6,12 +6,12 @@
 // le price ID fixé côté serveur). Le webhook /api/stripe/webhook flippe
 // profile.plan à 'pro' après checkout réussi.
 //
-// Pour ajouter d'autres plans (annuel 39€, à vie 49€), il faudra :
-//   1. Créer les products/prix dans Stripe dashboard
+// Pour ajouter le plan annuel 69 € (validé en mémoire), il faudra :
+//   1. Créer le product/prix dans Stripe dashboard
 //   2. Modifier /api/stripe/checkout pour accepter un param priceId
-//   3. Ajouter les cards correspondantes ici
+//   3. Ajouter une 3e card côté UI
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -24,7 +24,20 @@ import {
 } from '@/types'
 import './styles.css'
 
+// Wrapper exporté par défaut : enveloppe le contenu dans <Suspense> pour
+// satisfaire la contrainte Next.js 14 App Router quand on utilise
+// useSearchParams() (lecture de ?success=true / ?cancelled=true post-Stripe).
+// Sans ce wrapper, le build Vercel échoue avec "useSearchParams() should be
+// wrapped in a suspense boundary".
 export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="pri-page"><div className="pri-loading">Chargement…</div></div>}>
+      <PricingContent />
+    </Suspense>
+  )
+}
+
+function PricingContent() {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
