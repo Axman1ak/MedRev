@@ -2,7 +2,20 @@
 /* src/app/dashboard/settings/styles.css
    Page Paramètres — préfixe scope : .set-* */
 
+/* Aliases vers les tokens globaux du design system (src/app/globals.css).
+   Les tokens --bg-app, --bg-card, etc. changent automatiquement avec
+   data-theme="dark", donc la page Settings suit le thème sans plus toucher. */
 .set-page {
+  --bg: var(--bg-app);
+  --card: var(--bg-card);
+  --soft: var(--bg-soft);
+  --dark: var(--text-primary);
+  --gray: var(--text-secondary);
+  --border: var(--border-subtle);
+  --green: var(--accent-primary);
+  --gm: var(--accent-medium);
+  --rose: var(--danger);
+
   min-height: 100vh;
   background: var(--bg, #EDEAE3);
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
