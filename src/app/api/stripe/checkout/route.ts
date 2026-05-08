@@ -56,9 +56,11 @@ export async function POST(req: NextRequest) {
   }
 
   // URL de redirection après paiement / annulation. Détermine le domaine
-  // automatiquement (prod vs preview vs local) via l'env Vercel.
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  // depuis la requête elle-même : marche sur prod, preview, localhost, et
+  // domaine custom sans config manuelle. NE PAS utiliser process.env.VERCEL_URL
+  // qui pointe sur l'URL spécifique du deployment (med-rev-abc123.vercel.app)
+  // au lieu du domaine alias où sont les cookies de session Supabase.
+  const baseUrl = req.headers.get('origin') || new URL(req.url).origin
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
