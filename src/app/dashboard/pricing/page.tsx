@@ -1,15 +1,10 @@
 'use client'
 // src/app/dashboard/pricing/page.tsx
 //
-// Page Pricing — Free vs Premium (9,99 €/mois).
-// Branche /api/stripe/checkout existant (qui ouvre une session Stripe avec
-// le price ID fixé côté serveur). Le webhook /api/stripe/webhook flippe
+// Page Pricing — Free vs Premium (Annuel 69 € recommandé / Mensuel 9,99 €).
+// Branche /api/stripe/checkout existant qui sait maintenant router vers le
+// bon price ID via le param `plan`. Le webhook /api/stripe/webhook flippe
 // profile.plan à 'pro' après checkout réussi.
-//
-// Pour ajouter le plan annuel 69 € (validé en mémoire), il faudra :
-//   1. Créer le product/prix dans Stripe dashboard
-//   2. Modifier /api/stripe/checkout pour accepter un param priceId
-//   3. Ajouter une 3e card côté UI
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -27,8 +22,6 @@ import './styles.css'
 // Wrapper exporté par défaut : enveloppe le contenu dans <Suspense> pour
 // satisfaire la contrainte Next.js 14 App Router quand on utilise
 // useSearchParams() (lecture de ?success=true / ?cancelled=true post-Stripe).
-// Sans ce wrapper, le build Vercel échoue avec "useSearchParams() should be
-// wrapped in a suspense boundary".
 export default function PricingPage() {
   return (
     <Suspense fallback={<div className="pri-page"><div className="pri-loading">Chargement…</div></div>}>
@@ -37,13 +30,15 @@ export default function PricingPage() {
   )
 }
 
+type StripePlan = 'monthly' | 'yearly'
+
 function PricingContent() {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState<StripePlan | null>(null)
   const [banner, setBanner] = useState<{ kind: 'ok' | 'info'; text: string } | null>(null)
 
   useEffect(() => {
@@ -65,7 +60,6 @@ function PricingContent() {
     if (!searchParams) return
     if (searchParams.get('success') === 'true') {
       setBanner({ kind: 'ok', text: 'Paiement réussi. Ton plan Premium est activé — bienvenue.' })
-      // Nettoie les query params sans recharger (replace state HTML5)
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, '', '/dashboard/pricing')
       }
@@ -77,20 +71,25 @@ function PricingContent() {
     }
   }, [searchParams])
 
-  async function handleUpgrade() {
-    setCheckoutLoading(true)
+  async function handleUpgrade(plan: StripePlan) {
+    setCheckoutLoading(plan)
+    setBanner(null)
     try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' })
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.url) {
         setBanner({ kind: 'info', text: json?.error || 'Impossible d\'ouvrir le paiement. Réessaie dans un instant.' })
-        setCheckoutLoading(false)
+        setCheckoutLoading(null)
         return
       }
       window.location.href = json.url as string
     } catch {
       setBanner({ kind: 'info', text: 'Connexion impossible. Vérifie ta connexion et réessaie.' })
-      setCheckoutLoading(false)
+      setCheckoutLoading(null)
     }
   }
 
@@ -127,8 +126,8 @@ function PricingContent() {
           </div>
         )}
 
-        {/* === CARDS (2 plans : Gratuit + Premium mensuel) === */}
-        <div className="pri-cards pri-cards-2">
+        {/* === CARDS (3 plans : Gratuit / Annuel recommandé / Mensuel) === */}
+        <div className="pri-cards">
           {/* GRATUIT */}
           <article className={`pri-card${!isPro ? ' pri-card-current' : ''}`}>
             <div className="pri-card-h">
@@ -149,7 +148,7 @@ function PricingContent() {
               <li><span className="pri-mark ok">✓</span>Courbe J + notation 1-5</li>
               <li><span className="pri-mark ok">✓</span>Bibliothèque + sessions Focus illimitées</li>
               <li><span className="pri-mark dim">·</span>{FREE_AI_GENERATIONS_LIMIT} générations QCM IA <em>au total</em></li>
-              <li><span className="pri-mark dim">·</span>{FREE_SIMULATOR_SESSIONS_LIMIT} session simulateur</li>
+              <li><span className="pri-mark dim">·</span>{FREE_SIMULATOR_SESSIONS_LIMIT} sessions simulateur</li>
               <li><span className="pri-mark dim">·</span>Vidéos jusqu&apos;à {FREE_VIDEO_SIZE_MB} Mo (~30 min)</li>
               <li><span className="pri-mark dim">·</span>PDF jusqu&apos;à {FREE_PDF_SIZE_MB} Mo</li>
             </ul>
@@ -162,23 +161,23 @@ function PricingContent() {
             </div>
           </article>
 
-          {/* PREMIUM — RECOMMANDÉ */}
+          {/* ANNUEL — RECOMMANDÉ */}
           <article className="pri-card pri-card-featured">
             <div className="pri-card-badge">Recommandé</div>
             <div className="pri-card-h">
-              <div className="pri-card-tag">Le plan complet</div>
-              <h2 className="pri-card-name">Premium</h2>
+              <div className="pri-card-tag">Le meilleur rapport</div>
+              <h2 className="pri-card-name">Annuel</h2>
               <div className="pri-card-price">
-                <span className="pri-price-num">9,99</span>
+                <span className="pri-price-num">69</span>
                 <span className="pri-price-cur">€</span>
-                <span className="pri-price-period">par mois</span>
+                <span className="pri-price-period">par an</span>
               </div>
               <div className="pri-card-monthly">
-                Sans engagement, résiliable à tout moment.
+                soit <strong>5,75 €</strong> par mois · économise 3 mois
               </div>
               <p className="pri-card-desc">
-                Pour les <em>P1</em> qui veulent un outil complet sur toute
-                l&apos;année. L&apos;IA et le simulateur deviennent illimités.
+                Pour les <em>P1</em> qui veulent tout débloquer sur l&apos;année.
+                Un seul paiement, pas de gestion mensuelle.
               </p>
             </div>
             <ul className="pri-card-list">
@@ -186,8 +185,8 @@ function PricingContent() {
               <li><span className="pri-mark ok">✓</span>Générations QCM IA <strong>illimitées</strong></li>
               <li><span className="pri-mark ok">✓</span>Sessions simulateur illimitées + <strong>mode Examen blanc</strong></li>
               <li><span className="pri-mark ok">✓</span>Vidéos jusqu&apos;à 250 Mo, PDF sans limite</li>
-              <li><span className="pri-mark ok">✓</span>Stats avancées (heatmap année, sparkline 12 sem, dumbbell)</li>
-              <li><span className="pri-mark ok">✓</span>Support par email prioritaire</li>
+              <li><span className="pri-mark ok">✓</span>Stats avancées (heatmap, sparkline 12 sem, dumbbell)</li>
+              <li><span className="pri-mark ok">✓</span>Support email prioritaire</li>
             </ul>
             <div className="pri-card-cta">
               {isPro ? (
@@ -196,10 +195,52 @@ function PricingContent() {
                 <button
                   type="button"
                   className="pri-btn pri-btn-primary"
-                  onClick={handleUpgrade}
-                  disabled={checkoutLoading}
+                  onClick={() => handleUpgrade('yearly')}
+                  disabled={checkoutLoading !== null}
                 >
-                  {checkoutLoading ? 'Redirection…' : 'Passer Premium →'}
+                  {checkoutLoading === 'yearly' ? 'Redirection…' : 'Passer Annuel →'}
+                </button>
+              )}
+            </div>
+          </article>
+
+          {/* MENSUEL */}
+          <article className="pri-card">
+            <div className="pri-card-h">
+              <div className="pri-card-tag">Sans engagement</div>
+              <h2 className="pri-card-name">Mensuel</h2>
+              <div className="pri-card-price">
+                <span className="pri-price-num">9,99</span>
+                <span className="pri-price-cur">€</span>
+                <span className="pri-price-period">par mois</span>
+              </div>
+              <div className="pri-card-monthly">
+                Résiliable à tout moment.
+              </div>
+              <p className="pri-card-desc">
+                Pour tester un mois ou rester flexible. Mêmes fonctionnalités
+                que l&apos;Annuel.
+              </p>
+            </div>
+            <ul className="pri-card-list">
+              <li><span className="pri-mark gold">✦</span><strong>Tout du Premium</strong> :</li>
+              <li><span className="pri-mark ok">✓</span>Générations QCM IA illimitées</li>
+              <li><span className="pri-mark ok">✓</span>Simulateur illimité + Examen blanc</li>
+              <li><span className="pri-mark ok">✓</span>Vidéos 250 Mo, PDF sans limite</li>
+              <li><span className="pri-mark ok">✓</span>Stats avancées</li>
+              <li><span className="pri-mark dim">·</span>Sans engagement (résiliable)</li>
+            </ul>
+            <div className="pri-card-cta">
+              {isPro ? (
+                <span className="pri-btn pri-btn-current">Plan actuel</span>
+              ) : (
+                <button
+                  type="button"
+                  className="pri-btn pri-btn-secondary"
+                  onClick={() => handleUpgrade('monthly')}
+                  disabled={checkoutLoading !== null}
+                >
+                  {checkoutLoading === 'monthly' ? 'Redirection…' : 'Passer Mensuel →'}
                 </button>
               )}
             </div>
@@ -249,12 +290,21 @@ function PricingContent() {
           <h2 className="pri-faq-h">Questions fréquentes</h2>
 
           <details className="pri-faq-item">
+            <summary>Quelle est la différence entre Annuel et Mensuel ?</summary>
+            <p>
+              Aucune, en termes de fonctionnalités. L&apos;Annuel revient
+              à 5,75 €/mois (économise 3 mois sur l&apos;année), et c&apos;est
+              un seul paiement à gérer. Le Mensuel à 9,99 € est plus flexible
+              si tu préfères tester un mois ou résilier à tout moment.
+            </p>
+          </details>
+
+          <details className="pri-faq-item">
             <summary>Puis-je résilier à tout moment ?</summary>
             <p>
-              Oui. Le plan Premium est sans engagement — tu peux résilier
-              depuis ton espace client Stripe à tout moment. Tu gardes
-              l&apos;accès Premium jusqu&apos;à la fin du mois en cours, puis
-              tu repasses automatiquement en Gratuit.
+              Oui, sur les deux plans. Tu gères ton abonnement depuis ton
+              espace client Stripe. Sur l&apos;Annuel, tu gardes Premium
+              jusqu&apos;à la fin de la période payée puis repasses en Gratuit.
             </p>
           </details>
 
@@ -283,15 +333,6 @@ function PricingContent() {
               Oui — le paiement passe par Stripe, leader européen de
               l&apos;encaissement en ligne. MedRev ne stocke jamais tes
               données bancaires.
-            </p>
-          </details>
-
-          <details className="pri-faq-item">
-            <summary>Y a-t-il une période d&apos;essai ?</summary>
-            <p>
-              Le plan Gratuit te permet déjà de tester toutes les
-              fonctionnalités principales. Tu n&apos;as pas besoin de payer
-              pour découvrir si MedRev te correspond.
             </p>
           </details>
         </section>
