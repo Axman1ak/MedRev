@@ -893,7 +893,7 @@
   color: #3D2516;
   font-weight: 500;
 }
-[data-theme="dark"] .sim-ses-explain-text { color: var(--gold-soft); }
+[data-theme="dark"] .sim-ses-explain-text { color: var(--gold); }
 [data-theme="dark"] .sim-ses-explain-text strong { color: var(--text-primary); }
 .sim-ses-explain-link {
   margin-top: 8px;
