@@ -240,6 +240,67 @@
   background: rgba(199, 80, 80, .06);
 }
 
+/* ---- QUOTAS FREE (compteurs IA + simu) ---- */
+.set-quotas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.set-quota {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.set-quota-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.set-quota-lbl {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--dark, #111310);
+}
+.set-quota-num {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 13.5px;
+  color: var(--gray, #6B6F6A);
+  font-style: italic;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.set-quota-num strong {
+  font-family: 'Fraunces', serif;
+  font-style: normal;
+  color: var(--dark, #111310);
+  font-weight: 500;
+  font-size: 14.5px;
+  letter-spacing: -.01em;
+}
+.set-quota-bar {
+  height: 4px;
+  background: var(--soft, #FAF8F2);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border, #E1DDD3);
+}
+.set-quota-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--gm, #2D6A4F);
+  border-radius: 999px;
+  transition: width .35s cubic-bezier(.34, 1.2, .64, 1);
+}
+.set-quota.exhausted .set-quota-bar-fill {
+  background: var(--rose, #C75050);
+}
+.set-quota.exhausted .set-quota-num strong {
+  color: var(--rose, #C75050);
+}
+
 /* ---- APPARENCE / THEME PICKER ---- */
 .set-theme-grid {
   display: grid;
