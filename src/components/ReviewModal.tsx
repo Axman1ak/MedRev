@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia } from '@/types'
+import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import './review-modal.css'
 
@@ -162,8 +163,14 @@ export default function ReviewModal({
   const [genInfo, setGenInfo] = useState<string | null>(null)
 
   // PaywallModal — ouvert quand l'API renvoie code='quota_exceeded'
-  // (5e génération QCM IA atteinte ou vidéo > 100 Mo en mode Free).
+  // (10e génération QCM IA atteinte ou vidéo > 100 Mo en mode Free).
   const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
+
+  // Plan du user — fetched une fois à l'ouverture pour gating les uploads
+  // (PDF > 20 Mo et vidéo > 100 Mo refusés en Free, modale Premium ouverte).
+  // Null tant qu'on ne sait pas (on autorise par défaut, le serveur a le
+  // dernier mot pour la transcription vidéo).
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -184,6 +191,22 @@ export default function ReviewModal({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Fetch le plan du user une fois à l'ouverture pour gating les uploads.
+  useEffect(() => {
+    let cancelled = false
+    async function loadPlan() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', initialLesson.user_id)
+        .single()
+      if (cancelled) return
+      setUserPlan((data?.plan as 'free' | 'pro') ?? 'free')
+    }
+    loadPlan()
+    return () => { cancelled = true }
+  }, [supabase, initialLesson.user_id])
 
   function selectStep(idx: number) {
     if (!lesson.learn_date) return
@@ -222,12 +245,35 @@ export default function ReviewModal({
       return
     }
 
-    // Garde-fous types & taille
+    // Garde-fous types
     if (kind === 'video' && !file.type.startsWith('video/')) {
       setUploadError('Le fichier doit être une vidéo (.mp4, .webm…)'); return
     }
     if (kind === 'pdf' && file.type !== 'application/pdf') {
       setUploadError('Le fichier doit être un PDF.'); return
+    }
+
+    // Garde-fou quota Free : on bloque l'upload AVANT de payer le coût Storage
+    // si le fichier dépasse les limites du plan Free. Le user passe directement
+    // sur la PaywallModal pour upgrader. Si userPlan='pro' ou null (chargement
+    // en cours), on laisse passer — la transcription vidéo refera un check
+    // serveur côté /api/transcribe-video pour le cas null.
+    if (userPlan === 'free') {
+      const sizeMB = file.size / (1024 * 1024)
+      if (kind === 'video' && sizeMB > FREE_VIDEO_SIZE_MB) {
+        setPaywall({
+          quota: 'video_size',
+          message: `Ta vidéo fait ${sizeMB.toFixed(0)} Mo. Le mode Gratuit limite à ${FREE_VIDEO_SIZE_MB} Mo (~30 min). Passe en Premium pour des vidéos jusqu'à 250 Mo.`,
+        })
+        return
+      }
+      if (kind === 'pdf' && sizeMB > FREE_PDF_SIZE_MB) {
+        setPaywall({
+          quota: 'pdf_size',
+          message: `Ton PDF fait ${sizeMB.toFixed(0)} Mo. Le mode Gratuit limite à ${FREE_PDF_SIZE_MB} Mo. Passe en Premium pour des PDF sans limite de taille.`,
+        })
+        return
+      }
     }
 
     if (kind === 'video') setUploadingVideo(true)
