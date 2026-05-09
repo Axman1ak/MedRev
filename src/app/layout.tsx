@@ -1,16 +1,67 @@
 // src/app/layout.tsx
 //
-// Snippet à intégrer dans ton layout.tsx racine. Si tu as déjà un export
-// `metadata`, fusionne — sinon copie-colle tel quel au-dessus du composant
-// RootLayout.
+// Layout racine MedRev. Contient :
+//  - les fonts (Fraunces, Plus Jakarta Sans, Cormorant Garamond, Cinzel,
+//    JetBrains Mono) chargées via next/font pour optimisation auto
+//  - les meta tags SEO + OpenGraph (carte de partage WhatsApp / Twitter…)
+//  - l'export viewport (Next.js 14+ : themeColor n'est plus dans metadata)
 //
-// metadataBase est CRUCIAL : sans lui, Next.js ne sait pas construire les
-// URLs absolues pour les OG images. Mets ton vrai domaine prod ici.
+// L'image OG est générée automatiquement par src/app/opengraph-image.tsx
+// (convention Next.js — rien à référencer manuellement ici).
 
 import type { Metadata, Viewport } from 'next'
+import { Fraunces, Plus_Jakarta_Sans, Cormorant_Garamond, Cinzel, JetBrains_Mono } from 'next/font/google'
+import './globals.css'
 
+// ============================================================
+// FONTS
+// ============================================================
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  display: 'swap',
+})
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+})
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-cormorant',
+  display: 'swap',
+})
+
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  variable: '--font-cinzel',
+  display: 'swap',
+})
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+})
+
+// ============================================================
+// VIEWPORT (séparé de metadata depuis Next.js 14)
+// ============================================================
+export const viewport: Viewport = {
+  themeColor: '#FAFAF7',
+  width: 'device-width',
+  initialScale: 1,
+}
+
+// ============================================================
+// METADATA — SEO + cartes de partage
+// ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://med-rev-eight.vercel.app'), // ⚠️ remplace par ton domaine prod
+  metadataBase: new URL('https://medrev.fr'), // ⚠️ remplace par ton vrai domaine prod si différent
 
   title: {
     default: 'MedRev — Tes cours, tes QCM, ton planning.',
@@ -29,7 +80,7 @@ export const metadata: Metadata = {
   creator: 'Lou Bonnefoy',
   publisher: 'MedRev',
 
-  // Carte OpenGraph (Facebook, WhatsApp, LinkedIn, Discord, iMessage…)
+  // OpenGraph (Facebook, WhatsApp, LinkedIn, Discord, iMessage…)
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
@@ -38,8 +89,7 @@ export const metadata: Metadata = {
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
       'La méthode des prépas, sans le prix. 30 QCM générés sur ta vidéo, planning J0 → J+120, simulateur type concours.',
-    // L'image est auto-fournie par opengraph-image.tsx — pas besoin de la
-    // référencer ici manuellement, Next.js s'en occupe via la convention.
+    // L'image OG est fournie automatiquement par opengraph-image.tsx
   },
 
   // Twitter / X
@@ -48,7 +98,7 @@ export const metadata: Metadata = {
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
       'La méthode des prépas, sans le prix. 30 QCM sur ta vidéo, 14 paliers de révision, 100 % auto-organisé. Pour les P1.',
-    creator: '@medrev_fr', // change ou supprime si pas de compte
+    creator: '@medrev_fr', // change ou supprime si pas de compte X
   },
 
   // Robots / SEO
@@ -64,28 +114,34 @@ export const metadata: Metadata = {
     },
   },
 
-  // Verification (à remplir si tu utilises Google Search Console)
-  // verification: {
-  //   google: 'ton-code-google-search-console',
-  // },
-
-  // Icône / favicon — Next.js détecte aussi /app/icon.png automatiquement
+  // Favicon — Next.js détecte aussi /app/icon.png automatiquement
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-icon.png',
   },
-  
-  export const viewport: Viewport = {
-     themeColor: '#FAFAF7',
-     width: 'device-width',
-     initialScale: 1,
-  
-   }
-  
-  // Format detection (empêche iOS de transformer les chiffres en liens tel:)
+
+  // Empêche iOS de transformer les chiffres en liens tel:
   formatDetection: {
     telephone: false,
   },
 
   category: 'education',
+}
+
+// ============================================================
+// ROOT LAYOUT
+// ============================================================
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html
+      lang="fr"
+      className={`${fraunces.variable} ${jakarta.variable} ${cormorant.variable} ${cinzel.variable} ${jetbrains.variable}`}
+    >
+      <body>{children}</body>
+    </html>
+  )
 }
