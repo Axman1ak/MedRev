@@ -110,13 +110,18 @@ function AuthContent() {
   const [activeTab, setActiveTab] = useState<'register' | 'login'>(initialMode)
   const [step, setStep] = useState<Step>('form')
 
-  // Sync l'onglet actif avec ?mode= si l'URL change après le mount
-  // (cas où Next.js hydrate les searchParams après le premier render)
+  // Sync l'onglet actif avec ?mode= à chaque changement de URL.
+  // - ?mode=login → onglet login
+  // - ?mode=register OU pas de mode → onglet inscription (défaut)
+  // Important : on reset toujours, pas seulement sur les valeurs valides,
+  // sinon naviguer de /auth?mode=login vers /auth ne change pas le tab.
   useEffect(() => {
     const mode = searchParams?.get('mode')
-    if (mode === 'login' || mode === 'register') {
-      setActiveTab(mode)
-    }
+    setActiveTab(mode === 'login' ? 'login' : 'register')
+    // Reset aussi le step en cas de changement de mode
+    setStep('form')
+    setError(null)
+    setForgotMode(false)
   }, [searchParams])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -216,15 +221,18 @@ function AuthContent() {
       <MarketingNav />
 
       <div className="auth-page">
+        <div className="auth-page-head">
+          <span className="lp-hero-kicker">Inscription · 2 minutes</span>
+          <h1 className="auth-h1">Commence à retenir<br /><em>pour de bon.</em></h1>
+          <p className="auth-sub">
+            Crée ton compte en 2 minutes. Tes matières du S1 et S2 sont
+            déjà pré-configurées selon ta fac. Pas de carte bleue, pas
+            d&apos;engagement.
+          </p>
+        </div>
+
         <div className="auth-grid">
           <div>
-            <span className="lp-hero-kicker">Inscription · 2 minutes</span>
-            <h1 className="auth-h1">Commence à retenir<br /><em>pour de bon.</em></h1>
-            <p className="auth-sub">
-              Crée ton compte en 2 minutes. Tes matières du S1 et S2 sont
-              déjà pré-configurées selon ta fac. Pas de carte bleue, pas
-              d&apos;engagement.
-            </p>
             <div className="auth-trust">
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit pour démarrer (matières / fiches illimitées)</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Auto-config matières dès l&apos;inscription</div>
