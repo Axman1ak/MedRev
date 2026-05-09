@@ -19,9 +19,11 @@ export default function ConfidentialitePage() {
       <MarketingNav />
 
       <div className="legal-wrap">
-        <div className="legal-kicker">Confidentialité</div>
-        <h1 className="legal-h1">Politique de <em>Confidentialité</em></h1>
-        <p className="legal-meta">Conforme RGPD · En vigueur depuis le 8 mai 2026</p>
+        <div className="legal-header">
+          <div className="legal-kicker">Confidentialité</div>
+          <h1 className="legal-h1">Politique de <em>Confidentialité</em></h1>
+          <p className="legal-meta">Conforme RGPD · En vigueur depuis le 8 mai 2026</p>
+        </div>
 
         <section className="legal-section">
           <h2 className="legal-h2">1. Responsable du traitement</h2>
