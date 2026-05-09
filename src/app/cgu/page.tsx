@@ -20,9 +20,11 @@ export default function CguPage() {
       <MarketingNav />
 
       <div className="legal-wrap">
-        <div className="legal-kicker">Conditions générales</div>
-        <h1 className="legal-h1">Conditions Générales d&apos;<em>Utilisation</em></h1>
-        <p className="legal-meta">En vigueur depuis le 8 mai 2026</p>
+        <div className="legal-header">
+          <div className="legal-kicker">Conditions générales</div>
+          <h1 className="legal-h1">Conditions Générales d&apos;<em>Utilisation</em></h1>
+          <p className="legal-meta">En vigueur depuis le 8 mai 2026</p>
+        </div>
 
         <section className="legal-section">
           <h2 className="legal-h2">1. Éditeur</h2>
