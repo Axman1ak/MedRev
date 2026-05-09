@@ -1,0 +1,143 @@
+// src/app/manifesto/page.tsx
+//
+// Page Manifesto — positionnement émotionnel.
+// Server component, content-only.
+
+import Link from 'next/link'
+import MarketingNav from '@/components/MarketingNav'
+import MarketingFooter from '@/components/MarketingFooter'
+import '@/components/landing-styles.css'
+
+export const metadata = {
+  title: 'Manifesto — MedRev',
+  description: 'La médecine devrait être méritocratique. Pourquoi MedRev existe.',
+}
+
+export default function ManifestoPage() {
+  return (
+    <div className="lp-page">
+      <MarketingNav current="manifesto" />
+
+      <div className="manifesto-wrap">
+        <span className="manifesto-kicker">Manifesto</span>
+        <h1 className="manifesto-h1">
+          La médecine<br />devrait être<br /><em>méritocratique.</em>
+        </h1>
+        <p className="manifesto-lede">
+          En France, la P1 décide qui sera médecin. Elle devrait départager
+          <strong> les élèves qui travaillent le plus, pas ceux qui paient le plus.</strong>
+        </p>
+
+        <section className="manifesto-section">
+          <div className="manifesto-num">01 · Le problème</div>
+          <h2 className="manifesto-h2">Une <em>industrie de la prépa</em> qui exclut.</h2>
+          <p className="manifesto-p">
+            Aujourd&apos;hui, un étudiant en P1 dépense entre <strong>3 000 et
+            8 000 €</strong> en prépa privée pour avoir une chance raisonnable
+            de passer. Tutorat, polys spécifiques, e-learning, examens blancs :
+            la facture s&apos;empile.
+          </p>
+          <p className="manifesto-p">
+            Les boursiers ? Les enfants de classes populaires ? Ceux dont les
+            parents ne peuvent pas payer ? Ils ont droit à 4 fois moins
+            d&apos;heures encadrées. Et pourtant, la médecine est censée
+            recruter ses futurs praticiens <strong>sur la rigueur, pas sur le
+            compte bancaire</strong>.
+          </p>
+          <div className="manifesto-quote">
+            « En France, payer 6 000 € par an pour préparer un concours public,
+            c&apos;est devenu <strong>la norme</strong>. C&apos;est là le
+            problème. »
+          </div>
+        </section>
+
+        <section className="manifesto-section">
+          <div className="manifesto-num">02 · Notre réponse</div>
+          <h2 className="manifesto-h2">Une app, <em>cent fois moins chère.</em></h2>
+          <p className="manifesto-p">
+            MedRev est gratuit pour démarrer. <strong>Vraiment gratuit</strong> :
+            matières et fiches illimitées, courbe J, calendrier, sessions
+            Focus, bibliothèque virtuelle. Pas de version « démo » dégradée
+            pour pousser à payer.
+          </p>
+          <p className="manifesto-p">
+            Le Premium à <strong>69 €/an</strong> débloque l&apos;IA en
+            illimité (10 générations gratuites, c&apos;est déjà honnête) et le
+            mode Examen blanc. Sans engagement. Tu paies ce que tu utilises.
+          </p>
+          <div className="manifesto-numbers">
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">3 000 €</div><div className="manifesto-num-stat-lbl">Prépa privée</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">69 €</div><div className="manifesto-num-stat-lbl">MedRev annuel</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">43×</div><div className="manifesto-num-stat-lbl">Moins cher</div></div>
+          </div>
+        </section>
+
+        <section className="manifesto-section">
+          <div className="manifesto-num">03 · Nos engagements</div>
+          <h2 className="manifesto-h2">Pas de pub. Pas de tracking. <em>Pas de revente.</em></h2>
+          <p className="manifesto-p">
+            Tes données d&apos;apprentissage sont parmi les plus intimes que
+            tu produis : ce que tu sais, ce que tu rates, ce qui te coûte.
+            Personne ne devrait <em>vendre ça</em> ni s&apos;en servir pour
+            te cibler avec des pubs de bouquins.
+          </p>
+          <p className="manifesto-p">
+            MedRev tourne sans pub, sans Google Analytics, sans Facebook
+            Pixel, sans cookies tiers. <strong>Hébergé sur Supabase EU
+            (Paris)</strong> — aucune donnée ne quitte l&apos;Union Européenne.
+          </p>
+          <p className="manifesto-p">
+            Si on coule un jour, on n&apos;ouvre pas la porte aux <em>data
+            brokers</em>. On donne aux users 30 jours pour exporter leurs
+            fiches, puis on supprime.
+          </p>
+        </section>
+
+        <section className="manifesto-section">
+          <div className="manifesto-num">04 · Pourquoi maintenant ?</div>
+          <h2 className="manifesto-h2">Parce que <em>l&apos;IA bien faite</em>, ça change tout.</h2>
+          <p className="manifesto-p">
+            Il y a 5 ans, on n&apos;aurait pas pu te générer 30 QCM en 90
+            secondes depuis ta vidéo de cours pour 1 centime de coût.
+            Aujourd&apos;hui, oui. Et ce qui était réservé aux prépas qui
+            paient des armées de tuteurs devient <strong>accessible à tout le
+            monde</strong>.
+          </p>
+          <p className="manifesto-p">
+            MedRev n&apos;est pas un cours en plus. C&apos;est <strong>l&apos;outil
+            qui transforme tes propres cours</strong> — ceux que ta fac
+            t&apos;a donnés, ceux que tes profs ont enregistrés — en QCM, en
+            planning, en progression mesurable.
+          </p>
+        </section>
+
+        <div className="manifesto-sign">
+          <div className="manifesto-sign-avatar">L</div>
+          <div>
+            <div className="manifesto-sign-name">Lou Bonnefoy, fondateur</div>
+            <div className="manifesto-sign-role">
+              Étudiant. Construit MedRev parce que personne ne construisait
+              l&apos;outil que j&apos;aurais voulu pour la P1.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="lp-cta" style={{ padding: '60px 32px 100px' }}>
+        <h2 className="lp-cta-h2" style={{ fontSize: 'clamp(28px, 4.5vw, 44px)' }}>
+          Si tu lis ça, <em>tu fais déjà partie</em> de la solution.
+        </h2>
+        <p className="lp-cta-sub">
+          Crée ton compte gratuit, charge ton premier cours, et commence à
+          réviser autrement.
+        </p>
+        <div className="lp-cta-buttons">
+          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
+          <Link href="/methode" className="lp-btn-secondary">Voir la méthode</Link>
+        </div>
+      </section>
+
+      <MarketingFooter />
+    </div>
+  )
+}
