@@ -61,7 +61,7 @@ export const viewport: Viewport = {
 // METADATA — SEO + cartes de partage
 // ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://medrev.fr'), // ⚠️ remplace par ton vrai domaine prod si différent
+  metadataBase: new URL('https://med-rev-eight.vercel.app'), // ⚠️ remplace par ton vrai domaine prod si différent
 
   title: {
     default: 'MedRev — Tes cours, tes QCM, ton planning.',
