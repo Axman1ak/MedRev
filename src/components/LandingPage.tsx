@@ -1,812 +1,316 @@
 'use client'
 // src/components/LandingPage.tsx
+//
+// Landing page MedRev — version refonte mai 2026 inspirée de resend.com.
+// Palette claire « cabinet d'érudit moderne ». L'auth (signup/login) a été
+// extraite vers /auth ; cette page n'a que du contenu marketing.
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import MarketingNav from '@/components/MarketingNav'
+import MarketingFooter from '@/components/MarketingFooter'
+import './landing-styles.css'
 
-const FACS = [
-  { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6', hasOptions: true },
-  { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5', hasOptions: false },
-  { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13', hasOptions: false },
-  { id: 'upec', name: 'UPEC Créteil', badge: 'Paris 12', hasOptions: false },
-  { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: false },
-  { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: false },
-  { id: 'autre', name: 'Autre faculté', badge: 'Autre', hasOptions: false },
+const STREAM_ITEMS = [
+  { time: '14:32', tag: 'IA',    cls: 'lp-stream-tag-ai',    msg: '30 QCM générés depuis Vidéo Cardio · ', em: '1.2 min', status: 'OK' },
+  { time: '14:31', tag: 'NOTE',  cls: 'lp-stream-tag-note',  msg: 'Fiche Anatomie générale notée · ',     em: '5/5',     status: '+12h étudiées' },
+  { time: '14:28', tag: 'SIMU',  cls: 'lp-stream-tag-simu',  msg: 'Session simulateur 30 questions · ',  em: '87%',     status: 'examen blanc' },
+  { time: '14:24', tag: 'IA',    cls: 'lp-stream-tag-ai',    msg: 'Transcript généré · vidéo SSH ',       em: '47 min',  status: 'transcript prêt' },
+  { time: '14:22', tag: 'FOCUS', cls: 'lp-stream-tag-focus', msg: 'Session Focus · ',                     em: '3 fiches révisées', status: '+1 livre' },
+  { time: '14:18', tag: 'NOTE',  cls: 'lp-stream-tag-note',  msg: 'Glycolyse · revue J+15 · ',            em: '4/5',     status: 'maîtrisée' },
+  { time: '14:14', tag: 'IA',    cls: 'lp-stream-tag-ai',    msg: '+30 QCM ajoutés à Pharmacologie · ',   em: 'total 60', status: 'OK' },
+  { time: '14:10', tag: 'SIMU',  cls: 'lp-stream-tag-simu',  msg: 'Mode angles morts · ',                 em: '20 questions ciblées', status: 'session lancée' },
+  { time: '14:06', tag: 'NOTE',  cls: 'lp-stream-tag-note',  msg: 'Biophysique · J+7 · ',                 em: '3/5',     status: 'à retravailler' },
+  { time: '14:02', tag: 'FOCUS', cls: 'lp-stream-tag-focus', msg: 'Bibliothèque +1 ouvrage · ',           em: 'total 47/2000', status: 'progression' },
 ]
 
-const FAC_SYSTEMS: Record<string, Record<string, { name: string; icon: string; semestre: number }[]>> = {
-  sorbonne: {
-    sciences: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Physique', icon: '⚡', semestre: 1 },
-      { name: 'Chimie', icon: '🔭', semestre: 1 },
-      { name: 'Biophysique', icon: '📊', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-    ],
-    lettres: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Sociolinguistique', icon: '📚', semestre: 1 },
-      { name: 'Linguistique', icon: '🗣️', semestre: 1 },
-      { name: 'Biophysique', icon: '📊', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-    ],
-  },
-  'paris-cite': {
-    default: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Physique', icon: '⚡', semestre: 1 },
-      { name: 'Chimie', icon: '🔭', semestre: 1 },
-      { name: 'Biophysique', icon: '📊', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-    ],
-  },
-  'sorbonne-paris-nord': {
-    default: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Physique', icon: '⚡', semestre: 1 },
-      { name: 'Chimie', icon: '🔭', semestre: 1 },
-      { name: 'Biophysique', icon: '📊', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-    ],
-  },
-  upec: {
-    default: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-    ],
-  },
-  lyon: {
-    default: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-    ],
-  },
-  montpellier: {
-    default: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-    ],
-  },
-  autre: {
-    default: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 },
-      { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 },
-      { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-      { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-    ],
-  },
+export default function LandingPage() {
+  return (
+    <div className="lp-page">
+      <MarketingNav current="home" />
+
+      {/* HERO */}
+      <section className="lp-hero">
+        <span className="lp-hero-kicker">Pour les P1 · Rentrée 2026</span>
+        <h1 className="lp-hero-h1">
+          La P1 sans
+          <span className="line2"><em>les cahiers.</em></span>
+        </h1>
+        <p className="lp-hero-sub">
+          Importe tes cours, <strong>MedRev génère les QCM</strong>, planifie
+          tes révisions, et te dit chaque jour quoi travailler. La méthode
+          des prépas, sans le prix.
+        </p>
+        <div className="lp-hero-ctas">
+          <Link href="/auth" className="lp-btn-primary">Commencer gratuit →</Link>
+          <Link href="/methode" className="lp-btn-secondary">▶ Voir la méthode</Link>
+        </div>
+        <div className="lp-trust-row">
+          <span><span className="lp-trust-dot" />Gratuit pour démarrer</span>
+          <span><span className="lp-trust-dot" />Données en France</span>
+          <span><span className="lp-trust-dot" />Sans pub, sans engagement</span>
+        </div>
+        <DashboardMockup />
+      </section>
+
+      {/* FACS */}
+      <section className="lp-facs">
+        <div className="lp-facs-label">Conçu pour les P1 françaises</div>
+        <div className="lp-facs-grid">
+          <div className="lp-fac-name">Sorbonne Université<em>Paris 6</em></div>
+          <div className="lp-fac-name">Université Paris Cité<em>Paris 5</em></div>
+          <div className="lp-fac-name">Sorbonne Paris Nord<em>Paris 13</em></div>
+          <div className="lp-fac-name">UPEC<em>Créteil</em></div>
+          <div className="lp-fac-name">Université de Lyon<em>Lyon</em></div>
+          <div className="lp-fac-name">Montpellier<em>Hérault</em></div>
+        </div>
+      </section>
+
+      {/* COMMENT ÇA MARCHE */}
+      <section className="lp-section">
+        <div className="lp-section-head">
+          <div className="lp-section-kicker">La méthode</div>
+          <h2 className="lp-section-h2">Trois gestes, <em>zéro organisation manuelle.</em></h2>
+          <p className="lp-section-sub">
+            Tu donnes tes cours. MedRev fait le reste : QCM, planning, sessions
+            de révision et statistiques pour mesurer ta progression.
+          </p>
+        </div>
+        <div className="lp-steps">
+          <div className="lp-step">
+            <span className="lp-step-num">01</span>
+            <h3 className="lp-step-title">Importe ton cours</h3>
+            <p className="lp-step-desc">Vidéo de la rediffusion ou poly PDF. Glisse-dépose, c&apos;est tout.</p>
+            <div className="lp-step-mockup">
+              <div className="lp-mockup-import">
+                <div className="lp-mockup-file"><span className="lp-mockup-file-icon">▶</span>cours-cardio.mp4<span className="lp-mockup-file-meta">142 Mo</span></div>
+                <div className="lp-mockup-file"><span className="lp-mockup-file-icon">P</span>poly-cardio-2026.pdf<span className="lp-mockup-file-meta">8 Mo</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="lp-step">
+            <span className="lp-step-num">02</span>
+            <h3 className="lp-step-title">L&apos;IA génère 30 QCM</h3>
+            <p className="lp-step-desc">Type concours, avec retour direct vers le passage source.</p>
+            <div className="lp-step-mockup">
+              <div style={{ width: '100%' }}>
+                <div className="lp-mockup-qcm-q">L&apos;enzyme régulatrice de la glycolyse est :</div>
+                <div className="lp-mockup-qcm-opts">
+                  <div className="lp-mockup-qcm-opt">A. Hexokinase</div>
+                  <div className="lp-mockup-qcm-opt ok">B. Phosphofructokinase ✓</div>
+                  <div className="lp-mockup-qcm-opt">C. Pyruvate kinase</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="lp-step">
+            <span className="lp-step-num">03</span>
+            <h3 className="lp-step-title">Le planning J se construit</h3>
+            <p className="lp-step-desc">14 paliers J0 → J+120 basés sur la courbe d&apos;Ebbinghaus.</p>
+            <div className="lp-step-mockup">
+              <div className="lp-mockup-cal">
+                <span className="lp-mockup-cal-stamp s5">5</span>
+                <span className="lp-mockup-cal-stamp s4">4</span>
+                <span className="lp-mockup-cal-stamp s5">5</span>
+                <span className="lp-mockup-cal-stamp s3">3</span>
+                <span className="lp-mockup-cal-stamp s4">4</span>
+                <span className="lp-mockup-cal-stamp s5">5</span>
+                <span className="lp-mockup-cal-stamp future">·</span>
+                <span className="lp-mockup-cal-stamp future">·</span>
+                <span className="lp-mockup-cal-stamp future">·</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* STREAM */}
+      <section className="lp-stream">
+        <div className="lp-stream-card">
+          <div className="lp-stream-head">
+            <div className="lp-stream-kicker">Sous le capot</div>
+            <h2 className="lp-stream-title">Une journée P1 sur MedRev <em>en temps réel.</em></h2>
+          </div>
+          <div className="lp-stream-feed">
+            <div className="lp-stream-list">
+              {[...STREAM_ITEMS, ...STREAM_ITEMS].map((it, i) => (
+                <div key={i} className="lp-stream-item">
+                  <span className="lp-stream-time">{it.time}</span>
+                  <span className={`lp-stream-tag ${it.cls}`}>{it.tag}</span>
+                  <span className="lp-stream-msg">{it.msg}<em>{it.em}</em></span>
+                  <span className="lp-stream-status">{it.status}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section className="lp-section">
+        <div className="lp-section-head">
+          <div className="lp-section-kicker">Ce que tu débloques</div>
+          <h2 className="lp-section-h2">Un coach, <em>pas un cahier.</em></h2>
+          <p className="lp-section-sub">Anki ne sait pas que tes partiels sont dans trois semaines. MedRev oui. Et il sait quoi faire à propos.</p>
+        </div>
+        <div className="lp-features">
+          {[
+            { icon: '▦', title: 'Bibliothèque vivante', desc: "Chaque fiche notée ajoute un livre à ta bibliothèque virtuelle. 2000 ouvrages à amasser, 6 trésors à débloquer." },
+            { icon: '◷', title: 'Courbe J intelligente', desc: "14 paliers de J0 à J+120. Une note basse re-programme une révision automatiquement." },
+            { icon: '⊕', title: 'Sessions Focus', desc: "Mode plein écran, distractions verrouillées. La bibliothèque en fond." },
+            { icon: '◎', title: 'Mode angles morts', desc: "Le simulateur cible tes fiches faibles. 80 % du temps sur 20 % des notions." },
+            { icon: '∿', title: 'Stats avancées', desc: "Heatmap année, sparkline 12 sem, dumbbell par matière. Vois où tu progresses." },
+            { icon: '▶', title: 'Examen blanc', desc: "Type concours : timer, grille, 0 indice avant la fin. Comme le vrai jour." },
+            { icon: '◆', title: 'Multi-fac auto-config', desc: "Tes matières S1 et S2 prêtes dès l'inscription, selon ta fac." },
+            { icon: '◉', title: 'Données en France', desc: "Hébergé sur Supabase Europe. Aucune donnée ne quitte l'UE." },
+            { icon: '∅', title: 'Aucune publicité', desc: "Jamais. C'est ce que paye ton plan Premium." },
+          ].map((f) => (
+            <div key={f.title} className="lp-feature">
+              <div className="lp-feature-icon">{f.icon}</div>
+              <h3 className="lp-feature-title">{f.title}</h3>
+              <p className="lp-feature-desc">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PROOF */}
+      <section className="lp-section">
+        <div className="lp-proof">
+          <p className="lp-proof-quote">
+            « Une P1 typique fait <strong>40 à 60 fiches</strong> dans
+            l&apos;année. MedRev les organise toutes pour toi, te génère
+            <strong> 1200+ QCM</strong> sur tes vrais cours, et te demande
+            chaque jour <strong>quoi réviser</strong>. »
+          </p>
+          <div className="lp-proof-stats">
+            <div><div className="lp-proof-stat-num">1200+</div><div className="lp-proof-stat-lbl">QCM générés</div></div>
+            <div><div className="lp-proof-stat-num">14</div><div className="lp-proof-stat-lbl">Paliers J</div></div>
+            <div><div className="lp-proof-stat-num">6</div><div className="lp-proof-stat-lbl">Trésors</div></div>
+            <div><div className="lp-proof-stat-num">100 %</div><div className="lp-proof-stat-lbl">Auto-organisé</div></div>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="lp-cta">
+        <h2 className="lp-cta-h2">
+          La P1 commence.<br />
+          <em>Tu commences avec elle.</em>
+        </h2>
+        <p className="lp-cta-sub">
+          Pré-configure ton compte en 2 minutes. Tes matières Sorbonne / Paris Cité /
+          Lyon… sont déjà prêtes selon ta fac.
+        </p>
+        <div className="lp-cta-buttons">
+          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
+          <Link href="/pricing" className="lp-btn-secondary">Voir les tarifs détaillés</Link>
+        </div>
+      </section>
+
+      <MarketingFooter />
+    </div>
+  )
 }
 
-type Step = 'form' | 'fac' | 'option'
-
-export default function LandingPage() {
-  const [activeTab, setActiveTab] = useState<'register' | 'login'>('register')
-  const [step, setStep] = useState<Step>('form')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [username, setUsername] = useState('')
-  const [fac, setFac] = useState('')
-  const [option, setOption] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const [forgotMode, setForgotMode] = useState(false)
-  const [forgotMsg, setForgotMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
-
-  const supabase = createClient()
-  const selectedFac = FACS.find(f => f.id === fac)
-
-  const handleContinueForm = () => {
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      setError('Merci de remplir tous les champs.')
-      return
-    }
-    setError(null)
-    setStep('fac')
-  }
-
-  const handleContinueFac = () => {
-    if (!fac) return
-    if (selectedFac?.hasOptions) {
-      setStep('option')
-    } else {
-      handleRegister(fac, 'default')
-    }
-  }
-
-  const handleRegister = async (facId: string, opt: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { username, fac: facId, option: opt } }
-      })
-      if (error) throw error
-      if (!data.user) throw new Error('Erreur création compte')
-
-      await supabase.from('profiles').update({ username, fac: facId }).eq('id', data.user.id)
-
-      const matieres = FAC_SYSTEMS[facId]?.[opt] || FAC_SYSTEMS[facId]?.['default'] || FAC_SYSTEMS['autre']['default']
-      if (matieres?.length) {
-        await supabase.from('systems').insert(
-          matieres.map(m => ({
-            user_id: data.user!.id,
-            name: m.name,
-            icon: m.icon,
-            semestre: m.semestre,
-            cal_hidden: false,
-          }))
-        )
-      }
-
-      // Email de bienvenue (fire-and-forget — on ne bloque pas le redirect
-      // dashboard si l'envoi échoue, et l'endpoint ne fait rien si Resend
-      // pas configuré).
-      fetch('/api/welcome-email', { method: 'POST' }).catch(() => {})
-
-      window.location.href = '/dashboard'
-    } catch (e: any) {
-      setError(e.message)
-      setLoading(false)
-    }
-  }
-
-  const handleLogin = async () => {
-    setLoading(true)
-    setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
-    window.location.href = '/dashboard'
-  }
-
-  const handleForgotPassword = async () => {
-    setForgotMsg(null)
-    if (!email.trim()) {
-      setForgotMsg({ kind: 'err', text: 'Entre ton adresse email.' })
-      return
-    }
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/auth/reset-password',
-      })
-      if (error) throw error
-      setForgotMsg({ kind: 'ok', text: 'Email envoyé. Vérifie ta boîte de réception (et tes spams).' })
-    } catch (e: any) {
-      setForgotMsg({ kind: 'err', text: e.message })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const totalSteps = selectedFac?.hasOptions ? 3 : 2
-
+// ============================================================
+// DASHBOARD MOCKUP — visuel hero
+// ============================================================
+function DashboardMockup() {
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
-
-        *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        /* Aliases vers les tokens globaux du design system (src/app/globals.css).
-           La landing suit le thème clair / sombre comme le reste de l'app. */
-        .lp {
-          --cream: var(--bg-app);
-          --dark: var(--text-primary);
-          --green: var(--accent-primary);
-          --gm: var(--accent-medium);
-          --gl: var(--accent-soft);
-          --amber: var(--warning);
-          --al: var(--warning-soft);
-          --gray: var(--text-secondary);
-          --border: var(--border-subtle);
-          --fh: 'Fraunces', Georgia, serif;
-          --fb: 'Plus Jakarta Sans', sans-serif;
-          font-family: var(--fb);
-          background: var(--cream);
-          color: var(--dark);
-          overflow-x: hidden;
-        }
-
-        /* NAV */
-        .lp-nav { display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 64px; border-bottom: 1px solid var(--border); background: var(--cream); position: sticky; top: 0; z-index: 100; }
-        .lp-logo { font-family: var(--fh); font-size: 22px; font-weight: 700; color: var(--dark); text-decoration: none; }
-        .lp-logo span { color: var(--gm); }
-        .lp-nav-links { display: flex; gap: 28px; }
-        .lp-nav-links a { font-size: 14px; color: var(--gray); text-decoration: none; font-weight: 500; }
-        .lp-nav-links a:hover { color: var(--dark); }
-        .lp-nav-cta { background: var(--green); color: white; border: none; font-family: var(--fb); font-size: 14px; font-weight: 600; padding: 10px 22px; border-radius: 8px; cursor: pointer; transition: filter .15s; }
-        .lp-nav-cta:hover { filter: brightness(.9); }
-
-        /* HERO */
-        .lp-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding: 72px 48px 80px; max-width: 1160px; margin: 0 auto; }
-        .lp-eyebrow { display: inline-block; font-size: 11px; font-weight: 700; color: var(--amber); text-transform: uppercase; letter-spacing: .09em; background: var(--al); border: 1px solid var(--amber); border-radius: 4px; padding: 4px 11px; margin-bottom: 24px; }
-        .lp-h1 { font-family: var(--fh); font-size: clamp(36px, 4vw, 52px); line-height: 1.1; font-weight: 500; color: var(--dark); margin-bottom: 20px; }
-        .lp-h1 em { font-style: italic; color: var(--gm); }
-        .lp-hero-p { font-size: 16px; line-height: 1.75; color: var(--gray); margin-bottom: 32px; }
-        .lp-hero-btns { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; flex-wrap: wrap; }
-        .lp-btn { background: var(--green); color: white; border: none; font-family: var(--fb); font-size: 15px; font-weight: 600; padding: 13px 26px; border-radius: 9px; cursor: pointer; transition: filter .15s; }
-        .lp-btn:hover { filter: brightness(.9); }
-        .lp-btn-outline { background: transparent; border: 1.5px solid var(--border); font-family: var(--fb); font-size: 15px; font-weight: 500; padding: 12px 20px; border-radius: 9px; cursor: pointer; color: var(--dark); display: flex; align-items: center; gap: 8px; }
-        .lp-btn-play { width: 20px; height: 20px; background: var(--dark); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--cream); font-size: 7px; }
-        .lp-trust { display: flex; gap: 20px; flex-wrap: wrap; }
-        .lp-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--gray); }
-        .lp-trust-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gm); }
-
-        /* APP PREVIEW */
-        .lp-app-preview { background: var(--bg-card); border: 1px solid var(--border); border-radius: 15px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.07); }
-        .lp-app-bar { background: var(--bg-soft); border-bottom: 1px solid var(--border); padding: 10px 14px; display: flex; align-items: center; gap: 6px; }
-        .lp-dot { width: 9px; height: 9px; border-radius: 50%; }
-        .lp-dot-r { background: #FF5F57; }
-        .lp-dot-y { background: #FFBD2E; }
-        .lp-dot-g { background: #28CA41; }
-        .lp-app-bar span { margin-left: 8px; font-size: 11.5px; color: var(--gray); }
-        .lp-app-body { padding: 16px; }
-        .lp-upload-zone { border: 1.5px dashed var(--border); border-radius: 9px; padding: 22px 14px; text-align: center; margin-bottom: 12px; background: var(--bg-soft); }
-        .lp-upload-zone strong { font-size: 13.5px; font-weight: 600; color: var(--dark); display: block; margin-bottom: 5px; }
-        .lp-upload-zone p { font-size: 12px; color: var(--gray); line-height: 1.5; }
-        .lp-upload-tags { display: flex; gap: 5px; justify-content: center; margin-top: 9px; flex-wrap: wrap; }
-        .lp-tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
-        .lp-tag-g { background: var(--gl); color: var(--accent-on-soft); }
-        .lp-tag-a { background: var(--al); color: var(--amber); }
-        .lp-qcm-box { background: var(--gl); border-radius: 9px; padding: 13px; }
-        .lp-qcm-label { font-size: 10px; font-weight: 700; color: var(--accent-on-soft); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 7px; }
-        .lp-qcm-q { font-size: 12.5px; font-weight: 600; color: var(--dark); margin-bottom: 9px; line-height: 1.4; }
-        .lp-qcm-opts { display: flex; flex-direction: column; gap: 4px; }
-        .lp-qcm-opt { font-size: 11.5px; padding: 6px 10px; border-radius: 6px; background: var(--bg-card); color: var(--gray); }
-        .lp-qcm-opt-ok { background: var(--green); color: white; font-weight: 600; }
-        .lp-qcm-opt-ko { background: var(--danger-soft); color: var(--danger); text-decoration: line-through; }
-        .lp-qcm-src { margin-top: 7px; font-size: 11px; color: var(--gm); font-weight: 500; }
-        .lp-qcm-src span { background: var(--bg-card); border-radius: 4px; padding: 2px 7px; }
-
-        /* SECTIONS */
-        .lp-section { padding: 72px 48px; max-width: 1160px; margin: 0 auto; }
-        .lp-section-white { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-        .lp-section-label { font-size: 11px; font-weight: 700; color: var(--gm); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
-        .lp-section-title { font-family: var(--fh); font-size: clamp(28px, 3vw, 36px); font-weight: 500; line-height: 1.15; color: var(--dark); max-width: 480px; margin-bottom: 44px; }
-
-        /* STEPS */
-        .lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .lp-step { padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 13px; }
-        .lp-step-num { width: 32px; height: 32px; border-radius: 8px; background: var(--gl); color: var(--accent-on-soft); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 13px; }
-        .lp-step h3 { font-family: var(--fh); font-size: 18px; font-weight: 500; margin-bottom: 7px; color: var(--dark); }
-        .lp-step p { font-size: 13px; color: var(--gray); line-height: 1.6; }
-        .lp-new-tag { display: inline-block; margin-top: 9px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 20px; background: var(--al); color: var(--amber); }
-
-        /* DIFF */
-        .lp-diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
-        .lp-diff-cards { display: flex; flex-direction: column; gap: 11px; }
-        .lp-diff-card { display: flex; align-items: flex-start; gap: 13px; padding: 17px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 11px; }
-        .lp-diff-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 8px; background: var(--gl); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--accent-on-soft); }
-        .lp-diff-card h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; color: var(--dark); }
-        .lp-diff-card p { font-size: 12.5px; color: var(--gray); line-height: 1.5; }
-
-        /* PRICING — bloc dark assumé comme contraste volontaire */
-        .lp-pricing-bg { background: #0F141A; padding: 72px 48px; }
-        .lp-pricing-inner { max-width: 1160px; margin: 0 auto; }
-        .lp-pricing-title { font-family: var(--fh); font-size: clamp(28px, 3vw, 36px); font-weight: 500; color: white; text-align: center; margin-bottom: 7px; }
-        .lp-pricing-sub { font-size: 15px; color: rgba(255,255,255,.42); text-align: center; margin-bottom: 40px; }
-        .lp-pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 700px; margin: 0 auto; }
-        .lp-pcard { border-radius: 15px; padding: 26px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
-        .lp-pcard-ft { background: white; border-color: white; }
-        .lp-pcard-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.38); margin-bottom: 16px; }
-        .lp-pcard-ft .lp-pcard-name { color: #2D6A4F; }
-        .lp-pcard-price { font-family: var(--fh); font-size: 44px; font-weight: 500; color: white; line-height: 1; margin-bottom: 5px; }
-        .lp-pcard-ft .lp-pcard-price { color: #1A1A1A; }
-        .lp-pcard-price sub { font-family: var(--fb); font-size: 14px; }
-        .lp-pcard-desc { font-size: 12.5px; color: rgba(255,255,255,.32); margin-bottom: 20px; }
-        .lp-pcard-ft .lp-pcard-desc { color: #5C5C5A; }
-        .lp-pcard-features { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
-        .lp-pcard-features li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: rgba(255,255,255,.62); }
-        .lp-pcard-ft .lp-pcard-features li { color: #1A1A1A; }
-        .lp-pcard-features li::before { content: '✓'; color: #2D6A4F; font-weight: 700; font-size: 12px; margin-top: 1px; }
-        .lp-pcard-btn { width: 100%; padding: 11px; border-radius: 8px; font-family: var(--fb); font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid rgba(255,255,255,.16); background: transparent; color: white; }
-        .lp-pcard-ft .lp-pcard-btn { background: #1B4332; border-color: #1B4332; color: white; }
-
-        /* AUTH */
-        .lp-auth { padding: 72px 48px; background: var(--cream); }
-        .lp-auth-wrap { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
-        .lp-auth-left-title { font-family: var(--fh); font-size: 32px; font-weight: 500; line-height: 1.2; margin-bottom: 12px; color: var(--dark); }
-        .lp-auth-left-title em { font-style: italic; color: var(--gm); }
-        .lp-auth-left-sub { font-size: 14px; color: var(--gray); line-height: 1.6; margin-bottom: 24px; }
-        .lp-auth-testi { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-        .lp-auth-stars { color: #F59E0B; font-size: 13px; margin-bottom: 8px; }
-        .lp-auth-testi-text { font-size: 13px; color: var(--dark); line-height: 1.6; margin-bottom: 8px; }
-        .lp-auth-testi-author { font-size: 11.5px; color: var(--gray); font-weight: 500; }
-        .lp-auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
-        .lp-auth-tabs { display: flex; gap: 4px; background: var(--bg-soft); border-radius: 9px; padding: 4px; margin-bottom: 22px; }
-        .lp-auth-tab { flex: 1; padding: 8px; border-radius: 7px; border: none; font-family: var(--fb); font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: var(--gray); }
-        .lp-auth-tab-active { background: var(--bg-card); color: var(--dark); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-        .lp-auth-error { background: var(--danger-soft); color: var(--danger); font-size: 12.5px; padding: 10px 13px; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--danger); }
-        .lp-prog-dots { display: flex; gap: 6px; margin-bottom: 16px; }
-        .lp-prog-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
-        .lp-prog-dot-on { background: var(--gm); width: 20px; border-radius: 4px; }
-        .lp-prog-dot-done { background: var(--gm); }
-        .lp-form-group { margin-bottom: 14px; }
-        .lp-label { display: block; font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 5px; }
-        .lp-input { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--fb); font-size: 13.5px; color: var(--dark); outline: none; background: var(--bg-card); }
-        .lp-input:focus { border-color: var(--gm); }
-        .lp-submit { width: 100%; padding: 11px; border-radius: 8px; border: none; background: var(--green); color: white; font-family: var(--fb); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; transition: filter .15s; }
-        .lp-submit:hover:not(:disabled) { filter: brightness(.9); }
-        .lp-submit:disabled { opacity: .6; cursor: not-allowed; }
-        .lp-terms { font-size: 11.5px; color: var(--gray); text-align: center; margin-top: 10px; }
-        .lp-terms a { color: var(--gm); text-decoration: none; }
-        .lp-step-title { font-size: 15px; font-weight: 600; color: var(--dark); margin-bottom: 4px; }
-        .lp-step-sub { font-size: 12.5px; color: var(--gray); margin-bottom: 14px; }
-        .lp-back-btn { background: none; border: none; font-family: var(--fb); font-size: 12.5px; color: var(--gray); cursor: pointer; padding: 0; margin-bottom: 12px; }
-        .lp-fac-grid { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
-        .lp-fac-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 500; background: var(--bg-card); color: var(--dark); }
-        .lp-fac-item-sel { border-color: var(--gm); background: var(--gl); color: var(--accent-on-soft); }
-        .lp-fac-badge { font-size: 10px; font-weight: 700; background: var(--gl); color: var(--accent-on-soft); border-radius: 20px; padding: 2px 8px; }
-        .lp-fac-item-sel .lp-fac-badge { background: var(--bg-card); }
-        .lp-opt-grid { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
-        .lp-opt-card { padding: 14px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; background: var(--bg-card); }
-        .lp-opt-card-sel { border-color: var(--gm); background: var(--gl); }
-        .lp-opt-card-title { font-size: 13.5px; font-weight: 600; color: var(--dark); margin-bottom: 3px; }
-        .lp-opt-card-desc { font-size: 11.5px; color: var(--gray); }
-        .lp-opt-card-matieres { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-        .lp-opt-matiere { font-size: 10px; font-weight: 600; background: var(--gl); color: var(--accent-on-soft); border-radius: 20px; padding: 2px 7px; }
-
-        /* Forgot password */
-        .lp-forgot-link {
-          background: none; border: none; cursor: pointer;
-          color: var(--gray); font-size: 12.5px; font-weight: 500;
-          padding: 12px 0 0; width: 100%; text-align: center;
-          font-family: inherit;
-        }
-        .lp-forgot-link:hover { color: var(--dark); }
-        .lp-forgot-msg-ok {
-          background: var(--gl); color: var(--accent-on-soft); border-color: var(--gm);
-          font-size: 12.5px; padding: 10px 13px; border-radius: 8px;
-          margin-bottom: 14px; border: 1px solid var(--gm);
-        }
-
-        /* FOOTER */
-        .lp-footer { background: var(--cream); border-top: 1px solid var(--border); padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; }
-        .lp-footer p { font-size: 13px; color: var(--gray); }
-        .lp-footer-links { display: flex; gap: 16px; }
-        .lp-footer-links a { font-size: 13px; color: var(--gray); text-decoration: none; }
-        .lp-footer-links a:hover { color: var(--dark); }
-
-        @media (max-width: 900px) {
-          .lp-nav { padding: 0 20px; }
-          .lp-nav-links { display: none; }
-          .lp-hero { grid-template-columns: 1fr; padding: 48px 20px; gap: 36px; }
-          .lp-section { padding: 48px 20px; }
-          .lp-steps { grid-template-columns: 1fr; }
-          .lp-diff-grid { grid-template-columns: 1fr; }
-          .lp-pricing-bg { padding: 48px 20px; }
-          .lp-pricing-grid { grid-template-columns: 1fr; }
-          .lp-auth { padding: 48px 20px; }
-          .lp-auth-wrap { grid-template-columns: 1fr; gap: 32px; }
-          .lp-footer { flex-direction: column; gap: 12px; text-align: center; padding: 20px; }
-        }
-      `}</style>
-
-      <div className="lp">
-
-        {/* NAV */}
-        <nav className="lp-nav">
-          <a href="#" className="lp-logo">Med<span>Rev</span></a>
-          <div className="lp-nav-links">
-            <a href="#how">Comment ça marche</a>
-            <a href="#features">Fonctionnalités</a>
-            <a href="#pricing">Tarifs</a>
-          </div>
-          <button className="lp-nav-cta" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
-            Commencer gratuitement
-          </button>
-        </nav>
-
-        {/* HERO */}
-        <div className="lp-hero">
-          <div>
-            <div className="lp-eyebrow">La méthode des prépas, sans les frais</div>
-            <h1 className="lp-h1">La médecine<br />devrait être<br /><em>méritocratique.</em></h1>
-            <p className="lp-hero-p">Les prépas coûtent jusqu&apos;à 400 €/mois. MedRev te donne les mêmes outils — QCMs générés depuis tes cours, répétition espacée, planning automatique — gratuitement.</p>
-            <div className="lp-hero-btns">
-              <button className="lp-btn" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
-                Commencer gratuitement →
-              </button>
-              <button className="lp-btn-outline" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
-                <span className="lp-btn-play">▶</span>
-                Voir comment ça marche
-              </button>
-            </div>
-            <div className="lp-trust">
-              <div className="lp-trust-item"><span className="lp-trust-dot"></span> Gratuit pour démarrer</div>
-              <div className="lp-trust-item"><span className="lp-trust-dot"></span> Données en France</div>
-              <div className="lp-trust-item"><span className="lp-trust-dot"></span> Sans engagement</div>
-            </div>
-          </div>
-          <div>
-            <div className="lp-app-preview">
-              <div className="lp-app-bar">
-                <div className="lp-dot lp-dot-r"></div>
-                <div className="lp-dot lp-dot-y"></div>
-                <div className="lp-dot lp-dot-g"></div>
-                <span>MedRev — Génération QCM</span>
-              </div>
-              <div className="lp-app-body">
-                <div className="lp-upload-zone">
-                  <strong>Colle le lien de ta rediffusion</strong>
-                  <p>YouTube, Moodle, Panopto… ou upload un PDF de cours</p>
-                  <div className="lp-upload-tags">
-                    <span className="lp-tag lp-tag-g">Vidéo</span>
-                    <span className="lp-tag lp-tag-g">PDF</span>
-                    <span className="lp-tag lp-tag-a">Nouveau</span>
-                  </div>
-                </div>
-                <div className="lp-qcm-box">
-                  <div className="lp-qcm-label">Généré à l&apos;instant</div>
-                  <div className="lp-qcm-q">Concernant le métabolisme du glucose, quelle affirmation est exacte ?</div>
-                  <div className="lp-qcm-opts">
-                    <div className="lp-qcm-opt lp-qcm-opt-ko">A. La glycolyse produit 36 ATP directement</div>
-                    <div className="lp-qcm-opt lp-qcm-opt-ok">B. La phosphofructokinase est l&apos;enzyme régulatrice ✓</div>
-                    <div className="lp-qcm-opt">C. Le pyruvate est formé dans la mitochondrie</div>
-                  </div>
-                  <div className="lp-qcm-src">Retour au cours : <span>Vidéo · 18:42</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="lp-hero-mockup">
+      <div className="lp-hero-mockup-bar">
+        <div className="lp-hero-mockup-dots">
+          <span className="lp-hero-mockup-dot" />
+          <span className="lp-hero-mockup-dot" />
+          <span className="lp-hero-mockup-dot" />
         </div>
-
-        {/* COMMENT ÇA MARCHE */}
-        <div className="lp-section-white" id="how">
-          <div className="lp-section">
-            <div className="lp-section-label">Comment ça marche</div>
-            <div className="lp-section-title">Trois étapes, zéro organisation manuelle.</div>
-            <div className="lp-steps">
-              <div className="lp-step">
-                <div className="lp-step-num">1</div>
-                <h3>Importe ton cours</h3>
-                <p>Colle un lien de rediffusion, upload un PDF ou copie tes notes. MedRev extrait l&apos;essentiel automatiquement.</p>
-                <span className="lp-new-tag">Vidéo — Nouveau</span>
-              </div>
-              <div className="lp-step">
-                <div className="lp-step-num">2</div>
-                <h3>MedRev génère les QCMs</h3>
-                <p>Des questions calibrées sur le format de ton concours, avec retour direct vers le passage du cours si tu rates.</p>
-              </div>
-              <div className="lp-step">
-                <div className="lp-step-num">3</div>
-                <h3>Ton planning se construit seul</h3>
-                <p>La courbe d&apos;Ebbinghaus et tes dates de partiels génèrent un calendrier quotidien qui s&apos;ajuste à ton avancement réel.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* POURQUOI PAS ANKI */}
-        <div id="features">
-          <div className="lp-section">
-            <div className="lp-diff-grid">
-              <div>
-                <div className="lp-section-label">Pourquoi pas juste Anki ?</div>
-                <div className="lp-section-title" style={{ marginBottom: 0 }}>MedRev est un coach, pas un carnet.</div>
-              </div>
-              <div className="lp-diff-cards">
-                <div className="lp-diff-card">
-                  <div className="lp-diff-icon">◎</div>
-                  <div>
-                    <h4>Mode angles morts</h4>
-                    <p>Le simulateur cible automatiquement les fiches où tu es faible, pour que tes sessions de révision attaquent ce qui compte vraiment.</p>
-                  </div>
-                </div>
-                <div className="lp-diff-card">
-                  <div className="lp-diff-icon">⊕</div>
-                  <div>
-                    <h4>QCM générés depuis ton cours</h4>
-                    <p>Pas de carte à écrire à la main. Importe ta vidéo et ton PDF, MedRev génère 30 QCM avec retour direct vers le passage source.</p>
-                  </div>
-                </div>
-                <div className="lp-diff-card">
-                  <div className="lp-diff-icon">◷</div>
-                  <div>
-                    <h4>Connecté à tes vraies dates</h4>
-                    <p>Anki ne sait pas que tes partiels sont dans trois semaines. MedRev ajuste le calendrier J en conséquence.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* PRICING */}
-        <div className="lp-pricing-bg" id="pricing">
-          <div className="lp-pricing-inner">
-            <div className="lp-pricing-title">Ton niveau ne devrait pas<br />dépendre de ton budget.</div>
-            <div className="lp-pricing-sub">Commence gratuitement, passe Premium quand tu veux.</div>
-            <div className="lp-pricing-grid">
-              <div className="lp-pcard">
-                <div className="lp-pcard-name">Gratuit</div>
-                <div className="lp-pcard-price">0 <sub>€</sub></div>
-                <div className="lp-pcard-desc">Pour démarrer sans risque.</div>
-                <ul className="lp-pcard-features">
-                  <li>Matières et fiches illimitées</li>
-                  <li>Répétition espacée (J0 → J+120)</li>
-                  <li>Calendrier et bibliothèque illimités</li>
-                  <li>10 générations QCM IA</li>
-                  <li>3 sessions simulateur</li>
-                </ul>
-                <button className="lp-pcard-btn" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Commencer gratuitement
-                </button>
-              </div>
-              <div className="lp-pcard lp-pcard-ft">
-                <div className="lp-pcard-name">Premium</div>
-                <div className="lp-pcard-price">69<sub> €/an</sub></div>
-                <div className="lp-pcard-desc">Soit 5,75 €/mois. Aussi en mensuel à 9,99 €.</div>
-                <ul className="lp-pcard-features">
-                  <li>Générations QCM IA illimitées</li>
-                  <li>Sessions simulateur illimitées + Examen blanc</li>
-                  <li>Vidéos jusqu&apos;à 250 Mo, PDF sans limite</li>
-                  <li>Stats avancées (heatmap, sparkline, dumbbell)</li>
-                  <li>Mode angles morts (cible tes points faibles)</li>
-                </ul>
-                <button className="lp-pcard-btn" onClick={() => document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Commencer gratuitement
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AUTH */}
-        <div className="lp-auth" id="auth">
-          <div className="lp-auth-wrap">
-            <div>
-              <div className="lp-auth-left-title">
-                Commence à retenir<br /><em>pour de bon.</em>
-              </div>
-              <p className="lp-auth-left-sub">Rejoins les étudiants en PASS et en médecine qui révisent avec MedRev. Gratuit pour commencer.</p>
-              <div className="lp-auth-testi">
-                <div className="lp-auth-stars">★★★★★</div>
-                <p className="lp-auth-testi-text">&quot;Dès l&apos;inscription mes matières Sorbonne étaient déjà là. J&apos;ai commencé à réviser en 2 minutes.&quot;</p>
-                <div className="lp-auth-testi-author">— Étudiant PASS · Sorbonne</div>
-              </div>
-            </div>
-            <div className="lp-auth-card">
-              <div className="lp-auth-tabs">
-                <button
-                  className={`lp-auth-tab${activeTab === 'register' ? ' lp-auth-tab-active' : ''}`}
-                  onClick={() => { setActiveTab('register'); setError(null); setStep('form'); setForgotMode(false) }}
-                >
-                  Créer un compte
-                </button>
-                <button
-                  className={`lp-auth-tab${activeTab === 'login' ? ' lp-auth-tab-active' : ''}`}
-                  onClick={() => { setActiveTab('login'); setError(null); setStep('form'); setForgotMode(false) }}
-                >
-                  Se connecter
-                </button>
-              </div>
-
-              {error && <div className="lp-auth-error">{error}</div>}
-
-              {/* ÉTAPE 1 : Formulaire inscription */}
-              {activeTab === 'register' && step === 'form' && (
-                <div>
-                  <div className="lp-prog-dots">
-                    <div className="lp-prog-dot lp-prog-dot-on"></div>
-                    <div className="lp-prog-dot"></div>
-                    {totalSteps === 3 && <div className="lp-prog-dot"></div>}
-                  </div>
-                  <div className="lp-form-group">
-                    <label className="lp-label">Nom d&apos;utilisateur</label>
-                    <input type="text" className="lp-input" placeholder="Ex: sophie_m" value={username} onChange={e => setUsername(e.target.value)} />
-                  </div>
-                  <div className="lp-form-group">
-                    <label className="lp-label">Adresse email</label>
-                    <input type="email" className="lp-input" placeholder="prenom@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-                  </div>
-                  <div className="lp-form-group">
-                    <label className="lp-label">Mot de passe</label>
-                    <input type="password" className="lp-input" placeholder="Min. 8 caractères" value={password} onChange={e => setPassword(e.target.value)} />
-                  </div>
-                  <button className="lp-submit" onClick={handleContinueForm}>Continuer →</button>
-                  <p className="lp-terms">En créant un compte, tu acceptes nos <a href="/privacy">CGU</a>. Données en France 🇫🇷</p>
-                </div>
-              )}
-
-              {/* ÉTAPE 2 : Choix de la fac */}
-              {activeTab === 'register' && step === 'fac' && (
-                <div>
-                  <div className="lp-prog-dots">
-                    <div className="lp-prog-dot lp-prog-dot-done"></div>
-                    <div className="lp-prog-dot lp-prog-dot-on"></div>
-                    {totalSteps === 3 && <div className="lp-prog-dot"></div>}
-                  </div>
-                  <button className="lp-back-btn" onClick={() => setStep('form')}>← Retour</button>
-                  <div className="lp-step-title">Quelle est ta fac ?</div>
-                  <div className="lp-step-sub">On pré-configure tes matières automatiquement.</div>
-                  <div className="lp-fac-grid">
-                    {FACS.map(f => (
-                      <div
-                        key={f.id}
-                        className={`lp-fac-item${fac === f.id ? ' lp-fac-item-sel' : ''}`}
-                        onClick={() => setFac(f.id)}
-                      >
-                        <span>{f.name}</span>
-                        <span className="lp-fac-badge">{f.badge}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="lp-submit" onClick={handleContinueFac} disabled={!fac || loading}>
-                    {loading ? 'Création en cours…' : 'Continuer →'}
-                  </button>
-                  {fac && <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--gray)', marginTop: '10px' }}>Sélectionne ta faculté pour continuer</p>}
-                </div>
-              )}
-
-              {/* ÉTAPE 3 : Choix de l'option (Sorbonne uniquement) */}
-              {activeTab === 'register' && step === 'option' && (
-                <div>
-                  <div className="lp-prog-dots">
-                    <div className="lp-prog-dot lp-prog-dot-done"></div>
-                    <div className="lp-prog-dot lp-prog-dot-done"></div>
-                    <div className="lp-prog-dot lp-prog-dot-on"></div>
-                  </div>
-                  <button className="lp-back-btn" onClick={() => setStep('fac')}>← Retour</button>
-                  <div className="lp-step-title">Quelle est ton option ?</div>
-                  <div className="lp-step-sub">Sorbonne PASS — choisir la mineure disciplinaire pour pré-configurer tes matières.</div>
-                  <div className="lp-opt-grid">
-                    <div
-                      className={`lp-opt-card${option === 'sciences' ? ' lp-opt-card-sel' : ''}`}
-                      onClick={() => setOption('sciences')}
-                    >
-                      <div className="lp-opt-card-title">⚗ Option Sciences</div>
-                      <div className="lp-opt-card-desc">Biologie-Chimie-Physique · Mineure Sciences</div>
-                      <div className="lp-opt-card-matieres">
-                        {['Biochimie','Biologie cell.','Anatomie','Physique','Chimie','Biophysique','Physiologie','Biostat','Pharmaco','SSH','Anatomie spéc.'].map(m => (
-                          <span key={m} className="lp-opt-matiere">{m}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div
-                      className={`lp-opt-card${option === 'lettres' ? ' lp-opt-card-sel' : ''}`}
-                      onClick={() => setOption('lettres')}
-                    >
-                      <div className="lp-opt-card-title">📚 Option Lettres</div>
-                      <div className="lp-opt-card-desc">Sciences du langage et humanités · Mineure Lettres</div>
-                      <div className="lp-opt-card-matieres">
-                        {['Biochimie','Biologie cell.','Anatomie','Sociolinguistique','Linguistique','Biophysique','Physiologie','Biostat','Pharmaco','SSH'].map(m => (
-                          <span key={m} className="lp-opt-matiere">{m}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    className="lp-submit"
-                    onClick={() => handleRegister(fac, option)}
-                    disabled={!option || loading}
-                  >
-                    {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}
-                  </button>
-                  {option && <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--gray)', marginTop: '10px' }}>Sélectionne ton option pour continuer</p>}
-                </div>
-              )}
-
-              {/* CONNEXION */}
-              {activeTab === 'login' && !forgotMode && (
-                <div>
-                  <div className="lp-form-group">
-                    <label className="lp-label">Adresse email</label>
-                    <input type="email" className="lp-input" placeholder="prenom@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-                  </div>
-                  <div className="lp-form-group">
-                    <label className="lp-label">Mot de passe</label>
-                    <input type="password" className="lp-input" placeholder="Ton mot de passe" value={password} onChange={e => setPassword(e.target.value)} />
-                  </div>
-                  <button className="lp-submit" onClick={handleLogin} disabled={loading}>
-                    {loading ? 'Connexion…' : 'Se connecter →'}
-                  </button>
-                  <button
-                    type="button"
-                    className="lp-forgot-link"
-                    onClick={() => { setForgotMode(true); setError(null); setForgotMsg(null) }}
-                  >
-                    Mot de passe oublié ?
-                  </button>
-                </div>
-              )}
-
-              {/* MOT DE PASSE OUBLIÉ */}
-              {activeTab === 'login' && forgotMode && (
-                <div>
-                  <button
-                    className="lp-back-btn"
-                    onClick={() => { setForgotMode(false); setForgotMsg(null) }}
-                  >
-                    ← Retour
-                  </button>
-                  <div className="lp-step-title">Mot de passe oublié</div>
-                  <div className="lp-step-sub">On t&apos;envoie un lien pour le réinitialiser par email.</div>
-                  <div className="lp-form-group">
-                    <label className="lp-label">Adresse email</label>
-                    <input
-                      type="email"
-                      className="lp-input"
-                      placeholder="prenom@email.com"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                    />
-                  </div>
-                  {forgotMsg && (
-                    forgotMsg.kind === 'ok'
-                      ? <div className="lp-forgot-msg-ok">{forgotMsg.text}</div>
-                      : <div className="lp-auth-error">{forgotMsg.text}</div>
-                  )}
-                  <button
-                    className="lp-submit"
-                    onClick={handleForgotPassword}
-                    disabled={loading}
-                  >
-                    {loading ? 'Envoi…' : 'Envoyer le lien'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* FOOTER */}
-        <footer className="lp-footer">
-          <p>© 2026 MedRev · Hébergé en France</p>
-          <div className="lp-footer-links">
-            <a href="/privacy">Mentions légales</a>
-            <a href="/privacy">CGU</a>
-            <a href="#">Contact</a>
-          </div>
-        </footer>
-
+        <div className="lp-hero-mockup-url">med-rev.app / dashboard</div>
+        <div style={{ width: 60 }} />
       </div>
-    </>
+      <div className="lp-hero-mockup-stage">
+        <svg viewBox="0 0 1080 608" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+          <rect width="1080" height="608" fill="#FAFAF7" />
+          <rect x="0" y="0" width="180" height="608" fill="#F0EEE9" />
+          <rect x="0" y="0" width="180" height="60" fill="#FAFAF7" />
+          <text x="22" y="38" fontFamily="Cinzel,serif" fontSize="14" fill="#1B4332" letterSpacing="2.5">MED·REV</text>
+          <rect x="12" y="78" width="156" height="32" rx="6" fill="rgba(45,106,79,0.10)" />
+          <rect x="20" y="86" width="14" height="14" rx="2" fill="#1B4332" opacity="0.7" />
+          <text x="42" y="98" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#1A1A1A" fontWeight="500">Aujourd&apos;hui</text>
+          <rect x="20" y="124" width="14" height="14" rx="2" fill="#9A9A98" /><text x="42" y="136" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#5C5C5A">Mes matières</text>
+          <rect x="20" y="158" width="14" height="14" rx="2" fill="#9A9A98" /><text x="42" y="170" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#5C5C5A">Calendrier</text>
+          <rect x="20" y="192" width="14" height="14" rx="2" fill="#9A9A98" /><text x="42" y="204" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#5C5C5A">Simulateur</text>
+          <rect x="20" y="226" width="14" height="14" rx="2" fill="#9A9A98" /><text x="42" y="238" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#5C5C5A">Statistiques</text>
+          <text x="210" y="50" fontFamily="Fraunces,serif" fontSize="22" fill="#1A1A1A" fontWeight="500">Bonjour Camille</text>
+          <text x="210" y="70" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="13" fill="#5C5C5A">Vendredi 8 mai · 7 fiches à réviser aujourd&apos;hui</text>
+          <rect x="210" y="98" width="500" height="240" rx="12" fill="#FFFFFF" stroke="#E8E6E0" />
+          <text x="228" y="124" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#1B4332" letterSpacing="2">À RÉVISER</text>
+          <rect x="226" y="136" width="468" height="44" rx="8" fill="#FAFAF7" stroke="#E8E6E0" />
+          <circle cx="246" cy="158" r="6" fill="#1B4332" />
+          <text x="262" y="156" fontFamily="Plus Jakarta Sans" fontSize="12" fill="#1A1A1A" fontWeight="500">Anatomie · Système circulatoire</text>
+          <text x="262" y="170" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="10.5" fill="#5C5C5A">J+15 · noté 4/5 il y a 7 jours</text>
+          <rect x="640" y="146" width="44" height="22" rx="4" fill="#1B4332" />
+          <text x="652" y="161" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#FFFFFF" fontWeight="600">RÉVISER</text>
+          <rect x="226" y="186" width="468" height="44" rx="8" fill="#FAFAF7" stroke="#E8E6E0" />
+          <circle cx="246" cy="208" r="6" fill="#7AA56B" />
+          <text x="262" y="206" fontFamily="Plus Jakarta Sans" fontSize="12" fill="#1A1A1A" fontWeight="500">Biochimie · Glycolyse</text>
+          <text x="262" y="220" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="10.5" fill="#5C5C5A">J+30 · prêt à valider</text>
+          <rect x="640" y="196" width="44" height="22" rx="4" fill="#1B4332" />
+          <text x="652" y="211" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#FFFFFF" fontWeight="600">RÉVISER</text>
+          <rect x="226" y="236" width="468" height="44" rx="8" fill="#FAFAF7" stroke="#E8E6E0" />
+          <circle cx="246" cy="258" r="6" fill="#D9B24A" />
+          <text x="262" y="256" fontFamily="Plus Jakarta Sans" fontSize="12" fill="#1A1A1A" fontWeight="500">Pharmacologie · Bêta-bloquants</text>
+          <text x="262" y="270" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="10.5" fill="#5C5C5A">J+7 · noté 3/5 hier</text>
+          <rect x="640" y="246" width="44" height="22" rx="4" fill="#1B4332" />
+          <text x="652" y="261" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#FFFFFF" fontWeight="600">RÉVISER</text>
+          <rect x="210" y="354" width="500" height="200" rx="12" fill="#FFFFFF" stroke="#E8E6E0" />
+          <text x="228" y="380" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#5C5C5A" letterSpacing="1.5">BIBLIOTHÈQUE · 47 / 2000</text>
+          {(() => {
+            const palette = ['#5A2424', '#1F2E50', '#2A4030', '#7A4A2A', '#3A2030', '#4A2840', '#3D2A14']
+            return (
+              <g transform="translate(228 396)">
+                {Array.from({ length: 60 }).map((_, i) => {
+                  const filled = i < 47
+                  return (
+                    <rect
+                      key={i}
+                      x={i * 8}
+                      y={0}
+                      width={6}
+                      height={36 + (i % 4) * 4}
+                      fill={filled ? palette[i % palette.length] : '#EBEAE5'}
+                      opacity={filled ? 1 : 0.5}
+                    />
+                  )
+                })}
+              </g>
+            )
+          })()}
+          <rect x="228" y="450" width="464" height="3" fill="#A48159" opacity="0.5" />
+          <rect x="730" y="98" width="160" height="115" rx="12" fill="#FFFFFF" stroke="#E8E6E0" />
+          <text x="746" y="120" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#5C5C5A" letterSpacing="1.5">RÉVISIONS</text>
+          <text x="746" y="158" fontFamily="Fraunces,serif" fontSize="34" fill="#1B4332" fontWeight="500">147</text>
+          <text x="746" y="180" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#5C5C5A">depuis octobre</text>
+          <rect x="900" y="98" width="160" height="115" rx="12" fill="#FFFFFF" stroke="#E8E6E0" />
+          <text x="916" y="120" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#5C5C5A" letterSpacing="1.5">SÉRIE</text>
+          <text x="916" y="158" fontFamily="Fraunces,serif" fontSize="34" fill="#1B4332" fontWeight="500">14</text>
+          <text x="916" y="180" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#5C5C5A">jours d&apos;affilée</text>
+          <rect x="730" y="229" width="330" height="125" rx="12" fill="#FFFFFF" stroke="#E8E6E0" />
+          <text x="746" y="251" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#5C5C5A" letterSpacing="1.5">CETTE SEMAINE</text>
+          <polyline points="746,322 770,310 794,302 818,296 842,288 866,280 890,272 914,264 938,260 962,254 986,250 1010,242 1034,236" stroke="#1B4332" strokeWidth="1.8" fill="none" />
+          <rect x="730" y="370" width="330" height="184" rx="12" fill="#FFFFFF" stroke="#E8E6E0" />
+          <text x="746" y="392" fontFamily="Plus Jakarta Sans" fontSize="9" fill="#1B4332" letterSpacing="1.5">QCM IA · NOUVEAU</text>
+          <text x="746" y="416" fontFamily="Fraunces,serif" fontSize="13" fill="#1A1A1A">L&apos;enzyme régulatrice de</text>
+          <text x="746" y="432" fontFamily="Fraunces,serif" fontSize="13" fill="#1A1A1A">la glycolyse est :</text>
+          <rect x="746" y="448" width="298" height="22" rx="4" fill="#FAFAF7" stroke="#E8E6E0" />
+          <text x="756" y="463" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#5C5C5A">A. Hexokinase</text>
+          <rect x="746" y="474" width="298" height="22" rx="4" fill="#DDECE3" />
+          <rect x="746" y="474" width="298" height="22" rx="4" fill="none" stroke="#1B4332" strokeWidth="1" />
+          <text x="756" y="489" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#1B4332" fontWeight="500">B. Phosphofructokinase ✓</text>
+          <rect x="746" y="500" width="298" height="22" rx="4" fill="#FAFAF7" stroke="#E8E6E0" />
+          <text x="756" y="515" fontFamily="Plus Jakarta Sans" fontSize="11" fill="#5C5C5A">C. Pyruvate kinase</text>
+          <text x="746" y="540" fontFamily="JetBrains Mono" fontSize="9" fill="#9A9A98">Source : Vidéo · 18:42</text>
+        </svg>
+      </div>
+    </div>
   )
 }
