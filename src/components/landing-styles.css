@@ -280,11 +280,12 @@
 
 /* === AUTH PAGE === */
 .auth-page { position: relative; z-index: 2; max-width: 1080px; margin: 0 auto; padding: 60px 32px 100px; }
+.auth-page-head { text-align: center; max-width: 720px; margin: 0 auto 56px; }
 .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
 .auth-h1 { font-family: var(--lp-fh); font-size: clamp(32px, 4.5vw, 44px); font-weight: 400; letter-spacing: -.02em; line-height: 1.1; color: var(--lp-text); margin: 0 0 16px; }
 .auth-h1 em { font-style: italic; color: var(--lp-accent); font-weight: 300; }
 .auth-sub { font-family: var(--lp-fi); font-style: italic; font-size: 17px; line-height: 1.6; color: var(--lp-text-soft); margin: 0 0 24px; }
-.auth-trust { display: flex; flex-direction: column; gap: 12px; }
+.auth-trust { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .auth-trust-row { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--lp-text-soft); }
 .auth-trust-check { width: 20px; height: 20px; border-radius: 50%; background: var(--lp-accent-soft); border: 1px solid rgba(45,106,79,.2); display: flex; align-items: center; justify-content: center; color: var(--lp-accent); font-size: 11px; font-weight: 700; flex-shrink: 0; }
 .auth-card { background: var(--lp-bg-card); border: 1px solid var(--lp-border); border-radius: 18px; padding: 32px 28px; position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(60,30,15,.08); }
