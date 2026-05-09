@@ -75,14 +75,25 @@
 .lp-trust-row { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 64px; font-size: 12.5px; color: var(--lp-text-dim); animation: lp-fade-up 1s .35s cubic-bezier(.16, 1, .3, 1) both; }
 .lp-trust-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--lp-accent); margin-right: 7px; vertical-align: middle; }
 
-/* === HERO MOCKUP === */
-.lp-hero-mockup { position: relative; margin: 0 auto; max-width: 1080px; border-radius: 18px; overflow: hidden; border: 1px solid var(--lp-border); background: var(--lp-bg-card); box-shadow: 0 30px 80px rgba(60, 30, 15, .14), 0 0 0 1px rgba(45, 106, 79, .04), inset 0 1px 0 rgba(255, 255, 255, .6); animation: lp-fade-up 1s .4s cubic-bezier(.16, 1, .3, 1) both; }
-.lp-hero-mockup-bar { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--lp-border); background: var(--lp-bg-soft); }
-.lp-hero-mockup-dots { display: flex; gap: 6px; }
-.lp-hero-mockup-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lp-border-strong); }
-.lp-hero-mockup-url { flex: 1; text-align: center; font: 11.5px/1 var(--lp-fm); color: var(--lp-text-dim); letter-spacing: .02em; }
-.lp-hero-mockup-stage { position: relative; aspect-ratio: 16 / 9; background: var(--lp-bg-soft); }
-.lp-hero-mockup-stage svg { width: 100%; height: 100%; display: block; }
+/* === HERO MOCKUP — version focalisée (1 QCM avec source vidéo) === */
+.lp-focus-mockup { position: relative; margin: 0 auto; max-width: 540px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; animation: lp-fade-up 1s .4s cubic-bezier(.16, 1, .3, 1) both; }
+.lp-focus-source { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--lp-bg-card); border: 1px solid var(--lp-border); border-radius: 12px; box-shadow: 0 4px 14px rgba(60, 30, 15, .04); }
+.lp-focus-icon { font-family: var(--lp-fk); width: 28px; height: 28px; border-radius: 7px; background: var(--lp-accent-soft); color: var(--lp-accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.lp-focus-icon-small { font-family: var(--lp-fk); width: 18px; height: 18px; border-radius: 4px; background: var(--lp-accent-soft); color: var(--lp-accent); display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+.lp-focus-source-name { font: 500 14px/1 var(--lp-fb); color: var(--lp-text); }
+.lp-focus-source-meta { font-family: var(--lp-fi); font-style: italic; font-size: 13px; color: var(--lp-text-soft); margin-left: auto; }
+
+.lp-focus-arrow { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--lp-text-soft); padding: 4px 0; }
+.lp-focus-arrow-label { font: 500 10.5px/1 var(--lp-fk); letter-spacing: .18em; color: var(--lp-gold); text-transform: uppercase; }
+
+.lp-focus-card { background: var(--lp-bg-card); border: 1.5px solid var(--lp-border-strong); border-radius: 16px; padding: 24px 26px; box-shadow: 0 12px 40px rgba(60, 30, 15, .08), 0 0 0 1px rgba(45, 106, 79, .04); position: relative; }
+.lp-focus-card::before { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 18px; background: linear-gradient(135deg, var(--lp-accent-soft), transparent 50%); z-index: -1; pointer-events: none; }
+.lp-focus-card-kicker { font: 500 11px/1 var(--lp-fm); color: var(--lp-gold); letter-spacing: .15em; margin-bottom: 14px; text-transform: uppercase; }
+.lp-focus-card-q { font-family: var(--lp-fh); font-size: 18px; line-height: 1.4; color: var(--lp-text); margin-bottom: 18px; font-weight: 400; }
+.lp-focus-card-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.lp-focus-card-opt { font: 14px/1 var(--lp-fb); padding: 10px 14px; border-radius: 8px; background: var(--lp-bg-soft); border: 1px solid var(--lp-border); color: var(--lp-text-soft); }
+.lp-focus-card-opt.ok { background: var(--lp-accent-soft); border-color: var(--lp-accent-medium); color: var(--lp-accent); font-weight: 500; }
+.lp-focus-card-source { display: flex; align-items: center; gap: 8px; padding-top: 14px; border-top: 1px solid var(--lp-border); font: 12px/1 var(--lp-fm); color: var(--lp-text-dim); }
 
 /* === FACS === */
 .lp-facs { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; padding: 56px 32px; text-align: center; border-top: 1px solid var(--lp-border); border-bottom: 1px solid var(--lp-border); }
