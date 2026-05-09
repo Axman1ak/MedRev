@@ -7,7 +7,7 @@
 // metadataBase est CRUCIAL : sans lui, Next.js ne sait pas construire les
 // URLs absolues pour les OG images. Mets ton vrai domaine prod ici.
 
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://med-rev-eight.vercel.app'), // ⚠️ remplace par ton domaine prod
@@ -74,10 +74,14 @@ export const metadata: Metadata = {
     icon: '/favicon.ico',
     apple: '/apple-icon.png',
   },
-
-  // Couleur du thème (barre Safari iOS / Chrome Android)
-  themeColor: '#FAFAF7',
-
+  
+  export const viewport: Viewport = {
+     themeColor: '#FAFAF7',
+     width: 'device-width',
+     initialScale: 1,
+  
+   }
+  
   // Format detection (empêche iOS de transformer les chiffres en liens tel:)
   formatDetection: {
     telephone: false,
