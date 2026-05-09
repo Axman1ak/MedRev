@@ -102,11 +102,22 @@ function AuthContent() {
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  // Si ?mode=login dans l'URL, ouvrir directement sur l'onglet login
+  // Si ?mode=login dans l'URL, ouvrir directement sur l'onglet login.
+  // useState initializer pour le premier render, useEffect pour catcher le
+  // cas où searchParams arrive en délai (hydration Next.js).
   const initialMode = searchParams?.get('mode') === 'login' ? 'login' : 'register'
 
   const [activeTab, setActiveTab] = useState<'register' | 'login'>(initialMode)
   const [step, setStep] = useState<Step>('form')
+
+  // Sync l'onglet actif avec ?mode= si l'URL change après le mount
+  // (cas où Next.js hydrate les searchParams après le premier render)
+  useEffect(() => {
+    const mode = searchParams?.get('mode')
+    if (mode === 'login' || mode === 'register') {
+      setActiveTab(mode)
+    }
+  }, [searchParams])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
