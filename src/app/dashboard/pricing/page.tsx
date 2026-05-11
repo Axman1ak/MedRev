@@ -165,7 +165,7 @@ function PricingContent() {
           <article className="pri-card pri-card-featured">
             <div className="pri-card-badge">Recommandé</div>
             <div className="pri-card-h">
-              <div className="pri-card-tag">Économise 3 mois</div>
+              <div className="pri-card-tag">Économise ~5 mois</div>
               <h2 className="pri-card-name">Annuel</h2>
               <div className="pri-card-price">
                 <span className="pri-price-num">69</span>
@@ -186,7 +186,7 @@ function PricingContent() {
               <li><span className="pri-mark ok">✓</span>Simulateur illimité + Examen blanc</li>
               <li><span className="pri-mark ok">✓</span>Vidéos 250 Mo, PDF sans limite</li>
               <li><span className="pri-mark ok">✓</span>Stats avancées</li>
-              <li><span className="pri-mark dim">·</span>Économise 30 € vs Mensuel</li>
+              <li><span className="pri-mark dim">·</span>Économise ~51 € vs Mensuel</li>
             </ul>
             <div className="pri-card-cta">
               {isPro ? (
@@ -293,9 +293,10 @@ function PricingContent() {
             <summary>Quelle est la différence entre Annuel et Mensuel ?</summary>
             <p>
               Aucune, en termes de fonctionnalités. L&apos;Annuel revient
-              à 5,75 €/mois (économise 3 mois sur l&apos;année), et c&apos;est
-              un seul paiement à gérer. Le Mensuel à 9,99 € est plus flexible
-              si tu préfères tester un mois ou résilier à tout moment.
+              à 5,75 €/mois et te fait économiser environ 5 mois sur l&apos;année
+              (69 € vs 119,88 € en mensuel), et c&apos;est un seul paiement à
+              gérer. Le Mensuel à 9,99 € est plus flexible si tu préfères
+              tester un mois ou résilier à tout moment.
             </p>
           </details>
 
