@@ -248,9 +248,15 @@ export default function QcmSessionPage() {
       quitToFiches()
       return
     }
-    const missedQs = shuffleArr(missedIndices.map(i => questions[i]))
-    setQuestions(missedQs)
-    setAnswers(missedQs.map(() => ({ selected: null, isCorrect: null })))
+    // IMPORTANT : on doit shuffler ENSEMBLE la question et son origIdx pour
+    // que persistSessionResults() incrémente les compteurs attempts/correct
+    // sur les bonnes entrées de lesson.ai_questions. Sans ça, les stats par
+    // question sont silencieusement faussées dès qu'on relance les ratées.
+    const pairs = missedIndices.map(i => ({ q: questions[i], idx: origIndices[i] }))
+    const shuffledPairs = shuffleArr(pairs)
+    setQuestions(shuffledPairs.map(p => p.q))
+    setOrigIndices(shuffledPairs.map(p => p.idx))
+    setAnswers(shuffledPairs.map(() => ({ selected: null, isCorrect: null })))
     setCurrentIdx(0)
     setStartTime(Date.now())
     setPhase('question')
