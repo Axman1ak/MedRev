@@ -464,7 +464,7 @@ export default function SettingsPage() {
         {/* DÉCONNEXION */}
         <section className="set-card set-card-danger">
           <div className="set-card-h">Session</div>
-          <p className="set-hint">Tu peux te déconnecter — tes données restent en place et tu pourras te reconnecter à tout moment.</p>
+          <p className="set-hint">Tu peux te déconnecter sans risque : tes données restent en place et tu pourras te reconnecter à tout moment.</p>
           <div className="set-actions">
             <button className="set-btn ghost-rose" onClick={logout}>
               Se déconnecter
