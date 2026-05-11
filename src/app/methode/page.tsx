@@ -280,9 +280,11 @@ export default function MethodePage() {
               Une <em>gamification</em> qui ne te trahit pas.
             </h2>
             <p className="lp-method-p">
-              Chaque fiche notée ajoute <strong>un livre</strong> à ta
-              bibliothèque virtuelle. Tu en collectionnes <strong>2000</strong>
-              sur l&apos;année (correspond à ~2000 heures d&apos;études cumulées).
+              À chaque <strong>révision notée</strong> (J0, J1, J3, J7… les
+              14 paliers que chaque fiche traverse), tu ajoutes
+              <strong> un livre</strong> à ta bibliothèque virtuelle. Sur
+              l&apos;année, ça correspond à <strong>2000 livres</strong> et
+              autant d&apos;heures d&apos;études cumulées.
             </p>
             <p className="lp-method-p">
               <strong>6 trésors</strong> se débloquent à 100, 300, 600, 900,
@@ -332,7 +334,7 @@ export default function MethodePage() {
       {/* CTA final */}
       <section className="lp-cta">
         <h2 className="lp-cta-h2">
-          Prête à tester <em>la méthode ?</em>
+          Prêt·e à tester <em>la méthode ?</em>
         </h2>
         <p className="lp-cta-sub">
           Crée ton compte gratuit, charge ton premier cours, et regarde MedRev
