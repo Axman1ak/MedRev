@@ -3,8 +3,8 @@
 //
 // Modale affichée quand l'API renvoie code='quota_exceeded'.
 // Réutilisable pour tous les quotas Free :
-//   - ai_generations       (5 générations QCM IA)
-//   - simulator_sessions   (1 session simulateur)
+//   - ai_generations       (10 générations QCM IA)
+//   - simulator_sessions   (3 sessions simulateur)
 //   - video_size           (vidéo > 100 Mo)
 //   - pdf_size              (PDF > 20 Mo) — pas encore enforced côté upload
 //
@@ -44,12 +44,12 @@ type PaywallModalProps = PaywallInfo & {
 const QUOTA_COPY: Record<PaywallQuota, { title: string; intro: string; icon: string }> = {
   ai_generations: {
     title: 'Plus de générations IA',
-    intro: "Tu as utilisé tes 5 générations QCM IA gratuites. Le Premium les rend illimitées.",
+    intro: "Tu as utilisé tes 10 générations QCM IA gratuites. Le Premium les rend illimitées.",
     icon: '✦',
   },
   simulator_sessions: {
     title: 'Plus de sessions simulateur',
-    intro: "Tu as utilisé ta session simulateur gratuite. Le Premium ouvre les sessions illimitées + le mode Examen blanc.",
+    intro: "Tu as utilisé tes 3 sessions simulateur gratuites. Le Premium ouvre les sessions illimitées + le mode Examen blanc.",
     icon: '◆',
   },
   video_size: {
