@@ -59,7 +59,7 @@ function PricingContent() {
   useEffect(() => {
     if (!searchParams) return
     if (searchParams.get('success') === 'true') {
-      setBanner({ kind: 'ok', text: 'Paiement réussi. Ton plan Premium est activé — bienvenue.' })
+      setBanner({ kind: 'ok', text: 'Paiement réussi. Ton plan Premium est activé. Bienvenue.' })
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, '', '/dashboard/pricing')
       }
@@ -330,7 +330,7 @@ function PricingContent() {
           <details className="pri-faq-item">
             <summary>Le paiement est-il sécurisé ?</summary>
             <p>
-              Oui — le paiement passe par Stripe, leader européen de
+              Oui : le paiement passe par Stripe, leader européen de
               l&apos;encaissement en ligne. MedRev ne stocke jamais tes
               données bancaires.
             </p>
