@@ -19,7 +19,7 @@ const FACS = [
   { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6', hasOptions: true },
   { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5', hasOptions: false },
   { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13', hasOptions: false },
-  { id: 'upec', name: 'UPEC Créteil', badge: 'Paris 12', hasOptions: false },
+  { id: 'upec', name: 'UPEC Créteil', badge: 'Créteil', hasOptions: false },
   { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: false },
   { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: false },
   { id: 'autre', name: 'Autre faculté', badge: 'Autre', hasOptions: false },
@@ -148,6 +148,17 @@ function AuthContent() {
       setError('Merci de remplir tous les champs.')
       return
     }
+    // Validation basique côté client pour éviter à l'user de découvrir
+    // l'erreur Supabase à la fin du wizard (3 étapes plus loin).
+    const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    if (!emailLooksValid) {
+      setError("Cette adresse email ne semble pas valide.")
+      return
+    }
+    if (password.length < 8) {
+      setError('Le mot de passe doit faire au moins 8 caractères.')
+      return
+    }
     setError(null)
     setStep('fac')
   }
@@ -180,7 +191,14 @@ function AuthContent() {
         )
       }
 
-      fetch('/api/welcome-email', { method: 'POST' }).catch(() => {})
+      // Welcome email : on attend avec un timeout court pour ne pas bloquer
+      // le signup si Resend est lent ou down. La race condition précédente
+      // (fetch fire-and-forget puis window.location.href immédiat) pouvait
+      // interrompre la requête avant qu'elle parte.
+      await Promise.race([
+        fetch('/api/welcome-email', { method: 'POST' }).catch(() => null),
+        new Promise(r => setTimeout(r, 2500)),
+      ])
       window.location.href = '/dashboard'
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur inconnue')
@@ -236,7 +254,7 @@ function AuthContent() {
             <div className="auth-trust">
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit pour démarrer (matières / fiches illimitées)</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Auto-config matières dès l&apos;inscription</div>
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données hébergées en France 🇫🇷</div>
+              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données sur Supabase Paris 🇫🇷</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Aucune publicité, aucun tracking tiers</div>
             </div>
           </div>
