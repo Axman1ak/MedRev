@@ -329,7 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="db-sidebar" data-tour="sidebar">
         {/* Logo */}
         <div className="db-logo">
-          Med<span>Rev</span>
+          Med<span>·Rev</span>
         </div>
 
         {/* Semester toggle */}
