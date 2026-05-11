@@ -105,6 +105,10 @@ export const FREE_PDF_SIZE_MB = 20
 // outliers. User normal Premium fait 10-20/mois, donc 100 laisse une marge.
 export const PREMIUM_MONTHLY_AI_CAP = 100
 export const J_STEPS = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+// Legacy const conservée pour rétro-compat avec d'anciens imports qui
+// pourraient encore traîner. À retirer en un coup quand on a vérifié qu'aucun
+// code de prod ne l'utilise (grep "FREE_LIMIT" dans le repo).
+// @deprecated — préfère FREE_AI_GENERATIONS_LIMIT / FREE_SIMULATOR_SESSIONS_LIMIT
 export const FREE_LIMIT = 15
 export function jLabel(i: number): string {
   return i === 0 ? 'J0' : `J+${J_STEPS[i]}`
