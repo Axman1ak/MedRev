@@ -38,7 +38,7 @@
 //    16. Clic Tableau de bord (nav)
 //    17. Tableau de bord — centralise quotidien
 //    18. Clic zone Bibliothèque
-//    19. Bibliothèque — 1500 livres
+//    19. Bibliothèque — 2000 livres
 //    20. Clic Simulateur (nav)
 //    21. Simulateur — utilise les QCM générés + Premium
 //    22. Clic Statistiques (nav)
@@ -312,7 +312,7 @@ const STEPS: Step[] = [
         l&apos;IA pour générer tes QCM.
         <br /><br />
         <em className="ont-premium-note">
-          Plan Gratuit : 30 min de vidéo, 20 Mo de PDF, 1 par fiche.{' '}
+          Plan Gratuit : 100 Mo de vidéo (~30 min), 20 Mo de PDF, 1 par fiche.{' '}
           <strong>Premium</strong> : sans limite.
         </em>
       </>
@@ -426,13 +426,13 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
-    title: () => 'L’objectif : 1500 livres',
+    title: () => 'L’objectif : 2000 livres',
     body: (
       <>
         La <strong>session focus</strong> enchaîne tes fiches dues. Chaque
         fiche notée ajoute <strong>1 livre</strong> à ta bibliothèque (1 livre
         = 1h d&apos;étude). <strong>6 trésors</strong> à débloquer au fil des
-        livres. Objectif : 1500 livres pour boucler la P1.
+        livres. Objectif : 2000 livres pour boucler la P1.
       </>
     ),
   },
