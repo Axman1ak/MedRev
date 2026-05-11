@@ -320,7 +320,7 @@ function AuthContent() {
                 </div>
                 <button type="button" className="auth-back-btn" onClick={() => setStep('fac')}>← Retour</button>
                 <div className="auth-step-title">Quelle est ton option ?</div>
-                <div className="auth-step-sub">Sorbonne PASS — choisis ta mineure pour pré-configurer les matières.</div>
+                <div className="auth-step-sub">Sorbonne PASS/LAS : choisis ta mineure pour pré-configurer les matières.</div>
                 <div className="auth-opt-list">
                   <button type="button" className={`auth-opt-card${option === 'sciences' ? ' sel' : ''}`} onClick={() => setOption('sciences')}>
                     <div className="auth-opt-card-title">Option Sciences</div>
