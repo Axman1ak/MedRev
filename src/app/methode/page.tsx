@@ -25,7 +25,7 @@ export default function MethodePage() {
       <section className="lp-hero" style={{ paddingBottom: 60 }}>
         <span className="lp-hero-kicker">La méthode</span>
         <h1 className="lp-hero-h1" style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}>
-          Une P1, c&apos;est <em>40 fiches à oublier</em>
+          Une P1, c&apos;est <em>environ 200 fiches à oublier</em>
           <span className="line2" style={{ fontStyle: 'normal', color: 'var(--lp-text)' }}>
             quatre fois.
           </span>
