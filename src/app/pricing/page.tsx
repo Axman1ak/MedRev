@@ -37,7 +37,7 @@ export default function PricingPublicPage() {
           <span className="line2"><em>dépendre de ton budget.</em></span>
         </h1>
         <p className="lp-hero-sub">
-          Commence gratuit. Passe Premium quand tu en as vraiment besoin —
+          Commence gratuit. Passe Premium quand tu en as vraiment besoin,
           ou jamais. <strong>C&apos;est ton choix.</strong>
         </p>
       </section>
@@ -180,7 +180,7 @@ export default function PricingPublicPage() {
           <details className="lp-faq-item">
             <summary>Le paiement est-il sécurisé ?</summary>
             <p>
-              Oui — le paiement passe par Stripe, leader européen de
+              Oui : le paiement passe par Stripe, leader européen de
               l&apos;encaissement en ligne. MedRev ne stocke jamais tes
               données bancaires.
             </p>
@@ -190,7 +190,7 @@ export default function PricingPublicPage() {
             <p>
               Le plan Gratuit te permet de tester toutes les fonctionnalités
               principales sans engagement. C&apos;est mieux qu&apos;une période
-              d&apos;essai à durée limitée — tu utilises l&apos;app à ton
+              d&apos;essai à durée limitée. Tu utilises l&apos;app à ton
               rythme.
             </p>
           </details>
