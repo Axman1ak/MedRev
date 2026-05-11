@@ -46,6 +46,13 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
+  // Suppression du compte (RGPD — droit à l'effacement)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   // Apparence (mode clair / sombre)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
 
@@ -166,6 +173,44 @@ export default function SettingsPage() {
     router.push('/')
   }
 
+  // ------------ DELETE ACCOUNT ------------
+  async function deleteAccount() {
+    setDeleteError(null)
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: deletePassword,
+          confirmation: deleteConfirmation,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setDeleteError(json?.error || 'Suppression impossible. Réessaie.')
+        setDeleting(false)
+        return
+      }
+      // Compte supprimé — on redirige vers l'accueil avec un signal pour
+      // éventuellement afficher un message côté landing.
+      window.location.href = '/?deleted=1'
+    } catch {
+      setDeleteError('Connexion impossible. Réessaie dans un instant.')
+      setDeleting(false)
+    }
+  }
+
+  // Reset l'état de la modal quand on la ferme
+  function closeDeleteModal() {
+    setShowDeleteModal(false)
+    setDeletePassword('')
+    setDeleteConfirmation('')
+    setDeleteError(null)
+  }
+
+  const canConfirmDelete = deletePassword.length > 0 && deleteConfirmation === 'SUPPRIMER'
+
   if (!profile) {
     return (
       <div className="set-page">
@@ -244,7 +289,10 @@ export default function SettingsPage() {
           <div className="set-row">
             <label className="set-label">Email</label>
             <div className="set-static">{email}</div>
-            <p className="set-hint">L&apos;email est utilisé pour la connexion. Pour le changer, contacte-nous.</p>
+            <p className="set-hint">
+              L&apos;email est utilisé pour la connexion. Pour le changer,
+              écris à <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
+            </p>
           </div>
 
           <div className="set-row">
@@ -472,7 +520,95 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* SUPPRIMER MON COMPTE — droit à l'effacement RGPD */}
+        <section className="set-card set-card-danger">
+          <div className="set-card-h">Supprimer mon compte</div>
+          <p className="set-hint">
+            La suppression est <strong>définitive et immédiate</strong> : toutes
+            tes fiches, tes notes, tes QCM, ta bibliothèque et ton historique
+            sont effacés sans possibilité de récupération. Si tu as un
+            abonnement Premium actif, il sera automatiquement annulé.
+          </p>
+          <div className="set-actions">
+            <button
+              className="set-btn ghost-rose"
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Supprimer mon compte…
+            </button>
+          </div>
+        </section>
+
       </div>
+
+      {/* MODAL CONFIRMATION SUPPRESSION */}
+      {showDeleteModal && (
+        <div
+          className="set-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="del-title"
+          onClick={() => { if (!deleting) closeDeleteModal() }}
+        >
+          <div className="set-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 id="del-title" className="set-modal-title">Supprimer mon compte</h2>
+            <p className="set-modal-intro">
+              Cette action est <strong>définitive</strong>. On supprime
+              tes fiches, tes notes, ta bibliothèque, tes QCM générés, et
+              on annule l&apos;abonnement Premium si tu en as un.
+            </p>
+
+            <div className="set-row" style={{ marginTop: 18 }}>
+              <label className="set-label">Tape <strong>SUPPRIMER</strong> en majuscules pour confirmer</label>
+              <input
+                className="set-input"
+                type="text"
+                value={deleteConfirmation}
+                onChange={e => setDeleteConfirmation(e.target.value)}
+                placeholder="SUPPRIMER"
+                autoComplete="off"
+                disabled={deleting}
+              />
+            </div>
+
+            <div className="set-row">
+              <label className="set-label">Mot de passe (pour re-vérification)</label>
+              <input
+                className="set-input"
+                type="password"
+                value={deletePassword}
+                onChange={e => setDeletePassword(e.target.value)}
+                placeholder="Ton mot de passe actuel"
+                autoComplete="current-password"
+                disabled={deleting}
+              />
+            </div>
+
+            {deleteError && (
+              <div className="set-msg err" style={{ marginTop: 12 }}>{deleteError}</div>
+            )}
+
+            <div className="set-modal-actions">
+              <button
+                type="button"
+                className="set-btn"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="set-btn ghost-rose"
+                onClick={deleteAccount}
+                disabled={!canConfirmDelete || deleting}
+              >
+                {deleting ? 'Suppression…' : 'Supprimer définitivement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
