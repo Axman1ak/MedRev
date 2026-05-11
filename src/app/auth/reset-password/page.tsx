@@ -103,9 +103,11 @@ export default function ResetPasswordPage() {
         }
 
         .rp-logo {
-          font-family: 'Fraunces', serif;
-          font-weight: 500;
-          font-size: 22px;
+          font-family: 'Cinzel', 'Fraunces', serif;
+          font-weight: 600;
+          font-size: 17px;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
           color: var(--dark);
           text-align: center;
           margin-bottom: 24px;
