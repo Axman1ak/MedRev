@@ -354,23 +354,39 @@ export default function FichesPage() {
   async function confirmDelete() {
     if (!deleting) return
     setDeleteLoading(true)
-    if (deleting.type === 'system') {
-      const sysLessons = lessons.filter(l => l.system_id === deleting.id)
-      const lessonIds = sysLessons.map(l => l.id)
-      if (lessonIds.length > 0) {
-        await supabase.from('voyage_checks').delete().in('lesson_id', lessonIds)
-        await supabase.from('lessons').delete().eq('system_id', deleting.id)
+    // On check les erreurs Supabase pour ne pas retirer du state local
+    // ce qui n'a pas été effectivement supprimé en DB (cas RLS bloque ou
+    // réseau down : l'UI montrait la fiche disparue mais elle réapparaissait
+    // au refresh).
+    try {
+      if (deleting.type === 'system') {
+        const sysLessons = lessons.filter(l => l.system_id === deleting.id)
+        const lessonIds = sysLessons.map(l => l.id)
+        if (lessonIds.length > 0) {
+          const { error: vcErr } = await supabase.from('voyage_checks').delete().in('lesson_id', lessonIds)
+          if (vcErr) throw vcErr
+          const { error: lessErr } = await supabase.from('lessons').delete().eq('system_id', deleting.id)
+          if (lessErr) throw lessErr
+        }
+        const { error: sysErr } = await supabase.from('systems').delete().eq('id', deleting.id)
+        if (sysErr) throw sysErr
+        setLessons(prev => prev.filter(l => l.system_id !== deleting.id))
+        setSystems(prev => prev.filter(s => s.id !== deleting.id))
+      } else {
+        const { error: vcErr } = await supabase.from('voyage_checks').delete().eq('lesson_id', deleting.id)
+        if (vcErr) throw vcErr
+        const { error: lessErr } = await supabase.from('lessons').delete().eq('id', deleting.id)
+        if (lessErr) throw lessErr
+        setLessons(prev => prev.filter(l => l.id !== deleting.id))
       }
-      await supabase.from('systems').delete().eq('id', deleting.id)
-      setLessons(prev => prev.filter(l => l.system_id !== deleting.id))
-      setSystems(prev => prev.filter(s => s.id !== deleting.id))
-    } else {
-      await supabase.from('voyage_checks').delete().eq('lesson_id', deleting.id)
-      await supabase.from('lessons').delete().eq('id', deleting.id)
-      setLessons(prev => prev.filter(l => l.id !== deleting.id))
+      setDeleting(null)
+    } catch (e) {
+      console.error('[confirmDelete] erreur Supabase :', e)
+      // On laisse le modal ouvert pour que l'user voie qu'il s'est passé qqch.
+      alert(`Suppression impossible : ${e instanceof Error ? e.message : 'erreur inconnue'}. Réessaie ou recharge la page.`)
+    } finally {
+      setDeleteLoading(false)
     }
-    setDeleteLoading(false)
-    setDeleting(null)
   }
 
   // ---- Dérivées ----
