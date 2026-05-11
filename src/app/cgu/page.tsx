@@ -29,7 +29,7 @@ export default function CguPage() {
         <section className="legal-section">
           <h2 className="legal-h2">1. Éditeur</h2>
           <p>Le service MedRev (ci-après « le Service ») est édité par Lou Bonnefoy, étudiant, contact : <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.</p>
-          <p>L&apos;hébergement est assuré par Vercel Inc. (États-Unis) pour l&apos;application web et Supabase (Europe — Paris) pour la base de données et les fichiers.</p>
+          <p>L&apos;hébergement est assuré par Vercel Inc. (États-Unis) pour l&apos;application web et Supabase (Europe, Paris) pour la base de données et les fichiers.</p>
         </section>
 
         <section className="legal-section">
