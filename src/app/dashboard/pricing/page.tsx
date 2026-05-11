@@ -321,8 +321,8 @@ function PricingContent() {
             <summary>Pourquoi limiter l&apos;IA en mode Gratuit ?</summary>
             <p>
               Chaque génération coûte de l&apos;argent côté Gemini (l&apos;IA
-              utilisée). MedRev est développé par un étudiant qui veut garder
-              le projet viable sans pubs. Le plan Premium finance les coûts
+              utilisée). On veut garder MedRev viable sans pubs et sans
+              revendre tes données. Le plan Premium finance les coûts
               d&apos;infrastructure et de développement.
             </p>
           </details>
