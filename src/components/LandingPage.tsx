@@ -141,11 +141,11 @@ export default function LandingPage() {
           <p className="lp-proof-quote">
             « Une P1 typique fait <strong>environ 200 fiches</strong> dans
             l&apos;année. MedRev les organise toutes pour toi, te génère
-            <strong> 1200+ QCM</strong> sur tes vrais cours, et te demande
-            chaque jour <strong>quoi réviser</strong>. »
+            <strong> jusqu&apos;à 30 QCM par fiche</strong> sur tes vrais cours,
+            et te demande chaque jour <strong>quoi réviser</strong>. »
           </p>
           <div className="lp-proof-stats">
-            <div><div className="lp-proof-stat-num">1200+</div><div className="lp-proof-stat-lbl">QCM générés</div></div>
+            <div><div className="lp-proof-stat-num">30</div><div className="lp-proof-stat-lbl">QCM / fiche</div></div>
             <div><div className="lp-proof-stat-num">14</div><div className="lp-proof-stat-lbl">Paliers J</div></div>
             <div><div className="lp-proof-stat-num">6</div><div className="lp-proof-stat-lbl">Trésors</div></div>
             <div><div className="lp-proof-stat-num">100 %</div><div className="lp-proof-stat-lbl">Auto-organisé</div></div>
