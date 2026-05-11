@@ -112,12 +112,12 @@ export default function ManifestoPage() {
         </section>
 
         <div className="manifesto-sign">
-          <div className="manifesto-sign-avatar">L</div>
+          <div className="manifesto-sign-avatar">M</div>
           <div>
-            <div className="manifesto-sign-name">Lou Bonnefoy, fondateur</div>
+            <div className="manifesto-sign-name">L&apos;équipe MedRev</div>
             <div className="manifesto-sign-role">
-              Étudiant. Construit MedRev parce que personne ne construisait
-              l&apos;outil que j&apos;aurais voulu pour la P1.
+              On a construit MedRev parce que personne ne construisait
+              l&apos;outil qu&apos;on aurait voulu pour la P1.
             </div>
           </div>
         </div>
