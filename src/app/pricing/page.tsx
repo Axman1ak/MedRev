@@ -68,7 +68,7 @@ export default function PricingPublicPage() {
           </div>
 
           <div className="lp-pt-card featured">
-            <div className="lp-pt-tag">Recommandé · Économise 3 mois</div>
+            <div className="lp-pt-tag">Recommandé · Économise ~5 mois</div>
             <h3 className="lp-pt-name">Annuel</h3>
             <div className="lp-pt-price">69<em>€/an</em></div>
             <div className="lp-pt-period">soit 5,75 € par mois</div>
@@ -82,7 +82,7 @@ export default function PricingPublicPage() {
               <li>Simulateur illimité + Examen blanc</li>
               <li>Vidéos 250 Mo, PDF sans limite</li>
               <li>Stats avancées</li>
-              <li>Économise 30 € vs Mensuel</li>
+              <li>Économise ~51 € vs Mensuel</li>
             </ul>
             <Link href="/auth" className="lp-btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
               Passer Annuel →
@@ -156,9 +156,9 @@ export default function PricingPublicPage() {
             <summary>Quelle est la différence entre Annuel et Mensuel ?</summary>
             <p>
               Aucune en termes de fonctionnalités. L&apos;Annuel revient à
-              5,75 €/mois (économise 3 mois sur l&apos;année). Le Mensuel à
-              9,99 € est plus flexible si tu préfères tester ou résilier à
-              tout moment.
+              5,75 €/mois et te fait économiser environ 5 mois sur l&apos;année
+              (69 € vs 119,88 €). Le Mensuel à 9,99 € est plus flexible si tu
+              préfères tester ou résilier à tout moment.
             </p>
           </details>
           <details className="lp-faq-item">
