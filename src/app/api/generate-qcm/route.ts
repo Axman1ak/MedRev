@@ -42,6 +42,12 @@ const FREE_AI_GENERATIONS_LIMIT = 10
 // soit de légitime.
 const PREMIUM_MONTHLY_AI_CAP = 100
 
+// Cap dur du nombre de questions stockées par fiche (mode append cumulatif).
+// Au-delà : le JSON ai_questions devient lourd à charger côté UI, et l'intérêt
+// pédagogique sature (au-delà de 100 questions sur une seule fiche, on tape
+// du diminishing returns). Vaut pour tous les plans (Free ET Premium).
+const MAX_QUESTIONS_PER_LESSON = 100
+
 // Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
 // (standard PASS médecine). Le V/F est interdit, les questions à moins ou
 // plus de 5 options sont rejetées au sanitize.
@@ -375,21 +381,27 @@ export async function POST(req: NextRequest) {
 
     // 2. Body
     const body = await req.json().catch(() => ({}))
+    let {
+      nbQ = 30,
+    } = body as { nbQ?: number }
     const {
       lessonId,
-      nbQ = 30,
       format = 'mixed',
       difficulty = 'annales',
       mode = 'replace',
     } = body as {
       lessonId?: string
-      nbQ?: number
       format?: string
       difficulty?: string
       mode?: 'replace' | 'append'
     }
     if (!lessonId) {
       return NextResponse.json({ error: 'lessonId requis' }, { status: 400 })
+    }
+
+    // En mode replace : on ne génère jamais plus que le cap par fiche, point.
+    if (mode === 'replace' && nbQ > MAX_QUESTIONS_PER_LESSON) {
+      nbQ = MAX_QUESTIONS_PER_LESSON
     }
 
     // 3. Fetch lesson + ownership check (RLS)
@@ -494,6 +506,24 @@ export async function POST(req: NextRequest) {
     const existingQuestions = mode === 'append' && Array.isArray(lesson.ai_questions)
       ? (lesson.ai_questions as Array<Record<string, unknown>>)
       : []
+
+    // Cap dur par fiche (mode append) : on refuse d'ajouter si on est déjà au plafond,
+    // et on tronque la demande pour ne jamais dépasser MAX_QUESTIONS_PER_LESSON au total.
+    if (mode === 'append' && existingQuestions.length >= MAX_QUESTIONS_PER_LESSON) {
+      return NextResponse.json(
+        {
+          error: `Cette fiche contient déjà ${existingQuestions.length} questions générées (plafond : ${MAX_QUESTIONS_PER_LESSON}). Supprime des questions ou utilise "Régénérer" pour repartir de zéro.`,
+          code: 'lesson_questions_cap',
+          limit: MAX_QUESTIONS_PER_LESSON,
+          used: existingQuestions.length,
+        },
+        { status: 403 }
+      )
+    }
+    if (mode === 'append') {
+      const remaining = MAX_QUESTIONS_PER_LESSON - existingQuestions.length
+      if (nbQ > remaining) nbQ = remaining
+    }
 
     const existingBlock = existingQuestions.length > 0
       ? `\nQUESTIONS DÉJÀ GÉNÉRÉES POUR CETTE FICHE — ne les reproduis SURTOUT PAS, formule des questions sur d'autres angles, d'autres parties du cours, ou avec des pièges différents :
@@ -601,9 +631,12 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
     sanitized = shuffle(sanitized)
 
     // 9. Si mode append, concaténer aux existantes ; sinon remplacer
-    const finalQuestions = mode === 'append'
+    // Filet de sécurité : on retronque à MAX_QUESTIONS_PER_LESSON au cas où
+    // Gemini aurait renvoyé plus que demandé (rare, mais ça arrive).
+    const finalQuestions = (mode === 'append'
       ? [...existingQuestions, ...sanitized]
       : sanitized
+    ).slice(0, MAX_QUESTIONS_PER_LESSON)
 
     // 10. Save
     const { error: updateErr } = await supabase
