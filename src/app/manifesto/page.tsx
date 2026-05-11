@@ -61,9 +61,10 @@ export default function ManifestoPage() {
             pour pousser à payer.
           </p>
           <p className="manifesto-p">
-            Le Premium à <strong>69 €/an</strong> débloque l&apos;IA en
-            illimité (10 générations gratuites, c&apos;est déjà honnête) et le
-            mode Examen blanc. Sans engagement. Tu paies ce que tu utilises.
+            Le Premium démarre à <strong>5,75 €/mois</strong> (69 €/an) ou
+            <strong> 9,99 €/mois</strong> sans engagement. Il débloque l&apos;IA
+            en illimité (10 générations gratuites, c&apos;est déjà honnête) et
+            le mode Examen blanc. Tu paies ce que tu utilises.
           </p>
           <div className="manifesto-numbers">
             <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">3 000 €</div><div className="manifesto-num-stat-lbl">Prépa privée</div></div>
@@ -83,8 +84,11 @@ export default function ManifestoPage() {
           </p>
           <p className="manifesto-p">
             MedRev tourne sans pub, sans Google Analytics, sans Facebook
-            Pixel, sans cookies tiers. <strong>Hébergé sur Supabase EU
-            (Paris)</strong>. Aucune donnée ne quitte l&apos;Union Européenne.
+            Pixel, sans cookies tiers. Tes données utilisateur (fiches,
+            cours uploadés, profil) sont stockées en Union Européenne
+            sur <strong>Supabase Paris</strong>. L&apos;infrastructure web
+            passe par Vercel, avec des transferts strictement encadrés par
+            les Clauses Contractuelles Types de la Commission européenne.
           </p>
           <p className="manifesto-p">
             Si on coule un jour, on n&apos;ouvre pas la porte aux <em>data
