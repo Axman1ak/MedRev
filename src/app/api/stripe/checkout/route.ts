@@ -17,10 +17,11 @@ import { createClient } from '@/lib/supabase/server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
 
-// Price IDs lus dans l'env. Le fallback sur le price hardcodé garantit
-// la rétro-compat avec l'ancien code qui n'envoyait pas de plan.
-const STRIPE_PRICE_MONTHLY = process.env.STRIPE_PRICE_MONTHLY || 'price_1TFcVZ4I71YTpOUICTvhUcwJ'
-const STRIPE_PRICE_YEARLY = process.env.STRIPE_PRICE_YEARLY || ''
+// Price IDs lus dans l'env. AUCUN fallback hardcodé : si l'env var disparaît
+// d'un déploiement (mauvaise config, preview branch sans secrets), on préfère
+// échouer fort et clair plutôt que de facturer sur un mauvais price ID.
+const STRIPE_PRICE_MONTHLY = process.env.STRIPE_PRICE_MONTHLY
+const STRIPE_PRICE_YEARLY = process.env.STRIPE_PRICE_YEARLY
 
 // Allowlist des plans acceptés. Si on ajoute "lifetime" un jour, l'ajouter ici.
 const VALID_PLANS = ['monthly', 'yearly'] as const
@@ -52,6 +53,15 @@ export async function POST(req: NextRequest) {
     }
     priceId = STRIPE_PRICE_YEARLY
   } else {
+    if (!STRIPE_PRICE_MONTHLY) {
+      // Pas de fallback hardcodé : si l'env var manque, on bloque le paiement
+      // côté serveur. Mieux qu'un mauvais price facturé en silence.
+      console.error('[stripe/checkout] STRIPE_PRICE_MONTHLY env var manquante')
+      return NextResponse.json(
+        { error: 'Le paiement est temporairement indisponible. Réessaie dans un instant ou contacte le support.' },
+        { status: 500 }
+      )
+    }
     priceId = STRIPE_PRICE_MONTHLY
   }
 
