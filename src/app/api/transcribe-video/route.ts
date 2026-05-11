@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
     }
     if (videoBlob.size > MAX_VIDEO_SIZE) {
       return NextResponse.json(
-        { error: `Vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > 100 Mo)` },
+        { error: `Vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > ${MAX_VIDEO_SIZE / 1024 / 1024} Mo)` },
         { status: 400 }
       )
     }
