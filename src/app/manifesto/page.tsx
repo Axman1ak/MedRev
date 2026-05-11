@@ -65,8 +65,7 @@ export default function ManifestoPage() {
           <p className="manifesto-p">
             Le Premium démarre à <strong>5,75 €/mois</strong> (69 €/an) ou
             <strong> 9,99 €/mois</strong> sans engagement. Il débloque l&apos;IA
-            en illimité (10 générations gratuites, c&apos;est déjà honnête) et
-            le mode Examen blanc. Tu paies ce que tu utilises.
+            en illimité et le mode Examen blanc. Tu paies ce que tu utilises.
           </p>
           <p className="manifesto-p">
             Que tu sois <strong>déjà en prépa</strong> et que tu cherches un
