@@ -217,7 +217,7 @@ export default function ResetPasswordPage() {
 
       <div className="rp-wrap">
         <div className="rp-card">
-          <div className="rp-logo">Med<span>Rev</span></div>
+          <div className="rp-logo">Med<span>·Rev</span></div>
 
           {!authReady ? (
             <div className="rp-loading">Vérification du lien…</div>
