@@ -97,7 +97,11 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
         : 0
     const source = (q.source as string) || (q.src as string) || undefined
     const explanation = (q.explanation as string) || (q.explication as string) || undefined
-    if (!question || !Array.isArray(options) || options.length < 2) continue
+    // Standard PASS médecine : EXACTEMENT 5 options A-E. On rejette tout
+    // ce qui n'est pas conforme, pour aligner sur la règle stricte appliquée
+    // côté generate-qcm/route.ts et éviter d'afficher des questions cassées
+    // issues d'anciennes générations legacy (V/F, QCM à 4 options, etc.).
+    if (!question || !Array.isArray(options) || options.length !== 5) continue
     out.push({
       question,
       options,
