@@ -200,7 +200,7 @@ export default function PricingPublicPage() {
       {/* CTA final */}
       <section className="lp-cta">
         <h2 className="lp-cta-h2">
-          Prêt à <em>commencer ?</em>
+          Prêt·e à <em>commencer ?</em>
         </h2>
         <p className="lp-cta-sub">
           Pré-configure ton compte en 2 minutes. Tes matières sont déjà prêtes
