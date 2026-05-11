@@ -84,7 +84,7 @@ export default function ManifestoPage() {
           <p className="manifesto-p">
             MedRev tourne sans pub, sans Google Analytics, sans Facebook
             Pixel, sans cookies tiers. <strong>Hébergé sur Supabase EU
-            (Paris)</strong> — aucune donnée ne quitte l&apos;Union Européenne.
+            (Paris)</strong>. Aucune donnée ne quitte l&apos;Union Européenne.
           </p>
           <p className="manifesto-p">
             Si on coule un jour, on n&apos;ouvre pas la porte aux <em>data
@@ -105,8 +105,8 @@ export default function ManifestoPage() {
           </p>
           <p className="manifesto-p">
             MedRev n&apos;est pas un cours en plus. C&apos;est <strong>l&apos;outil
-            qui transforme tes propres cours</strong> — ceux que ta fac
-            t&apos;a donnés, ceux que tes profs ont enregistrés — en QCM, en
+            qui transforme tes propres cours</strong> (ceux que ta fac
+            t&apos;a donnés, ceux que tes profs ont enregistrés) en QCM, en
             planning, en progression mesurable.
           </p>
         </section>
