@@ -199,9 +199,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           transition: background-color .25s ease, color .25s ease, border-color .25s ease;
         }
         .db-logo {
-          font-family: 'Fraunces', Georgia, serif;
-          font-size: 20px;
-          font-weight: 700;
+          font-family: 'Cinzel', 'Fraunces', Georgia, serif;
+          font-size: 15px;
+          font-weight: 600;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
           padding: 0 18px 14px;
           color: var(--sb-text);
         }
