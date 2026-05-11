@@ -22,6 +22,10 @@ import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM_ADDRESS = process.env.WELCOME_EMAIL_FROM || 'MedRev <onboarding@resend.dev>'
+// URL de l'app utilisée dans les liens du mail. Lue depuis env var pour pouvoir
+// migrer vers un domaine custom sans toucher au code. Fallback sur l'URL Vercel
+// actuelle si la var n'est pas définie.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://med-rev-eight.vercel.app'
 
 export async function POST() {
   try {
@@ -118,7 +122,7 @@ function buildHtml(firstName: string): string {
         </td></tr>
 
         <tr><td style="padding:24px 36px 8px;">
-          <a href="https://med-rev-eight.vercel.app/dashboard" style="display:inline-block;background:#1B4332;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:9px;letter-spacing:0.01em;">
+          <a href="${APP_URL}/dashboard" style="display:inline-block;background:#1B4332;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:9px;letter-spacing:0.01em;">
             Aller sur mon dashboard →
           </a>
         </td></tr>
@@ -133,7 +137,7 @@ function buildHtml(firstName: string): string {
           <p style="margin:0;font-size:12px;color:#9A9A98;line-height:1.5;">
             Une question, un bug, une idée ? Réponds simplement à ce mail.
             <br />
-            <span style="color:#C4C2BA;">© 2026 MedRev · Hébergé en France</span>
+            <span style="color:#C4C2BA;">© 2026 MedRev · Données sur Supabase Paris</span>
           </p>
         </td></tr>
       </table>
@@ -154,13 +158,13 @@ Pour bien démarrer :
 2. Upload une vidéo de cours et/ou un PDF. MedRev en extrait le contenu et te génère 30 QCM en 1 minute.
 3. Note la fiche au jour J sur 1 à 5. La courbe d'oubli prend le relais et te programme les révisions suivantes.
 
-Aller sur mon dashboard : https://med-rev-eight.vercel.app/dashboard
+Aller sur mon dashboard : ${APP_URL}/dashboard
 
 Tout est gratuit pour démarrer (matières et fiches illimitées, courbe J, calendrier, bibliothèque). L'IA et le simulateur ont quelques limites en gratuit ; tu peux passer Premium quand tu en auras vraiment besoin.
 
 Une question, un bug, une idée ? Réponds simplement à ce mail.
 
-— MedRev · Hébergé en France
+— MedRev · Données sur Supabase Paris
 `
 }
 
