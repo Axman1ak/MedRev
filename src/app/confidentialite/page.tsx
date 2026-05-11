@@ -58,11 +58,11 @@ export default function ConfidentialitePage() {
           <h2 className="legal-h2">4. Destinataires et sous-traitants</h2>
           <p>Les données peuvent être transmises aux sous-traitants suivants, tous liés par accord de confidentialité :</p>
           <ul className="legal-list">
-            <li><strong>Supabase</strong> (Europe, Paris) — hébergement de la base de données et des fichiers uploadés.</li>
-            <li><strong>Vercel</strong> (États-Unis) — hébergement de l&apos;application web. Transferts couverts par les Standard Contractual Clauses de la Commission européenne.</li>
-            <li><strong>Stripe</strong> (Irlande) — traitement des paiements pour les abonnements Premium.</li>
-            <li><strong>Google (Gemini API)</strong> (États-Unis) — traitement des cours uploadés pour la génération de QCM. Transferts couverts par les SCC.</li>
-            <li><strong>Resend</strong> (États-Unis) — envoi des emails transactionnels.</li>
+            <li><strong>Supabase</strong> (Europe, Paris) : hébergement de la base de données et des fichiers uploadés.</li>
+            <li><strong>Vercel</strong> (États-Unis) : hébergement de l&apos;application web. Transferts couverts par les Standard Contractual Clauses de la Commission européenne.</li>
+            <li><strong>Stripe</strong> (Irlande) : traitement des paiements pour les abonnements Premium.</li>
+            <li><strong>Google (Gemini API)</strong> (États-Unis) : traitement des cours uploadés pour la génération de QCM. Transferts couverts par les SCC.</li>
+            <li><strong>Resend</strong> (États-Unis) : envoi des emails transactionnels.</li>
           </ul>
           <p>Aucune donnée n&apos;est revendue à des tiers à des fins commerciales ou publicitaires.</p>
         </section>
