@@ -25,35 +25,37 @@ export default function ManifestoPage() {
         </h1>
         <p className="manifesto-lede">
           En France, la P1 décide qui sera médecin. Elle devrait départager
-          <strong> les élèves qui travaillent le plus, pas ceux qui paient le plus.</strong>
+          <strong> les élèves sur leur travail, peu importe leur budget familial.</strong>
         </p>
 
         <section className="manifesto-section">
-          <div className="manifesto-num">01 · Le problème</div>
-          <h2 className="manifesto-h2">Une <em>industrie de la prépa</em> qui exclut.</h2>
+          <div className="manifesto-num">01 · Le constat</div>
+          <h2 className="manifesto-h2">Une <em>barrière financière</em> qui ne devrait pas exister.</h2>
           <p className="manifesto-p">
-            Aujourd&apos;hui, un étudiant en P1 dépense entre <strong>3 000 et
-            8 000 €</strong> en prépa privée pour avoir une chance raisonnable
-            de passer. Tutorat, polys spécifiques, e-learning, examens blancs :
-            la facture s&apos;empile.
+            Aujourd&apos;hui, beaucoup d&apos;étudiants en P1 investissent entre
+            <strong> 3 000 et 8 000 €</strong> dans une prépa privée. Pour ceux qui
+            le peuvent, ces structures apportent un cadre, des polys et un
+            encadrement qui font la différence. Le problème, ce n&apos;est pas
+            la prépa en elle-même : c&apos;est que <strong>tout le monde n&apos;y a
+            pas accès</strong>.
           </p>
           <p className="manifesto-p">
-            Les boursiers ? Les enfants de classes populaires ? Ceux dont les
-            parents ne peuvent pas payer ? Ils ont droit à 4 fois moins
-            d&apos;heures encadrées. Et pourtant, la médecine est censée
-            recruter ses futurs praticiens <strong>sur la rigueur, pas sur le
-            compte bancaire</strong>.
+            Les boursiers, les enfants de classes populaires, celles et ceux
+            dont les parents ne peuvent pas suivre cet effort financier passent
+            le même concours avec moins d&apos;heures encadrées. La médecine
+            devrait recruter ses futurs praticiens <strong>sur la rigueur,
+            pas sur le compte bancaire</strong>.
           </p>
           <div className="manifesto-quote">
-            « En France, payer 6 000 € par an pour préparer un concours public,
-            c&apos;est devenu <strong>la norme</strong>. C&apos;est là le
-            problème. »
+            « Payer plusieurs milliers d&apos;euros par an pour préparer un
+            concours public est devenu la norme pour beaucoup. On voulait que
+            ça ne soit plus <strong>une condition d&apos;accès</strong>. »
           </div>
         </section>
 
         <section className="manifesto-section">
           <div className="manifesto-num">02 · Notre réponse</div>
-          <h2 className="manifesto-h2">Une app, <em>cent fois moins chère.</em></h2>
+          <h2 className="manifesto-h2">Un outil <em>accessible</em>, en complément ou en alternative.</h2>
           <p className="manifesto-p">
             MedRev est gratuit pour démarrer. <strong>Vraiment gratuit</strong> :
             matières et fiches illimitées, courbe J, calendrier, sessions
@@ -66,10 +68,17 @@ export default function ManifestoPage() {
             en illimité (10 générations gratuites, c&apos;est déjà honnête) et
             le mode Examen blanc. Tu paies ce que tu utilises.
           </p>
+          <p className="manifesto-p">
+            Que tu sois <strong>déjà en prépa</strong> et que tu cherches un
+            outil pour mieux organiser ton travail, ou que tu prépares la P1
+            sans encadrement supplémentaire, MedRev s&apos;adapte à ton
+            contexte. L&apos;objectif : que le budget ne décide plus de qui
+            travaille bien.
+          </p>
           <div className="manifesto-numbers">
-            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">3 000 €</div><div className="manifesto-num-stat-lbl">Prépa privée</div></div>
-            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">69 €</div><div className="manifesto-num-stat-lbl">MedRev annuel</div></div>
-            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">43×</div><div className="manifesto-num-stat-lbl">Moins cher</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">69 €</div><div className="manifesto-num-stat-lbl">L&apos;année complète</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">14</div><div className="manifesto-num-stat-lbl">Paliers J</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">0 €</div><div className="manifesto-num-stat-lbl">Pour démarrer</div></div>
           </div>
         </section>
 
@@ -103,9 +112,9 @@ export default function ManifestoPage() {
           <p className="manifesto-p">
             Il y a 5 ans, on n&apos;aurait pas pu te générer 30 QCM en 90
             secondes depuis ta vidéo de cours pour 1 centime de coût.
-            Aujourd&apos;hui, oui. Et ce qui était réservé aux prépas qui
-            paient des armées de tuteurs devient <strong>accessible à tout le
-            monde</strong>.
+            Aujourd&apos;hui, oui. Et ce qui demandait des moyens conséquents
+            (banques de QCM, tuteurs disponibles, planning personnalisé)
+            devient <strong>accessible plus largement</strong>.
           </p>
           <p className="manifesto-p">
             MedRev n&apos;est pas un cours en plus. C&apos;est <strong>l&apos;outil
