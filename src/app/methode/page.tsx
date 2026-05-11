@@ -138,7 +138,7 @@ export default function MethodePage() {
               ))}
             </div>
             <div className="lp-method-stamps-note">
-              Plus de 9 paliers déjà notés sur cette fiche · les 5 derniers attendent leur tour
+              9 paliers déjà notés sur cette fiche · les 5 derniers attendent leur tour
             </div>
           </div>
         </div>
@@ -324,7 +324,7 @@ export default function MethodePage() {
               </div>
               <div className="lp-method-biblio-meta">
                 <span><strong>96</strong> ouvrages · 2000 max</span>
-                <span style={{ color: 'var(--lp-gold)' }}>Prochain trésor : 100 fiches</span>
+                <span style={{ color: 'var(--lp-gold)' }}>Prochain trésor : 100 livres</span>
               </div>
             </div>
           </div>
