@@ -1,22 +1,19 @@
 'use client'
 // src/components/LandingPage.tsx
 //
-// Landing page MedRev — version simplifiée mai 2026.
+// Landing page MedRev, version simplifiée mai 2026.
 // Suite au feedback : H1 plus concret, hero épuré (1 mockup focalisé au
 // lieu du dashboard dense), stream "Sous le capot" supprimée, features
 // réduites de 9 à 6.
-
 import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import './landing-styles.css'
-
 export default function LandingPage() {
   return (
     <div className="lp-page">
       <MarketingNav current="home" />
-
-      {/* HERO — simplifié */}
+      {/* HERO, simplifié */}
       <section className="lp-hero">
         <span className="lp-hero-kicker">Pour les P1 · Rentrée 2026</span>
         <h1 className="lp-hero-h1">
@@ -38,12 +35,10 @@ export default function LandingPage() {
           <span><span className="lp-trust-dot" />Données en France</span>
           <span><span className="lp-trust-dot" />Sans pub, sans engagement</span>
         </div>
-
         {/* Mockup focal : un seul card QCM avec source vidéo, pas le dashboard
             entier. Communique en un coup d'œil ce que MedRev fait. */}
         <FocusedMockup />
       </section>
-
       {/* FACS */}
       <section className="lp-facs">
         <div className="lp-facs-label">Conçu pour les P1 françaises</div>
@@ -56,8 +51,7 @@ export default function LandingPage() {
           <div className="lp-fac-name">Montpellier<em>Hérault</em></div>
         </div>
       </section>
-
-      {/* COMMENT ÇA MARCHE — gardé tel quel, c'est clair */}
+      {/* COMMENT ÇA MARCHE, gardé tel quel, c'est clair */}
       <section className="lp-section">
         <div className="lp-section-head">
           <div className="lp-section-kicker">La méthode</div>
@@ -114,8 +108,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* FEATURES — 6 au lieu de 9 */}
+      {/* FEATURES, 6 au lieu de 9 */}
       <section className="lp-section">
         <div className="lp-section-head">
           <div className="lp-section-kicker">Ce que tu débloques</div>
@@ -142,7 +135,6 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
-
       {/* PROOF */}
       <section className="lp-section">
         <div className="lp-proof">
@@ -160,7 +152,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
       {/* FINAL CTA */}
       <section className="lp-cta">
         <h2 className="lp-cta-h2">
@@ -176,14 +167,12 @@ export default function LandingPage() {
           <Link href="/pricing" className="lp-btn-secondary">Voir les tarifs détaillés</Link>
         </div>
       </section>
-
       <MarketingFooter />
     </div>
   )
 }
-
 // ============================================================
-// FOCUSED MOCKUP — visualise « ta vidéo → l'IA → 1 QCM avec source »
+// FOCUSED MOCKUP, visualise « ta vidéo, l'IA, 1 QCM avec source »
 // Beaucoup plus simple que le dashboard complet : une seule chose à
 // regarder, on comprend en 1 seconde ce que MedRev fait.
 // ============================================================
@@ -195,14 +184,12 @@ function FocusedMockup() {
         <span className="lp-focus-source-name">cours-glycolyse.mp4</span>
         <span className="lp-focus-source-meta">47 min · uploadé</span>
       </div>
-
       <div className="lp-focus-arrow">
         <div className="lp-focus-arrow-label">L&apos;IA en 90 secondes</div>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 5v14M5 12l7 7 7-7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-
       <div className="lp-focus-card">
         <div className="lp-focus-card-kicker">Question 12 / 30</div>
         <div className="lp-focus-card-q">
