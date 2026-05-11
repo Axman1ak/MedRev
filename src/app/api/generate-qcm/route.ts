@@ -8,7 +8,7 @@
 // - Sauvegarde le résultat dans lessons.ai_questions
 //
 // ⚠ Plan Vercel : nécessite Pro pour avoir maxDuration > 10s.
-//   Vidéos > 100 Mo → erreur "vidéo trop lourde" pour MVP.
+//   Vidéos > MAX_VIDEO_SIZE (250 Mo) → erreur "vidéo trop lourde" pour MVP.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -481,7 +481,7 @@ export async function POST(req: NextRequest) {
       if (vidErr || !videoBlob) {
         videoSkipReason = 'téléchargement Storage échoué'
       } else if (videoBlob.size > MAX_VIDEO_SIZE) {
-        videoSkipReason = `vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > 100 Mo)`
+        videoSkipReason = `vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > ${MAX_VIDEO_SIZE / 1024 / 1024} Mo)`
       } else {
         try {
           const file = await uploadFileToGemini(videoBlob, videoBlob.type || 'video/mp4', 'cours.mp4')
