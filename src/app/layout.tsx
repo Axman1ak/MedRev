@@ -61,7 +61,10 @@ export const viewport: Viewport = {
 // METADATA — SEO + cartes de partage
 // ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://medrev.fr'), // ⚠️ remplace par ton vrai domaine prod si différent
+  // En attendant un domaine custom, on utilise l'URL Vercel pour que les
+  // OG cards et les URLs canoniques pointent sur le site réellement déployé.
+  // Migrer vers le vrai domaine en un seul commit le jour où il est branché.
+  metadataBase: new URL('https://med-rev-eight.vercel.app'),
 
   title: {
     default: 'MedRev — Tes cours, tes QCM, ton planning.',
@@ -84,7 +87,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: 'https://medrev.fr',
+    url: 'https://med-rev-eight.vercel.app',
     siteName: 'MedRev',
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
@@ -98,7 +101,7 @@ export const metadata: Metadata = {
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
       'La méthode des prépas, sans le prix. 30 QCM sur ta vidéo, 14 paliers de révision, 100 % auto-organisé. Pour les P1.',
-    creator: '@medrev_fr', // change ou supprime si pas de compte X
+    // creator: '@medrev_fr', // à activer le jour où le compte X existe
   },
 
   // Robots / SEO
