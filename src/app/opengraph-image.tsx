@@ -83,7 +83,7 @@ export default async function Image() {
             textTransform: 'uppercase',
           }}
         >
-          MED·<span style={{ color: '#1B4332' }}>REV</span>
+          MED·<span style={{ color: '#2D6A4F' }}>REV</span>
         </div>
 
         {/* Badge kicker */}
