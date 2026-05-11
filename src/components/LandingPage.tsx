@@ -121,7 +121,7 @@ export default function LandingPage() {
           <div className="lp-section-kicker">Ce que tu débloques</div>
           <h2 className="lp-section-h2">Un coach, <em>pas un cahier.</em></h2>
           <p className="lp-section-sub">
-            Anki ne sait pas que tes partiels sont dans trois semaines.
+            Tes fiches en vrac ne savent pas que tes partiels sont dans trois semaines.
             MedRev oui. Et il sait quoi faire à propos.
           </p>
         </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
       <section className="lp-section">
         <div className="lp-proof">
           <p className="lp-proof-quote">
-            « Une P1 typique fait <strong>40 à 60 fiches</strong> dans
+            « Une P1 typique fait <strong>environ 200 fiches fiches</strong> dans
             l&apos;année. MedRev les organise toutes pour toi, te génère
             <strong> 1200+ QCM</strong> sur tes vrais cours, et te demande
             chaque jour <strong>quoi réviser</strong>. »
