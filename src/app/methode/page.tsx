@@ -59,9 +59,9 @@ export default function MethodePage() {
             <p className="lp-method-p">
               C&apos;est ce qu&apos;on appelle la <strong>répétition
               espacée</strong>. C&apos;est ce que font les bons étudiants.
-              Et c&apos;est ce qu&apos;Anki automatise depuis 20 ans —
-              imparfaitement, parce qu&apos;Anki ne sait pas que tes
-              partiels arrivent dans 3 semaines.
+              Beaucoup d&apos;outils l&apos;automatisent, mais imparfaitement,
+              parce qu&apos;ils ne savent pas que tes partiels arrivent dans
+              3 semaines.
             </p>
           </div>
           <div className="lp-method-visual">
