@@ -147,7 +147,7 @@ export default function LandingPage() {
       <section className="lp-section">
         <div className="lp-proof">
           <p className="lp-proof-quote">
-            « Une P1 typique fait <strong>environ 200 fiches fiches</strong> dans
+            « Une P1 typique fait <strong>environ 200 fiches</strong> dans
             l&apos;année. MedRev les organise toutes pour toi, te génère
             <strong> 1200+ QCM</strong> sur tes vrais cours, et te demande
             chaque jour <strong>quoi réviser</strong>. »
