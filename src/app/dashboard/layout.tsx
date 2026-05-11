@@ -14,6 +14,18 @@ const NAV = [
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
 ]
 
+// Mapping id fac → nom affichable. Aligné avec auth-page.tsx + settings-page.tsx.
+// À factoriser dans @/types un jour si on l'utilise dans encore plus d'endroits.
+const FAC_NAMES: Record<string, string> = {
+  'sorbonne': 'Sorbonne',
+  'paris-cite': 'Paris Cité',
+  'sorbonne-paris-nord': 'Paris 13',
+  'upec': 'UPEC',
+  'lyon': 'Lyon',
+  'montpellier': 'Montpellier',
+  'autre': 'Autre',
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -149,7 +161,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="db-shell">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+        /* Note : les fonts Fraunces et Plus Jakarta Sans sont déjà chargées
+           via next/font/google dans app/layout.tsx. Pas d'@import ici — ça
+           dupliquerait la requête et bloquerait le render. Si tu vois "Plus
+           Jakarta Sans" non-rendered, vérifier que layout.tsx applique bien
+           les variables CSS (--font-jakarta, etc.). */
 
         /* Scope page wrapper — pas de couleur hardcodée, tout via tokens.
            Les aliases ci-dessous permettent aux feuilles de styles scopées
@@ -395,7 +411,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="db-user-name">{profile?.name || '...'}</div>
               <div className="db-user-meta">
                 {profile?.plan === 'pro' ? 'Premium' : 'Gratuit'}
-                {profile?.fac ? ` · ${profile.fac}` : ''}
+                {profile?.fac ? ` · ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
               </div>
             </div>
             <span className="db-user-chev">›</span>
