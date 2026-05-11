@@ -61,7 +61,7 @@ export const viewport: Viewport = {
 // METADATA — SEO + cartes de partage
 // ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://med-rev-eight.vercel.app'), // ⚠️ remplace par ton vrai domaine prod si différent
+  metadataBase: new URL('https://medrev.fr'), // ⚠️ remplace par ton vrai domaine prod si différent
 
   title: {
     default: 'MedRev — Tes cours, tes QCM, ton planning.',
@@ -72,12 +72,12 @@ export const metadata: Metadata = {
 
   keywords: [
     'P1', 'PASS', 'LAS', 'médecine', 'révisions', 'QCM', 'concours médecine',
-    'prépa médecine', 'Sorbonne', 'Paris Cité', 'Anki', 'Ebbinghaus',
+    'prépa médecine', 'Sorbonne', 'Paris Cité', 'Ebbinghaus',
     'spaced repetition', 'fiches de révision', 'planning révision',
   ],
 
-  authors: [{ name: 'Lou Bonnefoy' }],
-  creator: 'Lou Bonnefoy',
+  authors: [{ name: 'MedRev' }],
+  creator: 'MedRev',
   publisher: 'MedRev',
 
   // OpenGraph (Facebook, WhatsApp, LinkedIn, Discord, iMessage…)
