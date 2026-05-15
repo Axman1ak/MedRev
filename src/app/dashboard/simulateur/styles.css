@@ -664,6 +664,16 @@
   overflow: hidden;
 }
 
+/* MOBILE / TABLETTE : passage en single column (question en haut, grille
+   en bas) en dessous de 1024px. La grille de réponse devient plus utile
+   sur grand écran ; sur tablette/mobile, on déroule verticalement. */
+@media (max-width: 1024px) {
+  .sim-ses-grid {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+}
+
 .sim-ses-header {
   background: var(--card);
   border: 1px solid var(--border);
