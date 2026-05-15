@@ -302,8 +302,10 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
     } else if (typeof rawAnswer === 'number' && Number.isInteger(rawAnswer) && rawAnswer >= 0) {
       answerArr = [rawAnswer]
     }
-    // Dédup + tri ascendant pour la robustesse
-    answerArr = [...new Set(answerArr)].sort((a, b) => a - b)
+    // Dédup + tri ascendant pour la robustesse.
+    // Array.from(new Set()) plutôt que [...new Set()] : le spread sur Set
+    // demande un target TS >= ES2015, alors qu'Array.from marche partout.
+    answerArr = Array.from(new Set(answerArr)).sort((a, b) => a - b)
 
     const explanation = String(r.explanation || '').trim()
     if (!question) continue
