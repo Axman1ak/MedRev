@@ -159,10 +159,14 @@ export const SCORING_SYSTEMS: Record<ScoringSystemId, {
     label: 'Tout ou rien',
     desc: 'Toutes les bonnes cochées ET aucune mauvaise = 1 pt. Sinon 0.',
     score: (selected, correct) => {
+      // On itère directement sur les arrays plutôt que sur des Set, pour ne pas
+      // dépendre d'un target TS >= ES2015 (sinon `for (const v of set)` fail à
+      // la compile en ES5 sans downlevelIteration).
+      if (selected.length !== correct.length) return 0
       const s = new Set(selected)
-      const c = new Set(correct)
-      if (s.size !== c.size) return 0
-      for (const v of c) if (!s.has(v)) return 0
+      for (let i = 0; i < correct.length; i++) {
+        if (!s.has(correct[i])) return 0
+      }
       return 1
     },
   },
