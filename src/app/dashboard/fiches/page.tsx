@@ -485,7 +485,7 @@ export default function FichesPage() {
               className="fi-btn-o"
               onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}
             >
-              + Matière
+              + Ajouter une matière
             </button>
             <button
               data-tour="add-lesson"
@@ -496,7 +496,7 @@ export default function FichesPage() {
                 setShowNewLesson(true)
               }}
             >
-              + Nouvelle fiche
+              + Ajouter une fiche
             </button>
           </div>
         </div>
