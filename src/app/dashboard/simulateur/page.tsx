@@ -114,8 +114,10 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
     } else if (typeof rawAns === 'number' && rawAns >= 0 && rawAns < options.length) {
       answerArr = [rawAns]
     }
-    // Dédup + tri ascendant
-    answerArr = [...new Set(answerArr)].sort((a, b) => a - b)
+    // Dédup + tri ascendant.
+    // Array.from(new Set()) plutôt que [...new Set()] : le spread sur Set
+    // demande un target TS >= ES2015, alors qu'Array.from marche partout.
+    answerArr = Array.from(new Set(answerArr)).sort((a, b) => a - b)
 
     const source = (q.source as string) || (q.src as string) || undefined
     const explanation = (q.explanation as string) || (q.explication as string) || undefined
