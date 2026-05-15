@@ -307,6 +307,52 @@
   padding: 24px 0;
   text-align: center;
 }
+
+/* Empty state global affiché quand totalRevs === 0 — incite à créer/noter
+   plutôt que d'afficher une page complète de charts vides. */
+.stats-empty-global {
+  max-width: 540px;
+  margin: 80px auto;
+  text-align: center;
+  padding: 40px 24px;
+}
+.stats-empty-global-icon {
+  font-family: 'Fraunces', serif;
+  font-size: 44px;
+  color: var(--gm);
+  opacity: .35;
+  line-height: 1;
+  margin-bottom: 18px;
+}
+.stats-empty-global-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 26px;
+  color: var(--dark);
+  letter-spacing: -.01em;
+  line-height: 1.25;
+  margin: 0 0 16px;
+}
+.stats-empty-global-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--gray);
+  margin: 0 0 22px;
+}
+.stats-empty-global-btn {
+  display: inline-block;
+  background: var(--gm);
+  color: white !important;
+  text-decoration: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 9px;
+  transition: opacity .15s;
+}
+.stats-empty-global-btn:hover { opacity: .9; }
 .stats-row {
   display: grid;
   gap: 16px;
