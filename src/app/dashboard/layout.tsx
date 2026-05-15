@@ -6,12 +6,22 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 import OnboardingTour from '@/components/OnboardingTour'
 
+// Breakpoint mobile (en dessous : sidebar slide-in avec burger).
+const MOBILE_BREAKPOINT = 768
+
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
   { href: '/dashboard/calendar', label: 'Calendrier', icon: '▦' },
-  { href: '/dashboard/fiches', label: 'Mes matières', icon: '▤' },
+  { href: '/dashboard/fiches', label: 'Mes cours', icon: '▤' },
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
+]
+
+// Liens "outils" affichés sous une séparation, plus discrets que la nav
+// principale. Paramètres + Aide pour que l'user trouve toujours comment
+// reconfigurer son compte / rejouer le tutoriel.
+const SECONDARY_NAV = [
+  { href: '/dashboard/settings', label: 'Paramètres', icon: '⚙', exact: false },
 ]
 
 // Mapping id fac → nom affichable. Aligné avec auth-page.tsx + settings-page.tsx.
@@ -40,6 +50,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [replayKey, setReplayKey] = useState(0)
   const [isReplay, setIsReplay] = useState(false)
   const [existingLessonCount, setExistingLessonCount] = useState(0)
+
+  // Mobile : sidebar masquée par défaut, ouverte via le bouton burger.
+  // On ferme automatiquement la sidebar quand on change de route (sinon
+  // l'user clique un lien et la sidebar reste ouverte par-dessus le contenu).
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  useEffect(() => { setMobileNavOpen(false) }, [pathname])
 
   // Load persisted semester on mount
   useEffect(() => {
@@ -254,6 +270,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .db-nav-item:hover { background: var(--sb-hover); color: var(--sb-text); }
         .db-nav-item.active { background: var(--sb-active); color: var(--sb-text); }
         .db-nav-item .ic { width: 16px; text-align: center; font-style: normal; font-size: 13px; }
+
+        /* Section secondaire (Paramètres + Aide) : moins prominente */
+        .db-nav-secondary {
+          margin-bottom: 12px;
+          padding-top: 10px;
+          border-top: 1px solid var(--sb-border);
+        }
+        .db-nav-secondary .db-nav-item {
+          font-size: 12.5px;
+          color: var(--sb-text-dim);
+        }
+        .db-nav-secondary .db-nav-item:hover {
+          color: var(--sb-text-muted);
+        }
+
+        /* Bouton "Aide & tutoriel" : ressemble à un nav item mais c'est un <button> */
+        .db-nav-item-btn {
+          width: 100%;
+          border: none;
+          background: transparent;
+          font-family: inherit;
+          cursor: pointer;
+          text-align: left;
+        }
         .db-nav-item .badge {
           margin-left: auto;
           font-size: 10px;
@@ -341,10 +381,85 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           overflow-y: auto;
           background: var(--bg-app);
         }
+
+        /* ================ MOBILE BURGER + OVERLAY ================ */
+        /* Bouton burger : caché en desktop, visible en mobile uniquement.
+           Position fixed pour rester accessible quand on scrolle. */
+        .db-burger {
+          display: none;
+          position: fixed;
+          top: 14px;
+          left: 14px;
+          z-index: 200;
+          width: 40px;
+          height: 40px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-subtle);
+          border-radius: 8px;
+          cursor: pointer;
+          padding: 0;
+          font-size: 18px;
+          color: var(--text-primary);
+          box-shadow: 0 2px 6px rgba(0,0,0,.06);
+        }
+
+        /* Overlay sombre derrière la sidebar mobile pour fermer en cliquant */
+        .db-sidebar-overlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(20,22,20,.45);
+          z-index: 90;
+        }
+
+        @media (max-width: ${MOBILE_BREAKPOINT}px) {
+          /* Sidebar : passe en off-canvas, slide depuis la gauche.
+             Toujours dans le DOM (les ancres data-tour fonctionnent) mais
+             translatée hors écran sauf si .open. */
+          .db-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            max-width: 80vw;
+            height: 100vh;
+            transform: translateX(-100%);
+            transition: transform .25s ease;
+            z-index: 100;
+            box-shadow: 4px 0 20px rgba(0,0,0,.12);
+          }
+          .db-sidebar.open {
+            transform: translateX(0);
+          }
+
+          /* Main occupe toute la largeur (la sidebar est par-dessus) */
+          .db-main {
+            width: 100%;
+            padding-top: 50px; /* laisse de la place au burger qui flotte */
+          }
+
+          .db-burger { display: flex; align-items: center; justify-content: center; }
+          .db-sidebar-overlay.open { display: block; }
+        }
       `}</style>
 
+      {/* MOBILE — bouton burger + overlay */}
+      <button
+        type="button"
+        className="db-burger"
+        onClick={() => setMobileNavOpen(o => !o)}
+        aria-label={mobileNavOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+      >
+        {mobileNavOpen ? '✕' : '☰'}
+      </button>
+      <div
+        className={`db-sidebar-overlay${mobileNavOpen ? ' open' : ''}`}
+        onClick={() => setMobileNavOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* SIDEBAR */}
-      <aside className="db-sidebar" data-tour="sidebar">
+      <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}`} data-tour="sidebar">
         {/* Logo */}
         <div className="db-logo">
           Med<span>·Rev</span>
@@ -398,6 +513,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
+
+        {/* Section secondaire — Paramètres + Aide.
+            Plus discrète que la nav principale (label "Outils" en gris),
+            mais toujours visible pour que l'user retrouve le tutoriel
+            et son compte sans chercher. */}
+        <div className="db-nav-section db-nav-secondary">
+          <div className="db-nav-label">Outils</div>
+          {SECONDARY_NAV.map(n => (
+            <Link
+              key={n.href}
+              href={n.href}
+              className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
+            >
+              <i className="ic">{n.icon}</i>
+              {n.label}
+            </Link>
+          ))}
+          <button
+            type="button"
+            className="db-nav-item db-nav-item-btn"
+            onClick={() => {
+              // Replay du tour — même event que celui dispatché depuis Settings,
+              // pour partager le même listener côté layout.
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('medrev-onboarding-step')
+                localStorage.removeItem('medrev-onboarding-phase')
+                window.dispatchEvent(new Event('medrev-onboarding-replay'))
+              }
+            }}
+            aria-label="Rejouer le tutoriel"
+          >
+            <i className="ic">?</i>
+            Aide & tutoriel
+          </button>
+        </div>
 
         {/* User card → redirige vers Settings */}
         <div className="db-user-wrap">
