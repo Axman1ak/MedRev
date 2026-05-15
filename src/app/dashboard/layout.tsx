@@ -16,13 +16,9 @@ const NAV = [
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
 ]
-
-// Liens "outils" affichés sous une séparation, plus discrets que la nav
-// principale. Paramètres + Aide pour que l'user trouve toujours comment
-// reconfigurer son compte / rejouer le tutoriel.
-const SECONDARY_NAV = [
-  { href: '/dashboard/settings', label: 'Paramètres', icon: '⚙', exact: false },
-]
+// Note : "Paramètres" n'est PAS dans NAV — l'accès se fait via la card user
+// en bas de sidebar (cliquable, avec name + plan + fac visibles). Le bouton
+// "Aide & tutoriel" en dessous est la seule entrée secondaire restante.
 
 // Mapping id fac → nom affichable. Aligné avec auth-page.tsx + settings-page.tsx.
 // À factoriser dans @/types un jour si on l'utilise dans encore plus d'endroits.
@@ -514,22 +510,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Section secondaire — Paramètres + Aide.
-            Plus discrète que la nav principale (label "Outils" en gris),
-            mais toujours visible pour que l'user retrouve le tutoriel
-            et son compte sans chercher. */}
+        {/* Bouton Aide isolé — la card user juste en dessous mène déjà aux
+            Paramètres, donc on n'ajoute QUE le bouton de relance du tour ici
+            pour éviter de doubler les liens. */}
         <div className="db-nav-section db-nav-secondary">
-          <div className="db-nav-label">Outils</div>
-          {SECONDARY_NAV.map(n => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
-            >
-              <i className="ic">{n.icon}</i>
-              {n.label}
-            </Link>
-          ))}
           <button
             type="button"
             className="db-nav-item db-nav-item-btn"
