@@ -785,6 +785,60 @@
   text-transform: none;
   letter-spacing: .02em;
 }
+
+/* Pastille type QCS/QCM côté simulateur (cohérent avec qcm-page) */
+.sim-ses-q-type {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gray);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+.sim-ses-q-type.multi {
+  color: #8A5A1F;
+  background: #FBF1DC;
+  border-color: #E8CE9A;
+}
+
+/* Marqueur "manquée" sur une bonne réponse non cochée en mode QCM revealed */
+.sim-ses-q-opt-mark {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--gm);
+  white-space: nowrap;
+}
+
+/* Score numérique affiché à côté du titre "Explication" en mode apprentissage */
+.sim-ses-explain-score {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--gm);
+  background: var(--gl);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-left: 12px;
+}
+
+/* Indicateur du système de scoring sous le score final */
+.sim-res-scoring {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--gray);
+  cursor: help;
+}
+.sim-res-scoring strong {
+  color: var(--dark);
+  font-weight: 600;
+}
 .sim-ses-q-text {
   font-family: 'Fraunces', serif;
   font-size: 21px;
