@@ -164,8 +164,9 @@ export default function MethodePage() {
               la vidéo ou la page exacte du PDF. Pas besoin de fouiller.
             </p>
             <p className="lp-method-p">
-              Format strict : 5 options A-E, une seule bonne réponse, niveau
-              annales EDN. Les options sont mélangées aléatoirement après
+              Format strict : 5 options A-E, niveau annales EDN. Mix de QCS
+              (une seule bonne réponse) et de QCM (plusieurs bonnes), comme
+              au vrai concours. Les options sont mélangées aléatoirement après
               génération pour casser le biais des LLM (qui placent souvent
               la bonne en B/C).
             </p>
