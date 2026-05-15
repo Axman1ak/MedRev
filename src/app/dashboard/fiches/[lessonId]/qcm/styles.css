@@ -173,6 +173,31 @@
   letter-spacing: .18em;
   color: var(--gm, #2D6A4F);
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Pastille type QCS / QCM affichée à côté du numéro de question. Aide l'élève
+   à savoir s'il peut cocher plusieurs réponses ou pas avant de lire la
+   question. */
+.qcm-q-type {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gray, #6B6F6A);
+  background: var(--soft, #FAF8F2);
+  border: 1px solid var(--border, #E1DDD3);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.qcm-q-type.multi {
+  color: #8A5A1F;
+  background: #FBF1DC;
+  border-color: #E8CE9A;
 }
 .qcm-q-stem {
   font-family: 'Fraunces', serif;
@@ -281,6 +306,49 @@
 
 .qcm-option.dim { opacity: .5; }
 .qcm-option:disabled { cursor: default; }
+
+/* ---- Mode QCM multi : pastille checkbox au lieu de lettre ---- */
+.qcm-options.multi .qcm-option .qcm-letter.check {
+  border-radius: 6px;
+  background: var(--card, #fff);
+  border: 1.5px solid var(--gray, #6B6F6A);
+  font-size: 15px;
+  font-weight: 700;
+  color: transparent;
+  font-style: normal;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.qcm-options.multi .qcm-option.selected .qcm-letter.check {
+  background: var(--gm, #2D6A4F);
+  border-color: var(--gm, #2D6A4F);
+  color: #fff;
+}
+.qcm-options.multi .qcm-option.correct .qcm-letter.check {
+  background: var(--gm, #2D6A4F);
+  border-color: var(--gm, #2D6A4F);
+  color: #fff;
+}
+.qcm-options.multi .qcm-option.correct .qcm-letter.check::after {
+  content: "✓";
+  color: #fff;
+}
+.qcm-options.multi .qcm-option.wrong .qcm-letter.check {
+  background: var(--rose, #C75050);
+  border-color: var(--rose, #C75050);
+}
+.qcm-options.multi .qcm-option.wrong .qcm-letter.check::after {
+  content: "✕";
+  color: #fff;
+}
+/* Lettre affichée AVANT le texte de l'option en mode multi
+   (puisque la pastille ronde a été remplacée par une checkbox). */
+.qcm-text-letter {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--gm, #2D6A4F);
+  margin-right: 8px;
+}
 
 /* ---- Feedback ---- */
 .qcm-feedback {
