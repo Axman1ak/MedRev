@@ -340,25 +340,42 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 )}
-                <div className="set-row">
-                  <label className="set-label">Gestion de l&apos;abonnement</label>
-                  <p className="set-hint">
-                    Mets à jour ta carte, télécharge tes factures ou résilie ton
-                    abonnement. Tu seras redirigé vers le portail sécurisé de Stripe.
-                  </p>
-              {portalError && (
-                <div className="set-msg err" style={{ marginTop: 8 }}>{portalError}</div>
-              )}
-              <div className="set-actions">
-                <button
-                  className="set-btn ghost"
-                  onClick={openCustomerPortal}
-                  disabled={portalLoading}
-                >
-                  {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement →'}
-                </button>
-              </div>
-            </div>
+                {/* Gestion d'abonnement : on ne montre le bouton "Gérer mon
+                    abonnement" QUE si l'user a un stripe_customer_id (= a payé
+                    via Stripe). Sinon (Premium offert manuellement via DB),
+                    le bouton est inutile et le portail Stripe répondrait avec
+                    une erreur. On affiche une note explicative à la place. */}
+                {profile.stripe_customer_id ? (
+                  <div className="set-row">
+                    <label className="set-label">Gestion de l&apos;abonnement</label>
+                    <p className="set-hint">
+                      Mets à jour ta carte, télécharge tes factures ou résilie ton
+                      abonnement. Tu seras redirigé vers le portail sécurisé de Stripe.
+                    </p>
+                    {portalError && (
+                      <div className="set-msg err" style={{ marginTop: 8 }}>{portalError}</div>
+                    )}
+                    <div className="set-actions">
+                      <button
+                        className="set-btn ghost"
+                        onClick={openCustomerPortal}
+                        disabled={portalLoading}
+                      >
+                        {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement →'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="set-row">
+                    <label className="set-label">Accès Premium</label>
+                    <p className="set-hint">
+                      Tu bénéficies d&apos;un accès Premium offert. Il n&apos;y a
+                      pas d&apos;abonnement à gérer côté facturation. Pour toute
+                      question sur ton compte, écris à{' '}
+                      <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
+                    </p>
+                  </div>
+                )}
               </>
             )
           })()}
