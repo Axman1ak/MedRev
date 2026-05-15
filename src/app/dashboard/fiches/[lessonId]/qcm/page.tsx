@@ -9,14 +9,29 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System } from '@/types'
+import { normalizeAnswer, isMultiAnswer } from '@/types'
 import SourceLightbox from '@/components/SourceLightbox'
 import './styles.css'
 
 type Phase = 'loading' | 'question' | 'feedback' | 'end' | 'empty'
 
+// Depuis 2026-05-15 : `selected` est TOUJOURS un tableau d'index choisis.
+//   - QCS  → [3]
+//   - QCM  → [0, 2, 4]
+//   - vide → [] (rien sélectionné)
+// On unifie la struct pour ne pas avoir à brancher dans chaque consumer.
 interface Answer {
-  selected: number | null
+  selected: number[]
   isCorrect: boolean | null
+}
+
+// Compare deux ensembles d'index sans dépendre de l'ordre. Utilisé en
+// "tout-ou-rien" : il faut EXACTEMENT les bonnes ET AUCUNE mauvaise.
+function arraysEqualAsSets(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false
+  const sa = new Set(a)
+  for (const v of b) if (!sa.has(v)) return false
+  return true
 }
 
 function letterFor(i: number): string {
@@ -118,7 +133,7 @@ export default function QcmSessionPage() {
       const shuffledIndexed = shuffleArr(indexed)
       setQuestions(shuffledIndexed.map(x => x.q))
       setOrigIndices(shuffledIndexed.map(x => x.idx))
-      setAnswers(shuffledIndexed.map(() => ({ selected: null, isCorrect: null })))
+      setAnswers(shuffledIndexed.map(() => ({ selected: [], isCorrect: null })))
       setStartTime(Date.now())
       setPhase('question')
     }
@@ -127,19 +142,39 @@ export default function QcmSessionPage() {
   }, [lessonId, router, supabase])
 
   // ---- Handlers ----
+  // Toggle pour QCM (multi), remplace pour QCS (single).
   function selectOption(idx: number) {
     if (phase !== 'question') return
+    const q = questions[currentIdx]
+    const multi = isMultiAnswer(q)
+    const current = answers[currentIdx]?.selected ?? []
+    const has = current.includes(idx)
+
+    let nextSelected: number[]
+    if (multi) {
+      // QCM : toggle. On ajoute si pas déjà coché, on retire sinon.
+      nextSelected = has ? current.filter(i => i !== idx) : [...current, idx].sort((a, b) => a - b)
+    } else {
+      // QCS : on remplace (même comportement qu'un radio).
+      nextSelected = has ? [] : [idx]
+    }
+
     const next = [...answers]
-    next[currentIdx] = { selected: idx, isCorrect: null }
+    next[currentIdx] = { selected: nextSelected, isCorrect: null }
     setAnswers(next)
   }
 
   function validate() {
     const ans = answers[currentIdx]
-    if (ans?.selected === null || ans?.selected === undefined) return
+    if (!ans || ans.selected.length === 0) return
     const q = questions[currentIdx]
+    const correctIdxs = normalizeAnswer(q.answer)
+    // Fiche QCM : tout-ou-rien. Pas de score partiel ici, pour rester simple
+    // pédagogiquement. Le scoring "discordance progressive" est réservé au
+    // mode Simulateur (cf src/types/index.ts).
+    const isCorrect = arraysEqualAsSets(ans.selected, correctIdxs)
     const next = [...answers]
-    next[currentIdx] = { selected: ans.selected, isCorrect: ans.selected === q.answer }
+    next[currentIdx] = { selected: ans.selected, isCorrect }
     setAnswers(next)
     setPhase('feedback')
   }
@@ -171,7 +206,7 @@ export default function QcmSessionPage() {
       : []
 
     answers.forEach((ans, sessIdx) => {
-      if (ans?.selected === null || ans?.selected === undefined) return
+      if (!ans || ans.selected.length === 0) return
       const origIdx = origIndices[sessIdx]
       if (origIdx === undefined || origIdx < 0 || origIdx >= allQs.length) return
       const cur = allQs[origIdx]
@@ -230,7 +265,7 @@ export default function QcmSessionPage() {
     const shuffled = shuffleArr(focusedIndexed)
     setQuestions(shuffled.map(x => x.q))
     setOrigIndices(shuffled.map(x => x.idx))
-    setAnswers(shuffled.map(() => ({ selected: null, isCorrect: null })))
+    setAnswers(shuffled.map(() => ({ selected: [], isCorrect: null })))
     setCurrentIdx(0)
     setStartTime(Date.now())
     setPhase('question')
@@ -242,7 +277,7 @@ export default function QcmSessionPage() {
 
   function restartMissed() {
     const missedIndices = answers
-      .map((a, i) => (a.selected !== null && !a.isCorrect ? i : -1))
+      .map((a, i) => (a.selected.length > 0 && !a.isCorrect ? i : -1))
       .filter(i => i >= 0)
     if (missedIndices.length === 0) {
       quitToFiches()
@@ -256,7 +291,7 @@ export default function QcmSessionPage() {
     const shuffledPairs = shuffleArr(pairs)
     setQuestions(shuffledPairs.map(p => p.q))
     setOrigIndices(shuffledPairs.map(p => p.idx))
-    setAnswers(shuffledPairs.map(() => ({ selected: null, isCorrect: null })))
+    setAnswers(shuffledPairs.map(() => ({ selected: [], isCorrect: null })))
     setCurrentIdx(0)
     setStartTime(Date.now())
     setPhase('question')
@@ -291,7 +326,7 @@ export default function QcmSessionPage() {
     const correctCount = answers.filter(a => a.isCorrect).length
     const totalCount = questions.length
     const wrongCount = answers.filter(a => a.isCorrect === false).length
-    const skippedCount = answers.filter(a => a.selected === null).length
+    const skippedCount = answers.filter(a => a.selected.length === 0).length
     const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
     const timeUsedSec = Math.round((Date.now() - startTime) / 1000)
     const minutes = Math.floor(timeUsedSec / 60)
@@ -468,7 +503,8 @@ export default function QcmSessionPage() {
   const q = questions[currentIdx]
   const ans = answers[currentIdx]
   const isFeedback = phase === 'feedback'
-  const correctIdx = q.answer
+  const correctIdxs = normalizeAnswer(q.answer)
+  const multi = correctIdxs.length >= 2
   const sourceRef = isFeedback ? normalizeSourceRef(q.source_ref) : null
   const media = (lesson?.media ?? {}) as LessonMedia
   const canShowSource = !!sourceRef && (
@@ -495,13 +531,18 @@ export default function QcmSessionPage() {
           <div className="qcm-progress-lbl">{currentIdx + 1} / {questions.length}</div>
         </div>
 
-        <div className="qcm-q-kicker">Question {currentIdx + 1}</div>
+        <div className="qcm-q-kicker">
+          Question {currentIdx + 1}
+          <span className={`qcm-q-type${multi ? ' multi' : ''}`}>
+            {multi ? 'QCM · plusieurs bonnes réponses' : 'QCS · une seule bonne réponse'}
+          </span>
+        </div>
         <h1 className="qcm-q-stem">{q.question}</h1>
 
-        <div className="qcm-options">
+        <div className={`qcm-options${multi ? ' multi' : ''}`}>
           {q.options.map((opt, i) => {
-            const isSelected = ans?.selected === i
-            const isCorrect = i === correctIdx
+            const isSelected = ans?.selected.includes(i) ?? false
+            const isCorrect = correctIdxs.includes(i)
             let cls = 'qcm-option'
             if (isFeedback) {
               if (isCorrect) cls += ' correct'
@@ -517,11 +558,19 @@ export default function QcmSessionPage() {
                 onClick={() => selectOption(i)}
                 disabled={isFeedback}
                 type="button"
+                role={multi ? 'checkbox' : 'radio'}
+                aria-checked={isSelected}
               >
-                <span className="qcm-letter">{letterFor(i)}</span>
-                <span className="qcm-text">{stripLetterPrefix(opt)}</span>
+                <span className={`qcm-letter${multi ? ' check' : ''}`}>
+                  {multi ? (isSelected ? '✓' : '') : letterFor(i)}
+                </span>
+                <span className="qcm-text">
+                  {multi && <span className="qcm-text-letter">{letterFor(i)}.</span>}
+                  {stripLetterPrefix(opt)}
+                </span>
                 {isFeedback && isCorrect && <span className="qcm-mark">Bonne réponse</span>}
                 {isFeedback && isSelected && !isCorrect && <span className="qcm-mark">Ta réponse</span>}
+                {isFeedback && !isSelected && isCorrect && <span className="qcm-mark">Manquée</span>}
               </button>
             )
           })}
@@ -556,9 +605,9 @@ export default function QcmSessionPage() {
             <button
               className="qcm-validate"
               onClick={validate}
-              disabled={ans?.selected === null || ans?.selected === undefined}
+              disabled={!ans || ans.selected.length === 0}
             >
-              Valider →
+              Valider {multi && ans?.selected.length ? `(${ans.selected.length} coché${ans.selected.length > 1 ? 'es' : 'e'})` : ''} →
             </button>
           ) : (
             <button className="qcm-next" onClick={goNext}>
