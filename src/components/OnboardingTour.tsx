@@ -125,10 +125,10 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="nav-fiches"]',
-    title: () => 'Va sur Mes matières',
+    title: () => 'Va sur Mes cours',
     body: (
       <>
-        Clique sur <strong>Mes matières</strong> dans la sidebar — c&apos;est
+        Clique sur <strong>Mes cours</strong> dans la sidebar — c&apos;est
         l&apos;onglet principal, tout part de là.
       </>
     ),
@@ -143,7 +143,7 @@ const STEPS: Step[] = [
     title: () => 'Crée une matière',
     body: (
       <>
-        Clique sur <strong>+ Matière</strong> pour ouvrir le formulaire.
+        Clique sur <strong>+ Ajouter une matière</strong> pour ouvrir le formulaire.
       </>
     ),
     tipPos: 'bottom',
@@ -174,27 +174,16 @@ const STEPS: Step[] = [
       '[data-tour="matiere-cancel"]',
     ],
   },
-  {
-    // Étape suivante : c'est ici que l'user clique enfin sur Annuler.
-    kind: 'wait-click',
-    selector: '[data-tour="matiere-cancel"]',
-    title: () => 'Ferme le formulaire',
-    body: (
-      <>
-        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
-        continuer le tour.
-      </>
-    ),
-    tipPos: 'top',
-    spotPad: 6,
-  },
+  // Note 2026-05-15 : l'ancien step "Ferme le formulaire matière" a été retiré
+  // pour raccourcir le tour. Le formulaire matière se ferme via autoAdvance
+  // (form unmount) ou l'user clique Suivant manuellement.
   {
     kind: 'wait-click',
     selector: '[data-tour="add-lesson"]',
     title: () => 'Ajoute une fiche',
     body: (
       <>
-        Clique sur <strong>+ Nouvelle fiche</strong> pour découvrir le
+        Clique sur <strong>+ Ajouter une fiche</strong> pour découvrir le
         formulaire d&apos;ajout.
       </>
     ),
@@ -246,24 +235,9 @@ const STEPS: Step[] = [
     // doit cliquer Suivant dans le tour pour avancer.
     blockSelectorsAlt: ['[data-tour="fiche-create"]', '[data-tour="fiche-cancel"]'],
   },
-  {
-    // Step intermédiaire pour les returning users : forcer le clic Annuler
-    // pour fermer le form proprement avant de passer à lesson-card.
-    // Pour les new users (qui ont créé via Créer), le form est déjà fermé →
-    // autoAdvanceIfTargetMissing skip cette étape automatiquement.
-    kind: 'wait-click',
-    selector: '[data-tour="fiche-cancel"]',
-    title: () => 'Ferme le formulaire',
-    body: (
-      <>
-        Clique sur <strong>Annuler</strong> pour fermer le formulaire et
-        continuer le tour.
-      </>
-    ),
-    tipPos: 'top',
-    spotPad: 6,
-    autoAdvanceIfTargetMissing: true,
-  },
+  // Note 2026-05-15 : l'ancien step "Ferme le formulaire fiche" a été retiré
+  // pour raccourcir le tour. Le formulaire se ferme via Créer (new user) ou
+  // l'user clique Annuler/Suivant lui-même (returning user).
   {
     // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
     kind: 'wait-click',
@@ -341,20 +315,9 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 6,
   },
-  {
-    kind: 'wait-click',
-    selector: '[data-tour="rmod-close"]',
-    title: () => 'Ferme la modale',
-    body: (
-      <>
-        Clique sur la <strong>croix</strong> en haut à droite pour fermer la
-        modale et continuer le tour.
-      </>
-    ),
-    tipPos: 'left',
-    spotPad: 8,
-    spotShape: 'circle',
-  },
+  // Note 2026-05-15 : l'ancien step "Ferme la modale" (clic sur la croix) a
+  // été retiré. Fermer un modal est un geste évident que les users savent
+  // faire — pas besoin de leur dire.
 
   // ============ PHASE 3 — TOUR DES ONGLETS ============
   {
@@ -410,45 +373,22 @@ const STEPS: Step[] = [
       </>
     ),
   },
-  {
-    kind: 'wait-click',
-    selector: '[data-tour="bib-cta"]',
-    title: () => 'Lance la session focus',
-    body: (
-      <>
-        Clique sur le bouton vert <strong>Démarrer</strong> (ou{' '}
-        <strong>Voir la session focus</strong> si tu n&apos;as pas encore de
-        fiche due) pour découvrir la session focus gamifiée.
-      </>
-    ),
-    tipPos: 'left',
-    spotPad: 6,
-  },
+  // Bibliothèque + session focus : un seul tooltip explicatif au lieu de
+  // forcer l'user à lancer puis quitter la session focus pendant le tour
+  // (3 étapes économisées). L'user découvrira la session focus lui-même
+  // depuis le dashboard quand il aura quelques fiches notées.
   {
     kind: 'tooltip-only',
-    title: () => 'L’objectif : 2000 livres',
+    title: () => 'La bibliothèque : 2000 livres',
     body: (
       <>
-        La <strong>session focus</strong> enchaîne tes fiches dues. Chaque
-        fiche notée ajoute <strong>1 livre</strong> à ta bibliothèque (1 livre
-        = 1h d&apos;étude). <strong>6 trésors</strong> à débloquer au fil des
-        livres. Objectif : 2000 livres pour boucler la P1.
+        Sur le dashboard, la <strong>zone Bibliothèque</strong> contient
+        une <strong>session focus</strong> qui enchaîne tes fiches dues.
+        Chaque fiche notée ajoute <strong>1 livre</strong> à ta bibliothèque
+        (1 livre = 1h d&apos;étude). <strong>6 trésors</strong> à débloquer
+        au fil des livres. Objectif : 2000 livres pour boucler la P1.
       </>
     ),
-  },
-  {
-    // Quitter la session focus avant de passer au Simulateur
-    kind: 'wait-click',
-    selector: '[data-tour="focus-quit"]',
-    title: () => 'Quitte la session focus',
-    body: (
-      <>
-        Clique sur la <strong>croix</strong> en haut à droite de la session
-        focus pour revenir au tableau de bord et continuer le tour.
-      </>
-    ),
-    tipPos: 'left',
-    spotPad: 6,
   },
   {
     kind: 'wait-click',
@@ -837,7 +777,7 @@ export default function OnboardingTour({
     // - sinon (user a déjà des fiches) : Suivant disponible pour skipper.
     if (cur.waitForCreate) {
       const itemLabel = cur.waitForCreate === 'system' ? 'matière' : 'fiche'
-      const buttonLabel = cur.waitForCreate === 'system' ? '+ Matière' : '+ Nouvelle fiche'
+      const buttonLabel = cur.waitForCreate === 'system' ? '+ Ajouter une matière' : '+ Ajouter une fiche'
       return (
         <div className="ont-root" role="dialog" aria-modal="true">
           <div
