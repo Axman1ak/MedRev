@@ -401,6 +401,32 @@ export default function StatsPage() {
     )
   }
 
+  // Empty state global : aucune révision notée du tout. On évite d'afficher
+  // une heatmap, sparkline et dumbbell tous vides — qui donneraient l'impression
+  // que l'app ne marche pas. On pousse plutôt l'action concrète (créer une
+  // fiche puis la noter au jour J).
+  if (totalRevs === 0) {
+    return (
+      <div className="stats-page">
+        <div className="stats-empty-global">
+          <div className="stats-empty-global-icon" aria-hidden>◈</div>
+          <h1 className="stats-empty-global-title">
+            Tes statistiques se construisent au fil des révisions
+          </h1>
+          <p className="stats-empty-global-text">
+            Note ta première fiche au jour J pour activer ta heatmap, ton
+            sparkline 12 semaines et tes dumbbells par matière. Les stats
+            n&apos;ont de sens qu&apos;une fois que tu as 5-10 fiches notées —
+            avant ça, elles sont vides.
+          </p>
+          <Link href="/dashboard/fiches" className="stats-empty-global-btn">
+            Aller à mes cours →
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   // mois pour la heatmap
   const monthLabels: { weekIdx: number; label: string }[] = []
   let lastMonth = ''
