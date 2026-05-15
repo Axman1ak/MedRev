@@ -51,11 +51,18 @@ const MAX_QUESTIONS_PER_LESSON = 100
 // Tous les formats produisent EXCLUSIVEMENT des questions à 5 options A-E
 // (standard PASS médecine). Le V/F est interdit, les questions à moins ou
 // plus de 5 options sont rejetées au sanitize.
+//
+// MIX QCS / QCM (depuis 2026-05-15) :
+// Chaque question peut être :
+//   - QCS = Question à Choix Simple : 1 seule bonne réponse (answer = [3])
+//   - QCM = Question à Choix Multiples : 2 à 5 bonnes réponses (answer = [0, 2, 4])
+// Gemini décide selon le contenu — on lui dit explicitement que les deux
+// formats sont autorisés et que la cohérence pédagogique prime.
 const FORMAT_DESC: Record<string, string> = {
-  mixed: 'un mélange équilibré de QCM classiques (5 options A-E) et de KFP (vignette clinique + question à 5 options A-E). JAMAIS de Vrai/Faux. JAMAIS moins ni plus de 5 options.',
-  qcm:   'des QCM classiques avec EXACTEMENT 5 options (A/B/C/D/E), une seule bonne réponse par question. Standard PASS médecine.',
-  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis question précise à 5 options A-E. JAMAIS moins ni plus de 5 options.',
-  vf:    'des QCM à 5 options A-E (le format V/F n\'est pas supporté — fallback automatique vers QCM classique).',
+  mixed: 'un mélange équilibré de QCS (Question à Choix Simple, 1 bonne réponse) et de QCM (Question à Choix Multiples, 2 à 5 bonnes réponses). Toutes les questions ont EXACTEMENT 5 options A-E. JAMAIS de Vrai/Faux.',
+  qcm:   'des QCM/QRM classiques avec EXACTEMENT 5 options A-E, où il peut y avoir 1, 2, 3, 4 ou 5 bonnes réponses. Tu DOIS varier le nombre de bonnes réponses (~30% des questions à 1 bonne, ~70% à 2-4 bonnes). Standard PASS médecine.',
+  kfp:   'des Key-Feature Problems : vignette clinique courte réaliste puis question précise à 5 options A-E. Mix QCS (1 bonne) et QCM (plusieurs bonnes) selon la situation clinique.',
+  vf:    'des QCM à 5 options A-E (le format V/F n\'est pas supporté). Mix QCS et QCM autorisé.',
 }
 
 const DIFF_DESC: Record<string, string> = {
@@ -232,19 +239,23 @@ function parseQuestionsJson(raw: string): unknown[] {
 // ============================================================
 // Sanitisation des questions retournées par Gemini
 // ============================================================
+// Depuis 2026-05-15 : answer est TOUJOURS un tableau d'index 0-based.
+// QCS = [3], QCM = [0, 2, 4]. La conversion depuis le legacy answer:number
+// se fait à ce niveau (Gemini peut continuer à renvoyer un number pour les
+// QCS, on l'enroule dans un array).
 type SanitizedQuestion = {
   question: string
   options: string[]
-  answer: number
+  answer: number[]
   explanation: string
   source_ref: { pdf_page?: number; video_ts?: number } | null
 }
 
 // Réordonne aléatoirement les 5 options d'une question pour casser le biais
-// positionnel des LLMs (Gemini place souvent la bonne réponse en B/C).
+// positionnel des LLMs (Gemini place souvent les bonnes réponses en B/C).
 // Strip le préfixe "A. ", "B. " etc., shuffle, puis ré-applique A-E dans
-// l'ordre nouveau. L'index `answer` est mis à jour pour pointer sur la
-// nouvelle position de la bonne réponse.
+// l'ordre nouveau. Le tableau `answer` est remappé pour pointer sur les
+// nouvelles positions des bonnes réponses.
 function reletterAndShuffleOptions(q: SanitizedQuestion): SanitizedQuestion {
   // Strip le préfixe lettré au début de chaque option
   const stripped = q.options.map(opt => opt.replace(/^\s*[A-E][.)]\s*/, '').trim())
@@ -262,8 +273,11 @@ function reletterAndShuffleOptions(q: SanitizedQuestion): SanitizedQuestion {
     return `${letter}. ${stripped[origPos]}`
   })
 
-  // Trouve la nouvelle position de la bonne réponse
-  const newAnswer = idx.indexOf(q.answer)
+  // Remappe TOUTES les bonnes réponses vers leur nouvelle position.
+  // Ex : answer=[0,2] (anciens index) → on cherche 0 et 2 dans idx[] et on
+  // retourne leur position dans le nouvel ordre. .sort() pour avoir des index
+  // ascendants (plus propre côté UI).
+  const newAnswer = q.answer.map(origPos => idx.indexOf(origPos)).filter(i => i >= 0).sort((a, b) => a - b)
 
   return { ...q, options: newOptions, answer: newAnswer }
 }
@@ -275,15 +289,32 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
     const r = q as Record<string, unknown>
     const question = String(r.question || r.stem || '').trim()
     const options = Array.isArray(r.options) ? (r.options as unknown[]).map(String) : []
-    const answer = typeof r.answer === 'number' ? r.answer
-      : typeof r.correct === 'number' ? r.correct
-      : 0
+
+    // Normalise answer : peut arriver en number (legacy) ou en number[] (nouveau).
+    // On accepte aussi r.correct (legacy alias) et r.answers (alias parfois utilisé
+    // par Gemini quand on lui demande multi-réponses).
+    let answerArr: number[] = []
+    const rawAnswer = r.answer ?? r.answers ?? r.correct
+    if (Array.isArray(rawAnswer)) {
+      answerArr = (rawAnswer as unknown[])
+        .filter(v => typeof v === 'number' && Number.isInteger(v) && v >= 0)
+        .map(v => v as number)
+    } else if (typeof rawAnswer === 'number' && Number.isInteger(rawAnswer) && rawAnswer >= 0) {
+      answerArr = [rawAnswer]
+    }
+    // Dédup + tri ascendant pour la robustesse
+    answerArr = [...new Set(answerArr)].sort((a, b) => a - b)
+
     const explanation = String(r.explanation || '').trim()
     if (!question) continue
     // RÈGLE STRICTE : exactement 5 options par question (standard PASS médecine).
-    // Toute question avec un autre nombre d'options est rejetée.
     if (options.length !== 5) continue
-    if (answer < 0 || answer >= options.length) continue
+    // Au moins 1 bonne réponse, et tous les index doivent être dans [0, 4].
+    if (answerArr.length < 1) continue
+    if (answerArr.some(i => i < 0 || i >= options.length)) continue
+    // Cap : pas plus de 5 bonnes réponses (= toutes vraies, ce qui est OK
+    // mais signal qu'il pourrait y avoir un bug Gemini). On laisse passer
+    // jusqu'à 5 — c'est légal en PASS.
 
     // source_ref : on ne garde que les nombres valides
     let sourceRef: SanitizedQuestion['source_ref'] = null
@@ -300,9 +331,8 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
     }
 
     // Shuffle des options pour neutraliser le biais positionnel de Gemini.
-    // Sans ça, la bonne réponse tombe ~40% du temps en B ou C.
     const shuffled = reletterAndShuffleOptions({
-      question, options, answer, explanation, source_ref: sourceRef,
+      question, options, answer: answerArr, explanation, source_ref: sourceRef,
     })
 
     out.push(shuffled)
@@ -539,8 +569,16 @@ CONSIGNE :
 Génère exactement ${nbQ} ${existingQuestions.length > 0 ? 'NOUVELLES ' : ''}questions de type : ${FORMAT_DESC[format] || FORMAT_DESC.mixed}.
 Niveau requis : ${DIFF_DESC[difficulty] || DIFF_DESC.annales}.
 
+FORMAT QCS / QCM (CAPITAL) :
+En PASS médecine, une question à 5 options peut avoir 1 SEULE bonne réponse (QCS — Question à Choix Simple) OU PLUSIEURS bonnes réponses (QCM/QRM — Question à Réponses Multiples, de 2 à 5 bonnes).
+- Tu DOIS varier : environ 40% de QCS, 60% de QCM (parmi les QCM : surtout 2-3 bonnes, parfois 4, rarement 5).
+- Ne mets PAS plusieurs bonnes réponses si le sujet n'en autorise qu'une (ex : "Quel est le ratio normal de…"). À l'inverse, ne mets PAS qu'une bonne réponse si plusieurs propositions du sujet sont vraies (ex : "Concernant l'insuline, lesquelles des propositions suivantes sont exactes ?").
+- Le champ "answer" est TOUJOURS un TABLEAU d'index 0-based, même pour une seule bonne réponse :
+    QCS → "answer": [3]
+    QCM → "answer": [0, 2, 4]
+
 RÈGLES IMPÉRATIVES :
-- ⚠ CHAQUE question doit avoir EXACTEMENT 5 OPTIONS A à E. PAS 2, PAS 3, PAS 4, PAS 6. EXACTEMENT 5. Toute question à un nombre d'options différent sera rejetée.
+- ⚠ CHAQUE question doit avoir EXACTEMENT 5 OPTIONS A à E. PAS 2, PAS 3, PAS 4, PAS 6. EXACTEMENT 5.
 - AUCUNE question Vrai/Faux. AUCUNE question à 2 options.
 - Base-toi exclusivement sur le contenu réel des sources fournies.
 ${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déjà traités ci-dessus (autres pages du PDF, autres moments de la vidéo, autres notions, autres pièges).\n' : ''}- Pour CHAQUE question, indique précisément où trouver l'information dans un objet "source_ref" :
@@ -551,19 +589,26 @@ ${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déj�
 - Pas de questions évidentes ou triviales.
 - Langue : français médical rigoureux.
 
-RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), exactement ce format. CHAQUE question doit avoir EXACTEMENT 5 OPTIONS A à E (standard PASS) :
+RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), exactement ce format :
 [
   {
-    "question": "Question précise ?",
-    "options": ["A. Option A", "B. Option B", "C. Option C", "D. Option D", "E. Option E"],
-    "answer": 0,
-    "explanation": "Explication pédagogique citant la source.",
-    "source_ref": { "pdf_page": 4, "video_ts": 2528 }
+    "question": "Parmi les propositions suivantes concernant la glycolyse, lesquelles sont exactes ?",
+    "options": ["A. Elle se déroule dans la mitochondrie", "B. Elle produit 2 ATP nets par molécule de glucose", "C. La phosphofructokinase en est l'enzyme régulatrice", "D. Elle nécessite de l'oxygène", "E. Le pyruvate en est le produit final"],
+    "answer": [1, 2, 4],
+    "explanation": "B (2 ATP nets), C (PFK régulatrice), E (pyruvate produit). A faux : cytosol. D faux : anaérobie.",
+    "source_ref": { "pdf_page": 4, "video_ts": 528 }
+  },
+  {
+    "question": "Quel est le ratio insuline/glucagon à jeun chez un sujet sain ?",
+    "options": ["A. 10/1", "B. 1/1", "C. 0,4/1", "D. 0,1/1", "E. 4/1"],
+    "answer": [2],
+    "explanation": "À jeun, le ratio descend autour de 0,4/1 pour favoriser la libération de glucose. Cf cours p.12.",
+    "source_ref": { "pdf_page": 12 }
   }
 ]
 
-"answer" est l'index (0-based) de la bonne réponse dans "options" (donc 0, 1, 2, 3 ou 4).
-RÈGLE NON NÉGOCIABLE : exactement 5 options par question, jamais 4, jamais 3.`
+"answer" est TOUJOURS un tableau (même avec un seul élément). Index 0-based dans "options" (donc 0, 1, 2, 3 ou 4).
+RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tableau d'au moins 1 et au plus 5 index distincts.`
 
     parts.push({ text: prompt })
 
