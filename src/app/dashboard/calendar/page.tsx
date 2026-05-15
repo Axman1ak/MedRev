@@ -357,8 +357,18 @@ export default function CalendarPage() {
       {/* EMPTY STATE */}
       {!hasAnyLesson && (
         <div className="cal-empty-state">
-          <div>Pas encore de fiche pour {semester === 'year' ? 'l\'année' : `le semestre ${semester}`}.</div>
-          <Link href="/dashboard/fiches">Crée tes premières fiches →</Link>
+          <div className="cal-empty-icon" aria-hidden>▦</div>
+          <div className="cal-empty-title">
+            Aucune révision programmée pour {semester === 'year' ? 'l\'année' : `le semestre ${semester}`}
+          </div>
+          <p className="cal-empty-text">
+            Le calendrier se remplit automatiquement à mesure que tu crées
+            des fiches et les notes au jour J. La courbe J replanifie les 14
+            paliers (J0 → J+120) pour chacune.
+          </p>
+          <Link href="/dashboard/fiches" className="cal-empty-btn">
+            Créer ma première fiche →
+          </Link>
         </div>
       )}
 
