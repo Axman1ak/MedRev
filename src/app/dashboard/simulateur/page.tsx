@@ -9,7 +9,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { System, Lesson } from '@/types'
+import type { System, Lesson, Profile } from '@/types'
+import { SCORING_SYSTEMS, getScoringForFac } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import './styles.css'
 
@@ -18,16 +19,26 @@ type Mode = 'apprentissage' | 'examen'
 type Phase = 'config' | 'session' | 'results'
 type Selection = 'random' | 'weak'
 
+// Depuis 2026-05-15 : answer est TOUJOURS un tableau d'index 0-based.
+//   QCS = [3], QCM = [0, 2, 4]. Permet de gérer multi-réponses.
 interface Question {
   question: string
   options: string[]
-  answer: number
+  answer: number[]  // 1+ index, jamais vide ni null
   source?: string
   explanation?: string
   lessonId?: string
   lessonName?: string
   systemName?: string
   systemId?: string
+}
+
+// Compare deux ensembles d'index sans dépendre de l'ordre.
+function arraysEqualAsSets(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false
+  const sa = new Set(a)
+  for (const v of b) if (!sa.has(v)) return false
+  return true
 }
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -90,22 +101,31 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
     const q = r as Record<string, unknown>
     const question = (q.question as string) || (q.q as string) || ''
     const options = (q.options as string[]) || (q.opts as string[]) || []
-    const answer = typeof q.answer === 'number'
-      ? (q.answer as number)
-      : typeof q.correct_index === 'number'
-        ? (q.correct_index as number)
-        : 0
+
+    // Normalise answer en tableau d'index 0-based.
+    // - Nouveau format : answer = [0, 2, 4] (tableau directement)
+    // - Legacy : answer = 3 (number) → on l'enroule en [3]
+    let answerArr: number[] = []
+    const rawAns = q.answer ?? q.answers ?? q.correct_index ?? q.correct
+    if (Array.isArray(rawAns)) {
+      answerArr = (rawAns as unknown[])
+        .filter(v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < options.length)
+        .map(v => v as number)
+    } else if (typeof rawAns === 'number' && rawAns >= 0 && rawAns < options.length) {
+      answerArr = [rawAns]
+    }
+    // Dédup + tri ascendant
+    answerArr = [...new Set(answerArr)].sort((a, b) => a - b)
+
     const source = (q.source as string) || (q.src as string) || undefined
     const explanation = (q.explanation as string) || (q.explication as string) || undefined
-    // Standard PASS médecine : EXACTEMENT 5 options A-E. On rejette tout
-    // ce qui n'est pas conforme, pour aligner sur la règle stricte appliquée
-    // côté generate-qcm/route.ts et éviter d'afficher des questions cassées
-    // issues d'anciennes générations legacy (V/F, QCM à 4 options, etc.).
+    // Standard PASS médecine : EXACTEMENT 5 options A-E + au moins 1 bonne réponse.
     if (!question || !Array.isArray(options) || options.length !== 5) continue
+    if (answerArr.length === 0) continue
     out.push({
       question,
       options,
-      answer,
+      answer: answerArr,
       source,
       explanation,
       lessonId: lesson.id,
@@ -144,6 +164,7 @@ export default function SimulateurPage() {
 
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [semester, setSemester] = useState<Semestre>(2)
 
@@ -157,11 +178,19 @@ export default function SimulateurPage() {
   const [phase, setPhase] = useState<Phase>('config')
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [answers, setAnswers] = useState<(number | null)[]>([])
+  // Chaque réponse est un tableau d'index cochés. null = pas encore répondu
+  // (différent de [] qui veut dire "vu mais aucune option cochée").
+  const [answers, setAnswers] = useState<(number[] | null)[]>([])
   const [revealed, setRevealed] = useState<boolean[]>([])
   const [selfRatings, setSelfRatings] = useState<string[]>([])
   const [timeLeft, setTimeLeft] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Système de scoring selon la fac de l'user. Default = discordance progressive
+  // (la plus répandue en PASS français). Cf src/types/index.ts pour ajouter
+  // un système per-fac plus précis.
+  const scoringId = useMemo(() => getScoringForFac(profile?.fac), [profile?.fac])
+  const scoring = SCORING_SYSTEMS[scoringId]
 
   // Quota Free : vérifié serveur via /api/simulator/start avant lancement.
   // - quotaError : message inline pour les erreurs réseau / serveur génériques
@@ -171,12 +200,14 @@ export default function SimulateurPage() {
   const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
 
   const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }] = await Promise.all([
+    const [{ data: sys }, { data: les }, { data: pro }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid),
+      supabase.from('profiles').select('*').eq('id', uid).single(),
     ])
     setSystems((sys as System[] | null) ?? [])
     setLessons((les as Lesson[] | null) ?? [])
+    if (pro) setProfile(pro as Profile)
     setLoading(false)
   }, [supabase])
 
@@ -339,18 +370,42 @@ export default function SimulateurPage() {
     setLaunching(false)
   }
 
+  // Toggle pour QCM (multi), remplace pour QCS (single).
+  // Le revealed en mode apprentissage ne se déclenche QUE quand l'élève clique
+  // "Valider" (cf validateCurrent ci-dessous) — avant ce clic, il peut cocher /
+  // décocher librement les options.
   function selectOption(optIdx: number) {
     if (mode === 'apprentissage' && revealed[currentIdx]) return
 
-    const newAnswers = [...answers]
-    newAnswers[currentIdx] = optIdx
-    setAnswers(newAnswers)
+    const q = sessionQuestions[currentIdx]
+    if (!q) return
+    const multi = q.answer.length >= 2
+    const current = answers[currentIdx] ?? []
+    const has = current.includes(optIdx)
 
-    if (mode === 'apprentissage') {
-      const newRevealed = [...revealed]
-      newRevealed[currentIdx] = true
-      setRevealed(newRevealed)
+    let nextSelected: number[]
+    if (multi) {
+      nextSelected = has ? current.filter(i => i !== optIdx) : [...current, optIdx].sort((a, b) => a - b)
+    } else {
+      // QCS : on remplace (= un radio button)
+      nextSelected = has ? [] : [optIdx]
     }
+    const newAnswers = [...answers]
+    newAnswers[currentIdx] = nextSelected
+    setAnswers(newAnswers)
+  }
+
+  // En mode apprentissage : passe la question en revealed pour afficher
+  // la correction + l'explication. En mode examen : pas de validation par
+  // question, tout est révélé d'un coup à la fin.
+  function validateCurrent() {
+    if (mode !== 'apprentissage') return
+    if (revealed[currentIdx]) return
+    const sel = answers[currentIdx]
+    if (!sel || sel.length === 0) return
+    const newRevealed = [...revealed]
+    newRevealed[currentIdx] = true
+    setRevealed(newRevealed)
   }
 
   function rateSelf(rating: string) {
@@ -393,7 +448,13 @@ export default function SimulateurPage() {
   }
 
   function replayMissed() {
-    const missed = sessionQuestions.filter((q, i) => answers[i] !== null && answers[i] !== q.answer)
+    // Une question est "ratée" si la sélection n'égale pas exactement
+    // le set des bonnes réponses (tout-ou-rien pour le replay, plus simple
+    // que le score discordance ici).
+    const missed = sessionQuestions.filter((q, i) => {
+      const a = answers[i]
+      return a !== null && !arraysEqualAsSets(a, q.answer)
+    })
     if (missed.length === 0) { newSession(); return }
     setSessionQuestions(missed)
     setCurrentIdx(0)
@@ -408,10 +469,34 @@ export default function SimulateurPage() {
     setPhase('session')
   }
 
-  const correctCount = answers.filter((a, i) => a !== null && a === sessionQuestions[i]?.answer).length
-  const wrongCount = answers.filter((a, i) => a !== null && a !== sessionQuestions[i]?.answer).length
-  const answeredCount = answers.filter(a => a !== null).length
-  const score = sessionQuestions.length > 0 ? Math.round((correctCount / sessionQuestions.length) * 100) : 0
+  // Score "tout-ou-rien" pour les compteurs Bonnes / Ratées (lisible dans
+  // la UI). Le vrai score pondéré (discordance) est calculé séparément
+  // pour le pourcentage final.
+  const correctCount = answers.filter((a, i) => {
+    const q = sessionQuestions[i]
+    return a !== null && q && arraysEqualAsSets(a, q.answer)
+  }).length
+  const wrongCount = answers.filter((a, i) => {
+    const q = sessionQuestions[i]
+    return a !== null && a.length > 0 && q && !arraysEqualAsSets(a, q.answer)
+  }).length
+  const answeredCount = answers.filter(a => a !== null && a.length > 0).length
+
+  // Score pondéré selon le système de scoring de la fac (discordance progressive
+  // par défaut). Somme des scores par question / nb total de questions, x100.
+  const weightedScoreSum = useMemo(() => {
+    let sum = 0
+    for (let i = 0; i < sessionQuestions.length; i++) {
+      const q = sessionQuestions[i]
+      const a = answers[i]
+      if (!q || a === null) continue  // non répondue = 0
+      sum += scoring.score(a, q.answer, q.options.length)
+    }
+    return sum
+  }, [sessionQuestions, answers, scoring])
+  const score = sessionQuestions.length > 0
+    ? Math.round((weightedScoreSum / sessionQuestions.length) * 100)
+    : 0
 
   if (loading) {
     return (
@@ -670,9 +755,10 @@ export default function SimulateurPage() {
   function renderSession() {
     const q = sessionQuestions[currentIdx]
     if (!q) return <div className="sim-page"><div className="sim-loading">…</div></div>
-    const selectedAnswer = answers[currentIdx]
+    const selectedAnswer = answers[currentIdx] ?? []
     const isRevealed = mode === 'apprentissage' && revealed[currentIdx]
-    const correctIdx = q.answer
+    const correctIdxs = q.answer
+    const isMulti = correctIdxs.length >= 2
 
     return (
       <div className="sim-page">
@@ -684,7 +770,7 @@ export default function SimulateurPage() {
             <span className="sim-ses-tag-sub">
               {mode === 'apprentissage'
                 ? 'Réponse révélée + explication à chaque question'
-                : 'Aucun feedback avant la fin · style concours'}
+                : `Aucun feedback avant la fin · scoring "${scoring.label}"`}
             </span>
           </div>
           <div className="sim-ses-stats">
@@ -724,13 +810,16 @@ export default function SimulateurPage() {
             <div className="sim-ses-q-meta">
               <em>Question {currentIdx + 1} / {sessionQuestions.length}</em>
               {q.systemName && <span className="sim-ses-q-source">{q.systemName}{q.lessonName ? ` · ${q.lessonName}` : ''}</span>}
+              <span className={`sim-ses-q-type${isMulti ? ' multi' : ''}`}>
+                {isMulti ? 'QCM · plusieurs bonnes' : 'QCS · une seule bonne'}
+              </span>
             </div>
             <div className="sim-ses-q-text">{q.question}</div>
 
-            <div className="sim-ses-q-options">
+            <div className={`sim-ses-q-options${isMulti ? ' multi' : ''}`}>
               {q.options.map((opt, i) => {
-                const isSelected = selectedAnswer === i
-                const isCorrect = i === correctIdx
+                const isSelected = selectedAnswer.includes(i)
+                const isCorrect = correctIdxs.includes(i)
                 let cls = 'sim-ses-q-opt'
                 if (isRevealed) {
                   if (isCorrect) cls += ' correct'
@@ -743,27 +832,50 @@ export default function SimulateurPage() {
                   <button
                     key={i}
                     className={cls}
-                    disabled
+                    onClick={() => selectOption(i)}
+                    disabled={isRevealed}
                     type="button"
-                    aria-label={`Option ${letterFor(i)} — réponse via la grille à droite`}
+                    role={isMulti ? 'checkbox' : 'radio'}
+                    aria-checked={isSelected}
                   >
                     <span className="sim-ses-q-opt-letter">{letterFor(i)}.</span>
                     {opt}
+                    {isRevealed && isCorrect && !isSelected && <span className="sim-ses-q-opt-mark">manquée</span>}
                   </button>
                 )
               })}
             </div>
 
+            {mode === 'apprentissage' && !isRevealed && (
+              <div className="sim-ses-nav" style={{ marginTop: 18 }}>
+                <button
+                  className="sim-ses-nav-btn primary"
+                  onClick={validateCurrent}
+                  disabled={selectedAnswer.length === 0}
+                >
+                  Valider ma réponse {isMulti && selectedAnswer.length > 0 ? `(${selectedAnswer.length} coché${selectedAnswer.length > 1 ? 'es' : 'e'})` : ''} →
+                </button>
+              </div>
+            )}
+
             {mode === 'apprentissage' && isRevealed && (
               <>
                 <div className="sim-ses-explain">
-                  <div className="sim-ses-explain-h">Explication</div>
+                  <div className="sim-ses-explain-h">
+                    Explication
+                    <span className="sim-ses-explain-score">
+                      {scoring.score(selectedAnswer, correctIdxs, q.options.length).toFixed(2).replace(/\.00$/, '')} pt
+                    </span>
+                  </div>
                   <div className="sim-ses-explain-text">
                     {q.explanation ? (
                       q.explanation
                     ) : (
                       <>
-                        La bonne réponse était <strong>{letterFor(correctIdx)}. {q.options[correctIdx]}</strong>.
+                        Bonne{correctIdxs.length > 1 ? 's' : ''} réponse{correctIdxs.length > 1 ? 's' : ''} :{' '}
+                        <strong>
+                          {correctIdxs.map(idx => `${letterFor(idx)}. ${q.options[idx]}`).join(' · ')}
+                        </strong>.
                       </>
                     )}
                   </div>
@@ -859,6 +971,9 @@ export default function SimulateurPage() {
             <div className="sim-res-message">
               <strong>{message}</strong> {submessage}
             </div>
+            <div className="sim-res-scoring" title={scoring.desc}>
+              Scoring : <strong>{scoring.label}</strong>
+            </div>
           </div>
 
           <div className="sim-res-stats">
@@ -924,7 +1039,7 @@ function SheetGrid({
   onBubbleClick,
 }: {
   questions: Question[]
-  answers: (number | null)[]
+  answers: (number[] | null)[]
   revealed: boolean[]
   currentIdx: number
   mode: Mode
@@ -941,7 +1056,7 @@ function SheetGrid({
 
   function renderRow(q: Question, qi: number) {
     const isCurrent = qi === currentIdx
-    const ans = answers[qi]
+    const ans = answers[qi] ?? []
     const isRevealed = mode === 'apprentissage' && revealed[qi]
     return (
       <div
@@ -953,11 +1068,13 @@ function SheetGrid({
         {letters.map((_, oi) => {
           const exists = oi < q.options.length
           if (!exists) return <span key={oi} className="sim-ses-sheet-bubble missing" />
-          const filled = ans === oi
+          const filled = ans.includes(oi)
+          const isCorrectOpt = q.answer.includes(oi)
           let cls = 'sim-ses-sheet-bubble'
           if (filled) cls += ' filled'
           if (isRevealed) {
-            if (oi === q.answer) cls = 'sim-ses-sheet-bubble ok'
+            // Vert si bonne réponse (cochée ou pas) ; rouge si cochée par erreur
+            if (isCorrectOpt) cls = 'sim-ses-sheet-bubble ok'
             else if (filled) cls = 'sim-ses-sheet-bubble bad'
           }
           return (
@@ -965,6 +1082,7 @@ function SheetGrid({
               key={oi}
               className={cls}
               onClick={(e) => { e.stopPropagation(); onBubbleClick(qi, oi) }}
+              aria-pressed={filled}
             />
           )
         })}
