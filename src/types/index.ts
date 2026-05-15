@@ -27,13 +27,22 @@ export interface AiQuestionSourceRef {
   video_ts?: number   // timestamp en secondes dans la vidéo
 }
 export interface AiQuestion {
-  // Format actuel (post-2026-05)
+  // Format actuel (post-2026-05, multi-réponses depuis 2026-05-15) :
+  // - answer est TOUJOURS un tableau d'index 0-based.
+  // - 1 élément = QCS (Question à Choix Simple) → radio buttons côté UI.
+  // - 2+ éléments = QCM/QRM (Question à Réponses Multiples) → checkboxes côté UI.
+  // Pour les questions legacy avec answer: number (avant 2026-05-15), on
+  // convertit à la volée au load via normalizeAnswer() : 3 → [3].
   question: string
   options: string[]
-  answer: number          // index 0-based de la bonne réponse
+  answer: number[] | number  // number = legacy, [number] ou plus = nouveau format
   explanation: string
   // Forme objet (post-2026-05) ou string (legacy data) ou absent.
   source_ref?: AiQuestionSourceRef | string | null
+  // Compteurs cumulés sur les sessions QCM par fiche (incrémentés à chaque
+  // session via persistSessionResults). Optionnels = pas encore répondu.
+  attempts?: number
+  correct?: number
   // Champs rétro-compat (legacy AVANT la refonte 2026-05) — toujours typés
   // optionnels. Utilisés par d'anciens chemins de code (ex : page /dashboard/lesson/[id])
   // qui n'a pas encore été migrée vers les nouveaux noms. NE PAS supprimer
@@ -41,7 +50,21 @@ export interface AiQuestion {
   type?: 'qcm' | 'kfp' | 'vf'
   context?: string | null
   stem?: string      // legacy alias de "question"
-  correct?: number   // legacy alias de "answer"
+}
+
+// Helper centralisé : normalise answer en tableau d'index, qu'il soit
+// number legacy ou number[] nouveau. À utiliser partout où on lit
+// q.answer pour comparer aux sélections de l'utilisateur.
+export function normalizeAnswer(raw: AiQuestion['answer'] | undefined): number[] {
+  if (Array.isArray(raw)) return raw.filter(n => typeof n === 'number' && n >= 0)
+  if (typeof raw === 'number' && raw >= 0) return [raw]
+  return []
+}
+
+// Helper : la question est-elle multi-réponses ?
+// 2+ index = QCM/QRM multi, sinon QCS simple.
+export function isMultiAnswer(q: AiQuestion): boolean {
+  return normalizeAnswer(q.answer).length >= 2
 }
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
@@ -105,6 +128,100 @@ export const FREE_PDF_SIZE_MB = 20
 // outliers. User normal Premium fait 10-20/mois, donc 100 laisse une marge.
 export const PREMIUM_MONTHLY_AI_CAP = 100
 export const J_STEPS = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+
+// =============================================================
+// SCORING SYSTEMS POUR LE SIMULATEUR
+// =============================================================
+// "Discordance progressive" est le système le plus répandu en PASS français
+// (Sorbonne, Paris Cité, plupart). 1 point si parfait, dégradation selon le
+// nombre de discordances (= options où ma sélection ≠ la vraie réponse).
+//
+// Si tu veux ajouter un système per-fac plus tard :
+//   1. Ajouter une entrée dans SCORING_SYSTEMS
+//   2. Mapper la fac dans SCORING_BY_FAC
+//   3. Le simulateur lira automatiquement la bonne formule via getScoringForFac()
+//
+// Pour les QCM directement dans les fiches (route /dashboard/fiches/[id]/qcm),
+// on utilise TOUJOURS "tout-ou-rien" pour la simplicité pédagogique.
+// =============================================================
+
+export type ScoringSystemId = 'tout-ou-rien' | 'discordance-progressive' | 'discordance-classique'
+
+export const SCORING_SYSTEMS: Record<ScoringSystemId, {
+  label: string
+  desc: string
+  // Calcul de la note pour une question :
+  // selected = ensemble des index cochés par l'élève
+  // correct  = ensemble des index officiellement bons
+  score: (selected: number[], correct: number[], nbOptions: number) => number
+}> = {
+  'tout-ou-rien': {
+    label: 'Tout ou rien',
+    desc: 'Toutes les bonnes cochées ET aucune mauvaise = 1 pt. Sinon 0.',
+    score: (selected, correct) => {
+      const s = new Set(selected)
+      const c = new Set(correct)
+      if (s.size !== c.size) return 0
+      for (const v of c) if (!s.has(v)) return 0
+      return 1
+    },
+  },
+  'discordance-progressive': {
+    label: 'Discordance progressive',
+    desc: '1 pt si parfait, 0,5 si 1 discordance, 0,2 si 2 discordances, 0 sinon.',
+    score: (selected, correct, nbOptions) => {
+      // Une discordance = un option où ma réponse diffère de la vraie.
+      // Ex : bonnes = [0, 2], moi = [0, 3] → discordances sur index 2 (manqué)
+      // et index 3 (faux positif) = 2 discordances.
+      let discord = 0
+      for (let i = 0; i < nbOptions; i++) {
+        const inSel = selected.includes(i)
+        const inCor = correct.includes(i)
+        if (inSel !== inCor) discord++
+      }
+      if (discord === 0) return 1
+      if (discord === 1) return 0.5
+      if (discord === 2) return 0.2
+      return 0
+    },
+  },
+  'discordance-classique': {
+    label: 'Discordance classique',
+    desc: '1 pt si parfait, 0,5 si 1 discordance, 0,2 si 2, 0,1 si 3, 0 sinon.',
+    score: (selected, correct, nbOptions) => {
+      let discord = 0
+      for (let i = 0; i < nbOptions; i++) {
+        const inSel = selected.includes(i)
+        const inCor = correct.includes(i)
+        if (inSel !== inCor) discord++
+      }
+      if (discord === 0) return 1
+      if (discord === 1) return 0.5
+      if (discord === 2) return 0.2
+      if (discord === 3) return 0.1
+      return 0
+    },
+  },
+}
+
+// Mapping fac → système de scoring utilisé dans son examen officiel.
+// Pour l'instant, défaut "discordance-progressive" partout (vérifié pour
+// Sorbonne et Paris Cité, à confirmer pour les autres). À ajuster quand on
+// récupère les vraies infos officielles de chaque fac.
+export const SCORING_BY_FAC: Record<string, ScoringSystemId> = {
+  'sorbonne': 'discordance-progressive',
+  'paris-cite': 'discordance-progressive',
+  'sorbonne-paris-nord': 'discordance-progressive',
+  'upec': 'discordance-progressive',
+  'lyon': 'discordance-progressive',
+  'montpellier': 'discordance-progressive',
+  'autre': 'discordance-progressive',
+}
+
+export function getScoringForFac(fac: string | null | undefined): ScoringSystemId {
+  if (!fac) return 'discordance-progressive'
+  return SCORING_BY_FAC[fac] || 'discordance-progressive'
+}
 // Legacy const conservée pour rétro-compat avec d'anciens imports qui
 // pourraient encore traîner. À retirer en un coup quand on a vérifié qu'aucun
 // code de prod ne l'utilise (grep "FREE_LIMIT" dans le repo).
