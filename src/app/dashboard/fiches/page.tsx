@@ -186,11 +186,15 @@ export default function FichesPage() {
   const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
 
   // Menu contextuel (⋯) + éditer / supprimer
-  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string } | null
+  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string; semestre?: 1 | 2 } | null
   type DeleteTarget = { type: 'system' | 'lesson'; id: string; name: string; childCount?: number } | null
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditTarget>(null)
   const [editName, setEditName] = useState('')
+  // Semestre en cours d'édition (uniquement utilisé quand type === 'system').
+  // Permet à l'user de déplacer une matière entre S1 et S2 si la pré-config
+  // au signup ne correspond pas à son vrai cursus.
+  const [editSemestre, setEditSemestre] = useState<1 | 2>(2)
   const [editLoading, setEditLoading] = useState(false)
   const [deleting, setDeleting] = useState<DeleteTarget>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -324,8 +328,17 @@ export default function FichesPage() {
 
   // ---- Menu ⋯ : éditer / supprimer matière ou fiche ----
   function openEdit(type: 'system' | 'lesson', id: string, name: string) {
-    setEditing({ type, id, name })
+    // Pour une matière, on charge aussi son semestre actuel pour pouvoir
+    // l'éditer dans le même modal. Pour une fiche, semestre n'est pas
+    // utilisé (la fiche hérite du semestre de sa matière).
+    let currentSemestre: 1 | 2 = 2
+    if (type === 'system') {
+      const sys = systems.find(s => s.id === id)
+      if (sys) currentSemestre = (sys.semestre === 1 ? 1 : 2)
+    }
+    setEditing({ type, id, name, semestre: currentSemestre })
     setEditName(name)
+    setEditSemestre(currentSemestre)
     setMenuOpenFor(null)
   }
   function openDelete(type: 'system' | 'lesson', id: string, name: string) {
@@ -341,12 +354,26 @@ export default function FichesPage() {
     const trimmed = editName.trim()
     if (!trimmed) return
     setEditLoading(true)
-    const table = editing.type === 'system' ? 'systems' : 'lessons'
-    await supabase.from(table).update({ name: trimmed }).eq('id', editing.id)
     if (editing.type === 'system') {
-      setSystems(prev => prev.map(s => s.id === editing.id ? ({ ...s, name: trimmed } as System) : s))
+      // Pour une matière, on met à jour name ET semestre dans la même requête.
+      const { error } = await supabase
+        .from('systems')
+        .update({ name: trimmed, semestre: editSemestre })
+        .eq('id', editing.id)
+      if (!error) {
+        setSystems(prev => prev.map(s => s.id === editing.id
+          ? ({ ...s, name: trimmed, semestre: editSemestre } as System)
+          : s))
+      } else {
+        console.error('[saveEdit] system update failed:', error)
+      }
     } else {
-      setLessons(prev => prev.map(l => l.id === editing.id ? ({ ...l, name: trimmed } as Lesson) : l))
+      const { error } = await supabase.from('lessons').update({ name: trimmed }).eq('id', editing.id)
+      if (!error) {
+        setLessons(prev => prev.map(l => l.id === editing.id ? ({ ...l, name: trimmed } as Lesson) : l))
+      } else {
+        console.error('[saveEdit] lesson update failed:', error)
+      }
     }
     setEditLoading(false)
     setEditing(null)
@@ -851,15 +878,15 @@ export default function FichesPage() {
         </div>
       )}
 
-      {/* ---- MODAL : Renommer ---- */}
+      {/* ---- MODAL : Éditer matière (nom + semestre) ou Renommer fiche ---- */}
       {editing && (
         <div className="fi-overlay" onClick={() => setEditing(null)}>
           <div className="fi-modal" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">
-              Renommer {editing.type === 'system' ? 'la matière' : 'la fiche'}
+              {editing.type === 'system' ? 'Modifier la matière' : 'Renommer la fiche'}
             </div>
-            <div style={{ marginBottom: 4 }}>
-              <label className="fi-label">Nouveau nom</label>
+            <div style={{ marginBottom: 14 }}>
+              <label className="fi-label">{editing.type === 'system' ? 'Nom de la matière' : 'Nouveau nom'}</label>
               <input
                 className="fi-input"
                 type="text"
@@ -869,13 +896,60 @@ export default function FichesPage() {
                 onKeyDown={e => { if (e.key === 'Enter' && editName.trim()) saveEdit() }}
               />
             </div>
+            {/* Picker S1/S2 : visible uniquement pour les matières. Permet de
+                corriger la pré-config du signup si l'user a une matière dans
+                le mauvais semestre selon sa fac. */}
+            {editing.type === 'system' && (
+              <div style={{ marginBottom: 4 }}>
+                <label className="fi-label">Semestre</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className={`fi-btn-o${editSemestre === 1 ? ' fi-btn-active' : ''}`}
+                    onClick={() => setEditSemestre(1)}
+                    style={{
+                      flex: 1,
+                      background: editSemestre === 1 ? 'var(--gm)' : 'transparent',
+                      color: editSemestre === 1 ? '#fff' : 'inherit',
+                      borderColor: editSemestre === 1 ? 'var(--gm)' : undefined,
+                    }}
+                  >
+                    Semestre 1
+                  </button>
+                  <button
+                    type="button"
+                    className={`fi-btn-o${editSemestre === 2 ? ' fi-btn-active' : ''}`}
+                    onClick={() => setEditSemestre(2)}
+                    style={{
+                      flex: 1,
+                      background: editSemestre === 2 ? 'var(--gm)' : 'transparent',
+                      color: editSemestre === 2 ? '#fff' : 'inherit',
+                      borderColor: editSemestre === 2 ? 'var(--gm)' : undefined,
+                    }}
+                  >
+                    Semestre 2
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="fi-modal-actions">
               <button className="fi-btn-o" onClick={() => setEditing(null)}>Annuler</button>
               <button
                 className="fi-btn-g"
                 onClick={saveEdit}
-                disabled={!editName.trim() || editName.trim() === editing.name || editLoading}
-                style={{ opacity: (!editName.trim() || editName.trim() === editing.name) ? .5 : 1 }}
+                disabled={
+                  !editName.trim()
+                  || editLoading
+                  || (editing.type === 'system'
+                    ? editName.trim() === editing.name && editSemestre === editing.semestre
+                    : editName.trim() === editing.name)
+                }
+                style={{
+                  opacity: (!editName.trim()
+                    || (editing.type === 'system'
+                      ? editName.trim() === editing.name && editSemestre === editing.semestre
+                      : editName.trim() === editing.name)) ? .5 : 1,
+                }}
               >
                 {editLoading ? 'Enregistrement…' : 'Enregistrer'}
               </button>
