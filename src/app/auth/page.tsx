@@ -17,73 +17,191 @@ import '@/components/landing-styles.css'
 
 const FACS = [
   { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6', hasOptions: true },
-  { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5', hasOptions: false },
-  { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13', hasOptions: false },
+  { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5', hasOptions: true },
+  { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13', hasOptions: true },
+  // UPEC : seule fac d'IDF sans PASS, propose uniquement LAS/LSPS.
+  // Du coup pas de choix de "mineure disciplinaire" au sens PASS — on
+  // pré-config un set neutre de matières santé.
   { id: 'upec', name: 'UPEC Créteil', badge: 'Créteil', hasOptions: false },
-  { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: false },
-  { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: false },
+  { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: true },
+  { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: true },
   { id: 'autre', name: 'Autre faculté', badge: 'Autre', hasOptions: false },
 ]
 
+// =============================================================
+// BLOCS DE MATIÈRES — composer chaque (fac, mineure) sans dupliquer
+// =============================================================
+// La "majeure santé" est commune à toutes les facs PASS (Biochimie, Bio cell,
+// Anatomie, Biophysique, Physiologie, Biostat, Pharmaco, SSH, etc.). On la
+// définit une fois ici, puis on l'étend avec les matières spécifiques à la
+// mineure choisie.
+const BASE_S1 = [
+  { name: 'Biochimie', icon: '🧪', semestre: 1 as const },
+  { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 as const },
+  { name: 'Anatomie générale', icon: '🦴', semestre: 1 as const },
+]
+const BASE_S2 = [
+  { name: 'Biophysique', icon: '📊', semestre: 2 as const },
+  { name: 'Physiologie', icon: '❤️', semestre: 2 as const },
+  { name: 'Biostatistiques', icon: '📈', semestre: 2 as const },
+  { name: 'Pharmacologie', icon: '💊', semestre: 2 as const },
+  { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 as const },
+  { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 as const },
+]
+
+// Matières spécifiques à chaque mineure disciplinaire.
+const MIN_SCIENCES = [
+  { name: 'Physique', icon: '⚡', semestre: 1 as const },
+  { name: 'Chimie', icon: '🔭', semestre: 1 as const },
+]
+const MIN_LETTRES = [
+  { name: 'Sociolinguistique', icon: '📚', semestre: 1 as const },
+  { name: 'Linguistique', icon: '🗣️', semestre: 1 as const },
+]
+const MIN_DROIT = [
+  { name: 'Droit constitutionnel', icon: '⚖️', semestre: 1 as const },
+  { name: 'Introduction au droit', icon: '📜', semestre: 2 as const },
+]
+const MIN_ECO = [
+  { name: 'Microéconomie', icon: '📉', semestre: 1 as const },
+  { name: 'Macroéconomie', icon: '💰', semestre: 2 as const },
+]
+const MIN_PSY = [
+  { name: 'Psychologie générale', icon: '🧠', semestre: 1 as const },
+  { name: 'Psychologie cognitive', icon: '💭', semestre: 2 as const },
+]
+const MIN_STAPS = [
+  { name: 'Anatomie fonctionnelle', icon: '🏃', semestre: 1 as const },
+  { name: 'Physiologie de l\'exercice', icon: '💪', semestre: 2 as const },
+]
+const MIN_MATHS = [
+  { name: 'Mathématiques', icon: '🔢', semestre: 1 as const },
+  { name: 'Mathématiques avancées', icon: '∑', semestre: 2 as const },
+]
+const MIN_SOC = [
+  { name: 'Sociologie de la santé', icon: '👥', semestre: 1 as const },
+  { name: 'Politiques de santé', icon: '🏛️', semestre: 2 as const },
+]
+
+// =============================================================
+// MATIÈRES PRÉ-CONFIG par (fac, mineure)
+// =============================================================
+// Sources officielles consultées en mai 2026 :
+//   - Paris Cité : 11 mineures officielles. On garde les 5 les plus communes.
+//   - Sorbonne Paris Nord : 6 mineures internes Bobigny/Villetaneuse.
+//   - Lyon 1 (Claude Bernard) : sciences vie, chimie, physique, maths, STAPS.
+//   - Montpellier : sciences vie, physique-chimie, maths, droit, économie, psy.
+// Si une fac change ses mineures, ajuster ici sans toucher au reste du code.
 const FAC_SYSTEMS: Record<string, Record<string, { name: string; icon: string; semestre: number }[]>> = {
   sorbonne: {
-    sciences: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Physique', icon: '⚡', semestre: 1 },
-      { name: 'Chimie', icon: '🔭', semestre: 1 }, { name: 'Biophysique', icon: '📊', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 }, { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 }, { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-    ],
-    lettres: [
-      { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-      { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Sociolinguistique', icon: '📚', semestre: 1 },
-      { name: 'Linguistique', icon: '🗣️', semestre: 1 }, { name: 'Biophysique', icon: '📊', semestre: 2 },
-      { name: 'Physiologie', icon: '❤️', semestre: 2 }, { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-      { name: 'Pharmacologie', icon: '💊', semestre: 2 }, { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-      { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-    ],
+    sciences: [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    lettres: [...BASE_S1, ...MIN_LETTRES, ...BASE_S2],
   },
-  'paris-cite': { default: [
-    { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-    { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Physique', icon: '⚡', semestre: 1 },
-    { name: 'Chimie', icon: '🔭', semestre: 1 }, { name: 'Biophysique', icon: '📊', semestre: 2 },
-    { name: 'Physiologie', icon: '❤️', semestre: 2 }, { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-    { name: 'Pharmacologie', icon: '💊', semestre: 2 }, { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-    { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-  ] },
-  'sorbonne-paris-nord': { default: [
-    { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-    { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Physique', icon: '⚡', semestre: 1 },
-    { name: 'Chimie', icon: '🔭', semestre: 1 }, { name: 'Biophysique', icon: '📊', semestre: 2 },
-    { name: 'Physiologie', icon: '❤️', semestre: 2 }, { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-    { name: 'Pharmacologie', icon: '💊', semestre: 2 }, { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-    { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 },
-  ] },
-  upec: { default: [
-    { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-    { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-    { name: 'Physiologie', icon: '❤️', semestre: 2 }, { name: 'Biostatistiques', icon: '📈', semestre: 2 },
-    { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-  ] },
-  lyon: { default: [
-    { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-    { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Physiologie', icon: '❤️', semestre: 2 },
-    { name: 'Biostatistiques', icon: '📈', semestre: 2 }, { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-    { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-  ] },
-  montpellier: { default: [
-    { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-    { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Physiologie', icon: '❤️', semestre: 2 },
-    { name: 'Biostatistiques', icon: '📈', semestre: 2 }, { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-    { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-  ] },
-  autre: { default: [
-    { name: 'Biochimie', icon: '🧪', semestre: 1 }, { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 },
-    { name: 'Anatomie générale', icon: '🦴', semestre: 1 }, { name: 'Physiologie', icon: '❤️', semestre: 2 },
-    { name: 'Biostatistiques', icon: '📈', semestre: 2 }, { name: 'Pharmacologie', icon: '💊', semestre: 2 },
-    { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 2 },
-  ] },
+  'paris-cite': {
+    bpc: [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    droit: [...BASE_S1, ...MIN_DROIT, ...BASE_S2],
+    'eco-gestion': [...BASE_S1, ...MIN_ECO, ...BASE_S2],
+    psychologie: [...BASE_S1, ...MIN_PSY, ...BASE_S2],
+    'sport-sante': [...BASE_S1, ...MIN_STAPS, ...BASE_S2],
+  },
+  'sorbonne-paris-nord': {
+    'sciences-vie': [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    'eco-gestion': [...BASE_S1, ...MIN_ECO, ...BASE_S2],
+    droit: [...BASE_S1, ...MIN_DROIT, ...BASE_S2],
+    'physique-chimie': [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    staps: [...BASE_S1, ...MIN_STAPS, ...BASE_S2],
+    'sciences-sociales': [...BASE_S1, ...MIN_SOC, ...BASE_S2],
+  },
+  upec: {
+    // LAS/LSPS — pas de mineure PASS standard.
+    default: [...BASE_S1, ...BASE_S2],
+  },
+  lyon: {
+    'sciences-vie': [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    chimie: [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    physique: [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    maths: [...BASE_S1, ...MIN_MATHS, ...BASE_S2],
+    staps: [...BASE_S1, ...MIN_STAPS, ...BASE_S2],
+  },
+  montpellier: {
+    'sciences-vie': [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    'physique-chimie': [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
+    maths: [...BASE_S1, ...MIN_MATHS, ...BASE_S2],
+    droit: [...BASE_S1, ...MIN_DROIT, ...BASE_S2],
+    economie: [...BASE_S1, ...MIN_ECO, ...BASE_S2],
+    psychologie: [...BASE_S1, ...MIN_PSY, ...BASE_S2],
+  },
+  autre: {
+    default: [...BASE_S1, ...BASE_S2],
+  },
+}
+
+// =============================================================
+// MÉTADONNÉES UI pour le step "choix de la mineure" au signup
+// =============================================================
+// Une carte par mineure dans la liste, avec un titre, une description
+// courte et les tags = aperçu des principales matières. La carte cliquée
+// devient le `option` dans handleRegister, qui mappe vers FAC_SYSTEMS.
+type FacOption = { id: string; name: string; desc: string; tags: string[] }
+const FAC_OPTIONS: Record<string, FacOption[]> = {
+  sorbonne: [
+    { id: 'sciences', name: 'Option Sciences', desc: 'Bio · Chimie · Physique · Mineure Sciences',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie', 'Biostat', 'Pharmaco', 'SSH'] },
+    { id: 'lettres', name: 'Option Lettres', desc: 'Sciences du langage · Mineure Lettres',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Sociolinguistique', 'Linguistique', 'Biophysique', 'Physiologie', 'Biostat', 'Pharmaco'] },
+  ],
+  'paris-cite': [
+    { id: 'bpc', name: 'Mineure BPC', desc: 'Biologie · Physique · Chimie · La voie classique',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie', 'Pharmaco'] },
+    { id: 'droit', name: 'Mineure Droit', desc: 'Droit constitutionnel · Introduction au droit',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Droit constit.', 'Intro droit', 'Biophysique', 'Physiologie'] },
+    { id: 'eco-gestion', name: 'Mineure Économie-Gestion', desc: 'Microéconomie · Macroéconomie',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Microéconomie', 'Macroéconomie', 'Biophysique', 'Physiologie'] },
+    { id: 'psychologie', name: 'Sciences psychologiques', desc: 'Psychologie générale et cognitive',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Psy générale', 'Psy cognitive', 'Biophysique', 'Physiologie'] },
+    { id: 'sport-sante', name: 'Sport et santé', desc: 'STAPS · Anatomie fonctionnelle · Physio exercice',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Anat. fonct.', 'Physio exercice', 'Biophysique', 'Physiologie'] },
+  ],
+  'sorbonne-paris-nord': [
+    { id: 'sciences-vie', name: 'Sciences de la vie', desc: 'Bobigny · Biologie · Physique · Chimie',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'eco-gestion', name: 'Économie-Gestion', desc: 'Villetaneuse · Micro/Macroéconomie',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Microéconomie', 'Macroéconomie', 'Biophysique', 'Physiologie'] },
+    { id: 'droit', name: 'Droit', desc: 'Villetaneuse · Droit constitutionnel',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Droit constit.', 'Intro droit', 'Biophysique', 'Physiologie'] },
+    { id: 'physique-chimie', name: 'Physique-Chimie', desc: 'Villetaneuse · Voie scientifique',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'staps', name: 'STAPS', desc: 'Bobigny · Anatomie fonctionnelle · Physio exercice',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Anat. fonct.', 'Physio exercice', 'Biophysique', 'Physiologie'] },
+    { id: 'sciences-sociales', name: 'Sciences sanitaires et sociales', desc: 'Bobigny · Sociologie · Politiques de santé',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Sociologie santé', 'Politiques santé', 'Biophysique', 'Physiologie'] },
+  ],
+  lyon: [
+    { id: 'sciences-vie', name: 'Sciences de la vie', desc: 'Voie scientifique classique',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'chimie', name: 'Chimie', desc: 'Spécialité chimie',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'physique', name: 'Physique', desc: 'Spécialité physique',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'maths', name: 'Mathématiques', desc: 'Maths · Maths avancées',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Mathématiques', 'Maths avancées', 'Biophysique', 'Physiologie'] },
+    { id: 'staps', name: 'STAPS', desc: 'Anatomie fonctionnelle · Physio exercice',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Anat. fonct.', 'Physio exercice', 'Biophysique', 'Physiologie'] },
+  ],
+  montpellier: [
+    { id: 'sciences-vie', name: 'Sciences de la vie', desc: 'Voie scientifique classique',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'physique-chimie', name: 'Physique-Chimie', desc: 'Spécialité scientifique',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie'] },
+    { id: 'maths', name: 'Mathématiques', desc: 'Maths · Maths avancées',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Mathématiques', 'Maths avancées', 'Biophysique', 'Physiologie'] },
+    { id: 'droit', name: 'Droit', desc: 'Droit constitutionnel · Introduction au droit',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Droit constit.', 'Intro droit', 'Biophysique', 'Physiologie'] },
+    { id: 'economie', name: 'Économie', desc: 'Microéconomie · Macroéconomie',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Microéconomie', 'Macroéconomie', 'Biophysique', 'Physiologie'] },
+    { id: 'psychologie', name: 'Psychologie', desc: 'Psychologie générale et cognitive',
+      tags: ['Biochimie', 'Bio cell.', 'Anatomie', 'Psy générale', 'Psy cognitive', 'Biophysique', 'Physiologie'] },
+  ],
 }
 
 type Step = 'form' | 'fac' | 'option'
@@ -337,27 +455,32 @@ function AuthContent() {
                   <span className="auth-dot on" />
                 </div>
                 <button type="button" className="auth-back-btn" onClick={() => setStep('fac')}>← Retour</button>
-                <div className="auth-step-title">Quelle est ton option ?</div>
-                <div className="auth-step-sub">Sorbonne PASS/LAS : choisis ta mineure pour pré-configurer les matières.</div>
+                <div className="auth-step-title">Quelle est ta mineure disciplinaire ?</div>
+                <div className="auth-step-sub">
+                  Choisis ta mineure pour pré-configurer tes matières.
+                  {' '}Tu pourras toujours ajouter, renommer ou supprimer des matières une fois ton compte créé.
+                </div>
                 <div className="auth-opt-list">
-                  <button type="button" className={`auth-opt-card${option === 'sciences' ? ' sel' : ''}`} onClick={() => setOption('sciences')}>
-                    <div className="auth-opt-card-title">Option Sciences</div>
-                    <div className="auth-opt-card-desc">Bio · Chimie · Physique · Mineure Sciences</div>
-                    <div className="auth-opt-tags">
-                      {['Biochimie', 'Bio cell.', 'Anatomie', 'Physique', 'Chimie', 'Biophysique', 'Physiologie', 'Biostat', 'Pharmaco', 'SSH'].map(m => (
-                        <span key={m} className="auth-opt-tag">{m}</span>
-                      ))}
-                    </div>
-                  </button>
-                  <button type="button" className={`auth-opt-card${option === 'lettres' ? ' sel' : ''}`} onClick={() => setOption('lettres')}>
-                    <div className="auth-opt-card-title">Option Lettres</div>
-                    <div className="auth-opt-card-desc">Sciences du langage · Mineure Lettres</div>
-                    <div className="auth-opt-tags">
-                      {['Biochimie', 'Bio cell.', 'Anatomie', 'Sociolinguistique', 'Linguistique', 'Biophysique', 'Physiologie', 'Biostat', 'Pharmaco'].map(m => (
-                        <span key={m} className="auth-opt-tag">{m}</span>
-                      ))}
-                    </div>
-                  </button>
+                  {/* Liste dynamique des mineures de la fac choisie. Si pas de
+                      mineures définies, fallback vide (mais on n'arrive ici
+                      que si hasOptions === true côté fac, donc une liste
+                      devrait toujours exister). */}
+                  {(FAC_OPTIONS[fac] || []).map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={`auth-opt-card${option === opt.id ? ' sel' : ''}`}
+                      onClick={() => setOption(opt.id)}
+                    >
+                      <div className="auth-opt-card-title">{opt.name}</div>
+                      <div className="auth-opt-card-desc">{opt.desc}</div>
+                      <div className="auth-opt-tags">
+                        {opt.tags.map(t => (
+                          <span key={t} className="auth-opt-tag">{t}</span>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
                 </div>
                 <button className="auth-submit" onClick={() => handleRegister(fac, option)} disabled={!option || loading}>
                   {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}
