@@ -36,7 +36,7 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileMsg, setProfileMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
-  // Stripe Customer Portal — bouton de gestion d'abonnement pour les Pro
+  // Stripe Customer Portal, bouton de gestion d'abonnement pour les Pro
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
 
@@ -46,7 +46,7 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
-  // Suppression du compte (RGPD — droit à l'effacement)
+  // Suppression du compte (RGPD, droit à l'effacement)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
@@ -192,7 +192,7 @@ export default function SettingsPage() {
         setDeleting(false)
         return
       }
-      // Compte supprimé — on redirige vers l'accueil avec un signal pour
+      // Compte supprimé, on redirige vers l'accueil avec un signal pour
       // éventuellement afficher un message côté landing.
       window.location.href = '/?deleted=1'
     } catch {
@@ -262,7 +262,7 @@ export default function SettingsPage() {
               value={fac}
               onChange={e => setFac(e.target.value)}
             >
-              <option value="">— Choisir —</option>
+              <option value="">· Choisir ·</option>
               {FACS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
@@ -335,7 +335,7 @@ export default function SettingsPage() {
                     <p className="set-hint">
                       Le compteur se reset le 1er du mois prochain. Cette
                       limite haute protège l&apos;infrastructure des usages
-                      excessifs — tu ne devrais jamais l&apos;atteindre en
+                      excessifs, tu ne devrais jamais l&apos;atteindre en
                       utilisation normale.
                     </p>
                   </div>
@@ -537,7 +537,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* SUPPRIMER MON COMPTE — droit à l'effacement RGPD */}
+        {/* SUPPRIMER MON COMPTE, droit à l'effacement RGPD */}
         <section className="set-card set-card-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">
@@ -631,7 +631,7 @@ export default function SettingsPage() {
 }
 
 // ============================================================
-// QuotaBar — barre de progression compacte pour les compteurs Free
+// QuotaBar, barre de progression compacte pour les compteurs Free
 // ============================================================
 function QuotaBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const safeUsed = Math.max(0, Math.min(used, limit))
