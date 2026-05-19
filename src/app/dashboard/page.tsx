@@ -689,7 +689,7 @@ export default function DashboardPage() {
             {todayQueue.length === 0 ? (
               <>
                 <h2 className="today-intro">Aucune révision pour aujourd&apos;hui</h2>
-                <div className="today-sub">Profite de ta journée — ou ajoute des fiches pour démarrer.</div>
+                <div className="today-sub">Profite de ta journée, ou ajoute des fiches pour démarrer.</div>
                 <div className="today-empty">Rien à faire aujourd&apos;hui.</div>
               </>
             ) : (
@@ -766,7 +766,7 @@ export default function DashboardPage() {
                     <div className="weak-hero-label">{scoreLabel(weakest.avgScore)}</div>
                   </div>
                   <div className={`weak-hero-num ${scoreClass(weakest.avgScore)}`}>
-                    <span className="weak-hero-num-val">{weakest.avgScore !== null ? weakest.avgScore.toFixed(1) : '—'}</span>
+                    <span className="weak-hero-num-val">{weakest.avgScore !== null ? weakest.avgScore.toFixed(1) : '·'}</span>
                     <span className="weak-hero-num-max">/5</span>
                   </div>
                 </div>
@@ -906,7 +906,7 @@ export default function DashboardPage() {
                   {total === 0 ? (
                     <div className="load-note calm"><strong>Aucune révision</strong> prévue.</div>
                   ) : showPeak && peakIdx >= 0 ? (
-                    <div className="load-note"><strong>Pic en {upcomingLoad[peakIdx].label}</strong> — pense à étaler.</div>
+                    <div className="load-note"><strong>Pic en {upcomingLoad[peakIdx].label}</strong>. Pense à étaler.</div>
                   ) : (
                     <div className="load-note calm"><strong>Charge équilibrée</strong> sur 4 sem.</div>
                   )}
@@ -1157,7 +1157,7 @@ function WeakModal({
                       </div>
                     </div>
                     <div className={`mat-avg ${cls}`}>
-                      <span className="mat-avg-n">{m.avgScore !== null ? m.avgScore.toFixed(1) : '—'}</span>
+                      <span className="mat-avg-n">{m.avgScore !== null ? m.avgScore.toFixed(1) : '·'}</span>
                       <span className="mat-avg-x">/ 5</span>
                     </div>
                   </div>
