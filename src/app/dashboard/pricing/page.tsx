@@ -271,16 +271,16 @@ function PricingContent() {
             <CompareGroup label="Simulateur d'examen" />
             <CompareRow feat="Sessions" free={`${FREE_SIMULATOR_SESSIONS_LIMIT} au total`} pro="Illimité" />
             <CompareRow feat="Mode Apprentissage" free="Oui" pro="Oui" />
-            <CompareRow feat="Mode Examen blanc" free="—" pro="Oui" />
+            <CompareRow feat="Mode Examen blanc" free="·" pro="Oui" />
 
             <CompareGroup label="Statistiques" />
             <CompareRow feat="Stats de base" free="Oui" pro="Oui" />
-            <CompareRow feat="Heatmap année" free="—" pro="Oui" />
-            <CompareRow feat="Sparkline 12 semaines" free="—" pro="Oui" />
-            <CompareRow feat="Dumbbell par matière" free="—" pro="Oui" />
+            <CompareRow feat="Heatmap année" free="·" pro="Oui" />
+            <CompareRow feat="Sparkline 12 semaines" free="·" pro="Oui" />
+            <CompareRow feat="Dumbbell par matière" free="·" pro="Oui" />
 
             <CompareGroup label="Support" />
-            <CompareRow feat="Email" free="—" pro="Prioritaire" />
+            <CompareRow feat="Email" free="·" pro="Prioritaire" />
             <CompareRow feat="Nouvelles features" free="Selon planning" pro="En avant-première" />
           </div>
         </section>
@@ -362,7 +362,7 @@ function CompareGroup({ label }: { label: string }) {
 }
 
 function CompareRow({ feat, free, pro }: { feat: string; free: string; pro: string }) {
-  const freeIsDash = free === '—'
+  const freeIsDash = free === '·'
   return (
     <div className="pri-compare-row">
       <div className="pri-compare-feat">{feat}</div>
