@@ -610,11 +610,11 @@ export default function FichesPage() {
                     onChange={e => setFilterNote(e.target.value as FilterNote)}
                   >
                     <option value="all">Toutes</option>
-                    <option value="s1">Rouge — à revoir</option>
-                    <option value="s2">Orange — faible</option>
-                    <option value="s3">Jaune — moyen</option>
-                    <option value="s4">Vert clair — bien</option>
-                    <option value="s5">Vert foncé — maîtrisée</option>
+                    <option value="s1">Rouge · à revoir</option>
+                    <option value="s2">Orange · faible</option>
+                    <option value="s3">Jaune · moyen</option>
+                    <option value="s4">Vert clair · bien</option>
+                    <option value="s5">Vert foncé · maîtrisée</option>
                   </select>
                 </div>
               </label>
@@ -736,7 +736,7 @@ export default function FichesPage() {
           <div className="fi-empty">
             <p className="fi-empty-text">
               {showDueOnly
-                ? `Aucune fiche à réviser aujourd'hui ${semester === 'year' ? 'cette année' : 'dans ce semestre'} — bravo !`
+                ? `Aucune fiche à réviser aujourd'hui ${semester === 'year' ? 'cette année' : 'dans ce semestre'}. Bravo !`
                 : search
                   ? "Aucune fiche ne correspond à ta recherche."
                   : (filterNote !== 'all' || filterProgress !== 'all')
@@ -836,7 +836,7 @@ export default function FichesPage() {
             <div className="fi-modal-title">Nouvelle fiche</div>
             <div style={{ marginBottom: 16 }}>
               <label className="fi-label">Intitulé de la fiche</label>
-              <input className="fi-input" type="text" placeholder="ex : Glycolyse — étapes et régulation" value={newLesName}
+              <input className="fi-input" type="text" placeholder="ex : Glycolyse, étapes et régulation" value={newLesName}
                 onChange={e => setNewLesName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && createLesson()} />
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -968,10 +968,10 @@ export default function FichesPage() {
             <p style={{ fontSize: 13, color: 'var(--gray)', lineHeight: 1.5, marginBottom: 14 }}>
               <strong style={{ color: 'var(--dark)' }}>{deleting.name}</strong>
               {deleting.type === 'system' && deleting.childCount !== undefined && deleting.childCount > 0 && (
-                <> — {deleting.childCount} fiche{deleting.childCount > 1 ? 's' : ''} et leurs révisions seront aussi supprimées.</>
+                <> · {deleting.childCount} fiche{deleting.childCount > 1 ? 's' : ''} et leurs révisions seront aussi supprimées.</>
               )}
               {deleting.type === 'lesson' && (
-                <> — toutes les notes et révisions enregistrées seront perdues.</>
+                <> · toutes les notes et révisions enregistrées seront perdues.</>
               )}
             </p>
             <p style={{ fontSize: 12, color: 'var(--gray)', fontStyle: 'italic' }}>
