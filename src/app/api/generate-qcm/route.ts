@@ -671,7 +671,7 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
     }
 
     if (sanitized.length === 0) {
-      throw new Error('Toutes les questions générées étaient des doublons des existantes — réessaie ou lance la génération sur d\'autres sources.')
+      throw new Error('Toutes les questions générées étaient des doublons des existantes. Réessaie ou lance la génération sur d\'autres sources.')
     }
 
     // 8d. Mélange l'ordre du batch (sinon Gemini sort par ordre de pages source)
