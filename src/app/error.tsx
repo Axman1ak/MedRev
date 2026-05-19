@@ -1,7 +1,7 @@
 'use client'
 // src/app/error.tsx
 //
-// Error boundary global — affiché quand une page React plante côté client OU
+// Error boundary global,affiché quand une page React plante côté client OU
 // quand une route serveur retourne une erreur non gérée. Doit être un client
 // component (Next.js le requiert pour pouvoir afficher le reset()).
 
@@ -15,7 +15,7 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  // Log côté console pour le debugging — Vercel les remonte dans
+  // Log côté console pour le debugging,Vercel les remonte dans
   // ses logs serveur si l'erreur vient d'un server component.
   useEffect(() => {
     console.error('[GlobalError]', error)
@@ -83,7 +83,7 @@ export default function GlobalError({
             margin: '0 0 12px',
           }}
         >
-          On a noté le problème. Tu peux recharger pour réessayer — ça
+          On a noté le problème. Tu peux recharger pour réessayer, ça
           marche très souvent.
         </p>
 
