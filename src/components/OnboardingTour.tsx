@@ -101,7 +101,7 @@ const STEPS: Step[] = [
     title: (n) => `Bienvenue, ${n}`,
     body: (
       <>
-        Trois minutes pour comprendre MedRev. Tu vois ici ta navigation —{' '}
+        Trois minutes pour comprendre MedRev. Tu vois ici ta navigation,{' '}
         <strong>cinq espaces</strong> pour réviser.
       </>
     ),
@@ -128,7 +128,7 @@ const STEPS: Step[] = [
     title: () => 'Va sur Mes cours',
     body: (
       <>
-        Clique sur <strong>Mes cours</strong> dans la sidebar — c&apos;est
+        Clique sur <strong>Mes cours</strong> dans la sidebar. C&apos;est
         l&apos;onglet principal, tout part de là.
       </>
     ),
@@ -155,11 +155,11 @@ const STEPS: Step[] = [
     title: () => 'Le formulaire de matière',
     body: (
       <>
-        <strong>Nom</strong> — Anatomie, Biochimie, Histologie...
+        <strong>Nom</strong> : Anatomie, Biochimie, Histologie...
         <br />
-        <strong>Couleur</strong> — pour distinguer la matière dans le calendrier.
+        <strong>Couleur</strong> : pour distinguer la matière dans le calendrier.
         <br />
-        <strong>Semestre</strong> — pour t&apos;organiser entre S1 et S2.
+        <strong>Semestre</strong> : pour t&apos;organiser entre S1 et S2.
         <br /><br />
         Pendant le tutoriel, le bouton <strong>Créer la matière</strong> est
         désactivé. Clique sur <strong>Annuler</strong> pour continuer le tour.
@@ -196,7 +196,7 @@ const STEPS: Step[] = [
     title: () => 'Crée ta première fiche',
     body: (
       <>
-        Saisis un <strong>titre</strong> (ex : « Glycolyse — étapes et
+        Saisis un <strong>titre</strong> (ex : « Glycolyse, étapes et
         régulation »), vérifie la <strong>matière</strong>, et garde la{' '}
         <strong>date d&apos;apprentissage</strong> sur aujourd&apos;hui (c&apos;est
         ton J0).
@@ -213,11 +213,11 @@ const STEPS: Step[] = [
       <>
         Voici le formulaire pour créer une nouvelle fiche :
         <br />
-        <strong>Titre</strong> — « Glycolyse — étapes et régulation »
+        <strong>Titre</strong> : « Glycolyse, étapes et régulation »
         <br />
-        <strong>Matière</strong> — où la fiche est rangée
+        <strong>Matière</strong> : où la fiche est rangée
         <br />
-        <strong>Date d&apos;apprentissage (J0)</strong> — à partir de cette
+        <strong>Date d&apos;apprentissage (J0)</strong> : à partir de cette
         date, les J1, J3, J5, J7... jusqu&apos;à J120 se programment
         automatiquement.
         <br /><br />
@@ -265,7 +265,7 @@ const STEPS: Step[] = [
       <>
         Voici les 14 paliers de cette fiche. Les J <strong>passés ou
         d&apos;aujourd&apos;hui</strong> sont notables. Les J{' '}
-        <strong>futurs</strong> sont verrouillés — ils se débloquent à la bonne date.
+        <strong>futurs</strong> sont verrouillés. Ils se débloquent à la bonne date.
         <br /><br />
         (Pendant le tutoriel, ces paliers sont juste pour la démo —
         clique <strong>Suivant</strong> pour continuer.)
@@ -303,8 +303,8 @@ const STEPS: Step[] = [
         MedRev génère automatiquement <strong>30 QCM</strong> par fiche dès
         qu&apos;une source est uploadée. Lance des sessions de révision ici.
         <br /><br />
-        Important : <strong>ces QCM alimentent aussi le Simulateur</strong> —
-        sans QCM générés, pas d&apos;examen blanc possible.
+        Important : <strong>ces QCM alimentent aussi le Simulateur</strong>.
+        Sans QCM générés, pas d&apos;examen blanc possible.
         <br /><br />
         <em className="ont-premium-note">
           Plan Gratuit : 10 générations IA totales sur tout le compte.{' '}
@@ -363,13 +363,13 @@ const STEPS: Step[] = [
       <>
         Tout ton travail quotidien est <strong>centralisé ici</strong> :
         <br />
-        — la queue d&apos;<strong>aujourd&apos;hui</strong> (les fiches dues),
+        · la queue d&apos;<strong>aujourd&apos;hui</strong> (les fiches dues),
         <br />
-        — ton <strong>point faible</strong> du moment,
+        · ton <strong>point faible</strong> du moment,
         <br />
-        — ta <strong>régularité</strong> (streak de jours actifs),
+        · ta <strong>régularité</strong> (streak de jours actifs),
         <br />
-        — ta <strong>charge à venir</strong> sur 4 semaines.
+        · ta <strong>charge à venir</strong> sur 4 semaines.
       </>
     ),
   },
@@ -855,7 +855,7 @@ export default function OnboardingTour({
               Tu n&apos;as pas encore de fiche. Voici un aperçu de ce que tu
               trouveras une fois que tu en auras créé une :
               <br /><br />
-              <strong>Carte fiche</strong> — 14 cases représentent les 14
+              <strong>Carte fiche</strong> : 14 cases représentent les 14
               paliers J0 → J120. Notation de <strong>1</strong> (à revoir) à{' '}
               <strong>5</strong> (acquis) à chaque échéance.
               <br /><br />
