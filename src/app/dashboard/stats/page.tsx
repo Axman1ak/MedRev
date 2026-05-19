@@ -416,7 +416,7 @@ export default function StatsPage() {
           <p className="stats-empty-global-text">
             Note ta première fiche au jour J pour activer ta heatmap, ton
             sparkline 12 semaines et tes dumbbells par matière. Les stats
-            n&apos;ont de sens qu&apos;une fois que tu as 5-10 fiches notées —
+            n&apos;ont de sens qu&apos;une fois que tu as 5-10 fiches notées,
             avant ça, elles sont vides.
           </p>
           <Link href="/dashboard/fiches" className="stats-empty-global-btn">
@@ -482,7 +482,7 @@ export default function StatsPage() {
             <div className="stats-sec-info">
               <div className="stats-sec-label">Jours actifs</div>
               <div className="stats-sec-sub">
-                {daySpan > 0 ? `sur ${daySpan} jours · ${activePct}% de présence` : '—'}
+                {daySpan > 0 ? `sur ${daySpan} jours · ${activePct}% de présence` : '·'}
               </div>
             </div>
           </div>
@@ -578,7 +578,7 @@ export default function StatsPage() {
                   <div className="stats-jbar-track">
                     <div className={`stats-jbar-fill ${cls}`} style={{ height: `${pct}%` }} title={j.avg !== null ? `${j.avg.toFixed(1)}/5 · ${j.count} note${j.count > 1 ? 's' : ''}` : 'aucune note'} />
                   </div>
-                  <div className="stats-jbar-val">{j.avg !== null ? j.avg.toFixed(1) : '—'}</div>
+                  <div className="stats-jbar-val">{j.avg !== null ? j.avg.toFixed(1) : '·'}</div>
                   <div className="stats-jbar-lbl">{j.jLabel}</div>
                 </div>
               )
