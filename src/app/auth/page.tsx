@@ -49,6 +49,15 @@ const BASE_S2 = [
   { name: 'Anatomie spécifique', icon: '🫀', semestre: 2 as const },
 ]
 
+// Variante Paris Cité : SSH est en S1 d'après la maquette officielle
+// (UE7 - Sciences humaines et sociales en première partie de la majeure).
+// On retire SSH de la base S2 et on ajoute une matière équivalente en S1.
+const BASE_S2_PC = BASE_S2.filter(m => m.name !== 'Santé, Société, Humanité')
+const BASE_S1_PC = [
+  ...BASE_S1,
+  { name: 'Santé, Société, Humanité', icon: '🌍', semestre: 1 as const },
+]
+
 // Matières spécifiques à chaque mineure disciplinaire.
 const MIN_SCIENCES = [
   { name: 'Physique', icon: '⚡', semestre: 1 as const },
@@ -98,11 +107,13 @@ const FAC_SYSTEMS: Record<string, Record<string, { name: string; icon: string; s
     lettres: [...BASE_S1, ...MIN_LETTRES, ...BASE_S2],
   },
   'paris-cite': {
-    bpc: [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
-    droit: [...BASE_S1, ...MIN_DROIT, ...BASE_S2],
-    'eco-gestion': [...BASE_S1, ...MIN_ECO, ...BASE_S2],
-    psychologie: [...BASE_S1, ...MIN_PSY, ...BASE_S2],
-    'sport-sante': [...BASE_S1, ...MIN_STAPS, ...BASE_S2],
+    // À PC, SSH est en S1 (pas en S2 comme à Sorbonne). On utilise les bases
+    // adaptées BASE_S1_PC / BASE_S2_PC pour refléter ça correctement.
+    bpc: [...BASE_S1_PC, ...MIN_SCIENCES, ...BASE_S2_PC],
+    droit: [...BASE_S1_PC, ...MIN_DROIT, ...BASE_S2_PC],
+    'eco-gestion': [...BASE_S1_PC, ...MIN_ECO, ...BASE_S2_PC],
+    psychologie: [...BASE_S1_PC, ...MIN_PSY, ...BASE_S2_PC],
+    'sport-sante': [...BASE_S1_PC, ...MIN_STAPS, ...BASE_S2_PC],
   },
   'sorbonne-paris-nord': {
     'sciences-vie': [...BASE_S1, ...MIN_SCIENCES, ...BASE_S2],
@@ -457,8 +468,12 @@ function AuthContent() {
                 <button type="button" className="auth-back-btn" onClick={() => setStep('fac')}>← Retour</button>
                 <div className="auth-step-title">Quelle est ta mineure disciplinaire ?</div>
                 <div className="auth-step-sub">
-                  Choisis ta mineure pour pré-configurer tes matières.
-                  {' '}Tu pourras toujours ajouter, renommer ou supprimer des matières une fois ton compte créé.
+                  Choisis ta mineure pour pré-configurer tes matières. La
+                  répartition S1/S2 ci-dessous est <em>indicative</em> — elle
+                  est basée sur les programmes officiels mais peut varier
+                  d&apos;une année à l&apos;autre. Tu pourras déplacer une
+                  matière entre S1 et S2 (ou la renommer, la supprimer)
+                  depuis la page Mes cours après inscription.
                 </div>
                 <div className="auth-opt-list">
                   {/* Liste dynamique des mineures de la fac choisie. Si pas de
