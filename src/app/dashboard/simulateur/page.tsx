@@ -944,7 +944,7 @@ export default function SimulateurPage() {
 
   function renderResults() {
     const message = score >= 70 ? 'Excellente session' : score >= 50 ? 'Bonne session' : 'À retravailler'
-    const submessage = score >= 70 ? '— tu maîtrises l\'essentiel.' : score >= 50 ? '— tu progresses, continue.' : '— c\'est en faisant les fautes qu\'on apprend.'
+    const submessage = score >= 70 ? 'tu maîtrises l\'essentiel.' : score >= 50 ? 'tu progresses, continue.' : 'c\'est en faisant les fautes qu\'on apprend.'
     const scoreCls = score >= 70 ? 'ok' : score >= 50 ? 'amber' : 'rose'
     const totalSeconds = duration !== null ? duration * 60 - timeLeft : 0
     const tu = formatTime(totalSeconds)
@@ -1000,7 +1000,7 @@ export default function SimulateurPage() {
 
           {hasRatings && (
             <div className="sim-res-rates">
-              <div className="sim-res-rates-h">Ressenti — répartition de tes réponses</div>
+              <div className="sim-res-rates-h">Ressenti · répartition de tes réponses</div>
               <div className="sim-res-rates-bar">
                 {r1 > 0 && <div className="sim-res-rates-segment r1" style={{ width: `${(r1 / rTotal) * 100}%` }} />}
                 {r2 > 0 && <div className="sim-res-rates-segment r2" style={{ width: `${(r2 / rTotal) * 100}%` }} />}
