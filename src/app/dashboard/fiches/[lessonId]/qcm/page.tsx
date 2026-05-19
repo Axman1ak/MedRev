@@ -374,13 +374,13 @@ export default function QcmSessionPage() {
         <div className="qcm-topbar">
           <button className="qcm-topback" onClick={quitToFiches}>←</button>
           <span className="qcm-ctx">
-            <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> — session terminée
+            <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · session terminée
           </span>
         </div>
 
         <div className="qcm-end">
           <div className={`qcm-end-score ${haloCls}`}>{score}<span className="qcm-end-pct">%</span></div>
-          <div className="qcm-end-message"><strong>{message}</strong> — {submessage}</div>
+          <div className="qcm-end-message"><strong>{message}</strong>, {submessage}</div>
 
           <div className="qcm-end-stats">
             <div className="qcm-end-stat">
@@ -518,7 +518,7 @@ export default function QcmSessionPage() {
       <div className="qcm-topbar">
         <button className="qcm-topback" onClick={quitToFiches}>←</button>
         <span className="qcm-ctx">
-          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> — session de <em>{questions.length} questions</em>
+          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · session de <em>{questions.length} questions</em>
         </span>
       </div>
 
