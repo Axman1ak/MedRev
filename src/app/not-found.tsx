@@ -1,12 +1,12 @@
 // src/app/not-found.tsx
 //
-// Page 404 globale — affichée quand Next.js ne trouve pas la route demandée.
+// Page 404 globale, affichée quand Next.js ne trouve pas la route demandée.
 // Style aligné sur les pages marketing (Cinzel, palette MedRev).
 
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Page introuvable — MedRev',
+  title: 'Page introuvable · MedRev',
 }
 
 export default function NotFound() {
