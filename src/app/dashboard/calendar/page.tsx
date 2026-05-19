@@ -332,7 +332,7 @@ export default function CalendarPage() {
             {view === 'week' && weekTotal > 0
               ? <>{weekTotal} révision{weekTotal > 1 ? 's' : ''} cette semaine{weekDone > 0 ? ` · ${weekDone} déjà notée${weekDone > 1 ? 's' : ''}` : ''}</>
               : view === 'week' ? 'Aucune révision planifiée cette semaine'
-              : 'Vue mensuelle — clique sur un jour pour y aller'}
+              : 'Vue mensuelle · clique sur un jour pour y aller'}
           </div>
         </div>
         <div className="cal-controls">
@@ -426,7 +426,7 @@ export default function CalendarPage() {
                 </div>
 
                 {occs.length === 0 ? (
-                  <div className="cal-day-empty">{'—'}</div>
+                  <div className="cal-day-empty">{'·'}</div>
                 ) : (
                   <>
                     <div className="cal-day-list">
