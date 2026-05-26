@@ -20,7 +20,7 @@
 @keyframes lp-ekgdraw{to{stroke-dashoffset:0}}
 
 .lp-root{background:var(--lp-ink);color:var(--lp-fg);font-family:var(--lp-fb);
-  -webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.5;cursor:none;
+  -webkit-font-smoothing:antialiased;overflow-x:clip;line-height:1.5;cursor:none;
   letter-spacing:-.006em;min-height:100vh;position:relative}
 .lp-root *{box-sizing:border-box;margin:0;padding:0}
 .lp-root::before{content:"";position:fixed;inset:0;z-index:9997;pointer-events:none;opacity:.05;
@@ -177,13 +177,20 @@
 .lp-tline-curve{position:absolute;top:0;left:0;right:0;height:60px;display:block;opacity:.7}
 .lp-tline-curve path{stroke-dasharray:800;stroke-dashoffset:800;transition:stroke-dashoffset 1.6s cubic-bezier(.16,1,.3,1)}
 .lp-tline-curve.draw path{stroke-dashoffset:0}
-.lp-tline-track{position:relative;height:80px;border-top:1px dashed var(--lp-line-2);border-bottom:1px dashed var(--lp-line-2)}
+.lp-tline-track{position:relative;height:140px;border-top:1px dashed var(--lp-line-2);border-bottom:1px dashed var(--lp-line-2)}
 .lp-tline-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,var(--lp-line-2),var(--lp-lime),var(--lp-line-2))}
-.lp-pill{position:absolute;top:50%;transform:translate(-50%,-50%) scale(.6);opacity:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .4s;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap}
-.lp-pill.up{transform:translate(-50%,-50%) scale(1);opacity:1}
-.lp-pill-bubble{font-family:var(--lp-fb);font-weight:700;font-size:10.5px;color:var(--lp-ink);background:var(--lp-lime);padding:5px 10px;border-radius:20px;letter-spacing:-.005em;box-shadow:0 4px 10px -3px rgba(63,217,146,.5)}
-.lp-pill-day{font-family:var(--lp-fm);font-size:10px;color:var(--lp-soft);letter-spacing:.02em}
-.lp-pill.late .lp-pill-bubble{background:var(--lp-lime-soft);color:var(--lp-lime);border:1px solid var(--lp-lime-d)}
+/* Pastille = point sur la ligne (::after) + bulle + date, en alternance haut/bas pour Ã©viter le chevauchement quand les dates sont proches. */
+.lp-pill{position:absolute;top:0;bottom:0;width:1px;pointer-events:none;opacity:0;transition:opacity .4s}
+.lp-pill.up{opacity:1}
+.lp-pill::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.3);width:11px;height:11px;border-radius:50%;background:var(--lp-lime);box-shadow:0 0 8px var(--lp-lime-soft);transition:transform .45s cubic-bezier(.34,1.56,.64,1);z-index:2}
+.lp-pill.up::after{transform:translate(-50%,-50%) scale(1)}
+.lp-pill-bubble{position:absolute;left:50%;transform:translateX(-50%);font-family:var(--lp-fb);font-weight:700;font-size:9.5px;color:var(--lp-ink);background:var(--lp-lime);padding:2px 7px;border-radius:10px;letter-spacing:-.01em;white-space:nowrap;box-shadow:0 3px 8px -2px rgba(63,217,146,.4)}
+.lp-pill-day{position:absolute;left:50%;transform:translateX(-50%);font-family:var(--lp-fm);font-size:10px;color:var(--lp-soft);letter-spacing:.02em;white-space:nowrap}
+.lp-pill:nth-child(odd) .lp-pill-bubble{bottom:calc(50% + 12px)}
+.lp-pill:nth-child(odd) .lp-pill-day{bottom:calc(50% + 36px)}
+.lp-pill:nth-child(even) .lp-pill-bubble{top:calc(50% + 12px)}
+.lp-pill:nth-child(even) .lp-pill-day{top:calc(50% + 36px)}
+.lp-pill.late .lp-pill-bubble{background:var(--lp-lime-soft);color:var(--lp-lime);border:1px solid var(--lp-lime-d);box-shadow:none}
 .lp-tline-cap{margin-top:36px;text-align:center;font-size:17px;color:var(--lp-soft);max-width:560px;margin-left:auto;margin-right:auto}
 .lp-tline-cap b{color:var(--lp-fg);font-family:var(--lp-fd);font-weight:700}
 
