@@ -19,8 +19,14 @@
 @keyframes lp-pulse{0%{box-shadow:0 0 0 0 rgba(63,217,146,.5)}70%{box-shadow:0 0 0 8px rgba(63,217,146,0)}100%{box-shadow:0 0 0 0 rgba(63,217,146,0)}}
 @keyframes lp-ekgdraw{to{stroke-dashoffset:0}}
 
+/* GARDE-FOU : neutralise tout overflow imposÃ© par globals.css ou un layout parent
+   qui casserait position:sticky de la section mÃ©thode. La landing impose le scroll
+   sur <html>, pas sur <body> ni sur .lp-root. */
+html:has(.lp-root){overflow-x:clip}
+body:has(.lp-root){overflow:visible!important;overflow-x:clip!important}
+
 .lp-root{background:var(--lp-ink);color:var(--lp-fg);font-family:var(--lp-fb);
-  -webkit-font-smoothing:antialiased;overflow-x:clip;line-height:1.5;cursor:none;
+  -webkit-font-smoothing:antialiased;overflow:visible;line-height:1.5;cursor:none;
   letter-spacing:-.006em;min-height:100vh;position:relative}
 .lp-root *{box-sizing:border-box;margin:0;padding:0}
 .lp-root::before{content:"";position:fixed;inset:0;z-index:9997;pointer-events:none;opacity:.05;
