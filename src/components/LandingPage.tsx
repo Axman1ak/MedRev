@@ -47,12 +47,23 @@ const FEATURES = [
   ['▶', 'Examen blanc', "Type concours : timer, grille de réponses, 0 indice avant la fin. Corrigé détaillé après."],
 ]
 
-const PIPE_HEIGHTS = [100, 72, 80, 58, 64, 48, 52, 40, 44, 34, 38, 30, 32, 26]
-const PIPE_LABELS = ['J0', 'J1', 'J2', 'J4', 'J7', 'J11', 'J16', 'J23', 'J32', 'J45', 'J60', 'J80', 'J100', 'J120']
+// Timeline points — 14 rappels MedRev sur 120 jours (sqrt mapping pour lisibilité)
+const TIMELINE = (() => {
+  const days = [0, 1, 2, 4, 7, 11, 16, 23, 32, 45, 60, 80, 100, 120]
+  // Date de départ : 20 mai 2026 (cohérent avec le mockup)
+  const start = new Date(2026, 4, 20)
+  const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+  return days.map((d, i) => {
+    const dt = new Date(start); dt.setDate(start.getDate() + d)
+    const x = 2 + Math.sqrt(d / 120) * 94 // 2% → 96% sqrt-mapped
+    return { day: d, x, date: fmt(dt), late: i > 7 }
+  })
+})()
+
 const STAGE_TITLES = [
-  'Un cours <span class="accent">entre.</span>',
-  '30 QCM <span class="accent">sortent.</span>',
-  'Le planning <span class="accent">se cale.</span>',
+  'Tu déposes <span class="accent">ton cours.</span>',
+  'L\'IA fabrique <span class="accent">30 QCM type concours.</span>',
+  'Ta fiche revient <span class="accent">14 fois sur 120 jours.</span>',
 ]
 const STAGE_STEPS = ['// 01 — IMPORT', '// 02 — GÉNÉRATION', '// 03 — PLANNING']
 
@@ -71,13 +82,11 @@ export default function LandingPage() {
   const act3Ref = useRef<HTMLDivElement>(null)
   const labelRef = useRef<HTMLDivElement>(null)
   const stepRef = useRef<HTMLDivElement>(null)
-  const bar1Ref = useRef<HTMLDivElement>(null)
-  const bar2Ref = useRef<HTMLDivElement>(null)
   const scrubFillRef = useRef<HTMLDivElement>(null)
   const scrubTcRef = useRef<HTMLSpanElement>(null)
   const ppRefs = [useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null)]
-  const qCellsRef = useRef<HTMLDivElement>(null)
-  const planRef = useRef<HTMLDivElement>(null)
+  const tlineRef = useRef<HTMLDivElement>(null)
+  const tlineCurveRef = useRef<SVGSVGElement>(null)
   // J-curve
   const jsvgRef = useRef<SVGSVGElement>(null)
   // QCM demo state
@@ -198,26 +207,20 @@ export default function LandingPage() {
       act3Ref.current?.classList.toggle('show', act === 2)
 
       if (act === 0) {
+        // Acte 1 : on fait progresser le scrub vidéo
         const lp = clamp(p / 0.34)
-        if (bar1Ref.current) bar1Ref.current.style.width = Math.min(100, lp * 160) + '%'
-        if (bar2Ref.current) bar2Ref.current.style.width = Math.min(100, lp * 160 - 30) + '%'
-        const sp = clamp((lp - 0.4) / 0.6) * 100
+        const sp = clamp(lp * 1.4) * 100
         if (scrubFillRef.current) scrubFillRef.current.style.width = sp + '%'
         const m = Math.floor((sp / 100) * 47)
         if (scrubTcRef.current) scrubTcRef.current.textContent = String(m).padStart(2, '0') + ':00 / 47:00'
       }
-      if (act === 1) {
-        const lp = clamp((p - 0.34) / 0.33)
-        const n = Math.floor(lp * 30)
-        qCellsRef.current?.querySelectorAll<HTMLDivElement>('.q').forEach((c, i) => {
-          c.classList.toggle('pop', i < n)
-          c.classList.toggle('hi', i < n && i % 7 === 3)
-        })
-      }
+      // Acte 2 : statique, la carte QCM est lisible telle quelle
       if (act === 2) {
+        // Acte 3 : les 14 rendez-vous apparaissent l'un après l'autre + la courbe se trace
         const lp = clamp((p - 0.67) / 0.33)
-        const n = Math.floor(lp * 14)
-        planRef.current?.querySelectorAll<HTMLDivElement>('.p').forEach((c, i) => c.classList.toggle('up', i < n))
+        const n = Math.floor(lp * TIMELINE.length)
+        tlineRef.current?.querySelectorAll<HTMLDivElement>('.lp-pill').forEach((c, i) => c.classList.toggle('up', i < n))
+        tlineCurveRef.current?.classList.toggle('draw', lp > 0.1)
       }
     }
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -314,43 +317,77 @@ export default function LandingPage() {
               <div className="label" ref={labelRef} dangerouslySetInnerHTML={{ __html: STAGE_TITLES[0] }} />
               <div className="step" ref={stepRef}>{STAGE_STEPS[0]}</div>
             </div>
+            {/* ACT 1 — vrai bloc cours, ce que le P1 dépose */}
             <div className="lp-act" ref={act1Ref}>
-              <div className="lp-panel lp-imp">
-                <h4>◷ Flux d'import · cardiologie</h4>
-                <div className="lp-file">
-                  <div className="ic">▶</div>
-                  <div className="nm">cours-glycolyse.mp4</div>
-                  <div className="meta">47 min</div>
-                  <div className="bar" ref={bar1Ref} />
+              <div className="lp-cc">
+                <div className="lp-cc-top">
+                  <span className="lp-cc-fac">Sorbonne · UE3</span>
+                  <span className="lp-cc-mat">BIOCHIMIE · S1</span>
                 </div>
-                <div className="lp-file">
-                  <div className="ic">P</div>
-                  <div className="nm">poly-glycolyse-2026.pdf</div>
-                  <div className="meta">8 Mo</div>
-                  <div className="bar" ref={bar2Ref} />
+                <div className="lp-cc-row">
+                  <div className="lp-cc-thumb">
+                    <svg viewBox="0 0 64 64"><polygon points="24,18 48,32 24,46" fill="var(--lp-lime)" /></svg>
+                  </div>
+                  <div>
+                    <div className="lp-cc-title">Glycolyse — voie cytosolique</div>
+                    <div className="lp-cc-meta">cours-glycolyse.mp4 · 47 min · Pr. Dupont</div>
+                  </div>
                 </div>
-                <div className="lp-scrub">
+                <div className="lp-cc-scrub">
                   <div className="fill" ref={scrubFillRef} />
                   <span className="tc" ref={scrubTcRef}>00:00 / 47:00</span>
                 </div>
+                <div className="lp-cc-foot">
+                  <span className="lp-cc-check">✓ Vidéo + poly analysés</span>
+                  <span>~90 s</span>
+                </div>
               </div>
             </div>
+
+            {/* ACT 2 — vraie carte QCM lisible, pas une grille abstraite */}
             <div className="lp-act" ref={act2Ref}>
-              <div className="lp-qgrid" ref={qCellsRef}>
-                {Array.from({ length: 30 }, (_, i) => <div key={i} className="q">{i + 1}</div>)}
+              <div className="lp-qstack">
+                <div className="lp-qstack-back lp-qb2" />
+                <div className="lp-qstack-back lp-qb1" />
+                <div className="lp-qstack-main">
+                  <div className="lp-qm-top">
+                    <span>Question 12 / 30</span>
+                    <span className="lp-qm-src">▶ Source · 18:42</span>
+                  </div>
+                  <div className="lp-qm-q">L'enzyme régulatrice de la glycolyse, dont l'activité est inhibée par l'ATP, est :</div>
+                  <div className="lp-qm-opts">
+                    <div className="lp-qm-opt"><b>A.</b> Hexokinase</div>
+                    <div className="lp-qm-opt lp-qm-correct"><b>B.</b> Phosphofructokinase-1 <span className="lp-check">✓</span></div>
+                    <div className="lp-qm-opt"><b>C.</b> Pyruvate kinase</div>
+                    <div className="lp-qm-opt"><b>D.</b> Aldolase</div>
+                    <div className="lp-qm-opt"><b>E.</b> Énolase</div>
+                  </div>
+                </div>
               </div>
-              <div className="lp-cap"><b>30 QCM</b> générés · distribution A→E uniforme</div>
+              <div className="lp-cap"><b>30 QCM</b> type concours · réponses justifiées · source en 1 clic</div>
             </div>
+
+            {/* ACT 3 — vraie frise calendrier avec dates concrètes */}
             <div className="lp-act" ref={act3Ref}>
-              <div className="lp-panel lp-plan">
-                <div className="lp-plan-row" ref={planRef}>
-                  {PIPE_HEIGHTS.map((h, i) => (
-                    <div key={i} className="p" style={{ height: h + '%', opacity: i < 5 ? 1 : i < 10 ? 0.78 : 0.55 }}>
-                      <span>{PIPE_LABELS[i]}</span>
+              <div className="lp-tline">
+                <svg className="lp-tline-curve" viewBox="0 0 760 60" preserveAspectRatio="none" ref={tlineCurveRef} aria-hidden>
+                  <path
+                    d="M 15,52 Q 60,46 80,42 Q 100,38 107,34 Q 125,32 146,30 Q 165,28 188,26 Q 215,24 232,22 Q 270,20 276,18 Q 320,17 328,16 Q 380,15 388,14 Q 450,13 452,12 Q 520,12 521,11 Q 600,11 599,10 Q 670,11 669,10 L 745,10"
+                    stroke="var(--lp-lime)" strokeWidth="2" fill="none"
+                    filter="drop-shadow(0 0 5px rgba(63,217,146,.4))"
+                  />
+                </svg>
+                <div className="lp-tline-track" ref={tlineRef}>
+                  {TIMELINE.map((t, i) => (
+                    <div key={i} className={'lp-pill' + (t.late ? ' late' : '')} style={{ left: t.x + '%' }}>
+                      <div className="lp-pill-bubble">Glycolyse</div>
+                      <div className="lp-pill-day">{t.date}</div>
                     </div>
                   ))}
                 </div>
-                <div className="lp-plan-cap"><b>14 paliers</b> J0 → J+120 · courbe d'Ebbinghaus</div>
+                <div className="lp-tline-cap">
+                  <b>14 rendez-vous</b> avec la même fiche, espacés selon ta maîtrise. La mémoire se consolide à chaque retour.
+                </div>
               </div>
             </div>
             <div className="lp-bars">
@@ -531,8 +568,53 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* PRICING */}
+      <section className="lp-sec" id="tarifs">
+        <div className="lp-wrap">
+          <span className="lp-k lp-rv">Tarifs · sans piège</span>
+          <h2 className="lp-h2 lp-rv d1" style={{ marginBottom: 46 }}>Gratuit pour démarrer. <span className="accent">Premium quand tu en veux plus.</span></h2>
+          <div className="lp-pricing">
+            <div className="lp-tier lp-rv d1">
+              <div className="lp-tier-name">Gratuit</div>
+              <div className="lp-tier-tag">Pour démarrer ta P1</div>
+              <div className="lp-tier-price"><span className="num">0€</span><span className="per">· pour toujours</span></div>
+              <div className="lp-tier-alt"><b>Sans carte bancaire</b> · sans engagement</div>
+              <ul className="lp-tier-list">
+                <li>Matières, fiches, calendrier, courbe J <b>illimités</b></li>
+                <li><b>10 générations IA</b> de QCM</li>
+                <li><b>3 sessions</b> simulateur (apprentissage)</li>
+                <li>Vidéo jusqu'à 30 min · PDF jusqu'à 20 Mo</li>
+                <li>Bibliothèque & gamification (2000 livres, 6 trésors)</li>
+                <li>Sessions Focus illimitées</li>
+                <li className="off">Mode Examen blanc</li>
+                <li className="off">Stats avancées (heatmap, sparkline)</li>
+              </ul>
+              <Link href="/auth" className="lp-tier-btn ghost" data-magnet>Commencer gratuit</Link>
+              <div className="lp-tier-foot">Aucune limite de durée</div>
+            </div>
+
+            <div className="lp-tier featured lp-rv d2">
+              <div className="lp-tier-name">Premium</div>
+              <div className="lp-tier-tag">Pour aller au bout</div>
+              <div className="lp-tier-price"><span className="num">4,99€</span><span className="per">/ mois</span></div>
+              <div className="lp-tier-alt">ou <b>39€/an</b> (économise 35%)</div>
+              <ul className="lp-tier-list">
+                <li><b>Tout du Gratuit</b>, sans aucune limite</li>
+                <li><b>QCM IA illimités</b> sur tous tes cours</li>
+                <li><b>Simulateur illimité</b> + Mode Examen blanc</li>
+                <li>Vidéo / PDF <b>sans limite de taille</b></li>
+                <li>Stats avancées : heatmap 52 sem, sparkline, dumbbell</li>
+                <li>Priorité support</li>
+              </ul>
+              <Link href="/auth?plan=premium" className="lp-tier-btn primary" data-magnet>Passer Premium →</Link>
+              <div className="lp-tier-foot">Résiliable en 1 clic · prélevé en €</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FINAL CTA */}
-      <section className="lp-fcta" id="tarifs">
+      <section className="lp-fcta">
         <div className="lp-fcta-glow" />
         <h2 className="lp-fcta-h">La P1 commence.<br /><span className="accent">Tu commences avec elle.</span></h2>
         <p className="lp-fcta-sub">Pré-configure ton compte en 2 minutes. Tes matières Sorbonne / Paris Cité / Lyon… sont déjà prêtes selon ta fac.</p>
