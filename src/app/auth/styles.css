@@ -1,0 +1,399 @@
+/* ============================================================================
+   src/app/auth/styles.css
+   Styles autonomes de la page /auth.
+   Reconstruit depuis l'ancien landing-styles.css qui Ã©tait partagÃ© entre
+   landing et auth. DÃ©sormais dÃ©couplÃ© : la landing utilise sa CSS rupture,
+   l'auth a la sienne propre, basÃ©e sur le design system de globals.css.
+   ============================================================================ */
+
+/* ---- Wrapper page (avant : .lp-page) ---- */
+.lp-page {
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Petit kicker en haut du bloc (avant : .lp-hero-kicker) ---- */
+.lp-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-medium);
+  background: var(--accent-soft);
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--accent-soft);
+  margin-bottom: 18px;
+}
+
+/* ---- Layout gÃ©nÃ©ral de la page auth ---- */
+.auth-page {
+  flex: 1;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 64px 32px 80px;
+}
+.auth-page-head {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.auth-h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+  font-size: clamp(38px, 5.5vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0 0 18px;
+}
+.auth-h1 em {
+  font-style: italic;
+  color: var(--accent-medium);
+  font-weight: 500;
+}
+.auth-sub {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+/* ---- Grille deux colonnes (trust + formulaire) ---- */
+.auth-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 48px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .auth-grid { grid-template-columns: 1fr; gap: 32px; }
+  .auth-page { padding: 40px 20px 64px; }
+}
+
+/* ---- Colonne de confiance (gauche) ---- */
+.auth-trust {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 26px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+}
+.auth-trust-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.auth-trust-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-on-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---- Carte formulaire (droite) ---- */
+.auth-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: var(--shadow-md);
+}
+
+/* ---- Tabs CrÃ©er/Connecter ---- */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+.auth-tab {
+  border: none;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.auth-tab:hover { color: var(--text-primary); }
+.auth-tab.active {
+  background: var(--bg-card);
+  color: var(--accent-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ---- Indicateur d'Ã©tapes ---- */
+.auth-progress {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.auth-dot {
+  width: 28px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--border-subtle);
+  transition: background 0.2s;
+}
+.auth-dot.on { background: var(--accent-medium); }
+.auth-dot.done { background: var(--accent-primary); }
+
+/* ---- Pane (contenu d'un onglet/Ã©tape) ---- */
+.auth-pane { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---- Champs de formulaire ---- */
+.auth-form-group { display: flex; flex-direction: column; gap: 6px; }
+.auth-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.auth-input:focus {
+  border-color: var(--accent-medium);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.auth-input::placeholder { color: var(--text-tertiary); }
+
+/* ---- CTA principal ---- */
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 22px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
+  margin-top: 8px;
+}
+.auth-submit:hover:not(:disabled) {
+  background: var(--accent-medium);
+  transform: translateY(-1px);
+}
+.auth-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ---- Mention CGU sous le formulaire ---- */
+.auth-terms {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-top: 6px;
+}
+.auth-terms a {
+  color: var(--accent-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.auth-terms a:hover { color: var(--accent-primary); }
+
+/* ---- Bouton retour Ã©tape ---- */
+.auth-back-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.auth-back-btn:hover { color: var(--text-primary); }
+
+.auth-step-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin-top: 8px;
+}
+.auth-step-sub {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.auth-step-sub em { color: var(--accent-medium); font-style: italic; }
+
+/* ---- Liste des facs ---- */
+.auth-fac-list { display: flex; flex-direction: column; gap: 8px; }
+.auth-fac-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s, background 0.18s;
+}
+.auth-fac-item:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-soft);
+}
+.auth-fac-item.sel {
+  border-color: var(--accent-medium);
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+.auth-fac-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  padding: 3px 9px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.auth-fac-item.sel .auth-fac-badge {
+  background: var(--bg-card);
+  color: var(--accent-medium);
+}
+
+/* ---- Options mineure (cartes plus grandes) ---- */
+.auth-opt-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 540px) { .auth-opt-list { grid-template-columns: 1fr; } }
+.auth-opt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+.auth-opt-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-soft);
+}
+.auth-opt-card.sel {
+  border-color: var(--accent-medium);
+  background: var(--accent-soft);
+}
+.auth-opt-card-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+.auth-opt-card.sel .auth-opt-card-title { color: var(--accent-primary); }
+.auth-opt-card-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.auth-opt-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.auth-opt-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+}
+.auth-opt-card.sel .auth-opt-tag {
+  background: var(--bg-card);
+  color: var(--accent-medium);
+}
+
+/* ---- Lien "mot de passe oubliÃ©" ---- */
+.auth-forgot {
+  align-self: center;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin-top: 4px;
+}
+.auth-forgot:hover { color: var(--accent-medium); }
+
+/* ---- Messages d'erreur / succÃ¨s ---- */
+.auth-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.auth-success {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
