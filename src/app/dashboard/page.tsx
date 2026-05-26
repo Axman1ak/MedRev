@@ -12,7 +12,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import './dashboard-styles.css'
+import './styles.css'
 
 // ============================================================
 // MOCK DATA — TODO: remplacer par les vraies requêtes Supabase
