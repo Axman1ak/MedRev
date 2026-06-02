@@ -9,6 +9,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import './styles.css'
 
 const ICONS = {
@@ -21,6 +23,7 @@ const ICONS = {
   moon: <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />,
   help: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /></>,
   play: <path d="M5 3l14 9-14 9V3z" />,
+  logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>,
 } as const
 
 type IconKey = keyof typeof ICONS
@@ -37,6 +40,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
   const [activeNav, setActiveNav] = useState<string>('dashboard')
   const [activeTab, setActiveTab] = useState<'home' | 'cal' | 'courses' | 'stats'>('home')
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth')
+    router.refresh()
+  }
 
   const Icon = (k: IconKey) => <svg viewBox="0 0 24 24" aria-hidden>{ICONS[k]}</svg>
 
@@ -76,6 +87,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {Icon('help')}
             <span className="tip">Aide & tutoriel</span>
           </Link>
+          <button
+            type="button"
+            className="rail-i"
+            onClick={handleLogout}
+            aria-label="Se déconnecter"
+            style={{ background: 'transparent', border: 'none', font: 'inherit', textAlign: 'left' }}
+          >
+            {Icon('logout')}
+            <span className="tip">Se déconnecter</span>
+          </button>
           {/* TODO: tirer initiales + nom + plan depuis le profil Supabase */}
           <Link href="/settings" className="rail-avatar">
             <span className="av">LO</span>
