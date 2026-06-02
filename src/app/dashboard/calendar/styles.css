@@ -27,16 +27,12 @@
   --cal-s5: #1B4332;
   --cal-neutral: var(--bg-muted);
 
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 22px 28px;
   gap: 14px;
-  background: var(--cal-bg);
   box-sizing: border-box;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
   color: var(--cal-dark);
