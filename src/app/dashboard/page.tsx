@@ -5,11 +5,11 @@
 // ils vivent dans dashboard/layout.tsx et sont partagés avec les sous-routes.
 // Cette page ne rend QUE le contenu spécifique au dashboard :
 // - header (greeting + search + bell)
-// - content grid (focal + queue + biblio panel)
+// - content grid (focal + queue + biblio panel avec étagère 3 rangées)
 // - stat-strip
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 // ============================================================
 // MOCK DATA — TODO: remplacer par les vraies requêtes Supabase
@@ -41,14 +41,34 @@ const ICONS = {
 } as const
 type IconKey = keyof typeof ICONS
 
+// ============================================================
+// BIBLIOTHÈQUE — étagère 3 rangées × 22 livres
+// Rendu en JSX statique : pas de measurement DOM, ça marche toujours.
+// Distribution : majorité vert (palette), quelques crème pour le contraste,
+// 3 trésors or répartis dans la collection.
+// ============================================================
+const SHELF_ROWS = 3
+const BOOKS_PER_ROW = 22
+const TOTAL_SLOTS = SHELF_ROWS * BOOKS_PER_ROW  // 66
+
 const SPINES = ['#1E7A50', '#2E9E6B', '#15573A', '#0F5132', '#247A55', '#3AA06B', '#114A33', '#1B6E49', '#43B57F', '#176E47']
-const CREAM = '#E8E2CF'
-const rand = (s: number) => { const x = Math.sin(s) * 10000; return x - Math.floor(x) }
+
+// Pseudo-random déterministe pour des hauteurs/couleurs stables au re-rendu
+const rand = (s: number) => { const x = Math.sin(s + 1) * 10000; return x - Math.floor(x) }
+
+type Book = { color: string; height: number; isTreasure: boolean }
+const BOOKS: Book[] = Array.from({ length: TOTAL_SLOTS }, (_, idx) => {
+  const isTreasure = idx === 8 || idx === 25 || idx === 47   // 3 trésors visibles
+  const isCream = !isTreasure && idx % 11 === 5
+  const height = 78 + Math.floor(rand(idx * 1.7) * 20)        // 78-98% du row_h
+  let color: string
+  if (isTreasure) color = 'linear-gradient(180deg,#EBCF80,#C2912F)'
+  else if (isCream) color = '#E8E2CF'
+  else color = SPINES[idx % SPINES.length]
+  return { color, height, isTreasure }
+})
 
 export default function Dashboard() {
-  const [fill, setFill] = useState<number>(LIBRARY.count)
-
-  const bookcaseRef = useRef<HTMLDivElement>(null)
   const biblioFillRef = useRef<HTMLDivElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
 
@@ -87,47 +107,6 @@ export default function Dashboard() {
       setTimeout(() => { b.style.height = h }, 480)
     })
   }, [])
-
-  // Bibliothèque dynamique — vue qui dézoom à mesure que la collection grandit
-  useEffect(() => {
-    const bc = bookcaseRef.current
-    if (!bc) return
-    const build = (N: number) => {
-      const W = bc.clientWidth, H = bc.clientHeight
-      if (W < 10 || H < 10) return
-      bc.innerHTML = ''
-      const aspect = Math.max(2.1, 5.2 - 0.0017 * N)
-      let C = Math.max(8, Math.ceil(Math.sqrt(N * aspect * W / H)))
-      let book_w = W / C
-      if (book_w < 3.2) { book_w = 3.2; C = Math.floor(W / book_w) }
-      const R = Math.ceil(N / C)
-      let row_h = Math.min(H / R, book_w * aspect + 3)
-      if (R * row_h > H) row_h = H / R
-      let idx = 0
-      for (let r = 0; r < R && idx < N; r++) {
-        const row = document.createElement('div'); row.className = 'shelf-row'; row.style.height = row_h + 'px'
-        for (let c = 0; c < C && idx < N; c++) {
-          const bk = document.createElement('div'); bk.className = 'bk'
-          const hVar = 0.78 + rand(idx * 1.3) * 0.22
-          bk.style.height = Math.max(6, (row_h - 3) * hVar) + 'px'
-          bk.style.width = book_w + 'px'
-          const seed = idx
-          if (seed % 23 === 7) { bk.classList.add('treasure'); bk.style.background = 'linear-gradient(180deg,#EBCF80,#C2912F)' }
-          else if (seed % 13 === 4) { bk.style.background = CREAM }
-          else { bk.style.background = SPINES[seed % SPINES.length] }
-          row.appendChild(bk); idx++
-        }
-        bc.appendChild(row)
-      }
-      Array.from(bc.querySelectorAll<HTMLElement>('.bk')).forEach((b, i) =>
-        setTimeout(() => b.classList.add('up'), Math.min(120 + i * 3, 900))
-      )
-    }
-    build(fill)
-    const ro = new ResizeObserver(() => build(fill))
-    ro.observe(bc)
-    return () => ro.disconnect()
-  }, [fill])
 
   const Icon = (k: IconKey) => <svg viewBox="0 0 24 24" aria-hidden>{ICONS[k]}</svg>
 
@@ -203,24 +182,35 @@ export default function Dashboard() {
           </section>
         </div>
 
-        {/* COLONNE DROITE — Biblio hero (étagère dynamique + slider démo) */}
+        {/* COLONNE DROITE — Biblio (étagère 3 rangées, JSX statique fiable) */}
         <div className="col-r reveal r3">
           <section className="biblio">
             <div className="biblio-head">
               <div className="biblio-title">Ta bibliothèque</div>
-              <div className="biblio-demo">
-                <span>DÉMO</span>
-                <input
-                  type="range" min={50} max={LIBRARY.total} value={fill}
-                  onChange={e => setFill(parseInt(e.target.value, 10))}
-                  aria-label="Démo : nombre de livres dans ta bibliothèque"
-                />
-                <span>{fill.toLocaleString('fr-FR')}</span>
-              </div>
               <Link href="/library" className="biblio-link">LE MEUBLE →</Link>
             </div>
             <div className="biblio-stage">
-              <div className="bookcase" ref={bookcaseRef} />
+              <div className="bookcase">
+                {Array.from({ length: SHELF_ROWS }).map((_, r) => (
+                  <div key={r} className="shelf-row">
+                    {Array.from({ length: BOOKS_PER_ROW }).map((_, c) => {
+                      const idx = r * BOOKS_PER_ROW + c
+                      const b = BOOKS[idx]
+                      return (
+                        <div
+                          key={c}
+                          className={'bk' + (b.isTreasure ? ' treasure' : '')}
+                          style={{
+                            background: b.color,
+                            height: b.height + '%',
+                            animationDelay: 200 + idx * 12 + 'ms',
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="biblio-foot">
               <div className="biblio-row">
