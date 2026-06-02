@@ -633,7 +633,7 @@
 
 /* =========== RESPONSIVE =========== */
 @media (max-width: 900px) {
-  .cal-page { height: auto; overflow: auto; padding: 18px; }
+  .cal-page { padding: 0; overflow: visible; }
   .cal-week { grid-template-columns: 1fr; gap: 10px; }
   .cal-day { min-height: 120px; }
   .cal-head { flex-direction: column; align-items: stretch; }
