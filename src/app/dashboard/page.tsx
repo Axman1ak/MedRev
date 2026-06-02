@@ -3,7 +3,7 @@
 //
 // Page d'accueil du dashboard. NE CONTIENT PAS le rail ni la tabbar :
 // ils vivent dans dashboard/layout.tsx et sont partagés avec les sous-routes.
-// Cette page ne rend QUE le contenu spécifique au dashboard :
+// Cette page ne rend QUE le contenu spécifique au dashboard 
 // - header (greeting + search + bell)
 // - content grid (focal + queue + biblio panel avec étagère 3 rangées)
 // - stat-strip
