@@ -44,12 +44,10 @@
 
 /* ============ PAGE LAYOUT ============ */
 .fi-main {
-  padding: 26px 32px;
-  background: var(--bg);
-  min-height: 100vh;
+  /* padding/background/min-height gérés par .dash-root .main du layout dashboard */
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--dark);
 }
@@ -796,7 +794,7 @@
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 720px) {
-  .fi-main { padding: 18px 16px; }
+  .fi-main { padding: 0; }
   .fi-topbar { flex-direction: column; align-items: stretch; }
   .fi-actions { justify-content: flex-start; }
   .fi-search { min-width: 0; flex: 1; }
