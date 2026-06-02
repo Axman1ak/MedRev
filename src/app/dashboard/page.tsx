@@ -1,18 +1,15 @@
 'use client'
-// src/app/dashboard/page.tsx (ou src/components/Dashboard.tsx)
+// src/app/dashboard/page.tsx
 //
-// MedRev — Dashboard (rupture vert foncé + blanc, dual-theme + responsive mobile).
-// Port du mockup dashboard-desktop-riche.html en composant Next.js.
-// CSS scopé sous .dash-root (cf dashboard-styles.css).
-//
-// CÔTÉ NEXT :
-// - Charger les fonts via /app/layout.tsx (next/font/google) : Bricolage Grotesque, Hanken Grotesk, IBM Plex Mono.
-// - Les données sont mockées ci-dessous (REVISIONS, STREAK, WEAK_POINT, LOAD, LIBRARY).
-//   À remplacer par tes requêtes Supabase (TODO marqués dans le composant).
+// Page d'accueil du dashboard. NE CONTIENT PAS le rail ni la tabbar :
+// ils vivent dans dashboard/layout.tsx et sont partagés avec les sous-routes.
+// Cette page ne rend QUE le contenu spécifique au dashboard :
+// - header (greeting + search + bell)
+// - content grid (focal + queue + biblio panel)
+// - stat-strip
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import './styles.css'
 
 // ============================================================
 // MOCK DATA — TODO: remplacer par les vraies requêtes Supabase
@@ -36,50 +33,26 @@ const STATE_TO_LABEL_CLASS: Record<Rev['state'], string> = {
   s1: 'fragile', s2: 'medium', s4: 'consol', s5: 'maitr',
 }
 
-// Icônes SVG (paths)
+// Icônes utilisées par CETTE page (le rail a les siennes dans layout.tsx)
 const ICONS = {
-  home: <><path d="M3 12l2-2 7-7 7 7 2 2" /><path d="M5 10v10h14V10" /></>,
-  cal: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
-  list: <path d="M4 6h16M4 12h16M4 18h10" />,
-  check: <><path d="M9 11l3 3 8-8" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>,
-  chart: <><path d="M3 3v18h18" /><path d="M7 14l4-4 4 4 6-6" /></>,
-  sun: <><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" /></>,
-  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />,
-  help: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /></>,
   bell: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
   pulse: <path d="M3 12h4l2 6 4-14 2 8h6" />,
   alert: <><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" /></>,
-  play: <path d="M5 3l14 9-14 9V3z" />,
 } as const
-
 type IconKey = keyof typeof ICONS
-
-const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Tableau de bord', icon: 'home' as IconKey, href: '/dashboard' },
-  { key: 'calendar', label: 'Calendrier', icon: 'cal' as IconKey, href: '/calendar', badge: true },
-  { key: 'courses', label: 'Mes cours', icon: 'list' as IconKey, href: '/fiches' },
-  { key: 'simulator', label: 'Simulateur', icon: 'check' as IconKey, href: '/simulateur' },
-  { key: 'stats', label: 'Statistiques', icon: 'chart' as IconKey, href: '/stats' },
-] as const
-type NavKey = (typeof NAV_ITEMS)[number]['key']
 
 const SPINES = ['#1E7A50', '#2E9E6B', '#15573A', '#0F5132', '#247A55', '#3AA06B', '#114A33', '#1B6E49', '#43B57F', '#176E47']
 const CREAM = '#E8E2CF'
-
-// Pseudo-random déterministe (cohérent au re-rendu)
 const rand = (s: number) => { const x = Math.sin(s) * 10000; return x - Math.floor(x) }
 
 export default function Dashboard() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('light')
-  const [activeNav, setActiveNav] = useState<NavKey>('dashboard')
-  const [activeTab, setActiveTab] = useState<'home' | 'cal' | 'courses' | 'stats'>('home')
   const [fill, setFill] = useState<number>(LIBRARY.count)
 
   const bookcaseRef = useRef<HTMLDivElement>(null)
   const biblioFillRef = useRef<HTMLDivElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
 
-  // ====== COUNT UP au mount ======
+  // Count-up au mount
   useEffect(() => {
     const els = document.querySelectorAll<HTMLElement>('.dash-root .count')
     els.forEach(el => {
@@ -98,13 +71,13 @@ export default function Dashboard() {
     })
   }, [])
 
-  // ====== BIBLIO FILL BAR ======
+  // Biblio fill bar
   useEffect(() => {
     const pct = Math.min(100, (LIBRARY.count / LIBRARY.total) * 100)
     setTimeout(() => { if (biblioFillRef.current) biblioFillRef.current.style.width = pct + '%' }, 600)
   }, [])
 
-  // ====== CHARGE-À-VENIR BARS ======
+  // Charge-à-venir bars
   useEffect(() => {
     const bars = barsRef.current?.querySelectorAll<HTMLDivElement>('.stat-bar')
     if (!bars) return
@@ -115,7 +88,7 @@ export default function Dashboard() {
     })
   }, [])
 
-  // ====== DYNAMIC BOOKCASE (zoom-out à mesure que la collection grandit) ======
+  // Bibliothèque dynamique — vue qui dézoom à mesure que la collection grandit
   useEffect(() => {
     const bc = bookcaseRef.current
     if (!bc) return
@@ -156,241 +129,160 @@ export default function Dashboard() {
     return () => ro.disconnect()
   }, [fill])
 
-  // Icon helper
   const Icon = (k: IconKey) => <svg viewBox="0 0 24 24" aria-hidden>{ICONS[k]}</svg>
 
   return (
-    <div className="dash-root" data-theme={theme}>
-      <div className="bg-fx" />
-      <div className="scan" />
+    <>
+      {/* HEADER */}
+      <header className="head reveal r1">
+        <div className="head-l">
+          <div className="head-eyebrow">
+            <span className="live" />Mer. 20 mai 2026 · Sorbonne S1 · {STREAK.days} jours d'affilée
+          </div>
+          {/* TODO: prénom depuis le profil */}
+          <h1 className="head-h1">Bonjour <em>lou</em></h1>
+        </div>
+        <div className="head-r">
+          <button className="cmd" type="button" aria-label="Rechercher">⌕ Rechercher <kbd>⌘K</kbd></button>
+          <button className="icon-btn" type="button" aria-label="Notifications">{Icon('bell')}</button>
+        </div>
+      </header>
 
-      <div className="app">
-        {/* ============ ICON RAIL (overlay, expand au survol) ============ */}
-        <aside className="rail">
-          <div className="rail-brand"><span className="bx"><i /></span><span className="txt">MedRev</span></div>
-          {NAV_ITEMS.map(n => (
-            <Link
-              href={n.href}
-              key={n.key}
-              className={'rail-i' + (activeNav === n.key ? ' active' : '')}
-              onClick={() => setActiveNav(n.key)}
-            >
-              {Icon(n.icon)}
-              {('badge' in n && n.badge) && <span className="bdg" />}
-              <span className="tip">{n.label}</span>
-            </Link>
-          ))}
-          <div className="rail-sp" />
-          <button
-            type="button"
-            className="rail-i"
-            onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
-            aria-label="Bascule thème"
-            style={{ background: 'transparent', border: 'none', font: 'inherit', textAlign: 'left' }}
-          >
-            {Icon(theme === 'dark' ? 'sun' : 'moon')}
-            <span className="tip">Thème clair / sombre</span>
-          </button>
-          <Link href="/aide" className="rail-i">
-            {Icon('help')}
-            <span className="tip">Aide & tutoriel</span>
-          </Link>
-          {/* TODO: tirer initiales + nom + plan depuis le profil Supabase */}
-          <Link href="/settings" className="rail-avatar">
-            <span className="av">LO</span>
-            <span className="txt">lou<small>Premium · Sorbonne</small></span>
-          </Link>
-        </aside>
-
-        {/* ============ MAIN ============ */}
-        <main className="main">
-          {/* HEADER */}
-          <header className="head reveal r1">
-            <div className="head-l">
-              <div className="head-eyebrow">
-                <span className="live" />Mer. 20 mai 2026 · Sorbonne S1 · {STREAK.days} jours d'affilée
+      <div className="content">
+        {/* COLONNE GAUCHE — Focal + Queue */}
+        <div className="col-l">
+          {/* FOCAL */}
+          <section className="focal reveal r2">
+            <svg className="focal-ekg" viewBox="0 0 760 70" preserveAspectRatio="none" aria-hidden>
+              <path d="M0,44 L200,44 L214,44 L223,12 L237,66 L249,30 L260,44 L440,44 L454,44 L463,16 L476,64 L489,32 L500,44 L660,44 L673,44 L682,8 L695,68 L708,36 L720,44 L760,44" />
+            </svg>
+            <div className="focal-row">
+              <div>
+                <div className="focal-k">Aujourd'hui · ta prochaine action</div>
+                <div className="focal-line">
+                  <span className="focal-num"><span className="count" data-target={String(TODAY.count)}>0</span></span>
+                  <span className="focal-txt">révisions à faire</span>
+                </div>
+                <div className="focal-meta">
+                  <span className="hot">{TODAY.lateCount} EN RETARD</span>
+                  <span className="sep">·</span>~{TODAY.minutes} MIN
+                  <span className="sep">·</span>{TODAY.biochimie} BIOCHIMIE
+                </div>
               </div>
-              {/* TODO: prénom depuis le profil */}
-              <h1 className="head-h1">Bonjour <em>lou</em></h1>
+              <div className="focal-actions">
+                <Link href="/dashboard/focus" className="btn-go">Démarrer la session <span className="arrow">→</span></Link>
+                <Link href="/dashboard/calendar" className="link-soft">Réorganiser ma file</Link>
+              </div>
             </div>
-            <div className="head-r">
-              <button className="cmd" type="button" aria-label="Rechercher">⌕ Rechercher <kbd>⌘K</kbd></button>
-              <button className="icon-btn" type="button" aria-label="Notifications">{Icon('bell')}</button>
-            </div>
-          </header>
+          </section>
 
-          <div className="content">
-            {/* COLONNE GAUCHE — Focal + Queue */}
-            <div className="col-l">
-              {/* FOCAL */}
-              <section className="focal reveal r2">
-                <svg className="focal-ekg" viewBox="0 0 760 70" preserveAspectRatio="none" aria-hidden>
-                  <path d="M0,44 L200,44 L214,44 L223,12 L237,66 L249,30 L260,44 L440,44 L454,44 L463,16 L476,64 L489,32 L500,44 L660,44 L673,44 L682,8 L695,68 L708,36 L720,44 L760,44" />
-                </svg>
-                <div className="focal-row">
+          {/* QUEUE */}
+          <section className="qblock reveal r3">
+            <div className="sec-head">
+              <div className="sec-label">Ta file du jour</div>
+              <Link href="/dashboard/calendar" className="sec-link">TOUT VOIR →</Link>
+            </div>
+            <div className="rev-list">
+              {REVISIONS.map((r, i) => (
+                <Link href={`/dashboard/fiches?focus=${encodeURIComponent(r.name)}`} key={i} className="rev">
+                  <div className={'rev-bar ' + r.state} />
                   <div>
-                    <div className="focal-k">Aujourd'hui · ta prochaine action</div>
-                    <div className="focal-line">
-                      <span className="focal-num"><span className="count" data-target={String(TODAY.count)}>0</span></span>
-                      <span className="focal-txt">révisions à faire</span>
+                    <div className="rev-name">
+                      {r.flag && <span className="flag">!</span>}
+                      {r.name}
                     </div>
-                    <div className="focal-meta">
-                      <span className="hot">{TODAY.lateCount} EN RETARD</span>
-                      <span className="sep">·</span>~{TODAY.minutes} MIN
-                      <span className="sep">·</span>{TODAY.biochimie} BIOCHIMIE
+                    <div className="rev-meta">
+                      {r.mat} · <span className={r.status}>{r.due}</span> · {r.note}/5
                     </div>
                   </div>
-                  <div className="focal-actions">
-                    <Link href="/focus" className="btn-go">Démarrer la session <span className="arrow">→</span></Link>
-                    <Link href="/calendar" className="link-soft">Réorganiser ma file</Link>
-                  </div>
-                </div>
-              </section>
+                  <div className={'rev-state ' + STATE_TO_LABEL_CLASS[r.state]}>{r.stateLabel}</div>
+                  <div className="rev-step">{r.step}</div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
 
-              {/* QUEUE */}
-              <section className="qblock reveal r3">
-                <div className="sec-head">
-                  <div className="sec-label">Ta file du jour</div>
-                  <Link href="/calendar" className="sec-link">TOUT VOIR →</Link>
-                </div>
-                <div className="rev-list">
-                  {REVISIONS.map((r, i) => (
-                    <Link href={`/fiches?focus=${encodeURIComponent(r.name)}`} key={i} className="rev">
-                      <div className={'rev-bar ' + r.state} />
-                      <div>
-                        <div className="rev-name">
-                          {r.flag && <span className="flag">!</span>}
-                          {r.name}
-                        </div>
-                        <div className="rev-meta">
-                          {r.mat} · <span className={r.status}>{r.due}</span> · {r.note}/5
-                        </div>
-                      </div>
-                      <div className={'rev-state ' + STATE_TO_LABEL_CLASS[r.state]}>{r.stateLabel}</div>
-                      <div className="rev-step">{r.step}</div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
+        {/* COLONNE DROITE — Biblio hero (étagère dynamique + slider démo) */}
+        <div className="col-r reveal r3">
+          <section className="biblio">
+            <div className="biblio-head">
+              <div className="biblio-title">Ta bibliothèque</div>
+              <div className="biblio-demo">
+                <span>DÉMO</span>
+                <input
+                  type="range" min={50} max={LIBRARY.total} value={fill}
+                  onChange={e => setFill(parseInt(e.target.value, 10))}
+                  aria-label="Démo : nombre de livres dans ta bibliothèque"
+                />
+                <span>{fill.toLocaleString('fr-FR')}</span>
+              </div>
+              <Link href="/library" className="biblio-link">LE MEUBLE →</Link>
             </div>
-
-            {/* COLONNE DROITE — Biblio hero (étagère dynamique + slider démo) */}
-            <div className="col-r reveal r3">
-              <section className="biblio">
-                <div className="biblio-head">
-                  <div className="biblio-title">Ta bibliothèque</div>
-                  <div className="biblio-demo">
-                    <span>DÉMO</span>
-                    <input
-                      type="range" min={50} max={LIBRARY.total} value={fill}
-                      onChange={e => setFill(parseInt(e.target.value, 10))}
-                      aria-label="Démo : nombre de livres dans ta bibliothèque"
-                    />
-                    <span>{fill.toLocaleString('fr-FR')}</span>
-                  </div>
-                  <Link href="/library" className="biblio-link">LE MEUBLE →</Link>
-                </div>
-                <div className="biblio-stage">
-                  <div className="bookcase" ref={bookcaseRef} />
-                </div>
-                <div className="biblio-foot">
-                  <div className="biblio-row">
-                    <span className="biblio-num"><span className="count" data-target={String(LIBRARY.count)}>0</span></span>
-                    <span className="biblio-suffix">/ {LIBRARY.total} ouvrages</span>
-                    <span className="biblio-treasures">
-                      <strong>{LIBRARY.treasures}/6 TRÉSORS</strong> · prochain au {LIBRARY.nextTreasure}
-                    </span>
-                  </div>
-                  <div className="biblio-bar">
-                    <div className="biblio-fill" ref={biblioFillRef} />
-                  </div>
-                </div>
-              </section>
+            <div className="biblio-stage">
+              <div className="bookcase" ref={bookcaseRef} />
             </div>
-          </div>
-
-          {/* STAT STRIP */}
-          <div className="stat-strip reveal r4" ref={barsRef}>
-            <div className="stat">
-              <div className="stat-icon teal">{Icon('pulse')}</div>
-              <div>
-                <div className="stat-label">Régularité</div>
-                <div className="stat-value">
-                  <span className="stat-num teal"><span className="count" data-target={String(STREAK.days)}>0</span></span>
-                  <span className="stat-unit">jours d'affilée</span>
-                  <span className="stat-trend">↑ +{STREAK.trend}</span>
-                </div>
-                <div className="stat-sub">Record : {STREAK.record} jours</div>
+            <div className="biblio-foot">
+              <div className="biblio-row">
+                <span className="biblio-num"><span className="count" data-target={String(LIBRARY.count)}>0</span></span>
+                <span className="biblio-suffix">/ {LIBRARY.total} ouvrages</span>
+                <span className="biblio-treasures">
+                  <strong>{LIBRARY.treasures}/6 TRÉSORS</strong> · prochain au {LIBRARY.nextTreasure}
+                </span>
+              </div>
+              <div className="biblio-bar">
+                <div className="biblio-fill" ref={biblioFillRef} />
               </div>
             </div>
-            <div className="stat">
-              <div className="stat-icon coral">{Icon('alert')}</div>
-              <div>
-                <div className="stat-label">Point faible</div>
-                <div className="stat-value">
-                  <span className="stat-num coral">{WEAK_POINT.score.toFixed(1)}</span>
-                  <span className="stat-unit">/5 · {WEAK_POINT.subject}</span>
-                </div>
-                <div className="stat-sub"><span className="frag">Fragile</span> — {WEAK_POINT.count} fiches à retravailler</div>
-              </div>
-              <Link href="/stats" className="stat-link">VOIR →</Link>
-            </div>
-            <div className="stat">
-              <div>
-                <div className="stat-label">Charge à venir · 4 sem.</div>
-                <div className="stat-value">
-                  <span className="stat-num">{LOAD.fiches}</span>
-                  <span className="stat-unit">fiches programmées</span>
-                </div>
-                <div className="stat-sub">Charge équilibrée</div>
-              </div>
-              <div className="stat-bars">
-                {LOAD.bars.map((h, i) => (
-                  <div className="stat-bar-col" key={i}>
-                    <div className={'stat-bar' + (h < 60 ? ' dim' : '')} />
-                    <span className="stat-bar-lbl">S{i + 1}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </main>
+          </section>
+        </div>
       </div>
 
-      {/* ============ BOTTOM TABBAR (mobile only — affiché par @media ≤760px) ============ */}
-      <nav className="tabbar" aria-label="Navigation principale">
-        <Link
-          href="/dashboard"
-          className={'tab' + (activeTab === 'home' ? ' active' : '')}
-          onClick={() => setActiveTab('home')}
-        >
-          {Icon('home')}<span>Accueil</span>
-        </Link>
-        <Link
-          href="/calendar"
-          className={'tab' + (activeTab === 'cal' ? ' active' : '')}
-          onClick={() => setActiveTab('cal')}
-        >
-          {Icon('cal')}<span>Agenda</span><span className="dot-badge" />
-        </Link>
-        <Link href="/focus" className="tab-go" aria-label="Démarrer la session">
-          {Icon('play')}<span>Démarrer</span>
-        </Link>
-        <Link
-          href="/fiches"
-          className={'tab' + (activeTab === 'courses' ? ' active' : '')}
-          onClick={() => setActiveTab('courses')}
-        >
-          {Icon('list')}<span>Cours</span>
-        </Link>
-        <Link
-          href="/stats"
-          className={'tab' + (activeTab === 'stats' ? ' active' : '')}
-          onClick={() => setActiveTab('stats')}
-        >
-          {Icon('chart')}<span>Stats</span>
-        </Link>
-      </nav>
-    </div>
+      {/* STAT STRIP */}
+      <div className="stat-strip reveal r4" ref={barsRef}>
+        <div className="stat">
+          <div className="stat-icon teal">{Icon('pulse')}</div>
+          <div>
+            <div className="stat-label">Régularité</div>
+            <div className="stat-value">
+              <span className="stat-num teal"><span className="count" data-target={String(STREAK.days)}>0</span></span>
+              <span className="stat-unit">jours d'affilée</span>
+              <span className="stat-trend">↑ +{STREAK.trend}</span>
+            </div>
+            <div className="stat-sub">Record : {STREAK.record} jours</div>
+          </div>
+        </div>
+        <div className="stat">
+          <div className="stat-icon coral">{Icon('alert')}</div>
+          <div>
+            <div className="stat-label">Point faible</div>
+            <div className="stat-value">
+              <span className="stat-num coral">{WEAK_POINT.score.toFixed(1)}</span>
+              <span className="stat-unit">/5 · {WEAK_POINT.subject}</span>
+            </div>
+            <div className="stat-sub"><span className="frag">Fragile</span> — {WEAK_POINT.count} fiches à retravailler</div>
+          </div>
+          <Link href="/dashboard/stats" className="stat-link">VOIR →</Link>
+        </div>
+        <div className="stat">
+          <div>
+            <div className="stat-label">Charge à venir · 4 sem.</div>
+            <div className="stat-value">
+              <span className="stat-num">{LOAD.fiches}</span>
+              <span className="stat-unit">fiches programmées</span>
+            </div>
+            <div className="stat-sub">Charge équilibrée</div>
+          </div>
+          <div className="stat-bars">
+            {LOAD.bars.map((h, i) => (
+              <div className="stat-bar-col" key={i}>
+                <div className={'stat-bar' + (h < 60 ? ' dim' : '')} />
+                <span className="stat-bar-lbl">S{i + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
