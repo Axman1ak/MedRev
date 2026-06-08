@@ -578,15 +578,6 @@ export default function FichesPage() {
               )
             })}
 
-            {dueTodayCount > 0 && (
-              <button
-                className={`mtab-review${showDueOnly ? ' active' : ''}`}
-                onClick={() => setShowDueOnly(v => !v)}
-              >
-                À réviser
-                <span className="ct">{dueTodayCount}</span>
-              </button>
-            )}
           </div>
         )}
 

@@ -546,14 +546,14 @@ export default function ReviewModal({
               .test(systemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")) && (
               <a
                 className="rmod-anat-btn"
-                href={`https://www.kenhub.com/fr/search?q=${encodeURIComponent(lesson.name)}`}
+                href={`https://sketchfab.com/search?q=${encodeURIComponent(lesson.name + ' anatomy')}&type=models`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
-                title={`Ouvrir « ${lesson.name} » sur l'atlas Kenhub`}
+                title={`Voir « ${lesson.name} » en 3D sur Sketchfab`}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-                Voir cette structure sur l&apos;atlas ↗
+                Voir en 3D ↗
               </a>
             )}
           </div>
