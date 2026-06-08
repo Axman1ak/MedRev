@@ -49,7 +49,7 @@
   box-sizing: border-box;
   background: var(--bg);
   color: var(--dark);
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: var(--font-hanken), -apple-system, sans-serif;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   color: var(--gray);
   font-size: 16px;
@@ -88,7 +88,7 @@
   gap: 20px;
 }
 .sim-title {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 26px;
   font-weight: 500;
   letter-spacing: -.015em;
@@ -97,7 +97,7 @@
 }
 .sim-title em { font-style: italic; color: var(--gm); }
 .sim-sub {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
   font-style: italic;
   color: var(--gray);
   font-size: 13.5px;
@@ -118,7 +118,7 @@
   min-height: 0;
 }
 .sim-card-h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: .18em;
@@ -140,7 +140,7 @@
 }
 .sim-meta {
   margin-left: auto;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
   font-style: italic;
   font-size: 12px;
   color: var(--gray);
@@ -180,7 +180,7 @@
 }
 .sim-mat-empty {
   grid-column: span 2;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
   font-style: italic;
   color: var(--gray);
   font-size: 13px;
@@ -229,7 +229,7 @@
   border-radius: 2px;
 }
 .sim-mat-name {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--dark);
@@ -263,7 +263,7 @@
 .sim-mat-bar-fill.s2 { background: var(--s2); }
 .sim-mat-bar-fill.s1 { background: var(--s1); }
 .sim-mat-q {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--dark);
@@ -287,7 +287,7 @@
   padding: 14px 16px;
 }
 .sim-opt-h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: .14em;
@@ -316,7 +316,7 @@
   border-radius: 6px;
   border: 1.5px solid var(--border);
   background: var(--card);
-  font: 600 12px 'Plus Jakarta Sans';
+  font: 600 12px var(--font-hanken);
   color: var(--gray);
   cursor: pointer;
   text-align: center;
@@ -361,7 +361,7 @@
 }
 .sim-mode-pill-top { flex-shrink: 0; }
 .sim-mode-pill-h {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 17px;
   font-weight: 500;
   color: var(--dark);
@@ -370,7 +370,7 @@
 }
 .sim-mode-pill.sel .sim-mode-pill-h { color: var(--green); }
 .sim-mode-pill-sub {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 12.5px;
   color: var(--gray);
@@ -395,7 +395,7 @@
   grid-template-rows: auto repeat(5, 1fr) auto;
 }
 .sim-mp-app-q {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 10.5px;
   color: var(--gray);
   font-style: italic;
@@ -407,7 +407,7 @@
   gap: 6px;
   padding: 0 7px;
   border-radius: 4px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   line-height: 1.2;
   min-height: 0;
@@ -428,7 +428,7 @@
   font-weight: 600;
 }
 .sim-mp-app-opt .mark {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 700;
   font-size: 11px;
 }
@@ -440,7 +440,7 @@
   padding: 6px 8px;
   background: var(--gold-soft);
   border-radius: 4px;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 11px;
   color: #5C4419;
@@ -458,7 +458,7 @@
   display: grid;
   grid-template-columns: 18px repeat(5, 1fr);
   gap: 5px 6px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 9px;
   color: var(--gray);
   font-weight: 700;
@@ -481,7 +481,7 @@
   padding: 0 4px;
 }
 .sim-mp-ex-row .num {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 9px;
   color: var(--gray);
   font-weight: 600;
@@ -504,7 +504,7 @@
   border-color: var(--gm);
 }
 .sim-mp-ex-bottom {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 10.5px;
   color: var(--gray);
@@ -538,7 +538,7 @@
   pointer-events: none;
 }
 .sim-hero-tag {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -573,7 +573,7 @@
   margin-bottom: 6px;
 }
 .sim-hero-num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: clamp(72px, 9vw, 120px);
   font-weight: 500;
   color: var(--green);
@@ -581,13 +581,13 @@
   letter-spacing: -.05em;
 }
 .sim-hero-num-unit {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 22px;
   color: var(--dark);
   font-weight: 500;
 }
 .sim-hero-quote {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   color: var(--gray);
   font-size: 16px;
@@ -597,7 +597,7 @@
   margin: 14px 0 22px;
 }
 .sim-hero-quote strong {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: normal;
   color: var(--dark);
   font-weight: 500;
@@ -616,7 +616,7 @@
   gap: 2px;
 }
 .sim-hero-row-l {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 9.5px;
   color: var(--gray);
   text-transform: uppercase;
@@ -624,7 +624,7 @@
   font-weight: 700;
 }
 .sim-hero-row-v {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 14px;
   font-weight: 500;
   color: var(--dark);
@@ -637,7 +637,7 @@
   color: white;
   border: none;
   border-radius: 10px;
-  font: 700 14px 'Plus Jakarta Sans';
+  font: 700 14px var(--font-hanken);
   letter-spacing: .02em;
   cursor: pointer;
   transition: all .15s;
@@ -692,7 +692,7 @@
   gap: 18px;
 }
 .sim-ses-tag {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -711,7 +711,7 @@
 .sim-ses-tag.ex { color: var(--rose); }
 .sim-ses-tag.ex::before { background: var(--rose); }
 .sim-ses-tag-sub {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   color: var(--gray);
   font-size: 13.5px;
@@ -720,7 +720,7 @@
 .sim-ses-stats { display: flex; gap: 22px; }
 .sim-ses-stat { text-align: center; }
 .sim-ses-stat-num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 22px;
   font-weight: 500;
   line-height: 1;
@@ -732,7 +732,7 @@
 .sim-ses-stat-num.ok { color: var(--gm); }
 .sim-ses-stat-num.ko { color: var(--rose); }
 .sim-ses-stat-lbl {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 9.5px;
   color: var(--gray);
   text-transform: uppercase;
@@ -746,7 +746,7 @@
   border: 1px solid var(--rose);
   padding: 7px 16px;
   border-radius: 8px;
-  font: 700 12px 'Plus Jakarta Sans';
+  font: 700 12px var(--font-hanken);
   cursor: pointer;
   letter-spacing: .02em;
 }
@@ -764,7 +764,7 @@
   min-height: 0;
 }
 .sim-ses-q-meta {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -777,7 +777,7 @@
   flex-wrap: wrap;
 }
 .sim-ses-q-meta em {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: normal;
   color: var(--gm);
   font-weight: 500;
@@ -850,7 +850,7 @@
   font-weight: 600;
 }
 .sim-ses-q-text {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 21px;
   font-weight: 400;
   line-height: 1.5;
@@ -869,7 +869,7 @@
   border: 1.5px solid var(--border);
   background: var(--card);
   border-radius: 10px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 13.5px;
   color: var(--dark);
   cursor: pointer;
@@ -890,7 +890,7 @@
   background: var(--gl);
 }
 .sim-ses-q-opt-letter {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 15px;
   font-weight: 500;
   color: var(--gray);
@@ -929,7 +929,7 @@
   margin-bottom: 18px;
 }
 .sim-ses-explain-h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -945,14 +945,14 @@
   font-size: 12px;
 }
 .sim-ses-explain-text {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 14.5px;
   color: #5C4419;
   line-height: 1.55;
 }
 .sim-ses-explain-text strong {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: normal;
   color: #3D2516;
   font-weight: 500;
@@ -964,7 +964,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11.5px;
   font-weight: 700;
   color: var(--gold);
@@ -975,7 +975,7 @@
 
 /* Self-rating */
 .sim-ses-rate-h {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13px;
   color: var(--gray);
@@ -992,7 +992,7 @@
   padding: 11px;
   border-radius: 8px;
   background: var(--card);
-  font: 600 12.5px 'Plus Jakarta Sans';
+  font: 600 12.5px var(--font-hanken);
   cursor: pointer;
   transition: all .15s;
 }
@@ -1018,7 +1018,7 @@
   border-radius: 10px;
   border: 1.5px solid var(--border);
   background: var(--card);
-  font: 600 13px 'Plus Jakarta Sans';
+  font: 600 13px var(--font-hanken);
   color: var(--dark);
   cursor: pointer;
   transition: all .12s;
@@ -1054,7 +1054,7 @@
   min-height: 0;
 }
 .sim-ses-sheet-h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: .18em;
@@ -1093,7 +1093,7 @@
   flex-shrink: 0;
 }
 .sim-ses-sheet-headers .h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 9px;
   color: var(--gray);
   font-weight: 700;
@@ -1132,7 +1132,7 @@
   font-weight: 700;
 }
 .sim-ses-sheet-num {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   color: var(--gray);
   font-weight: 600;
@@ -1182,7 +1182,7 @@
   flex-shrink: 0;
 }
 .sim-ses-sheet-progress-l {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   color: var(--gray);
   font-weight: 700;
@@ -1190,14 +1190,14 @@
   letter-spacing: .1em;
 }
 .sim-ses-sheet-progress-v {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 18px;
   font-weight: 500;
   color: var(--gm);
   letter-spacing: -.02em;
 }
 .sim-ses-sheet-progress-v em {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-size: 14px;
   color: var(--gray);
   font-style: italic;
@@ -1241,7 +1241,7 @@
   pointer-events: none;
 }
 .sim-res-tag {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1252,7 +1252,7 @@
   z-index: 2;
 }
 .sim-res-score {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: clamp(80px, 12vw, 130px);
   font-weight: 500;
   line-height: 1;
@@ -1272,7 +1272,7 @@
   font-weight: 400;
 }
 .sim-res-message {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 16px;
   color: var(--gray);
@@ -1281,7 +1281,7 @@
   z-index: 2;
 }
 .sim-res-message strong {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: normal;
   color: var(--dark);
   font-weight: 500;
@@ -1299,7 +1299,7 @@
   padding: 16px 18px;
 }
 .sim-res-stat-lbl {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1316,7 +1316,7 @@
   border-radius: 2px;
 }
 .sim-res-stat-num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 36px;
   font-weight: 500;
   line-height: 1;
@@ -1327,7 +1327,7 @@
 .sim-res-stat-num.ko { color: var(--rose); }
 .sim-res-stat-num.total { color: var(--dark); }
 .sim-res-stat-sub {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 12px;
   color: var(--gray);
@@ -1341,7 +1341,7 @@
   padding: 18px 20px;
 }
 .sim-res-rates-h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1391,13 +1391,13 @@
 .sim-res-rate-dot.r3 { background: var(--s4); }
 .sim-res-rate-dot.r4 { background: var(--gm); }
 .sim-res-rate-num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 16px;
   font-weight: 500;
   color: var(--dark);
 }
 .sim-res-rate-lbl {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 12px;
   color: var(--gray);
@@ -1411,7 +1411,7 @@
 .sim-res-btn {
   padding: 13px;
   border-radius: 10px;
-  font: 700 13.5px 'Plus Jakarta Sans';
+  font: 700 13.5px var(--font-hanken);
   letter-spacing: .02em;
   cursor: pointer;
   transition: all .15s;

@@ -30,10 +30,10 @@
   --lp-gold: #C19542;
   --lp-gold-soft: #F5E8C8;
   --lp-success: #2D6A4F;
-  --lp-fh: 'Fraunces', Georgia, serif;
-  --lp-fb: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  --lp-fi: 'Cormorant Garamond', Georgia, serif;
-  --lp-fk: 'Cinzel', 'Fraunces', serif;
+  --lp-fh: var(--font-bricolage), Georgia, serif;
+  --lp-fb: var(--font-hanken), -apple-system, sans-serif;
+  --lp-fi: var(--font-hanken), Georgia, serif;
+  --lp-fk: var(--font-bricolage), var(--font-bricolage), serif;
   --lp-fm: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
 }
 

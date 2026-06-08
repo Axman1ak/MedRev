@@ -657,7 +657,7 @@ export default function ReviewModal({
                 padding: '4px 10px',
                 fontSize: 12,
                 color: 'var(--gray)',
-                fontFamily: "'Cormorant Garamond', serif",
+                fontFamily: "var(--font-hanken), serif",
                 fontStyle: 'italic',
                 marginTop: -4,
                 marginBottom: 4,

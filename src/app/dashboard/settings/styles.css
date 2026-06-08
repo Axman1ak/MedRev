@@ -18,7 +18,7 @@
 
   min-height: 100vh;
   background: var(--bg, #EDEAE3);
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: var(--font-hanken), -apple-system, sans-serif;
   color: var(--dark, #111310);
   padding: 36px 32px 80px;
 }
@@ -26,7 +26,7 @@
 .set-loading {
   text-align: center;
   padding: 80px 20px;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   color: var(--gray, #6B6F6A);
   font-size: 16px;
@@ -42,7 +42,7 @@
   margin-bottom: 36px;
 }
 .set-h1 {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 30px;
   color: var(--dark, #111310);
@@ -52,7 +52,7 @@
 }
 .set-sub {
   margin: 0;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 16px;
   color: var(--gray, #6B6F6A);
@@ -67,7 +67,7 @@
   margin-bottom: 16px;
 }
 .set-card-h {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -100,7 +100,7 @@
 
 .set-label {
   display: block;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -114,7 +114,7 @@
   padding: 10px 13px;
   border: 1.5px solid var(--border, #E1DDD3);
   border-radius: 9px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 14px;
   color: var(--dark, #111310);
   background: var(--card, #FFFFFF);
@@ -130,14 +130,14 @@
   border-radius: 9px;
   background: var(--soft, #FAF8F2);
   border: 1px solid var(--border, #E1DDD3);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 14px;
   color: var(--dark, #111310);
 }
 
 .set-hint {
   margin: 6px 0 0;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13.5px;
   color: var(--gray, #6B6F6A);
@@ -155,7 +155,7 @@
   display: inline-block;
   padding: 5px 12px;
   border-radius: 999px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: .04em;
@@ -170,7 +170,7 @@
   color: #FFFFFF;
 }
 .set-plan-link {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--gm, #2D6A4F);
@@ -188,7 +188,7 @@
 .set-plan-inline-link {
   color: var(--gm, #2D6A4F);
   font-style: normal;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -202,7 +202,7 @@
   margin: 4px 0 12px;
   padding: 9px 12px;
   border-radius: 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12.5px;
   line-height: 1.4;
 }
@@ -226,7 +226,7 @@
 
 .set-btn {
   appearance: none;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 13px;
   padding: 11px 20px;
@@ -286,13 +286,13 @@
   gap: 12px;
 }
 .set-quota-lbl {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--dark, #111310);
 }
 .set-quota-num {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
   font-size: 13.5px;
   color: var(--gray, #6B6F6A);
   font-style: italic;
@@ -300,7 +300,7 @@
   white-space: nowrap;
 }
 .set-quota-num strong {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: normal;
   color: var(--dark, #111310);
   font-weight: 500;
@@ -425,7 +425,7 @@
   gap: 2px;
 }
 .set-theme-meta strong {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 16px;
   font-weight: 500;
   color: var(--dark, #111310);
@@ -434,7 +434,7 @@
   font-size: 12px;
   color: var(--gray, #6B6F6A);
   font-style: italic;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
 }
 
 /* ---- DELETE ACCOUNT MODAL ---- */
@@ -473,7 +473,7 @@
 }
 
 .set-modal-title {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 22px;
   color: var(--rose, #C75050);

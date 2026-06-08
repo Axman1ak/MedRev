@@ -144,7 +144,7 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
  
 @layer utilities {
-  .font-syne { font-family: 'Fraunces', serif; }
+  .font-syne { font-family: var(--font-bricolage), serif; }
   .font-mono-dm { font-family: 'DM Mono', monospace; }
   .hover\:bg-bg3:hover { background: var(--bg3); }
 }

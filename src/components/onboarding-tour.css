@@ -12,7 +12,7 @@
   inset: 0;
   z-index: 9000;
   pointer-events: none;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-hanken), system-ui, sans-serif;
   color: var(--text-primary);
 }
 
@@ -118,7 +118,7 @@
 }
 
 .ont-tip-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 19px;
   letter-spacing: -0.01em;
@@ -142,7 +142,7 @@
 /* Mention Premium — encart accent ambre */
 .ont-premium-note {
   display: block;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13px;
   color: var(--text-secondary);
@@ -157,7 +157,7 @@
 .ont-premium-note strong {
   color: var(--warning);
   font-weight: 600;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-style: normal;
   font-size: 12px;
   text-transform: uppercase;
@@ -168,7 +168,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13px;
   color: var(--text-secondary);
@@ -217,7 +217,7 @@
   color: var(--bg-card);
   border: 1px solid var(--accent-primary);
   padding: 8px 14px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 12.5px;
   border-radius: 8px;
@@ -240,7 +240,7 @@
   color: var(--text-secondary);
   border: 1px solid transparent;
   padding: 8px 10px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 500;
   font-size: 12px;
   border-radius: 8px;
@@ -322,7 +322,7 @@
 }
 
 .ont-celebration-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 34px;
   letter-spacing: -0.02em;

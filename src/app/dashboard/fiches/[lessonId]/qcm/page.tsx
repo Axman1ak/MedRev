@@ -418,7 +418,7 @@ export default function QcmSessionPage() {
               maxWidth: 540,
             }}>
               <div style={{
-                fontFamily: "'Fraunces', Georgia, serif",
+                fontFamily: "var(--font-bricolage), Georgia, serif",
                 fontWeight: 500,
                 fontSize: 28,
                 color: cumPct >= 70 ? '#1B4332' : cumPct >= 50 ? '#C47B2B' : '#C75050',

@@ -22,7 +22,7 @@
 
   min-height: 100vh;
   background: var(--bg, #EDEAE3);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   color: var(--dark, #111310);
   position: relative;
 }
@@ -31,7 +31,7 @@
 .qcm-loading {
   padding: 80px 20px;
   text-align: center;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   color: var(--gray, #6B6F6A);
   font-size: 16px;
@@ -44,7 +44,7 @@
   text-align: center;
 }
 .qcm-empty-title {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 28px;
   color: var(--dark, #111310);
@@ -52,14 +52,14 @@
   letter-spacing: -.01em;
 }
 .qcm-empty-title em {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   color: var(--gm, #2D6A4F);
   font-weight: 500;
   font-size: 28px;
 }
 .qcm-empty-text {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 16px;
   color: var(--gray, #6B6F6A);
@@ -67,7 +67,7 @@
   margin: 0 0 28px;
 }
 .qcm-empty-text em {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   color: var(--gm, #2D6A4F);
   font-weight: 500;
   font-size: 16px;
@@ -77,7 +77,7 @@
   border: 1px solid var(--border, #E1DDD3);
   background: var(--card, #fff);
   color: var(--green, #1B4332);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 13px;
   padding: 11px 22px;
@@ -107,20 +107,20 @@
 }
 .qcm-topback:hover { color: var(--dark, #111310); border-color: var(--gray, #6B6F6A); }
 .qcm-ctx {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   color: var(--gray, #6B6F6A);
   font-size: 14px;
 }
 .qcm-ctx strong {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-style: normal;
   font-weight: 600;
   color: var(--dark, #111310);
   font-size: 13px;
 }
 .qcm-ctx em {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   color: var(--gm, #2D6A4F);
   font-weight: 500;
@@ -156,7 +156,7 @@
   transition: width .3s ease;
 }
 .qcm-progress-lbl {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: var(--gray, #6B6F6A);
@@ -166,7 +166,7 @@
 
 /* ---- Question stem ---- */
 .qcm-q-kicker {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -200,7 +200,7 @@
   border-color: #E8CE9A;
 }
 .qcm-q-stem {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 24px;
   color: var(--dark, #111310);
@@ -209,7 +209,7 @@
   margin: 0 0 28px;
 }
 .qcm-q-stem em {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   color: var(--gm, #2D6A4F);
   font-weight: 500;
@@ -233,7 +233,7 @@
   gap: 14px;
   cursor: pointer;
   text-align: left;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   transition: all .12s ease;
 }
 .qcm-option:not(:disabled):hover {
@@ -249,7 +249,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   font-size: 14px;
   color: var(--dark, #111310);
@@ -257,14 +257,14 @@
   font-weight: 500;
 }
 .qcm-option .qcm-text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 14px;
   color: var(--dark, #111310);
   flex: 1;
   line-height: 1.5;
 }
 .qcm-option .qcm-mark {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .06em;
@@ -316,7 +316,7 @@
   font-weight: 700;
   color: transparent;
   font-style: normal;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
 }
 .qcm-options.multi .qcm-option.selected .qcm-letter.check {
   background: var(--gm, #2D6A4F);
@@ -343,7 +343,7 @@
 /* Lettre affichée AVANT le texte de l'option en mode multi
    (puisque la pastille ronde a été remplacée par une checkbox). */
 .qcm-text-letter {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   font-weight: 500;
   color: var(--gm, #2D6A4F);
@@ -362,7 +362,7 @@
 .qcm-feedback.right { border-left: 3px solid var(--gm, #2D6A4F); }
 
 .qcm-feedback-label {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -374,7 +374,7 @@
 
 .qcm-feedback-text {
   margin: 0;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 15.5px;
   color: var(--dark, #111310);
@@ -394,7 +394,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11px;
   font-weight: 600;
   color: var(--gray, #6B6F6A);
@@ -413,7 +413,7 @@
   background: transparent;
   border: 1px solid var(--border, #E1DDD3);
   color: var(--green, #1B4332);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12px;
   font-weight: 600;
   padding: 7px 13px;
@@ -439,7 +439,7 @@
   border: none;
   background: var(--green, #1B4332);
   color: #fff;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 13px;
   padding: 11px 22px;
@@ -463,7 +463,7 @@
   text-align: center;
 }
 .qcm-end-score {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 96px;
   line-height: 1;
@@ -481,14 +481,14 @@
   opacity: .7;
 }
 .qcm-end-message {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 17px;
   color: var(--gray, #6B6F6A);
   margin-bottom: 38px;
 }
 .qcm-end-message strong {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-style: normal;
   font-weight: 600;
   color: var(--dark, #111310);
@@ -514,7 +514,7 @@
   padding: 16px 12px;
 }
 .qcm-end-stat-num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 26px;
   color: var(--dark, #111310);
@@ -524,7 +524,7 @@
 .qcm-end-stat-num.ko { color: var(--rose, #C75050); }
 .qcm-end-stat-lbl {
   margin-top: 6px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -539,7 +539,7 @@
 }
 .qcm-end-btn {
   appearance: none;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 13px;
   padding: 11px 18px;

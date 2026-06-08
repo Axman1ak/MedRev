@@ -30,13 +30,13 @@ export default function GlobalError({
         alignItems: 'center',
         justifyContent: 'center',
         padding: '40px 20px',
-        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+        fontFamily: "var(--font-hanken), system-ui, sans-serif",
       }}
     >
       <div style={{ maxWidth: 480, textAlign: 'center' }}>
         <div
           style={{
-            fontFamily: "'Cinzel', 'Fraunces', Georgia, serif",
+            fontFamily: "var(--font-bricolage), var(--font-bricolage), Georgia, serif",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: '0.18em',
@@ -50,7 +50,7 @@ export default function GlobalError({
 
         <div
           style={{
-            fontFamily: "'Fraunces', serif",
+            fontFamily: "var(--font-bricolage), serif",
             fontSize: 64,
             fontWeight: 500,
             color: '#C75050',
@@ -64,7 +64,7 @@ export default function GlobalError({
 
         <h1
           style={{
-            fontFamily: "'Fraunces', serif",
+            fontFamily: "var(--font-bricolage), serif",
             fontSize: 26,
             fontWeight: 500,
             color: '#1A1A1A',

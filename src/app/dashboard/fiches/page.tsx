@@ -798,7 +798,7 @@ export default function FichesPage() {
                     border: `1.5px solid ${newSysSemestre === s ? 'var(--accent-medium)' : 'var(--border)'}`,
                     background: newSysSemestre === s ? 'var(--accent-soft)' : 'var(--card)',
                     color: newSysSemestre === s ? 'var(--accent-on-soft)' : 'var(--gray)',
-                    fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                    fontFamily: "var(--font-hanken), sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
                   }}>
                     Semestre {s}
                   </button>

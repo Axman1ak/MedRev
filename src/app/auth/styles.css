@@ -46,7 +46,7 @@
   margin-bottom: 48px;
 }
 .auth-h1 {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 400;
   font-size: clamp(38px, 5.5vw, 60px);
   line-height: 1.05;
@@ -250,7 +250,7 @@
 .auth-back-btn:hover { color: var(--text-primary); }
 
 .auth-step-title {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 22px;
   letter-spacing: -0.01em;
@@ -336,7 +336,7 @@
   background: var(--accent-soft);
 }
 .auth-opt-card-title {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 16px;
   color: var(--text-primary);

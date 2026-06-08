@@ -11,7 +11,7 @@
   background: #EDEAE3;
   display: flex;
   flex-direction: column;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-hanken), -apple-system, BlinkMacSystemFont, sans-serif;
   color: #111310;
   overflow: hidden;
 }
@@ -37,7 +37,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 700;
   font-size: 16px;
   color: white;
@@ -83,7 +83,7 @@
 }
 .focus-progress-chip-lbl { opacity: 0.85; }
 .focus-progress-chip-num {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 13px;
 }
@@ -247,7 +247,7 @@
 
 /* ============ NOM DE LA FICHE ============ */
 .focus-name {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 22px;
   line-height: 1.2;
@@ -333,7 +333,7 @@
 }
 .focus-score.s5 { background: #1B4332; }
 .focus-score-num {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 22px;
   font-weight: 500;
   line-height: 1;
@@ -481,7 +481,7 @@
   margin-bottom: 18px;
 }
 .focus-empty-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 24px;
   margin: 0 0 8px;
@@ -520,7 +520,7 @@
   margin-bottom: 8px;
 }
 .focus-done-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 22px;
   line-height: 1.22;
@@ -630,7 +630,7 @@
   margin-bottom: 10px;
 }
 .focus-done-recap-row strong {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 14px;
   color: #1B4332;
@@ -664,7 +664,7 @@
   color: #3D3D2A;
 }
 .focus-done-recap-pill strong {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 13px;
   color: #1A1A0F;
@@ -816,7 +816,7 @@
   white-space: nowrap;
 }
 .focus-combo-x {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 18px;
   font-weight: 500;
   line-height: 1;
@@ -928,7 +928,7 @@
   gap: 5px;
 }
 .focus-garden-stats-num {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 18px;
   font-weight: 500;
   line-height: 1;
@@ -1353,7 +1353,7 @@
   min-width: 220px;
   max-width: 250px;
   color: #E8C898;
-  font-family: 'Cormorant Garamond', 'Cinzel', Georgia, serif;
+  font-family: var(--font-hanken), var(--font-bricolage), Georgia, serif;
   box-shadow:
     0 16px 40px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(216, 168, 72, 0.18);
@@ -1371,7 +1371,7 @@
   border-bottom: 1px solid rgba(216, 168, 72, 0.22);
 }
 .bib-treasures-kicker {
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 3px;
@@ -1383,7 +1383,7 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   color: #F0DDB8;
 }
 .bib-treasures-count-num {
@@ -1395,7 +1395,7 @@
 .bib-treasures-count-sep { color: rgba(216, 168, 72, 0.4); font-size: 17px; }
 .bib-treasures-count-tot { color: #A88058; font-size: 14px; }
 .bib-treasures-count-lbl {
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 9.5px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -1417,7 +1417,7 @@
 }
 
 .bib-treasures-title {
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-bricolage), serif;
   font-size: 9.5px;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -1439,7 +1439,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   transition: opacity 0.3s, transform 0.3s;
 }
 .bib-treasure-marker {
@@ -1451,7 +1451,7 @@
   justify-content: center;
   font-size: 12px;
   flex-shrink: 0;
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-bricolage), serif;
   letter-spacing: 0;
 }
 .bib-treasure-info {
@@ -1462,7 +1462,7 @@
   flex: 1;
 }
 .bib-treasure-threshold {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;

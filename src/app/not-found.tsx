@@ -19,13 +19,13 @@ export default function NotFound() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '40px 20px',
-        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+        fontFamily: "var(--font-hanken), system-ui, sans-serif",
       }}
     >
       <div style={{ maxWidth: 480, textAlign: 'center' }}>
         <div
           style={{
-            fontFamily: "'Cinzel', 'Fraunces', Georgia, serif",
+            fontFamily: "var(--font-bricolage), var(--font-bricolage), Georgia, serif",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: '0.18em',
@@ -39,7 +39,7 @@ export default function NotFound() {
 
         <div
           style={{
-            fontFamily: "'Fraunces', serif",
+            fontFamily: "var(--font-bricolage), serif",
             fontSize: 88,
             fontWeight: 500,
             color: '#1B4332',
@@ -53,7 +53,7 @@ export default function NotFound() {
 
         <h1
           style={{
-            fontFamily: "'Fraunces', serif",
+            fontFamily: "var(--font-bricolage), serif",
             fontSize: 28,
             fontWeight: 500,
             color: '#1A1A1A',
