@@ -48,7 +48,7 @@ export default function DashTodo({ userId }: { userId: string | null }) {
   const pending = todos.filter(t => !t.done).length
 
   return (
-    <div className="panel reveal d2" style={{ flex: '1 1 0', minHeight: 0 }}>
+    <div className="panel reveal d2" style={{ flex: '2 1 0', minHeight: 0 }}>
       <div className="phead">
         <div className="picon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">

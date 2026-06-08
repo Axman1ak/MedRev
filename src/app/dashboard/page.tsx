@@ -472,10 +472,10 @@ function DashGarden({ userId }: { userId: string | null }) {
       </div>
       <div className="bib-foot">
         <div className="bignum">{fichesCount} <small>ouvrage{fichesCount > 1 ? 's' : ''}</small></div>
-        <div className="tres-pill"><span className="gd" />{treasures} tr\u00e9sor{treasures > 1 ? 's' : ''}</div>
+        <div className="tres-pill"><span className="gd" />{treasures} trésor{treasures > 1 ? 's' : ''}</div>
       </div>
       <div className="prog"><i style={{ width: progPct + '%' }} /></div>
-      <div className="prog-lbl">{upcoming ? `prochain tr\u00e9sor \u00e0 ${upcoming.at} h de focus` : 'tous les tr\u00e9sors d\u00e9bloqu\u00e9s'}</div>
+      <div className="prog-lbl">{upcoming ? `prochain trésor à ${upcoming.at} h de focus` : 'tous les trésors débloqués'}</div>
     </div>
   )
 }
@@ -612,7 +612,7 @@ export default function DashboardPage() {
         </div>
         <div className="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" strokeLinecap="round"/></svg>
-          Rechercher une fiche, une mati\u00e8re\u2026
+          Rechercher une fiche, une matière…
         </div>
       </div>
 
@@ -622,16 +622,16 @@ export default function DashboardPage() {
             <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 6v14M5 8v11a1 1 0 0 0 1 1h6M19 8v11a1 1 0 0 1-1 1h-6M5 8a3 3 0 0 1 3-3 4 4 0 0 1 4 3 4 4 0 0 1 4-3 3 3 0 0 1 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             <div>
               <div className="ptitle">Fiches du jour</div>
-              <div className="psub"><b>{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''}</b> \u00e0 r\u00e9viser</div>
+              <div className="psub"><b>{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''}</b> à réviser</div>
             </div>
-            {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer \u2192</Link>}
+            {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer →</Link>}
           </div>
           <div className="flist">
             {todayQueue.length === 0 ? (
-              <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune r\u00e9vision aujourd&apos;hui. Profite de ta journ\u00e9e !</div>
+              <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune révision aujourd&apos;hui. Profite de ta journée !</div>
             ) : todayQueue.slice(0, 6).map((p, idx) => {
               const sys = semSystems.find(s => s.id === p.lesson.system_id)
-              const sysName = sys?.name ?? 'Mati\u00e8re'
+              const sysName = sys?.name ?? 'Matière'
               const overdue = p.due.status === 'missed'
               const score = p.lastScore || 0
               return (
@@ -644,7 +644,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   {overdue
-                    ? <span className="badge-late">en retard \u00b7 {p.due.overdueDays} j</span>
+                    ? <span className="badge-late">en retard · {p.due.overdueDays} j</span>
                     : <span className="fdue">aujourd&apos;hui</span>}
                 </div>
               )
@@ -707,13 +707,13 @@ function TodayModal({
 
         <div className="full-header">
           <div className="full-title-wrap">
-            <div className="full-title-ic">{'\u25CF'}</div>
+            <div className="full-title-ic">{'●'}</div>
             <div>
               <h2 className="full-title">Révisions du jour</h2>
               <div className="full-sub">{todayLabel}</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
         </div>
 
         <div className="full-today-stats">
@@ -821,13 +821,13 @@ function WeakModal({
 
         <div className="full-header">
           <div className="full-title-wrap">
-            <div className="full-title-ic rose">{'\u25C6'}</div>
+            <div className="full-title-ic rose">{'◆'}</div>
             <div>
               <h2 className="full-title">Toutes tes matières</h2>
               <div className="full-sub">Classées par moyenne, du plus faible au plus maîtrisé</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
         </div>
 
         {stats.length > 0 && (
