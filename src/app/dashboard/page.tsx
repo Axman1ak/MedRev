@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import DashTodo from '@/components/DashTodo'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -678,7 +679,7 @@ export default function DashboardPage() {
         <div className="today">
           <div className="today-left">
             <div className="today-head">
-              <span className="today-label"><span className="today-label-dot" /> Aujourd&apos;hui</span>
+              <span className="today-label"><span className="today-label-dot" /> Fiches du jour</span>
               {todayQueue.length > 5 && (
                 <button className="see-more" onClick={() => setShowTodayModal(true)}>
                   Voir les {todayQueue.length} révisions
@@ -694,31 +695,36 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <h2 className="today-intro">
-                  Voici tes <em>révisions du jour</em>, dans l&apos;ordre suggéré
-                </h2>
+                <h2 className="today-intro">{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''} à réviser aujourd&apos;hui</h2>
                 <div className="today-sub">
-                  le premier item est prioritaire — tu peux skip ou reporter à tout moment
+                  la première est prioritaire — tu peux skip ou reporter à tout moment
                 </div>
 
                 <div className="today-list">
                   {todayQueue.slice(0, 5).map((p, idx) => {
                     const sys = semSystems.find(s => s.id === p.lesson.system_id)
                     const sysName = sys?.name ?? 'Matière'
-                    const meta = buildMetaForDue(p.due, sysName, p.lastScore)
                     const highlight = idx === 0
+                    const overdue = p.due.status === 'missed'
                     return (
                       <div key={p.lesson.id} className={`today-item${highlight ? ' highlight' : ''}`}>
-                        <div className="today-item-icon">{highlight ? '!' : idx + 1}</div>
+                        <div className="today-item-tag">{sysName.slice(0, 2).toUpperCase()}</div>
                         <div className="today-item-main">
                           <div className="today-item-name">{p.lesson.name}</div>
                           <div className="today-item-meta">
-                            {meta.withOverdue
-                              ? <><strong>J+{J[p.due.stepIndex]} manqué depuis {p.due.overdueDays} j</strong> · {sysName}{p.lastScore !== null ? ` · dernière ${p.lastScore}/5` : ''}</>
-                              : meta.text}
+                            <span>{sysName}</span>
+                            {p.lastScore !== null && (
+                              <span className="today-dots">
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <span key={n} className={`today-dot${n <= (p.lastScore || 0) ? ' on' : ''}`} />
+                                ))}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="today-item-arrow">{'\u2192'}</div>
+                        {overdue
+                          ? <span className="today-badge-late">en retard · {p.due.overdueDays} j</span>
+                          : <span className="today-due">aujourd&apos;hui</span>}
                       </div>
                     )
                   })}
@@ -737,185 +743,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ZONES 2, 3, 4 */}
-        <div className="dash-row">
-
-          {/* ZONE 2 : POINT FAIBLE — flex column propre pour éviter
-              chevauchement entre la liste de fiches et le CTA "Retravailler" */}
-          <div
-            className="dash-card weak-card"
-            style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
-          >
-            <div className="dash-card-title with-action">
-              Point faible
-              {matiereStats.length > 0 && (
-                <button className="see-more" onClick={() => setShowWeakModal(true)}>
-                  Tout voir
-                </button>
-              )}
-            </div>
-
-            {weakest === null ? (
-              <div className="weak-empty">
-                Pas encore assez de notes pour identifier un point faible.
-              </div>
-            ) : (
-              <>
-                <div className="weak-hero">
-                  <div className="weak-hero-left">
-                    <div className="weak-hero-matiere">{weakest.system.name}</div>
-                    <div className="weak-hero-label">{scoreLabel(weakest.avgScore)}</div>
-                  </div>
-                  <div className={`weak-hero-num ${scoreClass(weakest.avgScore)}`}>
-                    <span className="weak-hero-num-val">{weakest.avgScore !== null ? weakest.avgScore.toFixed(1) : '·'}</span>
-                    <span className="weak-hero-num-max">/5</span>
-                  </div>
-                </div>
-
-                {weakestFragile.length > 0 ? (
-                  <div
-                    className="weak-list"
-                    style={{ flex: '1 1 auto', overflowY: 'auto', minHeight: 0 }}
-                  >
-                    {weakestFragile.map(f => {
-                      const cls = scoreClass(f.avg)
-                      return (
-                        <div key={f.lesson.id} className="weak-item">
-                          <div className="weak-item-name">{f.lesson.name}</div>
-                          <span className={`weak-chip ${cls}`}>{f.avg.toFixed(1)}</span>
-                        </div>
-                      )
-                    })}
-                    {weakest && weakest.weakestFiches.length > weakestFragile.length && (
-                      <div className="weak-more">+ {weakest.weakestFiches.length - weakestFragile.length} autre{weakest.weakestFiches.length - weakestFragile.length > 1 ? 's' : ''}</div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="weak-noframe" style={{ flex: '1 1 auto' }}>
-                    Aucune fiche notée dans cette matière.
-                  </div>
-                )}
-
-                <Link
-                  href={
-                    weakestFragile.length > 0
-                      ? `/dashboard/focus?lessons=${weakestFragile.map(f => f.lesson.id).join(',')}`
-                      : `/dashboard/focus?system=${weakest.system.id}`
-                  }
-                  className="weak-cta"
-                  style={{ textDecoration: 'none', marginTop: 'auto', flexShrink: 0 }}
-                >
-                  Retravailler {weakestFragile.length > 0 ? 'ces fiches' : 'cette matière'}
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* ZONE 3 : RÉGULARITÉ — refonte lisibilité.
-              1 streak ÉNORME au centre, contexte fusionné, grille 7 jours plus grosse. */}
-          <div className="dash-card reg-card">
-            <div className="dash-card-title">Régularité</div>
-
-            <div className="reg-hero">
-              <div className="reg-hero-left">
-                <div className="reg-hero-num">{streak}</div>
-                <div className="reg-hero-unit">
-                  {streak <= 1 ? 'jour' : 'jours'}<br />
-                  <span className="reg-hero-unit-soft">d&apos;affilée</span>
-                </div>
-              </div>
-              <div className="reg-stats">
-                Record <strong>{recordStreak} j</strong><br />
-                Sem. <strong>{weekDone}/{weekTotal}</strong>
-              </div>
-            </div>
-
-            <div className="reg-heat-wrap">
-              {/* Grille unique 7×5 (1 ligne d'en-têtes + 4 semaines).
-                  La semaine courante est la dernière ligne ; les cases s'allument
-                  de gauche (lundi) à droite (dimanche). À la fin de la semaine,
-                  toutes les lignes remontent et une nouvelle semaine apparaît en bas. */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, 1fr)',
-                  gap: 4,
-                  marginBottom: 6,
-                }}
-              >
-                <div className="reg-heat-day">L</div>
-                <div className="reg-heat-day">M</div>
-                <div className="reg-heat-day">M</div>
-                <div className="reg-heat-day">J</div>
-                <div className="reg-heat-day">V</div>
-                <div className="reg-heat-day">S</div>
-                <div className="reg-heat-day">D</div>
-                {heatmap.flat().map((cell, idx) => {
-                  const cls = [
-                    'reg-heat-cell',
-                    cell.active && !cell.inFuture ? 'done' : '',
-                    cell.isToday ? 'today' : '',
-                    cell.inFuture ? 'future' : '',
-                  ].filter(Boolean).join(' ')
-                  return <div key={idx} className={cls} title={cell.date} />
-                })}
-              </div>
-              <div className="reg-heat-axis">
-                <span>il y a 4 sem.</span>
-                <span>aujourd&apos;hui {'↑'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ZONE 4 : CHARGE À VENIR — refonte lisibilité.
-              1 total dominant (44px), 4 barres verticales pour les semaines, pic en couleur. */}
-          <div className="dash-card load-card">
-            <div className="dash-card-title">Charge à venir</div>
-
-            {(() => {
-              const total = upcomingLoad.reduce((acc, w) => acc + w.count, 0)
-              const showPeak = loadMax > 10
-              return (
-                <>
-                  <div className="load-hero">
-                    <div className="load-hero-num">{total}</div>
-                    <div className="load-hero-unit">
-                      {total <= 1 ? 'fiche' : 'fiches'}<br />
-                      <span className="load-hero-unit-soft">sur 4 semaines</span>
-                    </div>
-                  </div>
-
-                  <div className="load-bars">
-                    {upcomingLoad.map((w, i) => {
-                      const isPeak = showPeak && i === peakIdx && w.count === loadMax
-                      const pct = loadMax > 0 ? Math.max(8, Math.round((w.count / loadMax) * 100)) : 0
-                      return (
-                        <div key={w.label} className={`load-col${isPeak ? ' peak' : ''}`}>
-                          <div className="load-col-bar-wrap">
-                            <div
-                              className={`load-col-bar${isPeak ? ' peak' : ''}`}
-                              style={{ height: w.count > 0 ? `${pct}%` : '6%' }}
-                            />
-                          </div>
-                          <div className="load-col-count">{w.count}</div>
-                          <div className="load-col-label">{w.label}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {total === 0 ? (
-                    <div className="load-note calm"><strong>Aucune révision</strong> prévue.</div>
-                  ) : showPeak && peakIdx >= 0 ? (
-                    <div className="load-note"><strong>Pic en {upcomingLoad[peakIdx].label}</strong>. Pense à étaler.</div>
-                  ) : (
-                    <div className="load-note calm"><strong>Charge équilibrée</strong> sur 4 sem.</div>
-                  )}
-                </>
-              )
-            })()}
-          </div>
-
-        </div>
+        <DashTodo userId={userId} />
       </div>
 
       {/* ====== MODALE : AUJOURD'HUI ====== */}
