@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import DashTodo from '@/components/DashTodo'
+import ReviewModal from '@/components/ReviewModal'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -134,12 +135,26 @@ function getNextRevDate(lesson: Lesson): string | null {
   return null
 }
 
+// Reporter / Annuler (colonnes lessons.skips / lessons.postpones — n'affectent
+// pas steps, donc moyennes/tampons/stats restent intacts).
+function lessonSkips(l: Lesson): number[] {
+  const s = (l as { skips?: unknown }).skips
+  return Array.isArray(s) ? (s as number[]) : []
+}
+function lessonPostpones(l: Lesson): Record<string, string> {
+  const p = (l as { postpones?: unknown }).postpones
+  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
+}
+
 function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
+  const skips = lessonSkips(lesson)
+  const postpones = lessonPostpones(lesson)
   for (let i = 0; i < J.length; i++) {
     if (stepScore(steps[i])) continue
-    const dd = stepDate(lesson, i)
+    if (skips.includes(i)) continue            // palier annulé → on passe au suivant
+    const dd = postpones[String(i)] ?? stepDate(lesson, i)  // report éventuel
     if (dd <= today) {
       return {
         stepIndex: i,
@@ -488,6 +503,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<{ name?: string } | null>(null)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
   const [showTodayModal, setShowTodayModal] = useState(false)
   const [showWeakModal, setShowWeakModal] = useState(false)
@@ -601,6 +617,29 @@ export default function DashboardPage() {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric'
   })
 
+  function openReview(lesson: Lesson) { setReviewLesson(lesson) }
+  function handleReviewUpdated(updated: Lesson) {
+    setLessons(prev => prev.map(l => (l.id === updated.id ? updated : l)))
+    setReviewLesson(prev => (prev && prev.id === updated.id ? updated : prev))
+  }
+
+  // Reporter à demain / Annuler ce palier — écrit dans lessons.postpones / lessons.skips.
+  // MAJ optimiste (la fiche quitte la liste tout de suite) puis persistance Supabase.
+  const tomorrow = dateStrFromOffset(today, 1)
+  async function postponeStep(lesson: Lesson, stepIndex: number) {
+    const postpones = { ...lessonPostpones(lesson), [String(stepIndex)]: tomorrow }
+    setLessons(prev => prev.map(l => (l.id === lesson.id ? { ...l, postpones } : l)))
+    await supabase.from('lessons').update({ postpones }).eq('id', lesson.id)
+  }
+  async function skipStep(lesson: Lesson, stepIndex: number) {
+    const skips = Array.from(new Set([...lessonSkips(lesson), stepIndex]))
+    setLessons(prev => prev.map(l => (l.id === lesson.id ? { ...l, skips } : l)))
+    await supabase.from('lessons').update({ skips }).eq('id', lesson.id)
+  }
+  const reviewSystemName = reviewLesson
+    ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
+    : ''
+
   if (!userId) return null
 
   return (
@@ -635,7 +674,15 @@ export default function DashboardPage() {
               const overdue = p.due.status === 'missed'
               const score = p.lastScore || 0
               return (
-                <div key={p.lesson.id} className={`fiche${idx === 0 ? ' hot' : ''}`}>
+                <div
+                  key={p.lesson.id}
+                  className={`fiche${idx === 0 ? ' hot' : ''}`}
+                  onClick={() => openReview(p.lesson)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(p.lesson) }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="ftag">{sysName.slice(0, 2).toUpperCase()}</div>
                   <div className="fmid">
                     <div className="fnm">{p.lesson.name}</div>
@@ -646,6 +693,20 @@ export default function DashboardPage() {
                   {overdue
                     ? <span className="badge-late">en retard · {p.due.overdueDays} j</span>
                     : <span className="fdue">aujourd&apos;hui</span>}
+                  <div className="fiche-actions">
+                    <button
+                      type="button"
+                      className="fa-btn"
+                      title="Reporter ce palier à demain"
+                      onClick={e => { e.stopPropagation(); postponeStep(p.lesson, p.due.stepIndex) }}
+                    >Reporter</button>
+                    <button
+                      type="button"
+                      className="fa-btn fa-skip"
+                      title="Annuler ce palier (sauté, sans pénaliser la moyenne)"
+                      onClick={e => { e.stopPropagation(); skipStep(p.lesson, p.due.stepIndex) }}
+                    >Annuler</button>
+                  </div>
                 </div>
               )
             })}
@@ -657,6 +718,16 @@ export default function DashboardPage() {
           <DashGarden userId={userId} />
         </div>
       </div>
+
+      {reviewLesson && (
+        <ReviewModal
+          lesson={reviewLesson}
+          systemName={reviewSystemName}
+          initialStepIdx={null}
+          onClose={() => setReviewLesson(null)}
+          onUpdated={handleReviewUpdated}
+        />
+      )}
     </div>
   )
 }

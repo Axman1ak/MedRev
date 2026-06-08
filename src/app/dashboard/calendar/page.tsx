@@ -76,19 +76,32 @@ function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0]
 }
 
+// Reporter / Annuler (colonnes lessons.skips / lessons.postpones).
+function lessonSkips(l: Lesson): number[] {
+  const s = (l as { skips?: unknown }).skips
+  return Array.isArray(s) ? (s as number[]) : []
+}
+function lessonPostpones(l: Lesson): Record<string, string> {
+  const p = (l as { postpones?: unknown }).postpones
+  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
+}
+
 function computeOccurrences(lessons: Lesson[]): FicheOccurrence[] {
   const out: FicheOccurrence[] = []
   for (const l of lessons) {
     if (!l.learn_date) continue
     const steps = (l.steps as StepEntry[]) || []
     const lastScore = getLastScore(l)
+    const skips = lessonSkips(l)
+    const postpones = lessonPostpones(l)
     for (let i = 0; i < J.length; i++) {
+      if (skips.includes(i)) continue          // palier annulé → pas d'occurrence
       const d = new Date(l.learn_date + 'T12:00:00')
       d.setDate(d.getDate() + J[i])
       out.push({
         lesson: l,
         stepIndex: i,
-        date: toDateStr(d),
+        date: postpones[String(i)] ?? toDateStr(d),  // report éventuel
         scoreForThisJ: stepScore(steps[i]),
         lastScore,
       })

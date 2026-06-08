@@ -58,6 +58,10 @@
 .dvx .fiche.hot{border-color:var(--alert)}
 .dvx .fiche.hot .ftag{background:var(--alert-soft);color:var(--alert)}
 .dvx .badge-late{background:var(--alert);color:#fff;font-weight:700;font-size:11px;padding:4px 9px;border-radius:7px;white-space:nowrap}
+.dvx .fiche-actions{display:flex;gap:6px;flex-shrink:0}
+.dvx .fa-btn{font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--gray);background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:5px 10px;cursor:pointer;transition:.15s;white-space:nowrap}
+.dvx .fa-btn:hover{border-color:var(--marine3);color:var(--marine2)}
+.dvx .fa-skip:hover{border-color:var(--alert);color:var(--alert)}
 
 .dvx .todo{display:flex;align-items:center;gap:11px;padding:8px 0;font-size:14.5px}
 .dvx .todo+.todo{border-top:1px solid var(--line)}
