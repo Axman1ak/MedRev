@@ -131,6 +131,8 @@ export default function CalendarPage() {
   const [reviewing, setReviewing] = useState<{ lesson: Lesson; stepIdx: number } | null>(null)
   const weekRef = useRef<HTMLDivElement>(null)
   const [weekPx, setWeekPx] = useState(0)
+  const monthRef = useRef<HTMLDivElement>(null)
+  const [monthPx, setMonthPx] = useState(0)
 
   const today = toDateStr(new Date())
 
@@ -184,6 +186,17 @@ export default function CalendarPage() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [view, lessons])
+
+  // Idem pour la grille mensuelle (hauteur d'une case = grille / nb lignes).
+  useEffect(() => {
+    const el = monthRef.current
+    if (!el) return
+    const update = () => setMonthPx(el.clientHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view, lessons, monthOffset])
 
   // ============= Derived =============
   const semSystems = useMemo(
@@ -311,6 +324,21 @@ export default function CalendarPage() {
     const maxFull = Math.max(1, Math.floor(avail / ROW_H))
     if (count <= maxFull) return { visible: count, overflow: 0 }
     const v = Math.max(1, Math.floor((avail - MORE_H) / ROW_H))
+    return { visible: v, overflow: count - v }
+  }
+
+  // Combien de titres tiennent dans une case mois (sinon : « voir plus »).
+  const monthRows = monthDays.length / 7
+  const M_NUM_H = 22, M_PAD = 14, M_TITLE_H = 16, M_MORE_H = 15
+  function monthSlots(count: number): { visible: number; overflow: number } {
+    if (!monthPx || !monthRows) {
+      const v = Math.min(count, 3)
+      return { visible: v, overflow: count - v }
+    }
+    const avail = (monthPx / monthRows) - M_NUM_H - M_PAD
+    const maxFull = Math.max(1, Math.floor(avail / M_TITLE_H))
+    if (count <= maxFull) return { visible: count, overflow: 0 }
+    const v = Math.max(1, Math.floor((avail - M_MORE_H) / M_TITLE_H))
     return { visible: v, overflow: count - v }
   }
 
@@ -456,14 +484,15 @@ export default function CalendarPage() {
               <div key={d} className="cal-month-head-cell">{d}</div>
             ))}
           </div>
-          <div className="cal-month-grid">
+          <div className="cal-month-grid" ref={monthRef}>
             {monthDays.map((day, i) => {
               if (!day) return <div key={i} className="cal-month-cell cal-empty" />
               const dateStr = toDateStr(day)
               const occs = byDate.get(dateStr) ?? []
               const isToday = dateStr === today
               const isPast = dateStr < today
-              const titleOccs = occs.slice(0, 8)
+              const { visible: mVisible, overflow: mOverflow } = monthSlots(occs.length)
+              const titleOccs = occs.slice(0, mVisible)
               const classes = [
                 'cal-month-cell',
                 isToday ? 'cal-today' : '',
@@ -498,8 +527,13 @@ export default function CalendarPage() {
                           </span>
                         )
                       })}
-                      {occs.length > titleOccs.length && (
-                        <span className="cal-month-more">+{occs.length - titleOccs.length}</span>
+                      {mOverflow > 0 && (
+                        <button
+                          className="cal-month-more"
+                          onClick={(e) => { e.stopPropagation(); setShowAllForDay(dateStr) }}
+                        >
+                          +{mOverflow} voir plus
+                        </button>
                       )}
                     </div>
                   )}
