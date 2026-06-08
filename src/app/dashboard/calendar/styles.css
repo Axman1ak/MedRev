@@ -27,12 +27,16 @@
   --cal-s5: #1B4332;
   --cal-neutral: var(--bg-muted);
 
-  flex: 1;
-  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding: 22px 28px;
   gap: 14px;
+  background: var(--cal-bg);
   box-sizing: border-box;
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
   color: var(--cal-dark);
@@ -633,7 +637,7 @@
 
 /* =========== RESPONSIVE =========== */
 @media (max-width: 900px) {
-  .cal-page { padding: 0; overflow: visible; }
+  .cal-page { height: auto; overflow: auto; padding: 18px; }
   .cal-week { grid-template-columns: 1fr; gap: 10px; }
   .cal-day { min-height: 120px; }
   .cal-head { flex-direction: column; align-items: stretch; }

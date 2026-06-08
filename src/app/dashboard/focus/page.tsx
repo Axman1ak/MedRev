@@ -13,7 +13,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -886,30 +886,13 @@ function FocusPageBody() {
 
         <div className="focus-stage">
 
-          {/* Bibliothèque alignée sur le dashboard (phase done) */}
-          <div className="focus-bookcase" aria-hidden>
-            {[0, 1, 2].map(r => (
-              <div key={r} className="shelf-row">
-                {Array.from({ length: 22 }).map((_, c) => {
-                  const idx = r * 22 + c
-                  const isTreasure = idx === 8 || idx === 25 || idx === 47
-                  const isCream = !isTreasure && idx % 11 === 5
-                  const SPINES = ['#1E7A50', '#2E9E6B', '#15573A', '#0F5132', '#247A55', '#3AA06B', '#114A33', '#1B6E49', '#43B57F', '#176E47']
-                  const h = 78 + Math.floor((Math.sin(idx * 1.7) + 1) * 10)
-                  let bg
-                  if (isTreasure) bg = 'linear-gradient(180deg,#EBCF80,#C2912F)'
-                  else if (isCream) bg = '#E8E2CF'
-                  else bg = SPINES[idx % SPINES.length]
-                  return (
-                    <div
-                      key={c}
-                      className={'bk' + (isTreasure ? ' treasure' : '')}
-                      style={{ background: bg, height: h + '%', animationDelay: 200 + idx * 14 + 'ms' }}
-                    />
-                  )
-                })}
-              </div>
-            ))}
+          {/* BIBLIOTHÈQUE visible en fond — état cumulé annuel (livres + trésors débloqués) */}
+          <div className="focus-garden">
+            <BibliothecaSvg
+              fichesCount={dayGarden.fichesCount}
+              className="focus-garden-svg"
+              preserveAspectRatio="xMidYMid slice"
+            />
           </div>
 
           {/* CARD bilan à GAUCHE pour laisser la bibliothèque visible à droite */}
@@ -1054,33 +1037,16 @@ function FocusPageBody() {
         </div>
       </div>
 
-      {/* STAGE : bibliothèque (fond) + zone card avec flèches (droite) */}
+      {/* STAGE : jardin (gauche) + zone card avec flèches (droite) */}
       <div className="focus-stage">
 
-        {/* Bibliothèque alignée sur le dashboard : 3 rangées × 22 livres, 3 trésors or */}
-        <div className="focus-bookcase" aria-hidden>
-          {[0, 1, 2].map(r => (
-            <div key={r} className="shelf-row">
-              {Array.from({ length: 22 }).map((_, c) => {
-                const idx = r * 22 + c
-                const isTreasure = idx === 8 || idx === 25 || idx === 47
-                const isCream = !isTreasure && idx % 11 === 5
-                const SPINES = ['#1E7A50', '#2E9E6B', '#15573A', '#0F5132', '#247A55', '#3AA06B', '#114A33', '#1B6E49', '#43B57F', '#176E47']
-                const h = 78 + Math.floor((Math.sin(idx * 1.7) + 1) * 10)
-                let bg
-                if (isTreasure) bg = 'linear-gradient(180deg,#EBCF80,#C2912F)'
-                else if (isCream) bg = '#E8E2CF'
-                else bg = SPINES[idx % SPINES.length]
-                return (
-                  <div
-                    key={c}
-                    className={'bk' + (isTreasure ? ' treasure' : '')}
-                    style={{ background: bg, height: h + '%', animationDelay: 200 + idx * 14 + 'ms' }}
-                  />
-                )
-              })}
-            </div>
-          ))}
+        {/* Zone BIBLIOTHÈQUE — état cumulé annuel, se peuple à chaque fiche notée */}
+        <div className="focus-garden">
+          <BibliothecaSvg
+            fichesCount={dayGarden.fichesCount}
+            className="focus-garden-svg"
+            preserveAspectRatio="xMidYMid slice"
+          />
         </div>
 
         {/* Panel des trésors (left-side, vertical) — montre les 6 trésors avec
