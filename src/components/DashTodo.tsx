@@ -48,7 +48,7 @@ export default function DashTodo({ userId }: { userId: string | null }) {
   const pending = todos.filter(t => !t.done).length
 
   return (
-    <div className="panel reveal d2" style={{ flex: '0 0 auto' }}>
+    <div className="panel reveal d2" style={{ flex: '1 1 0', minHeight: 0 }}>
       <div className="phead">
         <div className="picon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -61,7 +61,7 @@ export default function DashTodo({ userId }: { userId: string | null }) {
           <div className="psub">{pending} tâche{pending > 1 ? 's' : ''} en cours</div>
         </div>
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div className="todo-scroll" style={{ marginTop: 12 }}>
         {todos.map(t => (
           <div key={t.id} className={`todo${t.done ? ' done' : ''}`}>
             <button
