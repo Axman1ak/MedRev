@@ -403,16 +403,13 @@ function readBibLocal(userId: string): BibSnapshot {
 // ======================= MINI BIBLIOTHÈQUE COMPONENT =======================
 // Aperçu compact de la bibliothèque annuelle. Utilise <BibliothecaSvg> pour
 // un rendu identique au focus, juste à plus petite échelle.
-function DashGarden({
-  userId, queueLength, startHref,
-}: { userId: string | null; queueLength: number; startHref: string }) {
+function DashGarden({ userId }: { userId: string | null }) {
   const supabase = createClient()
   const [bib, setBib] = useState<BibSnapshot | null>(null)
 
   useEffect(() => {
     if (!userId) return
     setBib(readBibLocal(userId))
-    // Pull cloud (best-effort) si plus à jour que local
     void (async () => {
       try {
         const { data } = await supabase
@@ -421,37 +418,26 @@ function DashGarden({
           .eq('user_id', userId)
           .maybeSingle()
         if (!data) return
-        const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cloudFiches = Number((data as any).fiches_count ?? 0)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
         setBib(prev => {
           const local = prev ?? { elapsedMs: 0, fichesCount: 0 }
-          return {
-            elapsedMs: Math.max(local.elapsedMs, cloudElapsed),
-            fichesCount: Math.max(local.fichesCount, cloudFiches),
-          }
+          return { elapsedMs: Math.max(local.elapsedMs, cloudElapsed), fichesCount: Math.max(local.fichesCount, cloudFiches) }
         })
-      } catch {
-        // swallow
-      }
+      } catch {}
     })()
-
-    // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert.
-    if (!userId) return
     const uid: string = userId
-    function onStorage(e: StorageEvent) {
-      if (e.key === 'medrev-garden-' + uid) setBib(readBibLocal(uid))
-    }
+    function onStorage(e: StorageEvent) { if (e.key === 'medrev-garden-' + uid) setBib(readBibLocal(uid)) }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [userId, supabase])
 
-  // Refresh visibilité si on revient sur l'onglet (ex: après une session focus).
   useEffect(() => {
     if (!userId) return
     const uid = userId
-    function onVisible() {
-      if (document.visibilityState === 'visible') setBib(readBibLocal(uid))
-    }
+    function onVisible() { if (document.visibilityState === 'visible') setBib(readBibLocal(uid)) }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [userId])
@@ -459,79 +445,38 @@ function DashGarden({
   const fichesCount = bib?.fichesCount ?? 0
   const treasures = unlockedTreasuresCount(fichesCount)
   const upcoming = nextBibTreasure(fichesCount)
+  const progPct = Math.min(100, Math.round((treasures / 6) * 100))
 
-  const [showFullscreen, setShowFullscreen] = useState(false)
-
-  // Fermeture modale par ESC
-  useEffect(() => {
-    if (!showFullscreen) return
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setShowFullscreen(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [showFullscreen])
+  const shelves = useMemo(() => {
+    const cols = ['#15304E', '#22507E', '#2E5E8E', '#3E6F9C', '#6E93B8']
+    return [0, 1].map(row => Array.from({ length: 22 }, (_, i) => {
+      const gold = (i + row * 5) % 9 === 4
+      const sh = cols[(i * 3 + row * 5) % 5]
+      const h = 30 + Math.round(Math.abs(Math.sin((i + row * 5) * 1.3)) * 30)
+      return { bg: gold ? '#BE914A' : sh, h }
+    }))
+  }, [])
 
   return (
-    <>
-      <aside className="dash-bib-side" data-tour="bib-area" aria-label="Ma bibliothèque">
-        <div className="dash-bib-thumb">
-          <BibliothecaSvg fichesCount={fichesCount} />
-        </div>
-        <div className="dash-bib-stats">
-          <span className="dash-bib-stats-num">{fichesCount}</span>
-          <span className="dash-bib-stats-tot">/ {BIBLIOTHECA_TOTAL_CAPACITY}</span>
-          <span className="dash-bib-stats-lbl">Ouvrages</span>
-        </div>
-        <div className="dash-bib-tres">
-          <div className="dash-bib-tres-dots" aria-hidden="true">
-            {BIBLIOTHECA_TREASURES.map(t => (
-              <span key={t.unlockAt} className={`dash-bib-tres-dot${fichesCount >= t.unlockAt ? ' on' : ''}`} title={`${t.unlockAt}h · ${t.name}`} />
-            ))}
+    <div className="panel bib reveal d3">
+      <div className="phead">
+        <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h6v14H4zM10 5h6v14h-6z" strokeLinejoin="round"/><path d="M16 6l4 .8-2.4 13.3-3.9-.8" strokeLinejoin="round"/></svg></div>
+        <div><div className="ptitle">Bibliothèque</div><div className="psub">ta collection grandit</div></div>
+      </div>
+      <div className="case">
+        {shelves.map((row, r) => (
+          <div className="shelf" key={r}>
+            {row.map((b, i) => <span key={i} className="bk" style={{ background: b.bg, height: b.h }} />)}
           </div>
-          <span className="dash-bib-tres-lbl">
-            {treasures}/6 trésors{upcoming ? ` · prochain à ${upcoming.at} h` : ' · complet'}
-          </span>
-        </div>
-        <Link
-          data-tour="bib-cta"
-          href={startHref}
-          className={`dash-bib-cta${queueLength === 0 ? ' disabled' : ''}`}
-          style={{ pointerEvents: 'auto' }}
-        >
-          {queueLength === 0
-            ? 'Voir la session focus'
-            : `Démarrer · ${queueLength} ${queueLength > 1 ? 'fiches' : 'fiche'}`}
-        </Link>
-        <button
-          data-tour="bib-link"
-          type="button"
-          className="dash-bib-link"
-          onClick={() => setShowFullscreen(true)}
-        >
-          Voir ma bibliothèque entièrement →
-        </button>
-      </aside>
-
-      {showFullscreen && (
-        <div
-          className="dash-bib-fullscreen"
-          role="dialog"
-          aria-label="Bibliothèque complète"
-          onClick={() => setShowFullscreen(false)}
-        >
-          <button
-            data-tour="bib-fullscreen-close"
-            type="button"
-            className="dash-bib-fullscreen-close"
-            onClick={() => setShowFullscreen(false)}
-            aria-label="Fermer"
-          >×</button>
-          <div className="dash-bib-fullscreen-stage" onClick={e => e.stopPropagation()}>
-            <BibliothecaSvg fichesCount={fichesCount} className="dash-bib-fullscreen-svg" />
-            <BibliothecaTreasuresPanel fichesCount={fichesCount} className="dash-bib-fullscreen-panel" />
-          </div>
-        </div>
-      )}
-    </>
+        ))}
+      </div>
+      <div className="bib-foot">
+        <div className="bignum">{fichesCount} <small>ouvrage{fichesCount > 1 ? 's' : ''}</small></div>
+        <div className="tres-pill"><span className="gd" />{treasures} tr\u00e9sor{treasures > 1 ? 's' : ''}</div>
+      </div>
+      <div className="prog"><i style={{ width: progPct + '%' }} /></div>
+      <div className="prog-lbl">{upcoming ? `prochain tr\u00e9sor \u00e0 ${upcoming.at} h de focus` : 'tous les tr\u00e9sors d\u00e9bloqu\u00e9s'}</div>
+    </div>
   )
 }
 
@@ -659,119 +604,59 @@ export default function DashboardPage() {
   if (!userId) return null
 
   return (
-    <div className="dash-page">
-
-      {/* ====== TOP BAR ====== */}
-      <div className="dash-top">
+    <div className="dvx">
+      <div className="topbar reveal d1">
         <div>
-          <h1 className="dash-title">
-            {firstName ? <>Bonjour <em>{firstName}</em></> : <>Bonjour</>}
-          </h1>
-          <div className="dash-hello">Encore une journée pour avancer.</div>
+          <div className="kick">{todayLabel}</div>
+          <h1 className="hi">Bonjour {firstName}</h1>
         </div>
-        <div className="dash-topbar-right">
-          <div className="dash-search"><span className="dash-search-ic">⌕</span> Rechercher une fiche, une matière…</div>
-          <div className="dash-date">{todayLabel}</div>
+        <div className="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" strokeLinecap="round"/></svg>
+          Rechercher une fiche, une mati\u00e8re\u2026
         </div>
       </div>
 
-      {/* ====== 4 ZONES ====== */}
-      <div className="dash">
-
-        {/* ZONE 1 : AUJOURD'HUI */}
-        <div className="today">
-          <div className="today-left">
-            <div className="today-head">
-              <span className="today-label"><span className="today-label-dot" /> Fiches du jour</span>
-              <div className="today-head-actions">
-                {todayQueue.length > 5 && (
-                  <button className="see-more" onClick={() => setShowTodayModal(true)}>
-                    Voir les {todayQueue.length} révisions
-                  </button>
-                )}
-                {todayQueue.length > 0 && (
-                  <Link href={startSessionHref} className="today-start-btn">Commencer →</Link>
-                )}
-              </div>
+      <div className="grid">
+        <div className="panel reveal d2">
+          <div className="phead">
+            <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 6v14M5 8v11a1 1 0 0 0 1 1h6M19 8v11a1 1 0 0 1-1 1h-6M5 8a3 3 0 0 1 3-3 4 4 0 0 1 4 3 4 4 0 0 1 4-3 3 3 0 0 1 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+            <div>
+              <div className="ptitle">Fiches du jour</div>
+              <div className="psub"><b>{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''}</b> \u00e0 r\u00e9viser</div>
             </div>
-
-            {todayQueue.length === 0 ? (
-              <>
-                <h2 className="today-intro">Aucune révision pour aujourd&apos;hui</h2>
-                <div className="today-sub">Profite de ta journée, ou ajoute des fiches pour démarrer.</div>
-                <div className="today-empty">Rien à faire aujourd&apos;hui.</div>
-              </>
-            ) : (
-              <>
-                <h2 className="today-intro">{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''} à réviser aujourd&apos;hui</h2>
-                <div className="today-sub">
-                  la première est prioritaire — tu peux skip ou reporter à tout moment
-                </div>
-
-                <div className="today-list">
-                  {todayQueue.slice(0, 5).map((p, idx) => {
-                    const sys = semSystems.find(s => s.id === p.lesson.system_id)
-                    const sysName = sys?.name ?? 'Matière'
-                    const highlight = idx === 0
-                    const overdue = p.due.status === 'missed'
-                    return (
-                      <div key={p.lesson.id} className={`today-item${highlight ? ' highlight' : ''}`}>
-                        <div className="today-item-tag">{sysName.slice(0, 2).toUpperCase()}</div>
-                        <div className="today-item-main">
-                          <div className="today-item-name">{p.lesson.name}</div>
-                          <div className="today-item-meta">
-                            <span>{sysName}</span>
-                            {p.lastScore !== null && (
-                              <span className="today-dots">
-                                {[1, 2, 3, 4, 5].map(n => (
-                                  <span key={n} className={`today-dot${n <= (p.lastScore || 0) ? ' on' : ''}`} />
-                                ))}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {overdue
-                          ? <span className="today-badge-late">en retard · {p.due.overdueDays} j</span>
-                          : <span className="today-due">aujourd&apos;hui</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
+            {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer \u2192</Link>}
           </div>
-
+          <div className="flist">
+            {todayQueue.length === 0 ? (
+              <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune r\u00e9vision aujourd&apos;hui. Profite de ta journ\u00e9e !</div>
+            ) : todayQueue.slice(0, 6).map((p, idx) => {
+              const sys = semSystems.find(s => s.id === p.lesson.system_id)
+              const sysName = sys?.name ?? 'Mati\u00e8re'
+              const overdue = p.due.status === 'missed'
+              const score = p.lastScore || 0
+              return (
+                <div key={p.lesson.id} className={`fiche${idx === 0 ? ' hot' : ''}`}>
+                  <div className="ftag">{sysName.slice(0, 2).toUpperCase()}</div>
+                  <div className="fmid">
+                    <div className="fnm">{p.lesson.name}</div>
+                    <div className="fsub">{sysName}
+                      <span className="dots">{[1, 2, 3, 4, 5].map(n => <span key={n} className={`dot${n <= score ? ' f' : ''}`} />)}</span>
+                    </div>
+                  </div>
+                  {overdue
+                    ? <span className="badge-late">en retard \u00b7 {p.due.overdueDays} j</span>
+                    : <span className="fdue">aujourd&apos;hui</span>}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Colonne droite : À faire + Bibliothèque */}
-        <div className="dash-right">
+        <div className="col-r">
           <DashTodo userId={userId} />
-          <DashGarden
-            userId={userId}
-            queueLength={todayQueue.length}
-            startHref={startSessionHref}
-          />
+          <DashGarden userId={userId} />
         </div>
       </div>
-
-      {/* ====== MODALE : AUJOURD'HUI ====== */}
-      {showTodayModal && (
-        <TodayModal
-          queue={todayQueue}
-          systems={semSystems}
-          startHref={startSessionHref}
-          onClose={() => setShowTodayModal(false)}
-          todayLabel={todayLabel}
-        />
-      )}
-
-      {/* ====== MODALE : POINT FAIBLE ====== */}
-      {showWeakModal && (
-        <WeakModal
-          stats={matiereStats}
-          onClose={() => setShowWeakModal(false)}
-        />
-      )}
     </div>
   )
 }
