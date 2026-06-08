@@ -669,10 +669,7 @@ export default function DashboardPage() {
           </h1>
           <div className="dash-hello">Encore une journée pour avancer.</div>
         </div>
-        <div className="dash-topbar-right">
-          <div className="dash-search"><span className="dash-search-ic">⌕</span> Rechercher une fiche, une matière…</div>
-          <div className="dash-date">{todayLabel}</div>
-        </div>
+        <div className="dash-date">{todayLabel}</div>
       </div>
 
       {/* ====== 4 ZONES ====== */}
@@ -683,16 +680,11 @@ export default function DashboardPage() {
           <div className="today-left">
             <div className="today-head">
               <span className="today-label"><span className="today-label-dot" /> Fiches du jour</span>
-              <div className="today-head-actions">
-                {todayQueue.length > 5 && (
-                  <button className="see-more" onClick={() => setShowTodayModal(true)}>
-                    Voir les {todayQueue.length} révisions
-                  </button>
-                )}
-                {todayQueue.length > 0 && (
-                  <Link href={startSessionHref} className="today-start-btn">Commencer →</Link>
-                )}
-              </div>
+              {todayQueue.length > 5 && (
+                <button className="see-more" onClick={() => setShowTodayModal(true)}>
+                  Voir les {todayQueue.length} révisions
+                </button>
+              )}
             </div>
 
             {todayQueue.length === 0 ? (
@@ -741,17 +733,17 @@ export default function DashboardPage() {
             )}
           </div>
 
-        </div>
-
-        {/* Colonne droite : À faire + Bibliothèque */}
-        <div className="dash-right">
-          <DashTodo userId={userId} />
+          {/* Mini-jardin remplace le side panel CTA. La session focus se lance
+              depuis le bouton intégré au jardin. */}
           <DashGarden
             userId={userId}
             queueLength={todayQueue.length}
             startHref={startSessionHref}
           />
         </div>
+
+        {/* ZONES 2, 3, 4 */}
+        <DashTodo userId={userId} />
       </div>
 
       {/* ====== MODALE : AUJOURD'HUI ====== */}
