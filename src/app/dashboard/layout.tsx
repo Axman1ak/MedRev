@@ -16,12 +16,7 @@ const NAV = [
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
   { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
 ]
-// Note : "Paramètres" n'est PAS dans NAV — l'accès se fait via la card user
-// en bas de sidebar (cliquable, avec name + plan + fac visibles). Le bouton
-// "Aide & tutoriel" en dessous est la seule entrée secondaire restante.
 
-// Mapping id fac → nom affichable. Aligné avec auth-page.tsx + settings-page.tsx.
-// À factoriser dans @/types un jour si on l'utilise dans encore plus d'endroits.
 const FAC_NAMES: Record<string, string> = {
   'sorbonne': 'Sorbonne',
   'paris-cite': 'Paris Cité',
@@ -40,20 +35,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [todayCount, setTodayCount] = useState(0)
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
 
-  // Onboarding state — overlay tour piloté depuis Settings (event 'medrev-onboarding-replay')
-  // ou auto-déclenché au 1er login (onboarded_at null).
   const [tourOpen, setTourOpen] = useState(false)
   const [replayKey, setReplayKey] = useState(0)
   const [isReplay, setIsReplay] = useState(false)
   const [existingLessonCount, setExistingLessonCount] = useState(0)
 
-  // Mobile : sidebar masquée par défaut, ouverte via le bouton burger.
-  // On ferme automatiquement la sidebar quand on change de route (sinon
-  // l'user clique un lien et la sidebar reste ouverte par-dessus le contenu).
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   useEffect(() => { setMobileNavOpen(false) }, [pathname])
 
-  // Load persisted semester on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
@@ -72,8 +61,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
-      // Charge en parallèle profile + count des lessons (toujours, pour que
-      // le tour ait la bonne valeur même au replay).
       Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('lessons').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -89,8 +76,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             '...'
           setProfile({ ...data, name: displayName })
 
-          // Auto-open du tour : 1er login (onboarded_at null) OU étape déjà
-          // commencée (refresh en plein milieu du tour).
           const lsStep = typeof window !== 'undefined'
             ? localStorage.getItem('medrev-onboarding-step')
             : null
@@ -103,12 +88,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Listener pour le replay déclenché depuis Settings → "Revoir le tutoriel".
-  // L'event 'medrev-onboarding-replay' est dispatché par settings/page.tsx.
   useEffect(() => {
     async function handleReplay() {
-      // Refresh le count des lessons : si l'user a créé des fiches depuis
-      // le 1er login, le tour ne doit pas re-forcer la création.
       if (profile) {
         const { count } = await supabase
           .from('lessons')
@@ -125,7 +106,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
-  // Onboarding callbacks : marquer onboarded_at en DB et fermer l'overlay.
   async function markOnboarded() {
     if (!profile) return
     await supabase.from('profiles')
@@ -173,23 +153,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="db-shell">
       <style>{`
-        /* Note : les fonts Fraunces et Plus Jakarta Sans sont déjà chargées
-           via next/font/google dans app/layout.tsx. Pas d'@import ici — ça
-           dupliquerait la requête et bloquerait le render. Si tu vois "Plus
-           Jakarta Sans" non-rendered, vérifier que layout.tsx applique bien
-           les variables CSS (--font-jakarta, etc.). */
-
-        /* Scope page wrapper — pas de couleur hardcodée, tout via tokens.
-           Les aliases ci-dessous permettent aux feuilles de styles scopées
-           des pages enfants (.dash-, .fi-, .cal-, .qcm-, .set-, .rmod-, .srcl-,
-           .ont-) de recevoir automatiquement les bonnes couleurs sans avoir
-           à redéfinir leurs tokens locaux. */
         .db-shell {
           display: flex;
           min-height: 100vh;
           background: var(--bg-app);
           color: var(--text-primary);
-          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+          font-family: 'Hanken Grotesk', system-ui, sans-serif;
 
           /* Aliases legacy → tokens globaux du design system */
           --bg: var(--bg-app);
@@ -208,232 +177,149 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           --rose-soft: var(--danger-soft);
           --cream: var(--bg-soft);
           --al: var(--warning-soft);
+
+          /* Couleurs propres à la sidebar marine (indépendantes du thème) */
+          --rail: #15304E;
+          --rail-2: #22507E;
+          --rail-accent: #7FB0D4;
         }
 
-        /* SIDEBAR */
+        /* ===================== SIDEBAR MARINE RÉTRACTABLE ===================== */
         .db-sidebar {
-          width: 220px;
+          position: fixed;
+          left: 0; top: 0;
+          height: 100vh;
+          width: 76px;
           flex-shrink: 0;
-          background: var(--sb-bg);
-          color: var(--sb-text);
+          background: var(--rail);
+          color: #fff;
           display: flex;
           flex-direction: column;
-          padding: 22px 0;
-          position: sticky;
-          top: 0;
-          height: 100vh;
-          overflow-y: auto;
-          border-right: 1px solid var(--sb-border);
-          transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+          padding: 20px 0;
+          overflow: hidden;
+          z-index: 40;
+          transition: width .24s cubic-bezier(.4,0,.2,1), box-shadow .24s ease;
         }
+        .db-sidebar:hover { width: 248px; box-shadow: 22px 0 60px rgba(0,0,0,.30); }
+
+        /* libellés qui apparaissent au survol */
+        .db-lbl { opacity: 0; transition: opacity .15s ease; white-space: nowrap; }
+        .db-sidebar:hover .db-lbl { opacity: 1; }
+
         .db-logo {
-          font-family: 'Cinzel', 'Fraunces', Georgia, serif;
-          font-size: 15px;
-          font-weight: 600;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          padding: 0 18px 14px;
-          color: var(--sb-text);
+          display: flex; align-items: center;
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 22px; font-weight: 700; letter-spacing: -.01em;
+          padding: 0 0 22px 26px; color: #fff; white-space: nowrap;
         }
-        .db-logo span { color: var(--sb-accent); }
+        .db-logo .db-logo-r { color: var(--rail-accent); }
 
-        .db-sep {
-          border-bottom: 1px solid var(--sb-border);
-          margin: 0 12px 12px;
-        }
+        .db-sep { border-bottom: 1px solid rgba(255,255,255,.10); margin: 0 14px 14px; }
 
-        .db-nav-section {
-          padding: 0 9px;
-          margin-bottom: 20px;
-        }
+        .db-nav-section { padding: 0; margin-bottom: 16px; }
         .db-nav-label {
-          font-size: 9.5px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: .1em;
-          color: var(--sb-text-dim);
-          padding: 0 9px;
-          margin-bottom: 5px;
+          font-size: 10px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: .12em; color: rgba(255,255,255,.42);
+          padding: 0 26px; margin-bottom: 6px;
         }
 
         .db-nav-item {
-          display: flex; align-items: center; gap: 9px;
-          padding: 8px 10px; border-radius: 7px; cursor: pointer;
-          font-size: 13px; color: var(--sb-text-muted);
-          margin-bottom: 1px; transition: all .15s;
-          text-decoration: none;
+          position: relative;
+          display: flex; align-items: center; gap: 16px;
+          height: 46px; padding: 0 18px 0 26px;
+          color: rgba(255,255,255,.64); cursor: pointer;
+          font-size: 14.5px; font-weight: 500;
+          text-decoration: none; white-space: nowrap;
+          transition: color .15s, background .15s;
         }
-        .db-nav-item:hover { background: var(--sb-hover); color: var(--sb-text); }
-        .db-nav-item.active { background: var(--sb-active); color: var(--sb-text); }
-        .db-nav-item .ic { width: 16px; text-align: center; font-style: normal; font-size: 13px; }
-
-        /* Section secondaire (Paramètres + Aide) : moins prominente */
-        .db-nav-secondary {
-          margin-bottom: 12px;
-          padding-top: 10px;
-          border-top: 1px solid var(--sb-border);
+        .db-nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+        .db-nav-item.active { color: #fff; }
+        .db-nav-item.active::before {
+          content: ''; position: absolute; left: 0; top: 0;
+          width: 3px; height: 46px; background: var(--rail-accent);
+          border-radius: 0 2px 2px 0;
         }
-        .db-nav-secondary .db-nav-item {
-          font-size: 12.5px;
-          color: var(--sb-text-dim);
-        }
-        .db-nav-secondary .db-nav-item:hover {
-          color: var(--sb-text-muted);
-        }
-
-        /* Bouton "Aide & tutoriel" : ressemble à un nav item mais c'est un <button> */
-        .db-nav-item-btn {
-          width: 100%;
-          border: none;
-          background: transparent;
-          font-family: inherit;
-          cursor: pointer;
-          text-align: left;
+        .db-nav-item .ic {
+          width: 22px; min-width: 22px; text-align: center;
+          font-style: normal; font-size: 16px; flex-shrink: 0;
         }
         .db-nav-item .badge {
-          margin-left: auto;
-          font-size: 10px;
-          font-weight: 700;
-          background: var(--sb-accent);
-          color: white;
-          border-radius: 20px;
-          padding: 1px 7px;
+          margin-left: auto; font-size: 10px; font-weight: 700;
+          background: var(--rail-accent); color: var(--rail);
+          border-radius: 20px; padding: 1px 7px;
         }
 
-        /* SEMESTER TOGGLE */
+        /* SEMESTER TOGGLE — masqué quand la sidebar est repliée */
         .db-sem {
-          margin: 0 12px 16px;
-          background: var(--sb-hover);
-          border-radius: 8px;
-          padding: 3px;
-          display: flex;
-          gap: 2px;
+          margin: 0 14px 16px;
+          background: rgba(255,255,255,.08);
+          border-radius: 8px; padding: 3px;
+          display: flex; gap: 2px;
+          opacity: 0; max-height: 0; overflow: hidden;
+          transition: opacity .18s ease, max-height .22s ease, margin .22s ease;
         }
+        .db-sidebar:hover .db-sem { opacity: 1; max-height: 60px; }
         .db-sem button {
-          flex: 1;
-          padding: 6px 8px;
-          border: none;
-          background: transparent;
-          color: var(--sb-text-muted);
-          font-size: 11.5px;
-          font-weight: 600;
-          border-radius: 6px;
-          cursor: pointer;
-          font-family: inherit;
-          letter-spacing: .02em;
-          transition: all .15s;
+          flex: 1; padding: 6px 8px; border: none; background: transparent;
+          color: rgba(255,255,255,.70); font-size: 11.5px; font-weight: 600;
+          border-radius: 6px; cursor: pointer; font-family: inherit;
+          letter-spacing: .02em; transition: all .15s; white-space: nowrap;
         }
-        .db-sem button:hover { color: var(--sb-text); }
-        .db-sem button.active {
-          background: var(--sb-accent);
-          color: white;
-        }
+        .db-sem button:hover { color: #fff; }
+        .db-sem button.active { background: var(--rail-2); color: #fff; }
 
-        /* USER CARD (en bas) */
-        .db-user-wrap {
-          margin-top: auto;
-          padding: 14px 9px 0;
-          border-top: 1px solid var(--sb-border);
-        }
+        .db-nav-secondary { margin-bottom: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.10); }
+        .db-nav-item-btn { width: 100%; border: none; background: transparent; font-family: inherit; cursor: pointer; text-align: left; }
+
+        /* USER CARD */
+        .db-user-wrap { margin-top: auto; padding: 12px 14px 0; border-top: 1px solid rgba(255,255,255,.10); }
         .db-user-card {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          padding: 9px;
-          border-radius: 9px;
-          background: var(--sb-hover);
-          cursor: pointer;
-          text-decoration: none;
-          color: inherit;
-          transition: background .15s;
+          display: flex; align-items: center; gap: 12px;
+          padding: 9px; border-radius: 10px; background: rgba(255,255,255,.06);
+          cursor: pointer; text-decoration: none; color: inherit; transition: background .15s;
         }
-        .db-user-card:hover { background: var(--sb-active); }
+        .db-user-card:hover { background: rgba(255,255,255,.10); }
         .db-user-avatar {
-          width: 30px; height: 30px;
-          border-radius: 50%;
-          background: var(--sb-accent);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: 700; color: white;
-          min-width: 30px;
+          width: 32px; height: 32px; border-radius: 50%;
+          background: var(--rail-2); display: flex; align-items: center; justify-content: center;
+          font-size: 12px; font-weight: 700; color: #fff; min-width: 32px;
         }
-        .db-user-name {
-          font-size: 12.5px;
-          font-weight: 500;
-          color: var(--sb-text);
-        }
-        .db-user-meta {
-          font-size: 10.5px;
-          color: var(--sb-text-dim);
-        }
-        .db-user-chev {
-          margin-left: auto;
-          color: var(--sb-text-dim);
-          font-size: 14px;
-        }
+        .db-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+        .db-user-meta { font-size: 11px; color: rgba(255,255,255,.55); }
+        .db-user-chev { margin-left: auto; color: rgba(255,255,255,.45); font-size: 16px; }
 
-        /* MAIN content */
+        /* MAIN */
         .db-main {
           flex: 1;
+          margin-left: 76px;
+          min-height: 100vh;
           overflow-y: auto;
           background: var(--bg-app);
         }
 
         /* ================ MOBILE BURGER + OVERLAY ================ */
-        /* Bouton burger : caché en desktop, visible en mobile uniquement.
-           Position fixed pour rester accessible quand on scrolle. */
         .db-burger {
-          display: none;
-          position: fixed;
-          top: 14px;
-          left: 14px;
-          z-index: 200;
-          width: 40px;
-          height: 40px;
-          background: var(--bg-card);
-          border: 1px solid var(--border-subtle);
-          border-radius: 8px;
-          cursor: pointer;
-          padding: 0;
-          font-size: 18px;
-          color: var(--text-primary);
+          display: none; position: fixed; top: 14px; left: 14px; z-index: 200;
+          width: 40px; height: 40px; background: var(--bg-card);
+          border: 1px solid var(--border-subtle); border-radius: 8px; cursor: pointer;
+          padding: 0; font-size: 18px; color: var(--text-primary);
           box-shadow: 0 2px 6px rgba(0,0,0,.06);
         }
-
-        /* Overlay sombre derrière la sidebar mobile pour fermer en cliquant */
-        .db-sidebar-overlay {
-          display: none;
-          position: fixed;
-          inset: 0;
-          background: rgba(20,22,20,.45);
-          z-index: 90;
-        }
+        .db-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(10,16,26,.5); z-index: 90; }
 
         @media (max-width: ${MOBILE_BREAKPOINT}px) {
-          /* Sidebar : passe en off-canvas, slide depuis la gauche.
-             Toujours dans le DOM (les ancres data-tour fonctionnent) mais
-             translatée hors écran sauf si .open. */
           .db-sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 260px;
-            max-width: 80vw;
-            height: 100vh;
-            transform: translateX(-100%);
-            transition: transform .25s ease;
-            z-index: 100;
-            box-shadow: 4px 0 20px rgba(0,0,0,.12);
+            position: fixed; top: 0; left: 0; width: 264px; max-width: 82vw; height: 100vh;
+            transform: translateX(-100%); transition: transform .25s ease;
+            z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,.18);
           }
-          .db-sidebar.open {
-            transform: translateX(0);
-          }
+          .db-sidebar:hover { width: 264px; box-shadow: 4px 0 20px rgba(0,0,0,.18); }
+          .db-sidebar.open { transform: translateX(0); }
+          /* en mobile la sidebar est pleine : on montre tout */
+          .db-sidebar .db-lbl, .db-sidebar .db-nav-label { opacity: 1; }
+          .db-sidebar .db-sem { opacity: 1; max-height: 60px; }
 
-          /* Main occupe toute la largeur (la sidebar est par-dessus) */
-          .db-main {
-            width: 100%;
-            padding-top: 50px; /* laisse de la place au burger qui flotte */
-          }
-
+          .db-main { margin-left: 0; width: 100%; padding-top: 50px; }
           .db-burger { display: flex; align-items: center; justify-content: center; }
           .db-sidebar-overlay.open { display: block; }
         }
@@ -458,39 +344,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}`} data-tour="sidebar">
         {/* Logo */}
         <div className="db-logo">
-          Med<span>·Rev</span>
+          <span className="db-logo-m">M</span><span className="db-lbl">ed<span className="db-logo-r">·Rev</span></span>
         </div>
 
         {/* Semester toggle */}
         <div className="db-sem" data-tour="sem-toggle">
-          <button
-            className={semester === 1 ? 'active' : ''}
-            onClick={() => chooseSemester(1)}
-          >
-            S1
-          </button>
-          <button
-            className={semester === 2 ? 'active' : ''}
-            onClick={() => chooseSemester(2)}
-          >
-            S2
-          </button>
-          <button
-            className={semester === 'year' ? 'active' : ''}
-            onClick={() => chooseSemester('year')}
-            title="Vue année (toutes matières S1 + S2)"
-          >
-            Année
-          </button>
+          <button className={semester === 1 ? 'active' : ''} onClick={() => chooseSemester(1)}>S1</button>
+          <button className={semester === 2 ? 'active' : ''} onClick={() => chooseSemester(2)}>S2</button>
+          <button className={semester === 'year' ? 'active' : ''} onClick={() => chooseSemester('year')} title="Vue année (toutes matières S1 + S2)">Année</button>
         </div>
 
-        {/* Separator */}
         <div className="db-sep" />
 
         {/* Navigation */}
         <div className="db-nav-section">
-          <div className="db-nav-label">Navigation</div>
-
+          <div className="db-nav-label db-lbl">Navigation</div>
           {NAV.map(n => (
             <Link
               key={n.href}
@@ -499,7 +367,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               data-tour={`nav-${n.href.split('/').pop() || 'dashboard'}`}
             >
               <i className="ic">{n.icon}</i>
-              {n.label}
+              <span className="db-lbl">{n.label}</span>
               {n.href === '/dashboard/calendar' && todayCount > 0 && (
                 <span className="badge">{todayCount}</span>
               )}
@@ -507,19 +375,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </div>
 
-        {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Bouton Aide isolé — la card user juste en dessous mène déjà aux
-            Paramètres, donc on n'ajoute QUE le bouton de relance du tour ici
-            pour éviter de doubler les liens. */}
+        {/* Aide & tutoriel */}
         <div className="db-nav-section db-nav-secondary">
           <button
             type="button"
             className="db-nav-item db-nav-item-btn"
             onClick={() => {
-              // Replay du tour — même event que celui dispatché depuis Settings,
-              // pour partager le même listener côté layout.
               if (typeof window !== 'undefined') {
                 localStorage.removeItem('medrev-onboarding-step')
                 localStorage.removeItem('medrev-onboarding-phase')
@@ -529,26 +392,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             aria-label="Rejouer le tutoriel"
           >
             <i className="ic">?</i>
-            Aide & tutoriel
+            <span className="db-lbl">Aide &amp; tutoriel</span>
           </button>
         </div>
 
-        {/* User card → redirige vers Settings */}
+        {/* User card → Settings */}
         <div className="db-user-wrap">
-          <Link
-            href="/dashboard/settings"
-            className="db-user-card"
-            title="Paramètres"
-          >
+          <Link href="/dashboard/settings" className="db-user-card" title="Paramètres">
             <div className="db-user-avatar">{initials}</div>
-            <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="db-lbl" style={{ minWidth: 0, flex: 1 }}>
               <div className="db-user-name">{profile?.name || '...'}</div>
               <div className="db-user-meta">
                 {profile?.plan === 'pro' ? 'Premium' : 'Gratuit'}
                 {profile?.fac ? ` · ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
               </div>
             </div>
-            <span className="db-user-chev">›</span>
+            <span className="db-user-chev db-lbl">›</span>
           </Link>
         </div>
       </aside>
@@ -558,7 +417,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </main>
 
-      {/* ONBOARDING TOUR — overlay full-screen piloté par Settings ou 1er login */}
+      {/* ONBOARDING TOUR */}
       {tourOpen && profile && (
         <OnboardingTour
           key={replayKey}
