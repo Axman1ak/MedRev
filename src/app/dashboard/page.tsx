@@ -678,7 +678,7 @@ export default function DashboardPage() {
         <div className="today">
           <div className="today-left">
             <div className="today-head">
-              <span className="today-label"><span className="today-label-dot" /> Aujourd&apos;hui</span>
+              <span className="today-label"><span className="today-label-dot" /> Fiches du jour</span>
               {todayQueue.length > 5 && (
                 <button className="see-more" onClick={() => setShowTodayModal(true)}>
                   Voir les {todayQueue.length} révisions
@@ -694,31 +694,36 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <h2 className="today-intro">
-                  Voici tes <em>révisions du jour</em>, dans l&apos;ordre suggéré
-                </h2>
+                <h2 className="today-intro">{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''} à réviser aujourd&apos;hui</h2>
                 <div className="today-sub">
-                  le premier item est prioritaire — tu peux skip ou reporter à tout moment
+                  la première est prioritaire — tu peux skip ou reporter à tout moment
                 </div>
 
                 <div className="today-list">
                   {todayQueue.slice(0, 5).map((p, idx) => {
                     const sys = semSystems.find(s => s.id === p.lesson.system_id)
                     const sysName = sys?.name ?? 'Matière'
-                    const meta = buildMetaForDue(p.due, sysName, p.lastScore)
                     const highlight = idx === 0
+                    const overdue = p.due.status === 'missed'
                     return (
                       <div key={p.lesson.id} className={`today-item${highlight ? ' highlight' : ''}`}>
-                        <div className="today-item-icon">{highlight ? '!' : idx + 1}</div>
+                        <div className="today-item-tag">{sysName.slice(0, 2).toUpperCase()}</div>
                         <div className="today-item-main">
                           <div className="today-item-name">{p.lesson.name}</div>
                           <div className="today-item-meta">
-                            {meta.withOverdue
-                              ? <><strong>J+{J[p.due.stepIndex]} manqué depuis {p.due.overdueDays} j</strong> · {sysName}{p.lastScore !== null ? ` · dernière ${p.lastScore}/5` : ''}</>
-                              : meta.text}
+                            <span>{sysName}</span>
+                            {p.lastScore !== null && (
+                              <span className="today-dots">
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <span key={n} className={`today-dot${n <= (p.lastScore || 0) ? ' on' : ''}`} />
+                                ))}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="today-item-arrow">{'\u2192'}</div>
+                        {overdue
+                          ? <span className="today-badge-late">en retard · {p.due.overdueDays} j</span>
+                          : <span className="today-due">aujourd&apos;hui</span>}
                       </div>
                     )
                   })}
