@@ -545,13 +545,15 @@ export default function FichesPage() {
                   tabIndex={0}
                   onClick={() => { setSelectedSystemId(sys.id); setShowDueOnly(false) }}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelectedSystemId(sys.id); setShowDueOnly(false) } }}
-                  style={{ position: 'relative' }}
+                  style={active ? { background: c, borderColor: c } : undefined}
                 >
-                  <span className="micon" style={active ? undefined : { color: c }}>
+                  <span className="micon" style={active ? undefined : { color: c, background: `${c}1A` }}>
                     <SubjectIcon name={sys.name} />
                   </span>
-                  <span className="nm">{sys.name}</span>
-                  <span className="ct">{counts.total}</span>
+                  <span className="mtab-txt">
+                    <span className="nm">{sys.name}</span>
+                    <span className="ct">{counts.total} fiche{counts.total > 1 ? 's' : ''}</span>
+                  </span>
                   {counts.due > 0 && <span className="urg" />}
                   <button
                     type="button"

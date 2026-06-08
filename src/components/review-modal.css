@@ -338,13 +338,23 @@
   flex-shrink: 0;
   font-size: 13px;
 }
-.rmod-anat-link {
-  color: var(--accent-medium);
+.rmod-anat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 9px 15px;
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+  border: 1px solid color-mix(in srgb, var(--accent-medium) 30%, transparent);
+  border-radius: 10px;
+  font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--accent-medium) 35%, transparent);
+  transition: background .15s, border-color .15s, transform .12s;
 }
-.rmod-anat-link:hover { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+.rmod-anat-btn:hover { background: color-mix(in srgb, var(--accent-medium) 14%, var(--accent-soft)); border-color: var(--accent-medium); transform: translateY(-1px); }
+.rmod-anat-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
 .rmod-src-icon.video { color: var(--green); }
 .rmod-src-icon.pdf   { color: var(--amber); }
