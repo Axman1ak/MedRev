@@ -591,7 +591,7 @@ export default function DashboardPage() {
     const ro = new ResizeObserver(compute)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [userId, todayQueue.length])
+  }, [userId, lessons])
 
   // ================= DONNÉES DÉRIVÉES =================
   // En mode 'year' : tous les systèmes ; sinon filtre par semestre
