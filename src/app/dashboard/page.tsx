@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import DashTodo from '@/components/DashTodo'
 import ReviewModal from '@/components/ReviewModal'
+import SubjectIcon from '@/components/SubjectIcon'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -508,7 +509,7 @@ export default function DashboardPage() {
   const [showTodayModal, setShowTodayModal] = useState(false)
   const [showWeakModal, setShowWeakModal] = useState(false)
   const flistRef = useRef<HTMLDivElement>(null)
-  const [flistH, setFlistH] = useState(0)
+  const [fitFiches, setFitFiches] = useState(6)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -576,17 +577,21 @@ export default function DashboardPage() {
     if (main) main.scrollTop = 0
   }, [])
 
-  // Mesure la hauteur dispo de la liste « Fiches du jour » pour afficher autant
-  // de fiches qu'il en tient (au-delà : bouton « voir plus » → modale complète).
+  // Mesure combien de fiches « du jour » tiennent SANS scroll (hauteur réelle
+  // d'une ligne) ; au-delà : bouton « voir plus » → modale complète.
   useEffect(() => {
     const el = flistRef.current
     if (!el) return
-    const update = () => setFlistH(el.clientHeight)
-    update()
-    const ro = new ResizeObserver(update)
+    const compute = () => {
+      const row = el.querySelector('.fiche') as HTMLElement | null
+      const stride = (row ? row.offsetHeight : 64) + 9
+      setFitFiches(Math.max(1, Math.floor((el.clientHeight + 9) / stride)))
+    }
+    compute()
+    const ro = new ResizeObserver(compute)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [userId])
+  }, [userId, todayQueue.length])
 
   // ================= DONNÉES DÉRIVÉES =================
   // En mode 'year' : tous les systèmes ; sinon filtre par semestre
@@ -641,12 +646,14 @@ export default function DashboardPage() {
     ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
 
-  // Combien de fiches « du jour » tiennent dans le panneau (sinon « voir plus »).
-  const FICHE_ROW_H = 74
-  const fitFiches = flistH ? Math.max(1, Math.floor(flistH / FICHE_ROW_H)) : 6
-  const moreThanFit = todayQueue.length > fitFiches
-  const visibleQueue = moreThanFit ? todayQueue.slice(0, fitFiches) : todayQueue
-  const hiddenCount = todayQueue.length - visibleQueue.length
+  // Tri par palier J croissant (plus petit J d'abord) — ordre visuel & de révision.
+  const sortedQueue = useMemo(
+    () => [...todayQueue].sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex]),
+    [todayQueue]
+  )
+  const moreThanFit = sortedQueue.length > fitFiches
+  const visibleQueue = moreThanFit ? sortedQueue.slice(0, Math.max(1, fitFiches - 1)) : sortedQueue
+  const hiddenCount = sortedQueue.length - visibleQueue.length
 
   if (!userId) return null
 
@@ -733,7 +740,7 @@ export default function DashboardPage() {
 
       {showTodayModal && (
         <TodayModal
-          queue={todayQueue}
+          queue={sortedQueue}
           systems={semSystems}
           startHref={startSessionHref}
           onClose={() => setShowTodayModal(false)}
@@ -756,7 +763,7 @@ function TodayModal({
   onClose: () => void
   todayLabel: string
 }) {
-  const [sort, setSort] = useState<TodaySort>('priority')
+  const [sort, setSort] = useState<TodaySort>('j')
   const [subjectFilter, setSubjectFilter] = useState<string>('all')
 
   const sortedFiltered = useMemo(() => {
@@ -852,31 +859,26 @@ function TodayModal({
             ) : sortedFiltered.map((p, idx) => {
               const sys = systems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
-              const highlight = sort === 'priority' && idx === 0
-              const minTime = 8
+              const late = p.due.status === 'missed'
               return (
-                <div key={p.lesson.id} className={`full-row${highlight ? ' highlight' : ''}`}>
-                  <div className="full-row-num">{highlight ? '!' : idx + 1}</div>
-                  <div>
+                <div key={p.lesson.id} className={`full-row${idx === 0 ? ' highlight' : ''}`}>
+                  <span className="full-row-ic"><SubjectIcon name={sysName} /></span>
+                  <div className="full-row-main">
                     <div className="full-row-name">{p.lesson.name}</div>
-                    <div className="full-row-meta">
-                      {p.due.status === 'missed'
-                        ? <><strong>J+{J[p.due.stepIndex]} manqué depuis {p.due.overdueDays} j</strong> · {sysName} · ~{minTime} min</>
-                        : <>J+{J[p.due.stepIndex]} dû aujourd&apos;hui · {sysName} · ~{minTime} min</>}
-                    </div>
+                    <div className="full-row-sub">{sysName}</div>
                   </div>
-                  <div className={p.lastScore ? `score-chip s${p.lastScore}` : 'score-chip none'}>
+                  <span className={`full-row-j${late ? ' late' : ''}`}>J+{J[p.due.stepIndex]}</span>
+                  <span className={`full-row-state${late ? ' late' : ''}`}>
+                    {late ? `+${p.due.overdueDays} j` : "aujourd'hui"}
+                  </span>
+                  <span className={p.lastScore ? `full-row-score s${p.lastScore}` : 'full-row-score none'}>
                     {p.lastScore ?? '—'}
-                  </div>
-                  <div className="full-row-actions">
-                    <Link
-                      href={`/dashboard/focus?lesson=${p.lesson.id}`}
-                      className="row-btn go"
-                      onClick={onClose}
-                    >
-                      Faire
-                    </Link>
-                  </div>
+                  </span>
+                  <Link
+                    href={`/dashboard/focus?lesson=${p.lesson.id}`}
+                    className="full-row-go"
+                    onClick={onClose}
+                  >Faire →</Link>
                 </div>
               )
             })}

@@ -172,7 +172,8 @@ function computeTodayQueue(lessons: Lesson[], today: string): QueueItem[] {
     }
     out.push({ lesson: l, due, lastScore, priority })
   })
-  return out.sort((a, b) => a.priority - b.priority)
+  // Ordre de révision : palier J croissant (plus petit J d'abord).
+  return out.sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex])
 }
 
 function buildQueue(
