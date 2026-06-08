@@ -26,10 +26,10 @@
   --text-tertiary: #9A9A98;
 
   /* accent vert MedRev */
-  --accent-primary: #1B4332;
-  --accent-medium: #2D6A4F;
-  --accent-soft: #DDECE3;
-  --accent-on-soft: #1B4332;
+  --accent-primary: #1B3A5B;
+  --accent-medium: #2C5F8A;
+  --accent-soft: #E2ECF5;
+  --accent-on-soft: #1B3A5B;
 
   /* sÃ©mantique â€” rouge adouci pour moins de criardise */
   --warning: #C47B2B;
@@ -47,7 +47,7 @@
   --sb-hover: rgba(0, 0, 0, .04);
   --sb-active: rgba(0, 0, 0, .06);
   --sb-border: rgba(0, 0, 0, .06);
-  --sb-accent: #2D6A4F;
+  --sb-accent: #2C5F8A;
 
   /* shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .04);
@@ -61,24 +61,24 @@
 }
 
 [data-theme="dark"] {
-  --bg-app: #0F141A;
-  --bg-card: #1A2230;
-  --bg-elevated: #232C3D;
-  --bg-soft: #161D27;
-  --bg-muted: #1F2632;
+  --bg-app: #0E1726;
+  --bg-card: #18243A;
+  --bg-elevated: #243149;
+  --bg-soft: #131C2A;
+  --bg-muted: #1C2738;
 
-  --border-subtle: #2A3445;
-  --border-strong: #3D4960;
+  --border-subtle: #28384F;
+  --border-strong: #3C4E6E;
 
   --text-primary: #E8EAED;
-  --text-secondary: #9CA3AE;
-  --text-tertiary: #6B7380;
+  --text-secondary: #A6AFBC;
+  --text-tertiary: #7C8696;
 
   /* Verts adoucis : moins lumineux que #34D399, plus mat */
-  --accent-primary: #5DD39E;
-  --accent-medium: #2EA86F;
-  --accent-soft: #1B2A24;
-  --accent-on-soft: #95D9B5;
+  --accent-primary: #5AA9E6;
+  --accent-medium: #4A90D0;
+  --accent-soft: #16263C;
+  --accent-on-soft: #9CC9EE;
 
   --warning: #C8965A;
   --warning-soft: #2E2417;
@@ -87,14 +87,14 @@
   --success: #5DD39E;
   --success-soft: #1B2A24;
 
-  --sb-bg: #1A2230;
+  --sb-bg: #18243A;
   --sb-text: #E8EAED;
-  --sb-text-muted: #9CA3AE;
-  --sb-text-dim: #6B7380;
+  --sb-text-muted: #A6AFBC;
+  --sb-text-dim: #7C8696;
   --sb-hover: rgba(255, 255, 255, .05);
   --sb-active: rgba(255, 255, 255, .08);
   --sb-border: rgba(255, 255, 255, .05);
-  --sb-accent: #5DD39E;
+  --sb-accent: #5AA9E6;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, .5);
@@ -267,4 +267,18 @@ aside div.group:hover > button.transition-opacity {
 aside div.group:hover > span:nth-child(3) {
   display: none;
 }
- 
+
+
+/* ============================================================================
+   Marine profond — correctif contraste mode sombre
+   En sombre l'accent devient un bleu clair : on force un texte foncé sur les
+   boutons "pleins" pour qu'ils restent lisibles. CSS additif, mode sombre seul.
+   ============================================================================ */
+[data-theme="dark"] .qcm-validate,
+[data-theme="dark"] .qcm-next,
+[data-theme="dark"] .qcm-end-btn.primary,
+[data-theme="dark"] .fi-btn-g,
+[data-theme="dark"] .btn-focus-lg,
+[data-theme="dark"] .sim-ses-nav-btn.primary:hover:not(:disabled) {
+  color: #0E1726;
+}

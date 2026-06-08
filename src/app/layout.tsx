@@ -1,8 +1,9 @@
 // src/app/layout.tsx
 //
 // Layout racine MedRev. Contient :
-//  - les fonts (Fraunces, Plus Jakarta Sans, Cormorant Garamond, Cinzel,
-//    JetBrains Mono) chargées via next/font pour optimisation auto
+//  - les fonts (Bricolage Grotesque + Hanken Grotesk pour la refonte, plus
+//    Fraunces, Plus Jakarta Sans, Cormorant Garamond, Cinzel, JetBrains Mono
+//    conservées le temps de migrer les pages) chargées via next/font
 //  - les meta tags SEO + OpenGraph (carte de partage WhatsApp / Twitter…)
 //  - l'export viewport (Next.js 14+ : themeColor n'est plus dans metadata)
 //
@@ -10,12 +11,25 @@
 // (convention Next.js — rien à référencer manuellement ici).
 
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Plus_Jakarta_Sans, Cormorant_Garamond, Cinzel, JetBrains_Mono } from 'next/font/google'
+import { Bricolage_Grotesque, Hanken_Grotesk, Fraunces, Plus_Jakarta_Sans, Cormorant_Garamond, Cinzel, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
 // ============================================================
 // FONTS
 // ============================================================
+// Refonte « Marine » : Bricolage Grotesque (titres) + Hanken Grotesk (UI).
+const bricolage = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-bricolage',
+  display: 'swap',
+})
+
+const hanken = Hanken_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-hanken',
+  display: 'swap',
+})
+
 const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-fraunces',
@@ -61,9 +75,6 @@ export const viewport: Viewport = {
 // METADATA — SEO + cartes de partage
 // ============================================================
 export const metadata: Metadata = {
-  // En attendant un domaine custom, on utilise l'URL Vercel pour que les
-  // OG cards et les URLs canoniques pointent sur le site réellement déployé.
-  // Migrer vers le vrai domaine en un seul commit le jour où il est branché.
   metadataBase: new URL('https://med-rev-eight.vercel.app'),
 
   title: {
@@ -83,7 +94,6 @@ export const metadata: Metadata = {
   creator: 'MedRev',
   publisher: 'MedRev',
 
-  // OpenGraph (Facebook, WhatsApp, LinkedIn, Discord, iMessage…)
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
@@ -92,19 +102,15 @@ export const metadata: Metadata = {
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
       'La méthode des prépas, sans le prix. 30 QCM générés sur ta vidéo, planning J0 → J+120, simulateur type concours.',
-    // L'image OG est fournie automatiquement par opengraph-image.tsx
   },
 
-  // Twitter / X
   twitter: {
     card: 'summary_large_image',
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
       'La méthode des prépas, sans le prix. 30 QCM sur ta vidéo, 14 paliers de révision, 100 % auto-organisé. Pour les P1.',
-    // creator: '@medrev_fr', // à activer le jour où le compte X existe
   },
 
-  // Robots / SEO
   robots: {
     index: true,
     follow: true,
@@ -117,13 +123,11 @@ export const metadata: Metadata = {
     },
   },
 
-  // Favicon — Next.js détecte aussi /app/icon.png automatiquement
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-icon.png',
   },
 
-  // Empêche iOS de transformer les chiffres en liens tel:
   formatDetection: {
     telephone: false,
   },
@@ -142,7 +146,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${fraunces.variable} ${jakarta.variable} ${cormorant.variable} ${cinzel.variable} ${jetbrains.variable}`}
+      className={`${bricolage.variable} ${hanken.variable} ${fraunces.variable} ${jakarta.variable} ${cormorant.variable} ${cinzel.variable} ${jetbrains.variable}`}
     >
       <body>{children}</body>
     </html>
