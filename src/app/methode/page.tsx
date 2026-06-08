@@ -69,13 +69,13 @@ export default function MethodePage() {
               <rect width="400" height="280" fill="#FAFAF7" rx="12" />
               <line x1="40" y1="240" x2="370" y2="240" stroke="#9A9A98" strokeWidth="1" />
               <line x1="40" y1="40" x2="40" y2="240" stroke="#9A9A98" strokeWidth="1" />
-              <text x="40" y="265" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">J0</text>
-              <text x="120" y="265" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">J+1</text>
-              <text x="200" y="265" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">J+7</text>
-              <text x="280" y="265" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">J+30</text>
-              <text x="345" y="265" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">J+120</text>
-              <text x="15" y="50" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">100%</text>
-              <text x="20" y="240" fontFamily=var(--font-hanken) fontSize="10" fill="#9A9A98">0%</text>
+              <text x="40" y="265" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">J0</text>
+              <text x="120" y="265" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">J+1</text>
+              <text x="200" y="265" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">J+7</text>
+              <text x="280" y="265" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">J+30</text>
+              <text x="345" y="265" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">J+120</text>
+              <text x="15" y="50" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">100%</text>
+              <text x="20" y="240" fontFamily="var(--font-hanken)" fontSize="10" fill="#9A9A98">0%</text>
 
               {/* Sans révision (rouge) */}
               <path d="M 40 50 Q 80 130, 120 180 T 200 215 T 370 235" stroke="#C75050" strokeWidth="2" fill="none" />
