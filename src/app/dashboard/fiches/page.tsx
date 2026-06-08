@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
+import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -546,7 +547,9 @@ export default function FichesPage() {
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelectedSystemId(sys.id); setShowDueOnly(false) } }}
                   style={{ position: 'relative' }}
                 >
-                  <span className="mdot" style={{ background: c }} />
+                  <span className="micon" style={active ? undefined : { color: c }}>
+                    <SubjectIcon name={sys.name} />
+                  </span>
                   <span className="nm">{sys.name}</span>
                   <span className="ct">{counts.total}</span>
                   {counts.due > 0 && <span className="urg" />}

@@ -541,6 +541,16 @@ export default function ReviewModal({
             <div className="rmod-meta">
               {systemName}
               {lesson.learn_date && <> · appris le {frenchDate(lesson.learn_date)}</>}
+              {/anat|histo|embryo|osteo|arthro|myolog|splanchn|neuro|locomoteur|squelette|cardio|respi|thorax/
+                .test(systemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")) && (
+                <> · <a
+                  className="rmod-anat-link"
+                  href="https://www.visiblebody.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                >Visible Body ↗</a></>
+              )}
             </div>
           </div>
           <button data-tour="rmod-close" className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
