@@ -637,19 +637,6 @@ export default function DashboardPage() {
     setReviewLesson(prev => (prev && prev.id === updated.id ? updated : prev))
   }
 
-  // Reporter à demain / Annuler ce palier — écrit dans lessons.postpones / lessons.skips.
-  // MAJ optimiste (la fiche quitte la liste tout de suite) puis persistance Supabase.
-  const tomorrow = dateStrFromOffset(today, 1)
-  async function postponeStep(lesson: Lesson, stepIndex: number) {
-    const postpones = { ...lessonPostpones(lesson), [String(stepIndex)]: tomorrow }
-    setLessons(prev => prev.map(l => (l.id === lesson.id ? { ...l, postpones } : l)))
-    await supabase.from('lessons').update({ postpones }).eq('id', lesson.id)
-  }
-  async function skipStep(lesson: Lesson, stepIndex: number) {
-    const skips = Array.from(new Set([...lessonSkips(lesson), stepIndex]))
-    setLessons(prev => prev.map(l => (l.id === lesson.id ? { ...l, skips } : l)))
-    await supabase.from('lessons').update({ skips }).eq('id', lesson.id)
-  }
   const reviewSystemName = reviewLesson
     ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
@@ -658,7 +645,7 @@ export default function DashboardPage() {
   const FICHE_ROW_H = 74
   const fitFiches = flistH ? Math.max(1, Math.floor(flistH / FICHE_ROW_H)) : 6
   const moreThanFit = todayQueue.length > fitFiches
-  const visibleQueue = moreThanFit ? todayQueue.slice(0, Math.max(1, fitFiches - 1)) : todayQueue
+  const visibleQueue = moreThanFit ? todayQueue.slice(0, fitFiches) : todayQueue
   const hiddenCount = todayQueue.length - visibleQueue.length
 
   if (!userId) return null
@@ -714,20 +701,6 @@ export default function DashboardPage() {
                   {overdue
                     ? <span className="badge-late">en retard · {p.due.overdueDays} j</span>
                     : <span className="fdue">aujourd&apos;hui</span>}
-                  <div className="fiche-actions">
-                    <button
-                      type="button"
-                      className="fa-btn"
-                      title="Reporter ce palier à demain"
-                      onClick={e => { e.stopPropagation(); postponeStep(p.lesson, p.due.stepIndex) }}
-                    >Reporter</button>
-                    <button
-                      type="button"
-                      className="fa-btn fa-skip"
-                      title="Annuler ce palier (sauté, sans pénaliser la moyenne)"
-                      onClick={e => { e.stopPropagation(); skipStep(p.lesson, p.due.stepIndex) }}
-                    >Annuler</button>
-                  </div>
                 </div>
               )
             })}

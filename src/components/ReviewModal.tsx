@@ -58,6 +58,22 @@ function frenchDate(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 }
 
+// Reporter / Annuler un palier (colonnes lessons.skips / lessons.postpones — ne
+// touchent pas steps, donc moyennes/tampons/stats restent intacts).
+function lessonSkips(l: Lesson): number[] {
+  const s = (l as { skips?: unknown }).skips
+  return Array.isArray(s) ? (s as number[]) : []
+}
+function lessonPostpones(l: Lesson): Record<string, string> {
+  const p = (l as { postpones?: unknown }).postpones
+  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
+}
+function tomorrowOf(today: string): string {
+  const t = new Date(today + 'T12:00:00')
+  t.setDate(t.getDate() + 1)
+  return t.toISOString().split('T')[0]
+}
+
 // Durée en hMM ou MM min
 function formatDuration(sec?: number): string {
   if (!sec || sec <= 0) return ''
@@ -232,6 +248,32 @@ export default function ReviewModal({
     setLoading(false)
     setJustRated({ idx: stepIdx, score })
     setStepIdx(null)
+  }
+
+  // Reporter ce palier à demain (sort de la liste « à faire », réapparaît demain).
+  async function postponeCurrent() {
+    if (stepIdx === null) return
+    setLoading(true)
+    const postpones = { ...lessonPostpones(lesson), [String(stepIdx)]: tomorrowOf(today) }
+    await supabase.from('lessons').update({ postpones }).eq('id', lesson.id)
+    const updated = { ...lesson, postpones } as Lesson
+    setLesson(updated)
+    if (onUpdated) onUpdated(updated)
+    setLoading(false)
+    onClose()
+  }
+
+  // Annuler ce palier (sauté, sans pénaliser la moyenne).
+  async function skipCurrent() {
+    if (stepIdx === null) return
+    setLoading(true)
+    const skips = Array.from(new Set([...lessonSkips(lesson), stepIdx]))
+    await supabase.from('lessons').update({ skips }).eq('id', lesson.id)
+    const updated = { ...lesson, skips } as Lesson
+    setLesson(updated)
+    if (onUpdated) onUpdated(updated)
+    setLoading(false)
+    onClose()
   }
 
   // ============================================================
@@ -881,6 +923,15 @@ export default function ReviewModal({
                   </span>
                 </button>
               ))}
+            </div>
+
+            <div className="rmod-secondary">
+              <button className="rmod-2nd" onClick={postponeCurrent} disabled={loading}>
+                Reporter à demain
+              </button>
+              <button className="rmod-2nd rmod-2nd-skip" onClick={skipCurrent} disabled={loading}>
+                Annuler ce palier
+              </button>
             </div>
 
             <button className="rmod-back" onClick={() => setStepIdx(null)}>

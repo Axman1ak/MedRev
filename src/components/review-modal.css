@@ -356,6 +356,12 @@
 .rmod-anat-btn:hover { background: color-mix(in srgb, var(--accent-medium) 14%, var(--accent-soft)); border-color: var(--accent-medium); transform: translateY(-1px); }
 .rmod-anat-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
+.rmod-secondary { display: flex; gap: 10px; margin-top: 14px; }
+.rmod-2nd { flex: 1; padding: 11px; border: 1px solid var(--border-subtle); background: transparent; border-radius: 10px; color: var(--text-secondary); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+.rmod-2nd:hover { border-color: var(--accent-medium); color: var(--accent-primary); }
+.rmod-2nd:disabled { opacity: .5; cursor: default; }
+.rmod-2nd-skip:hover { border-color: var(--danger); color: var(--danger); }
+
 .rmod-src-icon.video { color: var(--green); }
 .rmod-src-icon.pdf   { color: var(--amber); }
 
