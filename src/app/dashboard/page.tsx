@@ -1,7 +1,7 @@
 'use client'
 // src/app/dashboard/page.tsx
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -507,6 +507,8 @@ export default function DashboardPage() {
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
   const [showTodayModal, setShowTodayModal] = useState(false)
   const [showWeakModal, setShowWeakModal] = useState(false)
+  const flistRef = useRef<HTMLDivElement>(null)
+  const [flistH, setFlistH] = useState(0)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -574,6 +576,18 @@ export default function DashboardPage() {
     if (main) main.scrollTop = 0
   }, [])
 
+  // Mesure la hauteur dispo de la liste « Fiches du jour » pour afficher autant
+  // de fiches qu'il en tient (au-delà : bouton « voir plus » → modale complète).
+  useEffect(() => {
+    const el = flistRef.current
+    if (!el) return
+    const update = () => setFlistH(el.clientHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [userId])
+
   // ================= DONNÉES DÉRIVÉES =================
   // En mode 'year' : tous les systèmes ; sinon filtre par semestre
   const semSystems = useMemo(
@@ -640,6 +654,13 @@ export default function DashboardPage() {
     ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
 
+  // Combien de fiches « du jour » tiennent dans le panneau (sinon « voir plus »).
+  const FICHE_ROW_H = 74
+  const fitFiches = flistH ? Math.max(1, Math.floor(flistH / FICHE_ROW_H)) : 6
+  const moreThanFit = todayQueue.length > fitFiches
+  const visibleQueue = moreThanFit ? todayQueue.slice(0, Math.max(1, fitFiches - 1)) : todayQueue
+  const hiddenCount = todayQueue.length - visibleQueue.length
+
   if (!userId) return null
 
   return (
@@ -665,10 +686,10 @@ export default function DashboardPage() {
             </div>
             {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer →</Link>}
           </div>
-          <div className="flist">
+          <div className="flist" ref={flistRef}>
             {todayQueue.length === 0 ? (
               <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune révision aujourd&apos;hui. Profite de ta journée !</div>
-            ) : todayQueue.slice(0, 6).map((p, idx) => {
+            ) : (<>{visibleQueue.map((p, idx) => {
               const sys = semSystems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
               const overdue = p.due.status === 'missed'
@@ -710,6 +731,14 @@ export default function DashboardPage() {
                 </div>
               )
             })}
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                className="flist-more"
+                onClick={() => setShowTodayModal(true)}
+              >Voir {hiddenCount} fiche{hiddenCount > 1 ? 's' : ''} de plus →</button>
+            )}
+            </>)}
           </div>
         </div>
 
@@ -726,6 +755,16 @@ export default function DashboardPage() {
           initialStepIdx={null}
           onClose={() => setReviewLesson(null)}
           onUpdated={handleReviewUpdated}
+        />
+      )}
+
+      {showTodayModal && (
+        <TodayModal
+          queue={todayQueue}
+          systems={semSystems}
+          startHref={startSessionHref}
+          onClose={() => setShowTodayModal(false)}
+          todayLabel={todayLabel}
         />
       )}
     </div>
