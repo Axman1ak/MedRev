@@ -1,7 +1,7 @@
 'use client'
 // src/app/dashboard/calendar/page.tsx
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -15,12 +15,6 @@ const DAY_LABELS_LONG = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Sam
 const MONTH_FULL_FR = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-]
-
-// Palette par défaut pour les matières si aucune couleur n'est définie en base
-const SUBJ_COLORS = [
-  '#C75050', '#5B8ED4', '#8D6BB0', '#A06840',
-  '#C47B2B', '#3A8F8A', '#7AA56B', '#D9B24A',
 ]
 
 // ============= Types =============
@@ -135,6 +129,8 @@ export default function CalendarPage() {
   const [view, setView] = useState<'week' | 'month'>('week')
   const [showAllForDay, setShowAllForDay] = useState<string | null>(null)
   const [reviewing, setReviewing] = useState<{ lesson: Lesson; stepIdx: number } | null>(null)
+  const weekRef = useRef<HTMLDivElement>(null)
+  const [weekPx, setWeekPx] = useState(0)
 
   const today = toDateStr(new Date())
 
@@ -177,6 +173,18 @@ export default function CalendarPage() {
     if (main) main.scrollTop = 0
   }, [])
 
+  // Mesure la hauteur dispo de la grille semaine pour calculer combien de
+  // fiches tiennent par colonne (au-delà : bouton « voir plus »).
+  useEffect(() => {
+    const el = weekRef.current
+    if (!el) return
+    const update = () => setWeekPx(el.clientHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view, lessons])
+
   // ============= Derived =============
   const semSystems = useMemo(
     () => semester === 'year' ? systems : systems.filter(s => s.semestre === semester),
@@ -188,26 +196,6 @@ export default function CalendarPage() {
   const systemsById = useMemo(() => {
     const map = new Map<string, System>()
     systems.forEach(s => map.set(s.id, s))
-    return map
-  }, [systems])
-
-  // Map ID matière → couleur effective. Si toutes les matières ont la même
-  // couleur en base (signe que le picker n'a jamais été utilisé consciemment),
-  // on bascule sur SUBJ_COLORS[idx] pour avoir des couleurs distinctes.
-  const colorOfSystem = useMemo(() => {
-    const map = new Map<string, string>()
-    const distinctColors = new Set(
-      systems.map(s => (s as unknown as { color?: string }).color).filter(Boolean)
-    )
-    const allSameColor = distinctColors.size <= 1 && systems.length > 1
-
-    systems.forEach((s, idx) => {
-      const baseColor = (s as unknown as { color?: string }).color
-      const c = allSameColor
-        ? SUBJ_COLORS[idx % SUBJ_COLORS.length]
-        : (baseColor || SUBJ_COLORS[idx % SUBJ_COLORS.length])
-      map.set(s.id, c)
-    })
     return map
   }, [systems])
 
@@ -311,6 +299,21 @@ export default function CalendarPage() {
     setView('week')
   }
 
+  // Combien de rectangles tiennent dans une colonne semaine (hauteur fixe).
+  // ROW_H = hauteur rectangle (30) + gap (4) ; DAY_HEAD_H/LIST_PAD = chrome colonne.
+  const DAY_HEAD_H = 62, LIST_PAD = 18, ROW_H = 34, MORE_H = 34
+  function daySlots(count: number): { visible: number; overflow: number } {
+    if (!weekPx) {
+      const v = Math.min(count, 8)
+      return { visible: v, overflow: count - v }
+    }
+    const avail = weekPx - DAY_HEAD_H - LIST_PAD
+    const maxFull = Math.max(1, Math.floor(avail / ROW_H))
+    if (count <= maxFull) return { visible: count, overflow: 0 }
+    const v = Math.max(1, Math.floor((avail - MORE_H) / ROW_H))
+    return { visible: v, overflow: count - v }
+  }
+
   if (!userId) return null
 
   // ============= Render =============
@@ -374,36 +377,14 @@ export default function CalendarPage() {
 
       {/* WEEK VIEW */}
       {hasAnyLesson && view === 'week' && (
-        <div className="cal-week">
+        <div className="cal-week" ref={weekRef}>
           {weekDays.map((day, i) => {
             const dateStr = toDateStr(day)
             const occs = byDate.get(dateStr) ?? []
             const isToday = dateStr === today
             const isPast = dateStr < today
-            const MAX_PER_DAY = 10
-            const groupsMap = new Map<string, FicheOccurrence[]>()
-            occs.forEach(o => {
-              const arr = groupsMap.get(o.lesson.system_id)
-              if (arr) arr.push(o)
-              else groupsMap.set(o.lesson.system_id, [o])
-            })
-            const visibleGroups: { systemId: string; systemName: string; systemColor: string; occs: FicheOccurrence[] }[] = []
-            let visibleCount = 0
-            groupsMap.forEach((groupOccs, sysId) => {
-              if (visibleCount >= MAX_PER_DAY) return
-              const remaining = MAX_PER_DAY - visibleCount
-              const take = groupOccs.slice(0, remaining)
-              visibleCount += take.length
-              const sys = systemsById.get(sysId)
-              const sysColor = colorOfSystem.get(sysId) ?? ''
-              visibleGroups.push({
-                systemId: sysId,
-                systemName: sys?.name ?? 'Matière',
-                systemColor: sysColor,
-                occs: take,
-              })
-            })
-            const overflow = occs.length - visibleCount
+            const { visible, overflow } = daySlots(occs.length)
+            const shown = occs.slice(0, visible)
 
             const classes = [
               'cal-day',
@@ -430,46 +411,33 @@ export default function CalendarPage() {
                 ) : (
                   <>
                     <div className="cal-day-list">
-                      {visibleGroups.map(g => (
-                        <div
-                          key={g.systemId}
-                          className="cal-group"
-                          style={g.systemColor ? { borderLeftColor: g.systemColor } : undefined}
-                        >
-                          <div className="cal-group-head" title={g.systemName}>
-                            {g.systemColor && (
-                              <span className="cal-group-dot" style={{ background: g.systemColor }} />
-                            )}
-                            {g.systemName}
-                          </div>
-                          {g.occs.map(occ => {
-                            const done = occ.scoreForThisJ !== null
-                            const displayScore = done ? occ.scoreForThisJ : occ.lastScore
-                            const cls = scoreClass(displayScore)
-                            return (
-                              <button
-                                key={`${occ.lesson.id}-${occ.stepIndex}`}
-                                className={`cal-fiche${done ? ' cal-done' : ''}`}
-                                onClick={() => openReview(occ)}
-                                title={`${g.systemName} · ${occ.lesson.name} · J+${J[occ.stepIndex]}`}
-                              >
-                                <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                                <span className="cal-fiche-body">
-                                  <span className="cal-fiche-name">{occ.lesson.name}</span>
-                                  <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
-                                </span>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ))}
+                      {shown.map(occ => {
+                        const done = occ.scoreForThisJ !== null
+                        const displayScore = done ? occ.scoreForThisJ : occ.lastScore
+                        const cls = scoreClass(displayScore)
+                        const sysName = systemsById.get(occ.lesson.system_id)?.name ?? ''
+                        return (
+                          <button
+                            key={`${occ.lesson.id}-${occ.stepIndex}`}
+                            className={`cal-fiche${done ? ' cal-done' : ''}`}
+                            onClick={() => openReview(occ)}
+                            title={`${sysName ? sysName + ' · ' : ''}${occ.lesson.name} · J+${J[occ.stepIndex]}`}
+                          >
+                            <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                            <span className="cal-fiche-body">
+                              <span className="cal-fiche-name">{occ.lesson.name}</span>
+                              <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
                     {overflow > 0 && (
                       <button
                         className="cal-day-more"
                         onClick={() => setShowAllForDay(dateStr)}
                       >
-                        + {overflow} fiche{overflow > 1 ? 's' : ''} à voir
+                        voir plus · +{overflow}
                       </button>
                     )}
                   </>
@@ -495,7 +463,7 @@ export default function CalendarPage() {
               const occs = byDate.get(dateStr) ?? []
               const isToday = dateStr === today
               const isPast = dateStr < today
-              const dotOccs = occs.slice(0, 8)
+              const titleOccs = occs.slice(0, 8)
               const classes = [
                 'cal-month-cell',
                 isToday ? 'cal-today' : '',
@@ -515,18 +483,24 @@ export default function CalendarPage() {
                       <span className="cal-month-count">{occs.length}</span>
                     )}
                   </div>
-                  {dotOccs.length > 0 && (
-                    <div className="cal-month-dots">
-                      {dotOccs.map(o => {
+                  {titleOccs.length > 0 && (
+                    <div className="cal-month-titles">
+                      {titleOccs.map(o => {
                         const done = o.scoreForThisJ !== null
                         const cls = scoreClass(done ? o.scoreForThisJ : o.lastScore)
                         return (
                           <span
                             key={`${o.lesson.id}-${o.stepIndex}`}
-                            className={`cal-month-dot ${cls}`}
-                          />
+                            className={`cal-month-title ${cls}${done ? ' cal-done' : ''}`}
+                            title={o.lesson.name}
+                          >
+                            {o.lesson.name}
+                          </span>
                         )
                       })}
+                      {occs.length > titleOccs.length && (
+                        <span className="cal-month-more">+{occs.length - titleOccs.length}</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -574,57 +548,26 @@ export default function CalendarPage() {
                 >{'×'}</button>
               </div>
               <div className="cal-overflow-list">
-                {(() => {
-                  const groupsMap = new Map<string, FicheOccurrence[]>()
-                  occs.forEach(o => {
-                    const arr = groupsMap.get(o.lesson.system_id)
-                    if (arr) arr.push(o)
-                    else groupsMap.set(o.lesson.system_id, [o])
-                  })
-                  const groups: { systemId: string; systemName: string; systemColor: string; occs: FicheOccurrence[] }[] = []
-                  groupsMap.forEach((groupOccs, sysId) => {
-                    const sys = systemsById.get(sysId)
-                    const sysColor = colorOfSystem.get(sysId) ?? ''
-                    groups.push({
-                      systemId: sysId,
-                      systemName: sys?.name ?? 'Matière',
-                      systemColor: sysColor,
-                      occs: groupOccs,
-                    })
-                  })
-                  return groups.map(g => (
-                    <div
-                      key={g.systemId}
-                      className="cal-group"
-                      style={g.systemColor ? { borderLeftColor: g.systemColor } : undefined}
+                {occs.map(occ => {
+                  const done = occ.scoreForThisJ !== null
+                  const displayScore = done ? occ.scoreForThisJ : occ.lastScore
+                  const cls = scoreClass(displayScore)
+                  const sysName = systemsById.get(occ.lesson.system_id)?.name ?? ''
+                  return (
+                    <button
+                      key={`${occ.lesson.id}-${occ.stepIndex}`}
+                      className={`cal-fiche${done ? ' cal-done' : ''}`}
+                      onClick={() => openReview(occ)}
+                      title={sysName}
                     >
-                      <div className="cal-group-head">
-                        {g.systemColor && (
-                          <span className="cal-group-dot" style={{ background: g.systemColor }} />
-                        )}
-                        {g.systemName}
-                      </div>
-                      {g.occs.map(occ => {
-                        const done = occ.scoreForThisJ !== null
-                        const displayScore = done ? occ.scoreForThisJ : occ.lastScore
-                        const cls = scoreClass(displayScore)
-                        return (
-                          <button
-                            key={`${occ.lesson.id}-${occ.stepIndex}`}
-                            className={`cal-fiche${done ? ' cal-done' : ''}`}
-                            onClick={() => openReview(occ)}
-                          >
-                            <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                            <span className="cal-fiche-body">
-                              <span className="cal-fiche-name">{occ.lesson.name}</span>
-                              <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ))
-                })()}
+                      <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                      <span className="cal-fiche-body">
+                        <span className="cal-fiche-name">{occ.lesson.name}</span>
+                        <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
