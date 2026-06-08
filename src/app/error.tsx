@@ -45,7 +45,7 @@ export default function GlobalError({
             marginBottom: 32,
           }}
         >
-          Med<span style={{ color: '#2D6A4F' }}>·Rev</span>
+          Med<span style={{ color: '#2C5F8A' }}>·Rev</span>
         </div>
 
         <div
@@ -105,7 +105,7 @@ export default function GlobalError({
             onClick={() => reset()}
             style={{
               padding: '12px 22px',
-              background: '#1B4332',
+              background: '#1B3A5B',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: 9,

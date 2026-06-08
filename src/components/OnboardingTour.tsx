@@ -725,7 +725,7 @@ export default function OnboardingTour({
             <div className="ont-celebration-mark" aria-hidden="true">
               <svg viewBox="0 0 64 64" width="64" height="64">
                 <circle cx="32" cy="32" r="28" fill="#D8EAE0" />
-                <path d="M20 33 L29 42 L46 22" stroke="#1B4332" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M20 33 L29 42 L46 22" stroke="#1B3A5B" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <h3 className="ont-celebration-title">{cur.title(firstName)}</h3>

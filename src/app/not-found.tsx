@@ -34,7 +34,7 @@ export default function NotFound() {
             marginBottom: 32,
           }}
         >
-          Med<span style={{ color: '#2D6A4F' }}>·Rev</span>
+          Med<span style={{ color: '#2C5F8A' }}>·Rev</span>
         </div>
 
         <div
@@ -42,7 +42,7 @@ export default function NotFound() {
             fontFamily: "var(--font-bricolage), serif",
             fontSize: 88,
             fontWeight: 500,
-            color: '#1B4332',
+            color: '#1B3A5B',
             lineHeight: 1,
             marginBottom: 18,
             letterSpacing: '-0.04em',
@@ -83,7 +83,7 @@ export default function NotFound() {
             style={{
               display: 'inline-block',
               padding: '12px 22px',
-              background: '#1B4332',
+              background: '#1B3A5B',
               color: '#FFFFFF',
               textDecoration: 'none',
               borderRadius: 9,

@@ -82,17 +82,17 @@ export default function MethodePage() {
               <text x="285" y="225" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#C75050">Sans révision</text>
 
               {/* Avec MedRev (vert) — points */}
-              <circle cx="40" cy="50" r="4" fill="#1B4332" />
-              <circle cx="80" cy="55" r="4" fill="#1B4332" />
-              <circle cx="120" cy="60" r="4" fill="#1B4332" />
-              <circle cx="160" cy="62" r="4" fill="#1B4332" />
-              <circle cx="200" cy="65" r="4" fill="#1B4332" />
-              <circle cx="240" cy="66" r="4" fill="#1B4332" />
-              <circle cx="280" cy="68" r="4" fill="#1B4332" />
-              <circle cx="320" cy="70" r="4" fill="#1B4332" />
-              <circle cx="360" cy="71" r="4" fill="#1B4332" />
-              <path d="M 40 50 L 80 55 L 120 60 L 160 62 L 200 65 L 240 66 L 280 68 L 320 70 L 360 71" stroke="#1B4332" strokeWidth="2" fill="none" />
-              <text x="240" y="55" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#1B4332">Avec MedRev</text>
+              <circle cx="40" cy="50" r="4" fill="#1B3A5B" />
+              <circle cx="80" cy="55" r="4" fill="#1B3A5B" />
+              <circle cx="120" cy="60" r="4" fill="#1B3A5B" />
+              <circle cx="160" cy="62" r="4" fill="#1B3A5B" />
+              <circle cx="200" cy="65" r="4" fill="#1B3A5B" />
+              <circle cx="240" cy="66" r="4" fill="#1B3A5B" />
+              <circle cx="280" cy="68" r="4" fill="#1B3A5B" />
+              <circle cx="320" cy="70" r="4" fill="#1B3A5B" />
+              <circle cx="360" cy="71" r="4" fill="#1B3A5B" />
+              <path d="M 40 50 L 80 55 L 120 60 L 160 62 L 200 65 L 240 66 L 280 68 L 320 70 L 360 71" stroke="#1B3A5B" strokeWidth="2" fill="none" />
+              <text x="240" y="55" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#1B3A5B">Avec MedRev</text>
             </svg>
           </div>
         </div>

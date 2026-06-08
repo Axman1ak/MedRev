@@ -674,7 +674,7 @@ export default function ReviewModal({
                       type="button"
                       onClick={() => void transcribeVideo()}
                       style={{
-                        background: 'none', border: 'none', color: '#2D6A4F',
+                        background: 'none', border: 'none', color: '#2C5F8A',
                         cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
                         padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
                       }}
@@ -682,7 +682,7 @@ export default function ReviewModal({
                   </>
                 ) : media.transcript && media.transcript.length > 0 ? (
                   <>
-                    <span style={{ color: '#2D6A4F' }}>{'✓'}</span>
+                    <span style={{ color: '#2C5F8A' }}>{'✓'}</span>
                     Transcript prêt · {media.transcript.length} segments
                     <button
                       type="button"
@@ -702,7 +702,7 @@ export default function ReviewModal({
                       type="button"
                       onClick={() => void transcribeVideo()}
                       style={{
-                        background: 'none', border: 'none', color: '#2D6A4F',
+                        background: 'none', border: 'none', color: '#2C5F8A',
                         cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
                         padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
                       }}
