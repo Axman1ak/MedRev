@@ -1545,3 +1545,30 @@
 .todo-add-plus { color: var(--dim); font-size: 16px; width: 18px; text-align: center; flex-shrink: 0; }
 .todo-add-input { flex: 1; border: none; background: transparent; outline: none; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; color: var(--dark); }
 .todo-add-input::placeholder { color: var(--dim); }
+
+/* ============================================================
+   v4 layout — 2 colonnes (fiches | à faire + biblio) + recherche
+   ============================================================ */
+.dash { grid-template-columns: 1.6fr 1fr; grid-template-rows: none; gap: 16px; align-items: stretch; }
+.today { grid-template-columns: none; display: flex; flex-direction: column; }
+.dash-right { display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow: hidden; }
+.dash-right .todo-card { flex: 0 0 auto; }
+.dash-right .dash-bib-side { flex: 1; min-height: 0; width: auto; }
+
+.dash-topbar-right { display: flex; align-items: center; gap: 16px; }
+.dash-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 11px;
+  padding: 9px 16px; font-size: 13px; color: var(--dim); min-width: 280px; white-space: nowrap;
+}
+.dash-search-ic { font-size: 15px; }
+
+.today-head { align-items: center; }
+.today-head-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.today-start-btn {
+  background: var(--gm); color: #fff;
+  font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 13.5px;
+  padding: 9px 18px; border-radius: 10px; text-decoration: none; white-space: nowrap;
+  transition: background .15s, transform .12s;
+}
+.today-start-btn:hover { background: var(--green); transform: translateY(-1px); }
