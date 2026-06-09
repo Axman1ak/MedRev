@@ -87,6 +87,10 @@ export interface Lesson {
   steps: (StepEntry | null)[]  // length 14
   ai_questions: AiQuestion[]
   media?: LessonMedia | null   // ← ajouté 2026-05 : sources du cours
+  // ← ajouté 2026-06 : Reporter / Annuler un palier (sans toucher à steps).
+  // skips = indices de paliers annulés ; postpones = { "indice": "YYYY-MM-DD" }.
+  skips?: number[]
+  postpones?: Record<string, string>
   created_at: string
 }
 export interface Profile {
