@@ -116,25 +116,12 @@ function getLastScore(lesson: Lesson): Score | null {
   return null
 }
 
-// Reporter / Annuler (colonnes lessons.skips / lessons.postpones).
-function lessonSkips(l: Lesson): number[] {
-  const s = (l as { skips?: unknown }).skips
-  return Array.isArray(s) ? (s as number[]) : []
-}
-function lessonPostpones(l: Lesson): Record<string, string> {
-  const p = (l as { postpones?: unknown }).postpones
-  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
-}
-
 function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
-  const skips = lessonSkips(lesson)
-  const postpones = lessonPostpones(lesson)
   for (let i = 0; i < J.length; i++) {
     if (stepScore(steps[i])) continue
-    if (skips.includes(i)) continue
-    const dd = postpones[String(i)] ?? stepDate(lesson, i)
+    const dd = stepDate(lesson, i)
     if (dd <= today) {
       return {
         stepIndex: i,
@@ -172,8 +159,7 @@ function computeTodayQueue(lessons: Lesson[], today: string): QueueItem[] {
     }
     out.push({ lesson: l, due, lastScore, priority })
   })
-  // Ordre de révision : palier J croissant (plus petit J d'abord).
-  return out.sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex])
+  return out.sort((a, b) => a.priority - b.priority)
 }
 
 function buildQueue(
