@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_MODEL = 'gemini-2.5-flash'
+const GEMINI_GEN_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
 const GEMINI_FILES_UPLOAD_URL = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`
 const GEMINI_FILE_GET_URL = (name: string) =>
   `https://generativelanguage.googleapis.com/v1beta/${name}?key=${GEMINI_API_KEY}`
@@ -613,51 +614,23 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
 
     parts.push({ text: prompt })
 
-    // 6. Generate — avec réessais sur surcharge temporaire de l'IA (503/429/500).
-    const genBody = JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        maxOutputTokens: 16000,  // 30 QCM détaillés ≈ 7-9k tokens, marge confortable
-        temperature: 0.3,
-        responseMimeType: 'application/json',
-      },
+    // 6. Generate
+    const genResp = await fetch(GEMINI_GEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          maxOutputTokens: 16000,  // 30 QCM détaillés ≈ 7-9k tokens, marge confortable
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      }),
     })
-    // Un 503 = capacité serveur de Google saturée (indépendant du tier payant).
-    // Parade : réessai court PUIS bascule sur un modèle de repli si le principal
-    // reste saturé — un autre modèle a un pool de capacité différent.
-    const GEN_MODELS = [GEMINI_MODEL, 'gemini-2.0-flash']
-    let genResp: Response | null = null
-    let lastStatus = 0
-    let lastErrText = ''
-    for (const model of GEN_MODELS) {
-      if (genResp) break
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const r = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: genBody,
-        })
-        if (r.ok) { genResp = r; break }
-        lastStatus = r.status
-        lastErrText = (await r.text()).slice(0, 200)
-        const retriable = r.status === 503 || r.status === 429 || r.status === 500
-        if (retriable && attempt === 0) {
-          await new Promise(res => setTimeout(res, 1200))
-          continue
-        }
-        break  // modèle saturé → on tente le modèle de repli
-      }
-    }
 
-    if (!genResp) {
-      if (lastStatus === 503 || lastStatus === 429 || lastStatus === 500) {
-        return NextResponse.json(
-          { error: "Le générateur de QCM est temporairement surchargé côté IA. Réessaie dans une minute, c'est passager.", code: 'ai_overloaded' },
-          { status: 503 },
-        )
-      }
-      throw new Error(`Gemini generateContent failed (${lastStatus}): ${lastErrText}`)
+    if (!genResp.ok) {
+      const errText = await genResp.text()
+      throw new Error(`Gemini generateContent failed (${genResp.status}): ${errText.slice(0, 200)}`)
     }
 
     const genData = await genResp.json()
