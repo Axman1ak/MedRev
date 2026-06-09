@@ -659,6 +659,15 @@
 .cal-overflow-list .cal-fiche-name { font-size: 13px; }
 .cal-overflow-list .cal-fiche-j { font-size: 10px; }
 
+/* Lignes visuelles de la modale jour (voir plus) */
+.cal-overflow-list .cal-of-row { gap: 12px; padding: 11px 13px; border: 1px solid var(--cal-border); border-radius: 12px; background: var(--cal-card); align-items: center; }
+.cal-overflow-list .cal-of-row:hover { border-color: var(--cal-gm); background: var(--cal-soft); }
+.cal-of-ic { width: 36px; height: 36px; border-radius: 10px; background: var(--cal-gl); color: var(--cal-gm); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cal-of-ic svg { width: 20px; height: 20px; }
+.cal-of-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
+.cal-of-sub { font-size: 11.5px; color: var(--cal-gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.cal-overflow-list .cal-of-row .cal-fiche-dot { margin-top: 0; }
+
 .cal-empty-state {
   flex: 1;
   display: flex;

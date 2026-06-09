@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
+import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -603,15 +604,17 @@ export default function CalendarPage() {
                   return (
                     <button
                       key={`${occ.lesson.id}-${occ.stepIndex}`}
-                      className={`cal-fiche${done ? ' cal-done' : ''}`}
+                      className={`cal-fiche cal-of-row${done ? ' cal-done' : ''}`}
                       onClick={() => openReview(occ)}
                       title={sysName}
                     >
-                      <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                      <span className="cal-fiche-body">
+                      <span className="cal-of-ic"><SubjectIcon name={sysName} /></span>
+                      <span className="cal-of-main">
                         <span className="cal-fiche-name">{occ.lesson.name}</span>
-                        <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                        {sysName && <span className="cal-of-sub">{sysName}</span>}
                       </span>
+                      <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                      <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
                     </button>
                   )
                 })}
