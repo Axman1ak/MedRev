@@ -17,7 +17,7 @@
 // seedé) et rendus via dangerouslySetInnerHTML pour bypass de la réconciliation
 // React (~2000 livres × ~10 sous-éléments = 20000 nœuds, trop coûteux à diff).
 
-import { useMemo, useEffect, type CSSProperties } from 'react'
+import { useMemo, useEffect, useRef, type CSSProperties } from 'react'
 
 // ============ CSS VARIABLES THÈME ============
 // Tokens injectés UNE FOIS au montage du premier composant. Les valeurs
@@ -139,6 +139,10 @@ const PALETTE: LeatherTone[] = [
   { main: '#604A38', accent: '#806648', title: '#C89040' },
 ]
 
+// Cuirs des OUVRAGES DORÉS (rares). Déclaré ici car utilisé par l'IIFE
+// ALL_BOOKS qui s'exécute au chargement du module (ordre d'évaluation).
+const RARE_LEATHERS = ['#2A1208', '#3A1020', '#101A30', '#1A2410', '#240E2E']
+
 // ============ ZONES RÉSERVÉES POUR LES TRÉSORS ============
 // Positions remappées sur le viewBox étendu (FRAME_RIGHT 1755 vs 1470 original) :
 // - shelf 0 left: 165-248 (inchangé, bord gauche)
@@ -190,7 +194,15 @@ const SHELVES_HTML: string = (() => {
 // Calcul fait UNE FOIS à l'import du module (déterministe via PRNG seedé).
 // Ordre : étagère par étagère, gauche à droite. C'est l'ordre dans lequel
 // les livres apparaîtront au fil des fiches notées.
-type Book = { svg: string; shelf: number }
+//
+// NOUVEAU (refonte "bibliothèque vivante") :
+// - ~1 livre sur 22 est un OUVRAGE DORÉ (rare) : plus grand, reliure gemmée,
+//   dorures pleines, et un glint lumineux périodique. Déterministe (PRNG),
+//   donc le même livre est doré pour tout le monde au même rang — la
+//   récompense variable : "le prochain sera-t-il doré ?".
+// - Chaque livre mémorise sa position (cx, top) pour viser la bouffée de
+//   poussière au pop-in, et son étagère pour les plaques de complétion.
+type Book = { svg: string; shelf: number; cx: number; top: number; rare: boolean }
 
 const ALL_BOOKS: Book[] = (() => {
   const rand = mulberry32(11)
@@ -205,44 +217,106 @@ const ALL_BOOKS: Book[] = (() => {
     let groupRemaining = 0
     let groupHeight = 0
     let groupWidth = 0
+    let groupRare = false
 
     while (cursor < FRAME_RIGHT - 8) {
       const zone = zones.find((z) => cursor >= z.x - 2 && cursor < z.x2)
       if (zone) { cursor = zone.x2 + 2; continue }
 
       if (groupRemaining === 0) {
-        if (rand() < 0.32) {
+        if (rand() < 0.045) {
+          // OUVRAGE DORÉ — rare, toujours seul. Plus grand et plus large,
+          // mais ≤ 74 pour tenir sous la planche (hauteur compartiment ~75).
+          groupRemaining = 1
+          groupRare = true
+          groupColor = PALETTE[Math.floor(rand() * PALETTE.length)]
+          groupHeight = 70 + Math.floor(rand() * 5)
+          groupWidth = 12 + Math.floor(rand() * 4)
+        } else if (rand() < 0.32) {
           // Série multi-volumes (3-7 livres mêmes couleurs/hauteurs)
           groupRemaining = 3 + Math.floor(rand() * 5)
+          groupRare = false
           groupColor = PALETTE[Math.floor(rand() * PALETTE.length)]
           groupHeight = 56 + Math.floor(rand() * 18)
           groupWidth = 7 + Math.floor(rand() * 4)
         } else {
           groupRemaining = 1
+          groupRare = false
           groupColor = PALETTE[Math.floor(rand() * PALETTE.length)]
           groupHeight = 54 + Math.floor(rand() * 22)
           groupWidth = 6 + Math.floor(rand() * 6)
         }
       }
-      const w = groupWidth + (groupRemaining > 1 ? 0 : Math.floor((rand() - 0.5) * 2))
+      const w = groupWidth + (groupRemaining > 1 || groupRare ? 0 : Math.floor((rand() - 0.5) * 2))
       const nextZone = zones.find((z) => cursor < z.x && cursor + w > z.x)
       if (nextZone) { cursor = nextZone.x2 + 2; groupRemaining = 0; continue }
       if (cursor + w > FRAME_RIGHT - 4) break
 
       const yBookTop = yBoardTop - groupHeight
-      const tilt = (groupRemaining === 1 && rand() < 0.02) ? (rand() - 0.5) * 5 : 0
+      const tilt = (groupRemaining === 1 && !groupRare && rand() < 0.02) ? (rand() - 0.5) * 5 : 0
       books.push({
-        svg: renderBook(cursor, yBookTop, w, groupHeight, groupColor!, tilt, rand),
+        svg: groupRare
+          ? renderRareBook(cursor, yBookTop, w, groupHeight, rand)
+          : renderBook(cursor, yBookTop, w, groupHeight, groupColor!, tilt, rand),
         shelf: s,
+        cx: cursor + w / 2,
+        top: yBookTop,
+        rare: groupRare,
       })
 
       cursor += w
       groupRemaining--
+      if (groupRemaining === 0) groupRare = false
       if (groupRemaining === 0 && rand() < 0.04) cursor += 1 + Math.floor(rand() * 2)
     }
   }
   return books
 })()
+
+// Dernier index de livre par étagère (pour les plaques de complétion) :
+// l'étagère s est "complète" quand visibleBooks > SHELF_LAST_BOOK_INDEX[s].
+const SHELF_LAST_BOOK_INDEX: number[] = (() => {
+  const out: number[] = new Array(SHELF_COUNT).fill(-1)
+  ALL_BOOKS.forEach((b, i) => { out[b.shelf] = i })
+  return out
+})()
+
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI']
+
+// Trajectoires (dx, dy) des particules de la bouffée de poussière au pop-in.
+const BURST_VECTORS: Array<[number, number]> = [
+  [-16, -22], [14, -26], [-8, -34], [6, -18], [-22, -10], [20, -12], [0, -40],
+]
+
+// Poussières ambiantes : positions dans le faisceau + tempo désynchronisé.
+const MOTES = [
+  { cx: 290, cy: 280, r: 0.7, dur: 12, delay: 0 },
+  { cx: 350, cy: 380, r: 0.5, dur: 15, delay: 3.2 },
+  { cx: 410, cy: 450, r: 0.6, dur: 10, delay: 6.1 },
+  { cx: 320, cy: 540, r: 0.4, dur: 16, delay: 1.4 },
+  { cx: 450, cy: 600, r: 0.7, dur: 11, delay: 8.3 },
+  { cx: 380, cy: 700, r: 0.5, dur: 14, delay: 4.7 },
+  { cx: 520, cy: 780, r: 0.6, dur: 13, delay: 9.6 },
+  { cx: 270, cy: 870, r: 0.5, dur: 17, delay: 2.5 },
+  { cx: 600, cy: 410, r: 0.4, dur: 12, delay: 7.2 },
+  { cx: 700, cy: 610, r: 0.5, dur: 15, delay: 5.8 },
+  { cx: 250, cy: 460, r: 0.35, dur: 18, delay: 10.4 },
+  { cx: 160, cy: 340, r: 0.4, dur: 13, delay: 0.9 },
+]
+
+// Plaque de laiton gravée, incrustée dans la planche de l'étagère complétée.
+// 11 jalons intermédiaires entre les 6 trésors : il y a TOUJOURS un objectif proche.
+function renderShelfPlaque(s: number): string {
+  const yBoardTop = shelfBoardTop(s)
+  const cx = (FRAME_LEFT + FRAME_RIGHT) / 2
+  return `<g transform="translate(${cx} ${yBoardTop})">
+    <rect x="-56" y="0.6" width="112" height="${BOARD_THICKNESS - 1.2}" rx="1.4" fill="url(#bib-brass)" stroke="rgba(0,0,0,0.45)" stroke-width="0.4"/>
+    <rect x="-54" y="1.4" width="108" height="${BOARD_THICKNESS - 2.8}" rx="1" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="0.3"/>
+    <circle cx="-51" cy="${BOARD_THICKNESS / 2}" r="0.7" fill="rgba(0,0,0,0.4)"/>
+    <circle cx="51" cy="${BOARD_THICKNESS / 2}" r="0.7" fill="rgba(0,0,0,0.4)"/>
+    <text y="${BOARD_THICKNESS / 2 + 1.7}" text-anchor="middle" font-family="Cinzel,serif" font-size="4.6" fill="rgba(40,22,8,0.85)" letter-spacing="1.2">RAYON ${ROMAN[s]} · COMPLET</text>
+  </g>`
+}
 
 function renderBook(
   x: number, y: number, w: number, h: number,
@@ -279,6 +353,45 @@ function renderBook(
     const cy = h * 0.62
     s += `<circle cx="${(w / 2).toFixed(1)}" cy="${cy.toFixed(1)}" r="0.7" fill="${c.title}" opacity="0.6"/>`
   }
+  s += '</g>'
+  return s
+}
+
+// OUVRAGE DORÉ — reliure de prestige : cuir nuit, dorures pleines, nervures,
+// cartouche central et gemme. Le glint (.bib-rare-glint) s'allume ~1s toutes
+// les 6-9s (délai désynchronisé par livre) : la bibliothèque scintille.
+// NB : RARE_LEATHERS est déclaré AVANT ALL_BOOKS (près de PALETTE) car
+// l'IIFE ALL_BOOKS s'exécute au chargement du module et appelle cette fonction.
+function renderRareBook(
+  x: number, y: number, w: number, h: number, rand: () => number
+): string {
+  const main = RARE_LEATHERS[Math.floor(rand() * RARE_LEATHERS.length)]
+  const gold = '#E8C26A'
+  const goldDeep = '#A87C2A'
+  const delay = (rand() * 7).toFixed(2)
+  const dur = (6 + rand() * 3).toFixed(2)
+  let s = `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">`
+  s += `<rect width="${w}" height="${h}" fill="${main}"/>`
+  // Tranches haut/bas dorées
+  s += `<rect x="0" y="0" width="${w}" height="2" fill="${gold}"/>`
+  s += `<rect x="0" y="2" width="${w}" height="0.6" fill="rgba(0,0,0,0.5)"/>`
+  s += `<rect x="0" y="${(h - 2.2).toFixed(1)}" width="${w}" height="2.2" fill="${goldDeep}"/>`
+  // Nervures de dos (5 doubles filets dorés)
+  for (let i = 1; i <= 5; i++) {
+    const ny = (h * i) / 6
+    s += `<rect y="${ny.toFixed(1)}" width="${w}" height="0.9" fill="${gold}" opacity="0.85"/>`
+    s += `<rect y="${(ny + 0.9).toFixed(1)}" width="${w}" height="0.45" fill="rgba(0,0,0,0.55)"/>`
+  }
+  // Cartouche central + gemme
+  const cw = Math.max(3, w - 5)
+  s += `<rect x="${((w - cw) / 2).toFixed(1)}" y="${(h * 0.38).toFixed(1)}" width="${cw.toFixed(1)}" height="${(h * 0.14).toFixed(1)}" fill="none" stroke="${gold}" stroke-width="0.5" opacity="0.9"/>`
+  s += `<circle cx="${(w / 2).toFixed(1)}" cy="${(h * 0.45).toFixed(1)}" r="1.5" fill="#B23040"/>`
+  s += `<circle cx="${(w / 2 - 0.4).toFixed(1)}" cy="${(h * 0.45 - 0.4).toFixed(1)}" r="0.5" fill="rgba(255,230,230,0.9)"/>`
+  // Lumières de matière
+  s += `<rect x="0" y="0" width="1.1" height="${h}" fill="rgba(255,230,180,0.30)"/>`
+  s += `<rect x="${(w - 0.7).toFixed(1)}" y="0" width="0.7" height="${h}" fill="rgba(0,0,0,0.45)"/>`
+  // Glint périodique (désynchronisé par livre)
+  s += `<rect class="bib-rare-glint" width="${w}" height="${h}" fill="url(#bib-rareGlint)" style="animation-delay:${delay}s;animation-duration:${dur}s"/>`
   s += '</g>'
   return s
 }
@@ -362,9 +475,11 @@ const DECORATIONS: Decoration[] = [
         <rect x="30" y="-62" width="4" height="16" fill="#E8DDC0"/>
         <rect x="30" y="-62" width="4" height="1" fill="#C8B89C"/>
         <line x1="32" y1="-62" x2="32" y2="-66" stroke="#3A2818" stroke-width="0.6"/>
-        <ellipse cx="32" cy="-72" rx="4" ry="7" fill="url(#bib-flame)"/>
-        <ellipse cx="32" cy="-70" rx="2" ry="4" fill="rgba(255,255,210,0.9)"/>
-        <circle cx="32" cy="-70" r="20" fill="url(#bib-flame)" opacity="0.3"/>
+        <g class="bib-flame-live">
+          <ellipse cx="32" cy="-72" rx="4" ry="7" fill="url(#bib-flame)"/>
+          <ellipse cx="32" cy="-70" rx="2" ry="4" fill="rgba(255,255,210,0.9)"/>
+        </g>
+        <circle class="bib-flame-halo" cx="32" cy="-70" r="20" fill="url(#bib-flame)" opacity="0.3"/>
       </g>`
     })(),
   },
@@ -515,6 +630,15 @@ export default function BibliothecaSvg({
   // Nombre de livres visibles : 1 fiche = 1 livre, capé à la capacité totale
   const visibleBooks = Math.min(Math.max(0, Math.floor(fichesCount)), ALL_BOOKS.length)
 
+  // fichesCount du render PRÉCÉDENT. Les célébrations (burst de poussière,
+  // gravure de plaque, reveal de trésor) ne se déclenchent que sur un VRAI
+  // incrément en cours de session — jamais au montage de la page, sinon ça
+  // flasherait à chaque visite et le moment perdrait toute valeur.
+  const prevFichesRef = useRef<number | null>(null)
+  const prevFiches = prevFichesRef.current
+  useEffect(() => { prevFichesRef.current = visibleBooks }, [visibleBooks])
+  const isIncrement = prevFiches !== null && visibleBooks > prevFiches
+
   // On sépare le rendu : tous les livres sauf le dernier sont stables (innerHTML
   // pour la perf) ; le dernier livre est rendu séparément avec un `key` qui
   // change à chaque incrément de fichesCount, ce qui re-monte le nœud et
@@ -529,17 +653,44 @@ export default function BibliothecaSvg({
     return s
   }, [stableCount])
 
-  const latestBookSvg = lastBookIdx >= 0 && lastBookIdx < ALL_BOOKS.length
-    ? ALL_BOOKS[lastBookIdx].svg
+  const latestBook = lastBookIdx >= 0 && lastBookIdx < ALL_BOOKS.length
+    ? ALL_BOOKS[lastBookIdx]
     : null
 
-  const decorationsHtml = useMemo(() => {
-    let s = ''
-    for (const d of DECORATIONS) {
-      if (fichesCount >= d.unlockAt) s += d.svg
+  // Étagère qui vient TOUT JUSTE d'être complétée par cet incrément (-1 sinon).
+  const justCompletedShelf = (() => {
+    if (!isIncrement || prevFiches === null) return -1
+    for (let s = 0; s < SHELF_COUNT; s++) {
+      const li = SHELF_LAST_BOOK_INDEX[s]
+      if (li >= 0 && prevFiches <= li && visibleBooks > li) return s
     }
-    return s
-  }, [fichesCount])
+    return -1
+  })()
+
+  // Plaques des étagères complétées (hors celle qui vient de l'être,
+  // rendue à part avec son animation de gravure).
+  const stablePlaquesHtml = useMemo(() => {
+    let html = ''
+    for (let s = 0; s < SHELF_COUNT; s++) {
+      const li = SHELF_LAST_BOOK_INDEX[s]
+      if (li >= 0 && visibleBooks > li && s !== justCompletedShelf) html += renderShelfPlaque(s)
+    }
+    return html
+    // justCompletedShelf dérive de visibleBooks + ref : inutile en dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleBooks])
+
+  // Trésors fraîchement débloqués par cet incrément → reveal doré.
+  const newlyUnlockedAts = isIncrement && prevFiches !== null
+    ? DECORATIONS.filter(d => prevFiches < d.unlockAt && visibleBooks >= d.unlockAt).map(d => d.unlockAt)
+    : []
+  let staticDecorationsHtml = ''
+  let revealDecorationsHtml = ''
+  for (const d of DECORATIONS) {
+    if (fichesCount < d.unlockAt) continue
+    if (newlyUnlockedAts.includes(d.unlockAt)) revealDecorationsHtml += d.svg
+    else staticDecorationsHtml += d.svg
+  }
 
   return (
     <svg
@@ -568,6 +719,98 @@ export default function BibliothecaSvg({
           transform-origin: 50% 100%;
           animation: bib-book-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both,
                      bib-book-glow 0.9s ease-out both;
+        }
+
+        /* --- Ouvrages dorés : glint périodique désynchronisé --- */
+        @keyframes bib-glint-sweep {
+          0%, 86% { opacity: 0; }
+          92%     { opacity: 0.75; }
+          100%    { opacity: 0; }
+        }
+        .bib-rare-glint {
+          opacity: 0;
+          animation-name: bib-glint-sweep;
+          animation-iteration-count: infinite;
+          animation-timing-function: ease-in-out;
+        }
+
+        /* --- Bouffée de poussière dorée au nouveau livre --- */
+        @keyframes bib-dust-fly {
+          from { transform: translate(0, 0); opacity: 0.95; }
+          to   { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+        }
+        .bib-dustburst circle:not(.bib-dustring) {
+          fill: var(--bib-brass-1, #E8C77A);
+          animation: bib-dust-fly 0.8s ease-out both;
+        }
+        @keyframes bib-ring-out {
+          from { transform: scale(0.2); opacity: 0.8; }
+          to   { transform: scale(1.7); opacity: 0; }
+        }
+        .bib-dustring {
+          transform-box: fill-box;
+          transform-origin: center;
+          animation: bib-ring-out 0.6s ease-out both;
+        }
+
+        /* --- Plaque de rayon complété : gravure qui s'incruste --- */
+        @keyframes bib-plaque-in {
+          0%   { opacity: 0; transform: scale(0.6); }
+          60%  { opacity: 1; transform: scale(1.08); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .bib-plaque-pop {
+          transform-box: fill-box;
+          transform-origin: center;
+          animation: bib-plaque-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                     bib-book-glow 1.4s ease-out both;
+        }
+
+        /* --- Trésor fraîchement débloqué : reveal doré --- */
+        @keyframes bib-treasure-in {
+          0%   { opacity: 0; transform: translateY(10px) scale(0.85); }
+          60%  { opacity: 1; transform: translateY(-3px) scale(1.04); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .bib-treasure-reveal {
+          transform-box: fill-box;
+          transform-origin: 50% 100%;
+          animation: bib-treasure-in 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                     bib-book-glow 1.6s ease-out both;
+        }
+
+        /* --- Vie ambiante --- */
+        @keyframes bib-mote-drift {
+          0%   { transform: translateY(0); opacity: 0; }
+          12%  { opacity: 0.7; }
+          85%  { opacity: 0.25; }
+          100% { transform: translateY(-52px); opacity: 0; }
+        }
+        .bib-mote { animation: bib-mote-drift linear infinite; }
+        @keyframes bib-flame-dance {
+          0%   { transform: scale(1) translateX(0); }
+          25%  { transform: scale(1.06, 0.94) translateX(0.3px); }
+          50%  { transform: scale(0.95, 1.08) translateX(-0.3px); }
+          75%  { transform: scale(1.03, 0.97) translateX(0.2px); }
+          100% { transform: scale(1) translateX(0); }
+        }
+        .bib-flame-live {
+          transform-box: fill-box;
+          transform-origin: 50% 90%;
+          animation: bib-flame-dance 1.1s ease-in-out infinite;
+        }
+        @keyframes bib-halo-breathe { 0%, 100% { opacity: 0.22; } 50% { opacity: 0.38; } }
+        .bib-flame-halo { animation: bib-halo-breathe 2.6s ease-in-out infinite; }
+        @keyframes bib-shaft-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+        .bib-shaft { animation: bib-shaft-breathe 11s ease-in-out infinite; }
+
+        /* Accessibilité : on coupe tout pour qui préfère le calme. */
+        @media (prefers-reduced-motion: reduce) {
+          .bib-rare-glint, .bib-mote, .bib-flame-live, .bib-flame-halo,
+          .bib-shaft, .bib-dustburst circle, .bib-dustring,
+          .bib-book-pop, .bib-plaque-pop, .bib-treasure-reveal {
+            animation: none !important;
+          }
         }
       `}</style>
 
@@ -648,6 +891,11 @@ export default function BibliothecaSvg({
           <stop offset="0%" stopColor="#E8D4A8" />
           <stop offset="100%" stopColor="#A88058" />
         </linearGradient>
+        <linearGradient id="bib-rareGlint" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="rgba(255,236,180,0)" />
+          <stop offset="50%" stopColor="rgba(255,236,180,0.85)" />
+          <stop offset="100%" stopColor="rgba(255,236,180,0)" />
+        </linearGradient>
       </defs>
 
       {/* === ARRIÈRE-PLAN (mur derrière le meuble) — étendu au viewBox élargi === */}
@@ -720,36 +968,75 @@ export default function BibliothecaSvg({
       <g dangerouslySetInnerHTML={{ __html: stableBooksHtml }} />
 
       {/* === DERNIER LIVRE (avec animation pop-in à chaque incrément) === */}
-      {latestBookSvg && (
+      {latestBook && (
         <g
           key={lastBookIdx}
           className="bib-book-pop"
-          dangerouslySetInnerHTML={{ __html: latestBookSvg }}
+          dangerouslySetInnerHTML={{ __html: latestBook.svg }}
+        />
+      )}
+
+      {/* === BOUFFÉE DE POUSSIÈRE DORÉE au nouveau livre (incrément seulement) === */}
+      {latestBook && isIncrement && (
+        <g
+          key={`burst-${lastBookIdx}`}
+          className="bib-dustburst"
+          transform={`translate(${latestBook.cx.toFixed(1)} ${latestBook.top.toFixed(1)})`}
+          pointerEvents="none"
+        >
+          <circle className="bib-dustring" r="11" fill="none" stroke="var(--bib-brass-1, #E8C77A)" strokeWidth="1.2" />
+          {BURST_VECTORS.map(([dx, dy], i) => (
+            <circle
+              key={i}
+              r={i % 2 ? 1.1 : 1.6}
+              style={{
+                ['--dx' as never]: `${dx}px`,
+                ['--dy' as never]: `${dy}px`,
+                animationDelay: `${(i * 0.02).toFixed(2)}s`,
+              }}
+            />
+          ))}
+        </g>
+      )}
+
+      {/* === PLAQUES DES RAYONS COMPLÉTÉS === */}
+      <g dangerouslySetInnerHTML={{ __html: stablePlaquesHtml }} />
+      {justCompletedShelf >= 0 && (
+        <g
+          key={`plaque-${justCompletedShelf}`}
+          className="bib-plaque-pop"
+          dangerouslySetInnerHTML={{ __html: renderShelfPlaque(justCompletedShelf) }}
         />
       )}
 
       {/* === DÉCORATIONS / TRÉSORS === */}
-      <g dangerouslySetInnerHTML={{ __html: decorationsHtml }} />
+      <g dangerouslySetInnerHTML={{ __html: staticDecorationsHtml }} />
+      {revealDecorationsHtml && (
+        <g
+          key={`treasure-${newlyUnlockedAts.join('-')}`}
+          className="bib-treasure-reveal"
+          dangerouslySetInnerHTML={{ __html: revealDecorationsHtml }}
+        />
+      )}
 
       {/* === ATMOSPHÈRE — étendue au viewBox étendu === */}
-      <polygon points="-112,0 940,0 230,1025 -112,1025" fill="url(#bib-lightShaft)" pointerEvents="none" />
+      <polygon className="bib-shaft" points="-112,0 940,0 230,1025 -112,1025" fill="url(#bib-lightShaft)" pointerEvents="none" />
       <rect x={VIEWBOX_X} y={VIEWBOX_Y} width={VIEWBOX_W} height={VIEWBOX_H} fill="url(#bib-warmGlow)" pointerEvents="none" />
       <rect x={VIEWBOX_X} y={VIEWBOX_Y} width={VIEWBOX_W} height={VIEWBOX_H} fill="url(#bib-vignette)" pointerEvents="none" />
 
-      {/* Particules de poussière dans le faisceau */}
+      {/* Particules de poussière qui dérivent lentement dans le faisceau */}
       <g pointerEvents="none">
-        <circle cx="290" cy="280" r="0.7" fill="var(--bib-dust, rgba(255,220,160,0.55))" />
-        <circle cx="350" cy="380" r="0.5" fill="var(--bib-dust, rgba(255,220,160,0.4))" />
-        <circle cx="410" cy="450" r="0.6" fill="var(--bib-dust, rgba(255,220,160,0.5))" />
-        <circle cx="320" cy="540" r="0.4" fill="var(--bib-dust, rgba(255,220,160,0.35))" />
-        <circle cx="450" cy="600" r="0.7" fill="var(--bib-dust, rgba(255,220,160,0.5))" />
-        <circle cx="380" cy="700" r="0.5" fill="var(--bib-dust, rgba(255,220,160,0.45))" />
-        <circle cx="520" cy="780" r="0.6" fill="var(--bib-dust, rgba(255,220,160,0.4))" />
-        <circle cx="270" cy="870" r="0.5" fill="var(--bib-dust, rgba(255,220,160,0.35))" />
-        <circle cx="600" cy="410" r="0.4" fill="var(--bib-dust, rgba(255,220,160,0.4))" />
-        <circle cx="700" cy="610" r="0.5" fill="var(--bib-dust, rgba(255,220,160,0.35))" />
-        <circle cx="250" cy="460" r="0.35" fill="var(--bib-dust, rgba(255,220,160,0.35))" />
-        <circle cx="160" cy="340" r="0.4" fill="var(--bib-dust, rgba(255,220,160,0.4))" />
+        {MOTES.map((m, i) => (
+          <circle
+            key={i}
+            className="bib-mote"
+            cx={m.cx}
+            cy={m.cy}
+            r={m.r}
+            fill="var(--bib-dust, rgba(255,220,160,0.45))"
+            style={{ animationDuration: `${m.dur}s`, animationDelay: `${m.delay}s` }}
+          />
+        ))}
       </g>
     </svg>
   )
@@ -772,6 +1059,25 @@ export function BibliothecaTreasuresPanel({
   const upcoming = nextTreasure(fichesCount)
   const treasuresUnlocked = unlockedTreasuresCount(fichesCount)
   const progressPct = Math.min(100, (fichesCount / BIBLIOTHECA_TOTAL_CAPACITY) * 100)
+
+  // Prochain jalon — échelle combinée "rayons complets" (11) + "trésors" (6) :
+  // il y a TOUJOURS un objectif proche, et la barre mesure la distance entre
+  // le jalon précédent et le suivant (pas le total, qui paraît infini).
+  const milestones: { at: number; label: string }[] = []
+  for (let s = 0; s < SHELF_COUNT; s++) {
+    const li = SHELF_LAST_BOOK_INDEX[s]
+    if (li >= 0) milestones.push({ at: li + 1, label: `Rayon ${ROMAN[s]} complet` })
+  }
+  for (const d of DECORATIONS) milestones.push({ at: d.unlockAt, label: d.name })
+  milestones.sort((a, b) => a.at - b.at)
+  const nextGoal = milestones.find(m => m.at > fichesCount) ?? null
+  let prevGoalAt = 0
+  for (const m of milestones) { if (m.at <= fichesCount) prevGoalAt = m.at }
+  const goalPct = nextGoal
+    ? Math.min(100, Math.max(0, ((fichesCount - prevGoalAt) / (nextGoal.at - prevGoalAt)) * 100))
+    : 100
+  const goalRemaining = nextGoal ? nextGoal.at - fichesCount : 0
+
   return (
     <aside className={`bib-treasures ${className ?? ''}`} style={style} aria-label="Trésors de la bibliothèque">
       {showHeader && (
@@ -787,6 +1093,21 @@ export function BibliothecaTreasuresPanel({
             <div className="bib-treasures-progress-bar" style={{ width: `${progressPct}%` }} />
           </div>
         </header>
+      )}
+
+      {nextGoal && (
+        <div className="bib-next-goal">
+          <div className="bib-next-goal-row">
+            <span className="bib-next-goal-kicker">Prochain jalon</span>
+            <span className="bib-next-goal-left">
+              {goalRemaining} livre{goalRemaining > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="bib-next-goal-name">{nextGoal.label}</div>
+          <div className="bib-next-goal-bar" aria-hidden="true">
+            <div className="bib-next-goal-fill" style={{ width: `${goalPct}%` }} />
+          </div>
+        </div>
       )}
       <div className="bib-treasures-title">Trésors · {treasuresUnlocked}/6</div>
       <ol className="bib-treasures-list">
