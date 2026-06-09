@@ -1433,3 +1433,518 @@
   color: var(--gray);
   cursor: not-allowed;
 }
+
+/* ============================================================
+   PHASE CONFIG — WIZARD 4 ÉTAPES (refonte 2026-06)
+   Palette marine + tokens design system. Une décision par écran.
+   ============================================================ */
+
+/* --- Barre de progression --- */
+.sim-wiz-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.sim-wiz-step-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.sim-wiz-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  min-width: 0;
+}
+.sim-wiz-step:disabled { cursor: default; }
+.sim-step-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-bricolage), serif;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--soft);
+  border: 1.5px solid var(--border);
+  color: var(--gray);
+  transition: all .15s;
+}
+.sim-wiz-step.active .sim-step-dot {
+  background: var(--gm);
+  border-color: var(--gm);
+  color: #fff;
+}
+.sim-wiz-step.done .sim-step-dot {
+  background: var(--gl);
+  border-color: var(--gm);
+  color: var(--gm);
+}
+.sim-step-label {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sim-wiz-step.active .sim-step-label { color: var(--dark); }
+.sim-wiz-step.done .sim-step-label { color: var(--gm); }
+.sim-wiz-step-line {
+  flex: 1;
+  height: 1.5px;
+  background: var(--border);
+  margin: 0 8px;
+  min-width: 12px;
+}
+
+/* --- Corps du wizard (carte unique) --- */
+.sim-wiz {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.sim-wiz-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 26px 30px;
+  gap: 4px;
+}
+.sim-wiz-q {
+  font-family: var(--font-bricolage), serif;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -.015em;
+  color: var(--dark);
+}
+.sim-wiz-hint {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--gray);
+  margin-bottom: 16px;
+}
+.sim-wiz-sublabel {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--gray);
+}
+.sim-wiz-sublabel-note {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--gray);
+}
+.sim-wiz-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gm);
+  letter-spacing: .01em;
+  padding: 0;
+}
+.sim-wiz-link:hover { color: var(--green); }
+
+/* --- Étape 1 : matières (chips) --- */
+.sim-wiz-mat-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.sim-wiz-mat-count {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--gray);
+  margin-right: auto;
+}
+.sim-wiz-mat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sim-wiz-chip {
+  --chip: var(--gm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--soft);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all .12s;
+  text-align: left;
+  font-family: inherit;
+  min-width: 0;
+}
+.sim-wiz-chip:hover { border-color: var(--gm); }
+.sim-wiz-chip.sel {
+  background: var(--gl);
+  border-color: var(--gm);
+}
+.sim-wiz-chip-ic {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--chip);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sim-wiz-chip-ic svg { width: 100%; height: 100%; }
+.sim-wiz-chip-name {
+  flex: 1;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.sim-wiz-chip.sel .sim-wiz-chip-name { color: var(--green); font-weight: 600; }
+.sim-wiz-chip-q {
+  font-family: var(--font-bricolage), serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray);
+  flex-shrink: 0;
+  letter-spacing: -.01em;
+}
+.sim-wiz-chip.sel .sim-wiz-chip-q { color: var(--gm); }
+
+/* --- Étape 1 : picker de fiches --- */
+.sim-wiz-fiches {
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sim-wiz-fiches-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.sim-wiz-fiches-head .sim-wiz-sublabel-note { margin-right: auto; }
+.sim-wiz-search {
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--soft);
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 13px;
+  color: var(--dark);
+  margin-bottom: 10px;
+}
+.sim-wiz-search:focus {
+  outline: none;
+  border-color: var(--gm);
+  background: var(--card);
+}
+.sim-wiz-search::placeholder { color: var(--gray); }
+.sim-wiz-fiche-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  align-content: start;
+}
+.sim-wiz-fiche {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all .12s;
+  text-align: left;
+  font-family: inherit;
+}
+.sim-wiz-fiche:hover { border-color: var(--gm); }
+.sim-wiz-fiche.sel { background: var(--gl); border-color: var(--gm); }
+.sim-wiz-fiche-check {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sim-wiz-fiche.sel .sim-wiz-fiche-check {
+  background: var(--gm);
+  border-color: var(--gm);
+}
+.sim-wiz-fiche.sel .sim-wiz-fiche-check::after {
+  content: '\2713';
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.sim-wiz-fiche-name {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.sim-wiz-fiche-sys {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--gray);
+  white-space: nowrap;
+}
+.sim-wiz-fiche-q {
+  font-family: var(--font-bricolage), serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--gray);
+  flex-shrink: 0;
+}
+
+/* --- Étape 2 : cartes source --- */
+.sim-wiz-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+.sim-wiz-card {
+  padding: 22px 22px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--soft);
+  cursor: pointer;
+  transition: all .12s;
+  text-align: left;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sim-wiz-card:hover:not(.disabled) { border-color: var(--gm); }
+.sim-wiz-card.sel {
+  border-color: var(--gm);
+  background: var(--gl);
+}
+.sim-wiz-card.disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  background: var(--soft);
+}
+.sim-wiz-card-h {
+  font-family: var(--font-bricolage), serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--dark);
+  letter-spacing: -.01em;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.sim-wiz-card.sel .sim-wiz-card-h { color: var(--green); }
+.sim-wiz-card-sub {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.5;
+}
+.sim-wiz-badge {
+  font-family: var(--font-hanken), sans-serif;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--gm);
+  background: var(--gl);
+  border: 1px solid var(--gm);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+/* --- Étape 3 : modes (réutilise .sim-mode-pill) --- */
+.sim-wiz-modes {
+  margin-top: 8px;
+  min-height: 320px;
+}
+
+/* --- Étape 4 : réglages + récap --- */
+.sim-wiz-settings { margin-top: 6px; margin-bottom: 18px; }
+.sim-opt-pill:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.sim-opt-pill:disabled:hover {
+  border-color: var(--border);
+  color: var(--gray);
+}
+.sim-wiz-recap {
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+}
+.sim-wiz-recap-h {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: var(--gray);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sim-wiz-recap-h::before {
+  content: '';
+  width: 4px; height: 12px;
+  background: var(--gm);
+  border-radius: 2px;
+}
+.sim-wiz-recap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px 28px;
+}
+.sim-wiz-recap-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sim-wiz-recap-l {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--gray);
+}
+.sim-wiz-recap-v {
+  font-family: var(--font-bricolage), serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--dark);
+  letter-spacing: -.005em;
+}
+.sim-wiz-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--rose-soft);
+  color: var(--rose);
+  border: 1px solid var(--rose);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* --- Navigation bas de page --- */
+.sim-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.sim-nav-btn {
+  padding: 13px 26px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  font: 700 13.5px var(--font-hanken);
+  letter-spacing: .02em;
+  color: var(--dark);
+  cursor: pointer;
+  transition: all .15s;
+}
+.sim-nav-btn:hover:not(:disabled) {
+  border-color: var(--gm);
+  color: var(--gm);
+}
+.sim-nav-btn.primary {
+  background: var(--dark);
+  border-color: var(--dark);
+  color: var(--bg-card);
+}
+.sim-nav-btn.primary:hover:not(:disabled) {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.sim-nav-btn.launch {
+  background: var(--gm);
+  border-color: var(--gm);
+  color: #fff;
+  min-width: 240px;
+}
+.sim-nav-btn.launch:hover:not(:disabled) {
+  background: var(--green);
+  border-color: var(--green);
+}
+.sim-nav-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.sim-nav-btn.launch:disabled,
+.sim-nav-btn.primary:disabled {
+  background: var(--soft);
+  border-color: var(--border);
+  color: var(--gray);
+  opacity: 1;
+}
+
+/* --- Responsive --- */
+@media (max-width: 720px) {
+  .sim-step-label { display: none; }
+  .sim-wiz-body { padding: 20px 18px; }
+  .sim-wiz-q { font-size: 20px; }
+  .sim-nav-btn.launch { min-width: 0; flex: 1; }
+}

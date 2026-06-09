@@ -784,8 +784,6 @@ function TodayModal({
     return list
   }, [queue, systems, sort, subjectFilter])
 
-  const totalMin = queue.length * 8
-
   const subjectsInQueue = useMemo(() => {
     const ids = new Set(queue.map(p => p.lesson.system_id))
     return systems.filter(s => ids.has(s.id))
@@ -810,10 +808,6 @@ function TodayModal({
           <div>
             <div className="full-stat-label">Total</div>
             <div className="full-stat-val"><em>{queue.length}</em> révision{queue.length > 1 ? 's' : ''}</div>
-          </div>
-          <div>
-            <div className="full-stat-label">Temps estimé</div>
-            <div className="full-stat-val">~ {totalMin} <span className="small">min</span></div>
           </div>
           <Link href={startHref} className="btn-focus-lg" onClick={onClose}>
             Démarrer la session focus
