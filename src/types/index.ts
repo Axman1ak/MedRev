@@ -80,6 +80,23 @@ export interface Flashcard {
   last_reviewed_at?: string
 }
 
+// Annale d'examen (PDF + questions extraites par IA) — table annales,
+// migration 2026-06. Rattachée à la matière (system_id), pas à une fiche.
+// questions = AiQuestion[] au même format que lessons.ai_questions.
+export interface Annale {
+  id: string
+  user_id: string
+  system_id: string
+  name: string
+  pdf_path: string | null
+  pdf_pages: number | null
+  pdf_size: number | null
+  questions: AiQuestion[]
+  status: 'pending' | 'ready' | 'error'
+  extract_error: string | null
+  created_at: string
+}
+
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
 export interface LessonMedia {

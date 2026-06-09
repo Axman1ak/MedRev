@@ -1936,3 +1936,148 @@
   .sim-cond-tiles { grid-template-columns: 1fr; }
   .sim-wiz-body-center { justify-content: flex-start; }
 }
+
+/* =========== PANNEAU ANNALES (étape 2, source annales) =========== */
+.sim-ann {
+  width: 100%;
+  max-width: 720px;
+  margin: 18px auto 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.sim-ann-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sim-ann-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dark);
+}
+.sim-ann-add { display: flex; gap: 8px; align-items: center; }
+.sim-ann-select {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--dark);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: var(--font-hanken), sans-serif;
+  max-width: 180px;
+}
+.sim-ann-upload {
+  background: var(--gm);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-hanken), sans-serif;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.sim-ann-upload:hover { opacity: .9; }
+.sim-ann-upload:disabled { opacity: .45; cursor: default; }
+
+.sim-ann-empty {
+  font-size: 12.5px;
+  color: var(--gray);
+  line-height: 1.55;
+  padding: 8px 2px;
+}
+
+.sim-ann-list { display: flex; flex-direction: column; gap: 6px; }
+.sim-ann-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  background: var(--card);
+  transition: border-color .15s, background .15s;
+}
+.sim-ann-row.sel { border-color: var(--gm); background: var(--gl); }
+
+.sim-ann-check {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.sim-ann-check:disabled { cursor: default; opacity: .4; }
+.sim-ann-check-box {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  display: inline-block;
+  background: var(--card);
+  transition: all .15s;
+}
+.sim-ann-row.sel .sim-ann-check-box {
+  background: var(--gm);
+  border-color: var(--gm);
+  box-shadow: inset 0 0 0 3px var(--card);
+}
+
+.sim-ann-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sim-ann-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sim-ann-sub { font-size: 11px; color: var(--gray); }
+
+.sim-ann-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sim-ann-badge.ok { background: var(--gl); color: var(--gm); }
+.sim-ann-badge.busy { background: var(--soft); color: var(--gray); font-style: italic; }
+.sim-ann-badge.err { background: var(--rose-soft); color: var(--rose); }
+
+.sim-ann-del {
+  background: none;
+  border: none;
+  color: var(--gray);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.sim-ann-del:hover { color: var(--rose); background: var(--rose-soft); }
+.sim-ann-del:disabled { opacity: .4; cursor: default; }
+
+@media (max-width: 640px) {
+  .sim-ann-head { flex-direction: column; align-items: stretch; }
+  .sim-ann-add { flex-wrap: wrap; }
+  .sim-ann-select { max-width: none; flex: 1; }
+}

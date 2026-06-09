@@ -9,8 +9,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { System, Lesson, Profile } from '@/types'
-import { SCORING_SYSTEMS, getScoringForFac } from '@/types'
+import type { System, Lesson, Profile, Annale } from '@/types'
+import { SCORING_SYSTEMS, getScoringForFac, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
@@ -82,6 +82,44 @@ function lessonAvg(lesson: Lesson): number | null {
     if (eff) { sum += eff; n++ }
   }
   return n > 0 ? sum / n : null
+}
+
+// Même normalisation que parseQuestions, mais sur les questions extraites
+// d'une annale (table annales). lessonName = nom de l'annale pour l'affichage
+// en session/résultats ; pas de lessonId (le mode "weak" ne s'applique pas).
+function parseAnnaleQuestions(annale: Annale, systemName: string): Question[] {
+  const raw = annale.questions as unknown[]
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  const out: Question[] = []
+  for (const r of raw) {
+    if (!r || typeof r !== 'object') continue
+    const q = r as Record<string, unknown>
+    const question = (q.question as string) || ''
+    const options = (q.options as string[]) || []
+    let answerArr: number[] = []
+    const rawAns = q.answer ?? q.answers ?? q.correct
+    if (Array.isArray(rawAns)) {
+      answerArr = (rawAns as unknown[])
+        .filter(v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < options.length)
+        .map(v => v as number)
+    } else if (typeof rawAns === 'number' && rawAns >= 0 && rawAns < options.length) {
+      answerArr = [rawAns]
+    }
+    answerArr = Array.from(new Set(answerArr)).sort((a, b) => a - b)
+    const explanation = (q.explanation as string) || undefined
+    if (!question || !Array.isArray(options) || options.length !== 5) continue
+    if (answerArr.length === 0) continue
+    out.push({
+      question,
+      options,
+      answer: answerArr,
+      explanation,
+      lessonName: annale.name,
+      systemName,
+      systemId: annale.system_id,
+    })
+  }
+  return out
 }
 
 function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Question[] {
@@ -161,6 +199,16 @@ export default function SimulateurPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [semester, setSemester] = useState<Semestre>(2)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Annales (source 3 de l'étape 2) : rows de la table annales.
+  const [annales, setAnnales] = useState<Annale[]>([])
+  const [selectedAnnaleIds, setSelectedAnnaleIds] = useState<Set<string>>(new Set())
+  const [annaleSysId, setAnnaleSysId] = useState('')
+  const [annaleBusy, setAnnaleBusy] = useState(false)
+  const [extractingIds, setExtractingIds] = useState<Set<string>>(new Set())
+  const [annalesError, setAnnalesError] = useState<string | null>(null)
+  const annaleFileRef = useRef<HTMLInputElement>(null)
 
   const [selectedSysIds, setSelectedSysIds] = useState<Set<string>>(new Set())
 
@@ -212,20 +260,23 @@ export default function SimulateurPage() {
   const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
 
   const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }, { data: pro }] = await Promise.all([
+    const [{ data: sys }, { data: les }, { data: pro }, { data: ann }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid),
       supabase.from('profiles').select('*').eq('id', uid).single(),
+      supabase.from('annales').select('*').eq('user_id', uid).order('created_at'),
     ])
     setSystems((sys as System[] | null) ?? [])
     setLessons((les as Lesson[] | null) ?? [])
     if (pro) setProfile(pro as Profile)
+    setAnnales((ann as Annale[] | null) ?? [])
     setLoading(false)
   }, [supabase])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
+      setUserId(user.id)
       load(user.id)
     })
   }, [supabase, router, load])
@@ -312,7 +363,44 @@ export default function SimulateurPage() {
     return out
   }, [lessons, selectedSysIds, selectedLessonIds, systems])
 
-  const totalAvailable = availableQuestions.length
+  // ---- Annales : dérivées ----
+  // Annales des matières sélectionnées à l'étape 1.
+  const semAnnales = useMemo(
+    () => annales.filter(a => selectedSysIds.has(a.system_id)),
+    [annales, selectedSysIds]
+  )
+
+  // Sélection par défaut : toutes les annales prêtes des matières choisies.
+  useEffect(() => {
+    setSelectedAnnaleIds(new Set(
+      semAnnales
+        .filter(a => a.status === 'ready' && Array.isArray(a.questions) && a.questions.length > 0)
+        .map(a => a.id)
+    ))
+  }, [semAnnales])
+
+  // Matière par défaut pour l'upload d'une nouvelle annale.
+  useEffect(() => {
+    if (!annaleSysId || !selectedSysIds.has(annaleSysId)) {
+      const first = semSystems.find(s => selectedSysIds.has(s.id))
+      setAnnaleSysId(first?.id ?? '')
+    }
+  }, [selectedSysIds, semSystems, annaleSysId])
+
+  const annalesPool = useMemo<Question[]>(() => {
+    const out: Question[] = []
+    for (const a of semAnnales) {
+      if (!selectedAnnaleIds.has(a.id)) continue
+      if (a.status !== 'ready') continue
+      const sys = systems.find(s => s.id === a.system_id)
+      out.push(...parseAnnaleQuestions(a, sys?.name ?? ''))
+    }
+    return out
+  }, [semAnnales, selectedAnnaleIds, systems])
+
+  // Pool effectif selon la source choisie à l'étape 2.
+  const effectivePool = source === 'annales' ? annalesPool : availableQuestions
+  const totalAvailable = effectivePool.length
 
   // Conditions d'examen (étape 4) : l'élève ne choisit rien, on s'aligne sur
   // les conditions réelles. Toutes les questions de la portée, et un chrono
@@ -378,7 +466,7 @@ export default function SimulateurPage() {
     }
 
     // 2. Quota OK : on construit la session normalement
-    let qs = [...availableQuestions]
+    let qs = [...effectivePool]
 
     if (selectionMode === 'weak') {
       const lessonAvgs = new Map<string, number>()
@@ -409,6 +497,127 @@ export default function SimulateurPage() {
     }
     setPhase('session')
     setLaunching(false)
+  }
+
+  // ---- Annales : actions ----
+  function toggleAnnale(id: string) {
+    setSelectedAnnaleIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  // Upload du PDF : insert row → upload Storage ({uid}/annales/{id}/sujet.pdf,
+  // mêmes policies path-based que lesson-media) → lance l'extraction.
+  async function uploadAnnale(file: File) {
+    if (!userId || annaleBusy) return
+    setAnnalesError(null)
+    if (profile?.plan !== 'pro') {
+      const sizeMB = file.size / (1024 * 1024)
+      if (sizeMB > FREE_PDF_SIZE_MB) {
+        setPaywall({
+          quota: 'pdf_size',
+          message: `Ton PDF fait ${sizeMB.toFixed(0)} Mo. Le mode Gratuit limite à ${FREE_PDF_SIZE_MB} Mo. Passe en Premium pour des PDF sans limite de taille.`,
+        })
+        return
+      }
+    }
+    const sysId = annaleSysId || Array.from(selectedSysIds)[0] || ''
+    if (!sysId) {
+      setAnnalesError("Sélectionne au moins une matière avant d'ajouter une annale.")
+      return
+    }
+    setAnnaleBusy(true)
+    try {
+      const name = file.name.replace(/\.pdf$/i, '').trim() || 'Annale'
+      const { data: row, error: insErr } = await supabase
+        .from('annales')
+        .insert({ user_id: userId, system_id: sysId, name })
+        .select()
+        .single()
+      if (insErr || !row) throw insErr ?? new Error('Insertion échouée')
+
+      const path = `${userId}/annales/${row.id}/sujet.pdf`
+      const { error: upErr } = await supabase.storage
+        .from('lesson-media')
+        .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+      if (upErr) {
+        // Rollback de la row pour ne pas laisser une annale fantôme sans PDF.
+        await supabase.from('annales').delete().eq('id', row.id)
+        throw upErr
+      }
+
+      const { data: updated } = await supabase
+        .from('annales')
+        .update({ pdf_path: path, pdf_size: file.size })
+        .eq('id', row.id)
+        .select()
+        .single()
+      const newRow = (updated ?? { ...row, pdf_path: path, pdf_size: file.size }) as Annale
+      setAnnales(prev => [...prev, newRow])
+      void extractAnnale(newRow.id)
+    } catch (e) {
+      setAnnalesError(e instanceof Error ? e.message : 'Upload impossible. Réessaie.')
+    } finally {
+      setAnnaleBusy(false)
+    }
+  }
+
+  // Extraction Gemini via /api/extract-annales. À la fin (succès OU échec),
+  // on re-fetch la row : le serveur y a posé status/questions/extract_error.
+  async function extractAnnale(id: string) {
+    setAnnalesError(null)
+    setExtractingIds(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+    try {
+      const res = await fetch('/api/extract-annales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annaleId: id }),
+      })
+      const data = await res.json().catch(() => ({} as Record<string, unknown>))
+      if (!res.ok) {
+        const d = data as { code?: string; used?: number; limit?: number; error?: string }
+        if (res.status === 403 && d.code === 'quota_exceeded') {
+          setPaywall({
+            quota: 'ai_generations',
+            used: d.used,
+            limit: d.limit,
+            message: d.error,
+          })
+        } else {
+          setAnnalesError(d.error || 'Extraction échouée. Réessaie.')
+        }
+      }
+      const { data: fresh } = await supabase.from('annales').select('*').eq('id', id).single()
+      if (fresh) setAnnales(prev => prev.map(a => (a.id === id ? (fresh as Annale) : a)))
+    } catch {
+      setAnnalesError("Connexion perdue pendant l'extraction. Réessaie.")
+    } finally {
+      setExtractingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
+  async function deleteAnnale(a: Annale) {
+    setAnnalesError(null)
+    try {
+      if (a.pdf_path) {
+        await supabase.storage.from('lesson-media').remove([a.pdf_path])
+      }
+      const { error } = await supabase.from('annales').delete().eq('id', a.id)
+      if (error) throw error
+      setAnnales(prev => prev.filter(x => x.id !== a.id))
+    } catch (e) {
+      setAnnalesError(e instanceof Error ? e.message : 'Suppression impossible.')
+    }
   }
 
   // Toggle pour QCM (multi), remplace pour QCS (single).
@@ -554,11 +763,17 @@ export default function SimulateurPage() {
     const nbMatieres = selectedSysIds.size
 
     // Validation par étape pour activer "Suivant".
-    const step1Ok = selectedSysIds.size > 0 && totalAvailable > 0
-    const canLaunch = step1Ok
+    // L'étape 1 passe si la portée contient des questions IA OU au moins une
+    // annale prête (un user "annales only" ne doit pas être bloqué avant
+    // d'avoir pu choisir sa source à l'étape 2).
+    const annalesReady = semAnnales.some(
+      a => a.status === 'ready' && Array.isArray(a.questions) && a.questions.length > 0
+    )
+    const step1Ok = selectedSysIds.size > 0 && (availableQuestions.length > 0 || annalesReady)
+    const canLaunch = selectedSysIds.size > 0 && totalAvailable > 0
     const stepCanNext =
       step === 1 ? step1Ok
-      : step === 2 ? source !== 'annales'
+      : step === 2 ? (source !== 'annales' || annalesPool.length > 0)
       : step === 3 ? true
       : true
 
@@ -804,9 +1019,8 @@ export default function SimulateurPage() {
 
                 <button
                   type="button"
-                  className="sim-wiz-card disabled"
-                  disabled
-                  aria-disabled="true"
+                  className={`sim-wiz-card${source === 'annales' ? ' sel' : ''}`}
+                  onClick={() => setSource('annales')}
                 >
                   <span className="sim-wiz-card-ic" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -814,13 +1028,117 @@ export default function SimulateurPage() {
                       <path d="M14 2v6h6M9 13h6M9 17h6" />
                     </svg>
                   </span>
-                  <div className="sim-wiz-card-h">
-                    Annales
-                    <span className="sim-wiz-badge">Bientôt</span>
-                  </div>
-                  <div className="sim-wiz-card-sub">Les vrais sujets, bientôt avec l&apos;import de PDF.</div>
+                  <div className="sim-wiz-card-h">Annales</div>
+                  <div className="sim-wiz-card-sub">Les vrais sujets : importe un PDF, les questions sont extraites.</div>
                 </button>
               </div>
+
+              {/* Panneau annales : liste + upload (visible quand la source est choisie) */}
+              {source === 'annales' && (
+                <div className="sim-ann">
+                  <div className="sim-ann-head">
+                    <span className="sim-ann-title">
+                      Tes annales
+                      {annalesPool.length > 0 && <> · {annalesPool.length} question{annalesPool.length > 1 ? 's' : ''} prête{annalesPool.length > 1 ? 's' : ''}</>}
+                    </span>
+                    <div className="sim-ann-add">
+                      <select
+                        className="sim-ann-select"
+                        value={annaleSysId}
+                        onChange={e => setAnnaleSysId(e.target.value)}
+                        aria-label="Matière de la nouvelle annale"
+                      >
+                        {semSystems.filter(s => selectedSysIds.has(s.id)).map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="sim-ann-upload"
+                        onClick={() => annaleFileRef.current?.click()}
+                        disabled={annaleBusy || !annaleSysId}
+                      >
+                        {annaleBusy ? 'Upload…' : '+ Ajouter un PDF'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {annalesError && (
+                    <div role="alert" className="sim-wiz-error">{annalesError}</div>
+                  )}
+
+                  {semAnnales.length === 0 ? (
+                    <div className="sim-ann-empty">
+                      Aucune annale sur ces matières. Importe le PDF d&apos;un sujet :
+                      les questions en seront extraites automatiquement
+                      (compte comme 1 génération IA, corrigé du PDF utilisé si présent).
+                    </div>
+                  ) : (
+                    <div className="sim-ann-list">
+                      {semAnnales.map(a => {
+                        const sys = systems.find(s => s.id === a.system_id)
+                        const isExtracting = extractingIds.has(a.id)
+                        const isReady = a.status === 'ready' && Array.isArray(a.questions) && a.questions.length > 0
+                        const checked = isReady && selectedAnnaleIds.has(a.id)
+                        return (
+                          <div key={a.id} className={`sim-ann-row${checked ? ' sel' : ''}`}>
+                            <button
+                              type="button"
+                              className="sim-ann-check"
+                              role="checkbox"
+                              aria-checked={checked}
+                              disabled={!isReady}
+                              onClick={() => toggleAnnale(a.id)}
+                              aria-label={`${checked ? 'Retirer' : 'Inclure'} ${a.name}`}
+                            >
+                              <span className="sim-ann-check-box" aria-hidden="true" />
+                            </button>
+                            <div className="sim-ann-main">
+                              <span className="sim-ann-name">{a.name}</span>
+                              <span className="sim-ann-sub">{sys?.name ?? ''}</span>
+                            </div>
+                            {isExtracting ? (
+                              <span className="sim-ann-badge busy">Extraction… (~1 min)</span>
+                            ) : isReady ? (
+                              <span className="sim-ann-badge ok">{a.questions.length} question{a.questions.length > 1 ? 's' : ''}</span>
+                            ) : a.status === 'error' ? (
+                              <>
+                                <span className="sim-ann-badge err" title={a.extract_error ?? ''}>Erreur</span>
+                                <button type="button" className="sim-wiz-link" onClick={() => extractAnnale(a.id)}>
+                                  Réessayer
+                                </button>
+                              </>
+                            ) : (
+                              <button type="button" className="sim-wiz-link" onClick={() => extractAnnale(a.id)}>
+                                Extraire les questions
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="sim-ann-del"
+                              onClick={() => deleteAnnale(a)}
+                              disabled={isExtracting}
+                              aria-label={`Supprimer ${a.name}`}
+                            >{'×'}</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <input
+                    ref={annaleFileRef}
+                    type="file"
+                    accept="application/pdf"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const f = e.target.files?.[0]
+                      e.target.value = ''
+                      if (f) void uploadAnnale(f)
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
