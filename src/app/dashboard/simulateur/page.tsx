@@ -420,17 +420,15 @@ export default function SimulateurPage() {
 
     const q = sessionQuestions[currentIdx]
     if (!q) return
-    const multi = q.answer.length >= 2
     const current = answers[currentIdx] ?? []
     const has = current.includes(optIdx)
 
-    let nextSelected: number[]
-    if (multi) {
-      nextSelected = has ? current.filter(i => i !== optIdx) : [...current, optIdx].sort((a, b) => a - b)
-    } else {
-      // QCS : on remplace (= un radio button)
-      nextSelected = has ? [] : [optIdx]
-    }
+    // TOUJOURS multi-coche (toggle), même si la question n'a qu'une bonne réponse :
+    // sinon le comportement (1 seule case cliquable) révélerait le nombre de
+    // bonnes réponses à l'étudiant. Comme au concours, on coche librement.
+    const nextSelected = has
+      ? current.filter(i => i !== optIdx)
+      : [...current, optIdx].sort((a, b) => a - b)
     const newAnswers = [...answers]
     newAnswers[currentIdx] = nextSelected
     setAnswers(newAnswers)
@@ -975,7 +973,6 @@ export default function SimulateurPage() {
     const selectedAnswer = answers[currentIdx] ?? []
     const isRevealed = mode === 'apprentissage' && revealed[currentIdx]
     const correctIdxs = q.answer
-    const isMulti = correctIdxs.length >= 2
 
     return (
       <div className="sim-page">
@@ -1027,13 +1024,13 @@ export default function SimulateurPage() {
             <div className="sim-ses-q-meta">
               <em>Question {currentIdx + 1} / {sessionQuestions.length}</em>
               {q.systemName && <span className="sim-ses-q-source">{q.systemName}{q.lessonName ? ` · ${q.lessonName}` : ''}</span>}
-              <span className={`sim-ses-q-type${isMulti ? ' multi' : ''}`}>
-                {isMulti ? 'QCM · plusieurs bonnes' : 'QCS · une seule bonne'}
+              <span className="sim-ses-q-type multi">
+                Une ou plusieurs bonnes réponses
               </span>
             </div>
             <div className="sim-ses-q-text">{q.question}</div>
 
-            <div className={`sim-ses-q-options${isMulti ? ' multi' : ''}`}>
+            <div className="sim-ses-q-options multi">
               {q.options.map((opt, i) => {
                 const isSelected = selectedAnswer.includes(i)
                 const isCorrect = correctIdxs.includes(i)
@@ -1063,7 +1060,7 @@ export default function SimulateurPage() {
                   onClick={validateCurrent}
                   disabled={selectedAnswer.length === 0}
                 >
-                  Valider ma réponse {isMulti && selectedAnswer.length > 0 ? `(${selectedAnswer.length} coché${selectedAnswer.length > 1 ? 'es' : 'e'})` : ''} →
+                  Valider ma réponse {selectedAnswer.length > 0 ? `(${selectedAnswer.length} coché${selectedAnswer.length > 1 ? 'es' : 'e'})` : ''} →
                 </button>
               </div>
             )}
