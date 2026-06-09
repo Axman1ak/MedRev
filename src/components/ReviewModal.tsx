@@ -479,6 +479,11 @@ export default function ReviewModal({
     router.push(`/dashboard/fiches/${lesson.id}/qcm`)
   }
 
+  function openCartes() {
+    onClose()
+    router.push(`/dashboard/fiches/${lesson.id}/cartes`)
+  }
+
   async function generateQcms(mode: 'replace' | 'append' = 'replace') {
     setGenError(null)
     setGenInfo(null)
@@ -568,6 +573,11 @@ export default function ReviewModal({
 
   const aiQuestions: unknown[] = Array.isArray(lesson.ai_questions) ? lesson.ai_questions : []
   const qcmCount = aiQuestions.length
+
+  // Flashcards maison (colonne lessons.flashcards, jsonb). Accès défensif :
+  // la colonne peut être absente sur de vieilles rows pas encore re-fetchées.
+  const flashcardsRaw = (lesson as { flashcards?: unknown }).flashcards
+  const cartesCount = Array.isArray(flashcardsRaw) ? flashcardsRaw.length : 0
 
   return (
     <>
@@ -891,6 +901,42 @@ export default function ReviewModal({
               <div className="rmod-gen-info">{genInfo}</div>
             )}
             </div>{/* /data-tour="qcm-section" */}
+
+            {/* ─────────────────────────────────────────────── */}
+            {/*  Bloc Flashcards maison (recto/verso)          */}
+            {/* ─────────────────────────────────────────────── */}
+            <div className="rmod-divider" />
+            <div className="rmod-block-label">Flashcards (recto/verso)</div>
+            {cartesCount > 0 ? (
+              <div className="rmod-qcm-line">
+                <div className="rmod-qcm-num">{cartesCount}</div>
+                <div className="rmod-qcm-meta">
+                  carte{cartesCount > 1 ? 's' : ''} sur cette fiche
+                </div>
+                <div className="rmod-qcm-actions">
+                  <button
+                    type="button"
+                    className="rmod-qcm-cta"
+                    onClick={openCartes}
+                  >
+                    Réviser les cartes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rmod-qcm-line">
+                <div className="rmod-qcm-meta rmod-qcm-meta-grow">
+                  Crée tes propres cartes question/réponse pour cette fiche.
+                </div>
+                <button
+                  type="button"
+                  className="rmod-qcm-cta"
+                  onClick={openCartes}
+                >
+                  Créer des cartes
+                </button>
+              </div>
+            )}
           </>
         )}
 

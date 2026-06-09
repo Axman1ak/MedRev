@@ -66,6 +66,20 @@ export function normalizeAnswer(raw: AiQuestion['answer'] | undefined): number[]
 export function isMultiAnswer(q: AiQuestion): boolean {
   return normalizeAnswer(q.answer).length >= 2
 }
+// Flashcard maison (recto/verso) — créée manuellement par l'étudiant.
+// Stockée dans la colonne lessons.flashcards (jsonb default [], migration 2026-06).
+// Les compteurs reviews/known sont cumulés sur les sessions de révision
+// (même esprit que attempts/correct sur AiQuestion).
+export interface Flashcard {
+  id: string            // identifiant local unique (crypto.randomUUID)
+  front: string         // recto : question / terme
+  back: string          // verso : réponse / définition
+  created_at: string    // ISO
+  reviews?: number      // nb de fois vue en session
+  known?: number        // nb de fois marquée "je savais"
+  last_reviewed_at?: string
+}
+
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
 export interface LessonMedia {
@@ -86,6 +100,7 @@ export interface Lesson {
   learn_date: string | null
   steps: (StepEntry | null)[]  // length 14
   ai_questions: AiQuestion[]
+  flashcards?: Flashcard[]     // ← ajouté 2026-06 : cartes recto/verso maison
   media?: LessonMedia | null   // ← ajouté 2026-05 : sources du cours
   // ← ajouté 2026-06 : Reporter / Annuler un palier (sans toucher à steps).
   // skips = indices de paliers annulés ; postpones = { "indice": "YYYY-MM-DD" }.
