@@ -49,7 +49,7 @@
   box-sizing: border-box;
   background: var(--bg);
   color: var(--dark);
-  font-family: var(--font-hanken), -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-style: italic;
   color: var(--gray);
   font-size: 16px;
@@ -88,7 +88,7 @@
   gap: 20px;
 }
 .sim-title {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 26px;
   font-weight: 500;
   letter-spacing: -.015em;
@@ -97,7 +97,7 @@
 }
 .sim-title em { font-style: italic; color: var(--gm); }
 .sim-sub {
-  font-family: var(--font-hanken), Georgia, serif;
+  font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
   color: var(--gray);
   font-size: 13.5px;
@@ -118,7 +118,7 @@
   min-height: 0;
 }
 .sim-card-h {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: .18em;
@@ -140,7 +140,7 @@
 }
 .sim-meta {
   margin-left: auto;
-  font-family: var(--font-hanken), Georgia, serif;
+  font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
   font-size: 12px;
   color: var(--gray);
@@ -180,7 +180,7 @@
 }
 .sim-mat-empty {
   grid-column: span 2;
-  font-family: var(--font-hanken), Georgia, serif;
+  font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
   color: var(--gray);
   font-size: 13px;
@@ -229,7 +229,7 @@
   border-radius: 2px;
 }
 .sim-mat-name {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--dark);
@@ -263,7 +263,7 @@
 .sim-mat-bar-fill.s2 { background: var(--s2); }
 .sim-mat-bar-fill.s1 { background: var(--s1); }
 .sim-mat-q {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--dark);
@@ -287,7 +287,7 @@
   padding: 14px 16px;
 }
 .sim-opt-h {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: .14em;
@@ -316,7 +316,7 @@
   border-radius: 6px;
   border: 1.5px solid var(--border);
   background: var(--card);
-  font: 600 12px var(--font-hanken);
+  font: 600 12px 'Plus Jakarta Sans';
   color: var(--gray);
   cursor: pointer;
   text-align: center;
@@ -361,7 +361,7 @@
 }
 .sim-mode-pill-top { flex-shrink: 0; }
 .sim-mode-pill-h {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 17px;
   font-weight: 500;
   color: var(--dark);
@@ -370,36 +370,149 @@
 }
 .sim-mode-pill.sel .sim-mode-pill-h { color: var(--green); }
 .sim-mode-pill-sub {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 12.5px;
   color: var(--gray);
   line-height: 1.4;
 }
 
-/* === MODE — icône claire unique par carte === */
-.sim-mode-pill-ic {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  color: var(--gm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sim-mode-pill-illus {
+/* === MINI VISUEL — base commune === */
+.sim-mp-vis {
   flex: 1;
-  min-height: 78px;
-  margin-top: 6px;
-  color: var(--gm);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 5px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Apprentissage : auto + 5×1fr + auto */
+.sim-mp-vis-app {
+  grid-template-rows: auto repeat(5, 1fr) auto;
+}
+.sim-mp-app-q {
+  font-family: 'Fraunces', serif;
+  font-size: 10.5px;
+  color: var(--gray);
+  font-style: italic;
+  line-height: 1.2;
+}
+.sim-mp-app-opt {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 0 7px;
+  border-radius: 4px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  line-height: 1.2;
+  min-height: 0;
 }
-.sim-mode-pill-illus svg { width: 100%; height: 100%; max-height: 92px; }
-.sim-mode-pill.sel .sim-mode-pill-illus { color: var(--green); }
-.sim-mode-pill-ic svg { width: 100%; height: 100%; }
-.sim-mode-pill.sel .sim-mode-pill-ic { color: var(--green); }
+.sim-mp-app-opt.dim {
+  color: var(--dim);
+  background: rgba(255, 255, 255, .4);
+}
+.sim-mp-app-opt.wrong {
+  color: var(--rose);
+  background: var(--rose-soft);
+  border-left: 2px solid var(--rose);
+}
+.sim-mp-app-opt.right {
+  color: var(--green);
+  background: var(--gl);
+  border-left: 2px solid var(--gm);
+  font-weight: 600;
+}
+.sim-mp-app-opt .mark {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 11px;
+}
+.sim-mp-app-opt .check {
+  margin-left: auto;
+  font-weight: 700;
+}
+.sim-mp-app-explain {
+  padding: 6px 8px;
+  background: var(--gold-soft);
+  border-radius: 4px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 11px;
+  color: #5C4419;
+  line-height: 1.3;
+  border-left: 2px solid var(--gold);
+  overflow: hidden;
+}
+[data-theme="dark"] .sim-mp-app-explain { color: var(--gold); }
+
+/* Examen blanc : auto + 5×1fr + auto */
+.sim-mp-vis-ex {
+  grid-template-rows: auto repeat(5, 1fr) auto;
+}
+.sim-mp-ex-header {
+  display: grid;
+  grid-template-columns: 18px repeat(5, 1fr);
+  gap: 5px 6px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 9px;
+  color: var(--gray);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  text-align: center;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border);
+}
+.sim-mp-ex-row {
+  display: grid;
+  grid-template-columns: 18px repeat(5, 1fr);
+  gap: 5px 6px;
+  align-items: center;
+}
+.sim-mp-ex-row.current {
+  background: var(--gl);
+  border-radius: 4px;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.sim-mp-ex-row .num {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 9px;
+  color: var(--gray);
+  font-weight: 600;
+  text-align: right;
+}
+.sim-mp-ex-row.current .num { color: var(--gm); font-weight: 700; }
+.sim-mp-ex-row .bubble {
+  width: 100%;
+  height: 11px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--card);
+}
+.sim-mp-ex-row .bubble.filled {
+  background: var(--dark);
+  border-color: var(--dark);
+}
+.sim-mp-ex-row.current .bubble.filled {
+  background: var(--gm);
+  border-color: var(--gm);
+}
+.sim-mp-ex-bottom {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 10.5px;
+  color: var(--gray);
+  text-align: center;
+  line-height: 1.3;
+  padding-top: 3px;
+  border-top: 1px solid var(--border);
+}
 
 /* HERO CTA (col 2) */
 .sim-hero {
@@ -425,7 +538,7 @@
   pointer-events: none;
 }
 .sim-hero-tag {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -460,7 +573,7 @@
   margin-bottom: 6px;
 }
 .sim-hero-num {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: clamp(72px, 9vw, 120px);
   font-weight: 500;
   color: var(--green);
@@ -468,13 +581,13 @@
   letter-spacing: -.05em;
 }
 .sim-hero-num-unit {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 22px;
   color: var(--dark);
   font-weight: 500;
 }
 .sim-hero-quote {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   color: var(--gray);
   font-size: 16px;
@@ -484,7 +597,7 @@
   margin: 14px 0 22px;
 }
 .sim-hero-quote strong {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-style: normal;
   color: var(--dark);
   font-weight: 500;
@@ -503,7 +616,7 @@
   gap: 2px;
 }
 .sim-hero-row-l {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 9.5px;
   color: var(--gray);
   text-transform: uppercase;
@@ -511,7 +624,7 @@
   font-weight: 700;
 }
 .sim-hero-row-v {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 14px;
   font-weight: 500;
   color: var(--dark);
@@ -524,7 +637,7 @@
   color: white;
   border: none;
   border-radius: 10px;
-  font: 700 14px var(--font-hanken);
+  font: 700 14px 'Plus Jakarta Sans';
   letter-spacing: .02em;
   cursor: pointer;
   transition: all .15s;
@@ -579,7 +692,7 @@
   gap: 18px;
 }
 .sim-ses-tag {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -598,7 +711,7 @@
 .sim-ses-tag.ex { color: var(--rose); }
 .sim-ses-tag.ex::before { background: var(--rose); }
 .sim-ses-tag-sub {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   color: var(--gray);
   font-size: 13.5px;
@@ -607,7 +720,7 @@
 .sim-ses-stats { display: flex; gap: 22px; }
 .sim-ses-stat { text-align: center; }
 .sim-ses-stat-num {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 22px;
   font-weight: 500;
   line-height: 1;
@@ -619,7 +732,7 @@
 .sim-ses-stat-num.ok { color: var(--gm); }
 .sim-ses-stat-num.ko { color: var(--rose); }
 .sim-ses-stat-lbl {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 9.5px;
   color: var(--gray);
   text-transform: uppercase;
@@ -633,7 +746,7 @@
   border: 1px solid var(--rose);
   padding: 7px 16px;
   border-radius: 8px;
-  font: 700 12px var(--font-hanken);
+  font: 700 12px 'Plus Jakarta Sans';
   cursor: pointer;
   letter-spacing: .02em;
 }
@@ -651,7 +764,7 @@
   min-height: 0;
 }
 .sim-ses-q-meta {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -664,7 +777,7 @@
   flex-wrap: wrap;
 }
 .sim-ses-q-meta em {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-style: normal;
   color: var(--gm);
   font-weight: 500;
@@ -737,7 +850,7 @@
   font-weight: 600;
 }
 .sim-ses-q-text {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 21px;
   font-weight: 400;
   line-height: 1.5;
@@ -756,7 +869,7 @@
   border: 1.5px solid var(--border);
   background: var(--card);
   border-radius: 10px;
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13.5px;
   color: var(--dark);
   cursor: pointer;
@@ -767,18 +880,17 @@
   gap: 14px;
   line-height: 1.4;
 }
-.sim-ses-q-opt:hover:not(:disabled):not(.readonly) {
+.sim-ses-q-opt:hover:not(:disabled) {
   border-color: var(--gm);
   background: var(--soft);
 }
 .sim-ses-q-opt:disabled { cursor: default; }
-.sim-ses-q-opt.readonly { cursor: default; }
 .sim-ses-q-opt.sel {
   border-color: var(--gm);
   background: var(--gl);
 }
 .sim-ses-q-opt-letter {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 15px;
   font-weight: 500;
   color: var(--gray);
@@ -817,7 +929,7 @@
   margin-bottom: 18px;
 }
 .sim-ses-explain-h {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -833,14 +945,14 @@
   font-size: 12px;
 }
 .sim-ses-explain-text {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 14.5px;
   color: #5C4419;
   line-height: 1.55;
 }
 .sim-ses-explain-text strong {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-style: normal;
   color: #3D2516;
   font-weight: 500;
@@ -852,7 +964,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 11.5px;
   font-weight: 700;
   color: var(--gold);
@@ -863,7 +975,7 @@
 
 /* Self-rating */
 .sim-ses-rate-h {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 13px;
   color: var(--gray);
@@ -880,7 +992,7 @@
   padding: 11px;
   border-radius: 8px;
   background: var(--card);
-  font: 600 12.5px var(--font-hanken);
+  font: 600 12.5px 'Plus Jakarta Sans';
   cursor: pointer;
   transition: all .15s;
 }
@@ -906,7 +1018,7 @@
   border-radius: 10px;
   border: 1.5px solid var(--border);
   background: var(--card);
-  font: 600 13px var(--font-hanken);
+  font: 600 13px 'Plus Jakarta Sans';
   color: var(--dark);
   cursor: pointer;
   transition: all .12s;
@@ -942,7 +1054,7 @@
   min-height: 0;
 }
 .sim-ses-sheet-h {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: .18em;
@@ -981,7 +1093,7 @@
   flex-shrink: 0;
 }
 .sim-ses-sheet-headers .h {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 9px;
   color: var(--gray);
   font-weight: 700;
@@ -1020,7 +1132,7 @@
   font-weight: 700;
 }
 .sim-ses-sheet-num {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   color: var(--gray);
   font-weight: 600;
@@ -1070,7 +1182,7 @@
   flex-shrink: 0;
 }
 .sim-ses-sheet-progress-l {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   color: var(--gray);
   font-weight: 700;
@@ -1078,14 +1190,14 @@
   letter-spacing: .1em;
 }
 .sim-ses-sheet-progress-v {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 18px;
   font-weight: 500;
   color: var(--gm);
   letter-spacing: -.02em;
 }
 .sim-ses-sheet-progress-v em {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-size: 14px;
   color: var(--gray);
   font-style: italic;
@@ -1129,7 +1241,7 @@
   pointer-events: none;
 }
 .sim-res-tag {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1140,7 +1252,7 @@
   z-index: 2;
 }
 .sim-res-score {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: clamp(80px, 12vw, 130px);
   font-weight: 500;
   line-height: 1;
@@ -1160,7 +1272,7 @@
   font-weight: 400;
 }
 .sim-res-message {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 16px;
   color: var(--gray);
@@ -1169,7 +1281,7 @@
   z-index: 2;
 }
 .sim-res-message strong {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-style: normal;
   color: var(--dark);
   font-weight: 500;
@@ -1187,7 +1299,7 @@
   padding: 16px 18px;
 }
 .sim-res-stat-lbl {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1204,7 +1316,7 @@
   border-radius: 2px;
 }
 .sim-res-stat-num {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 36px;
   font-weight: 500;
   line-height: 1;
@@ -1215,7 +1327,7 @@
 .sim-res-stat-num.ko { color: var(--rose); }
 .sim-res-stat-num.total { color: var(--dark); }
 .sim-res-stat-sub {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 12px;
   color: var(--gray);
@@ -1229,7 +1341,7 @@
   padding: 18px 20px;
 }
 .sim-res-rates-h {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1279,13 +1391,13 @@
 .sim-res-rate-dot.r3 { background: var(--s4); }
 .sim-res-rate-dot.r4 { background: var(--gm); }
 .sim-res-rate-num {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 16px;
   font-weight: 500;
   color: var(--dark);
 }
 .sim-res-rate-lbl {
-  font-family: var(--font-hanken), serif;
+  font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 12px;
   color: var(--gray);
@@ -1299,7 +1411,7 @@
 .sim-res-btn {
   padding: 13px;
   border-radius: 10px;
-  font: 700 13.5px var(--font-hanken);
+  font: 700 13.5px 'Plus Jakarta Sans';
   letter-spacing: .02em;
   cursor: pointer;
   transition: all .15s;
@@ -1320,619 +1432,4 @@
   background: var(--soft);
   color: var(--gray);
   cursor: not-allowed;
-}
-
-/* ============================================================
-   PHASE CONFIG — WIZARD 4 ÉTAPES (refonte 2026-06)
-   Palette marine + tokens design system. Une décision par écran.
-   ============================================================ */
-
-/* --- Barre de progression --- */
-.sim-wiz-steps {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-.sim-wiz-step-wrap {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-}
-.sim-wiz-step {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-  min-width: 0;
-}
-.sim-wiz-step:disabled { cursor: default; }
-.sim-step-dot {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--font-bricolage), serif;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--soft);
-  border: 1.5px solid var(--border);
-  color: var(--gray);
-  transition: all .15s;
-}
-.sim-wiz-step.active .sim-step-dot {
-  background: var(--gm);
-  border-color: var(--gm);
-  color: #fff;
-}
-.sim-wiz-step.done .sim-step-dot {
-  background: var(--gl);
-  border-color: var(--gm);
-  color: var(--gm);
-}
-.sim-step-label {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .04em;
-  color: var(--gray);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sim-wiz-step.active .sim-step-label { color: var(--dark); }
-.sim-wiz-step.done .sim-step-label { color: var(--gm); }
-.sim-wiz-step-line {
-  flex: 1;
-  height: 1.5px;
-  background: var(--border);
-  margin: 0 8px;
-  min-width: 12px;
-}
-
-/* --- Corps du wizard (carte unique) --- */
-.sim-wiz {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-.sim-wiz-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 26px 30px;
-  gap: 4px;
-}
-.sim-wiz-q {
-  font-family: var(--font-bricolage), serif;
-  font-size: 24px;
-  font-weight: 500;
-  letter-spacing: -.015em;
-  color: var(--dark);
-}
-.sim-wiz-hint {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 13.5px;
-  color: var(--gray);
-  margin-bottom: 16px;
-}
-.sim-wiz-sublabel {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  color: var(--gray);
-}
-.sim-wiz-sublabel-note {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 12px;
-  color: var(--gray);
-}
-.sim-wiz-link {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gm);
-  letter-spacing: .01em;
-  padding: 0;
-}
-.sim-wiz-link:hover { color: var(--green); }
-
-/* --- Étape 1 : liste unifiée des matières (select + déplier dans la même ligne) --- */
-.sim-wiz-mat-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.sim-wiz-mat-count {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 12.5px;
-  color: var(--gray);
-  margin-right: auto;
-}
-.sim-wiz-mat-count em { font-style: italic; color: var(--gm); }
-
-.sim-wiz-mats {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sim-wiz-mat {
-  --chip: var(--gm);
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--soft);
-  transition: border-color .12s, background .12s;
-}
-.sim-wiz-mat:hover { border-color: var(--gm); }
-.sim-wiz-mat.sel {
-  background: var(--gl);
-  border-color: var(--gm);
-}
-.sim-wiz-mat-row {
-  display: grid;
-  grid-template-columns: 22px 22px minmax(0, 1fr) auto auto 28px;
-  align-items: center;
-  gap: 11px;
-  padding: 11px 14px;
-}
-/* toggle de sélection (checkbox) */
-.sim-wiz-mat-toggle {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sim-wiz-mat-check {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border);
-  background: var(--card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .12s;
-}
-.sim-wiz-mat.sel .sim-wiz-mat-check {
-  background: var(--gm);
-  border-color: var(--gm);
-}
-.sim-wiz-mat.sel .sim-wiz-mat-check::after {
-  content: '\2713';
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-}
-.sim-wiz-mat-ic {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  color: var(--chip);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sim-wiz-mat-ic svg { width: 100%; height: 100%; }
-.sim-wiz-mat-name {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--dark);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.sim-wiz-mat.sel .sim-wiz-mat-name { color: var(--green); font-weight: 600; }
-.sim-wiz-mat-picked {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--gm);
-  background: var(--card);
-  border: 1px solid var(--gm);
-  border-radius: 999px;
-  padding: 2px 9px;
-  white-space: nowrap;
-}
-.sim-wiz-mat-q {
-  font-family: var(--font-bricolage), serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--gray);
-  flex-shrink: 0;
-  letter-spacing: -.01em;
-}
-.sim-wiz-mat.sel .sim-wiz-mat-q { color: var(--gm); }
-.sim-wiz-mat-chev {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--gray);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  transition: transform .15s, background .12s;
-}
-.sim-wiz-mat-chev svg { width: 18px; height: 18px; }
-.sim-wiz-mat-chev:hover { background: var(--card); color: var(--gm); }
-.sim-wiz-mat-chev.open { transform: rotate(180deg); }
-.sim-wiz-mat-chev.placeholder { cursor: default; }
-.sim-wiz-mat-body {
-  padding: 8px 14px 12px;
-  border-top: 1px solid var(--border);
-}
-.sim-wiz-mat-actions {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  margin-bottom: 8px;
-}
-.sim-wiz-mat-actions .sim-wiz-sublabel-note { margin-right: auto; }
-.sim-wiz-mat-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 6px;
-  max-height: 220px;
-  overflow-y: auto;
-  align-content: start;
-}
-
-/* --- Étape 1 : champ de recherche fiche --- */
-.sim-wiz-search {
-  width: 100%;
-  padding: 9px 14px;
-  border-radius: 9px;
-  border: 1.5px solid var(--border);
-  background: var(--soft);
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 13px;
-  color: var(--dark);
-  margin-bottom: 10px;
-}
-.sim-wiz-search:focus {
-  outline: none;
-  border-color: var(--gm);
-  background: var(--card);
-}
-.sim-wiz-search::placeholder { color: var(--gray); }
-.sim-wiz-fiche-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 6px;
-  max-height: 240px;
-  overflow-y: auto;
-  align-content: start;
-}
-.sim-wiz-fiche {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 11px;
-  border-radius: 8px;
-  background: var(--soft);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: all .12s;
-  text-align: left;
-  font-family: inherit;
-}
-.sim-wiz-fiche-ic {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: var(--chip);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sim-wiz-fiche-ic svg { width: 100%; height: 100%; }
-.sim-wiz-fiche-main {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.sim-wiz-fiche:hover { border-color: var(--gm); }
-.sim-wiz-fiche.sel { background: var(--gl); border-color: var(--gm); }
-.sim-wiz-fiche-check {
-  width: 16px; height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid var(--border);
-  background: var(--card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.sim-wiz-fiche.sel .sim-wiz-fiche-check {
-  background: var(--gm);
-  border-color: var(--gm);
-}
-.sim-wiz-fiche.sel .sim-wiz-fiche-check::after {
-  content: '\2713';
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-}
-.sim-wiz-fiche-name {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--dark);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.sim-wiz-fiche-sys {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 11px;
-  color: var(--gray);
-  white-space: nowrap;
-}
-.sim-wiz-fiche-q {
-  font-family: var(--font-bricolage), serif;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--gray);
-  flex-shrink: 0;
-}
-
-/* --- Étape 2 : cartes source --- */
-.sim-wiz-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 6px;
-}
-/* Variante "remplit l'écran, centrée" pour l'étape source */
-.sim-wiz-body-center { justify-content: center; }
-.sim-wiz-cards-big {
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-top: 10px;
-  align-items: stretch;
-}
-.sim-wiz-cards-big .sim-wiz-card {
-  padding: 34px 26px;
-  gap: 14px;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 240px;
-}
-.sim-wiz-card-ic {
-  width: 46px;
-  height: 46px;
-  color: var(--gm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 2px;
-}
-.sim-wiz-card-ic svg { width: 100%; height: 100%; }
-.sim-wiz-card.sel .sim-wiz-card-ic { color: var(--green); }
-.sim-wiz-cards-big .sim-wiz-card-h { font-size: 20px; }
-.sim-wiz-cards-big .sim-wiz-card-sub { font-size: 13.5px; }
-.sim-wiz-card {
-  padding: 22px 22px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--soft);
-  cursor: pointer;
-  transition: all .12s;
-  text-align: left;
-  font-family: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sim-wiz-card:hover:not(.disabled) { border-color: var(--gm); }
-.sim-wiz-card.sel {
-  border-color: var(--gm);
-  background: var(--gl);
-}
-.sim-wiz-card.disabled {
-  opacity: .55;
-  cursor: not-allowed;
-  background: var(--soft);
-}
-.sim-wiz-card-h {
-  font-family: var(--font-bricolage), serif;
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--dark);
-  letter-spacing: -.01em;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.sim-wiz-card.sel .sim-wiz-card-h { color: var(--green); }
-.sim-wiz-card-sub {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 13px;
-  color: var(--gray);
-  line-height: 1.5;
-}
-.sim-wiz-badge {
-  font-family: var(--font-hanken), sans-serif;
-  font-style: normal;
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--gm);
-  background: var(--gl);
-  border: 1px solid var(--gm);
-  border-radius: 999px;
-  padding: 2px 9px;
-}
-
-/* --- Étape 3 : modes (réutilise .sim-mode-pill) --- */
-.sim-wiz-modes {
-  margin-top: 8px;
-}
-.sim-wiz-modes .sim-mode-pill {
-  padding: 28px 24px;
-  gap: 16px;
-  min-height: 160px;
-  justify-content: flex-start;
-}
-
-/* --- Étape 4 : conditions réelles, aucun choix, presque pas de texte --- */
-.sim-cond-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-.sim-cond-tile {
-  background: var(--soft);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.sim-cond-tile.wide { grid-column: span 1; }
-.sim-cond-tile-v {
-  font-family: var(--font-bricolage), serif;
-  font-size: 30px;
-  font-weight: 500;
-  color: var(--dark);
-  letter-spacing: -.02em;
-  line-height: 1.05;
-}
-.sim-cond-tile-v.sm {
-  font-size: 17px;
-  color: var(--green);
-  letter-spacing: -.01em;
-}
-.sim-cond-tile-l {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--gray);
-}
-.sim-wiz-error {
-  margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--rose-soft);
-  color: var(--rose);
-  border: 1px solid var(--rose);
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-
-/* --- Navigation bas de page --- */
-.sim-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.sim-nav-btn {
-  padding: 13px 26px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--card);
-  font: 700 13.5px var(--font-hanken);
-  letter-spacing: .02em;
-  color: var(--dark);
-  cursor: pointer;
-  transition: all .15s;
-}
-.sim-nav-btn:hover:not(:disabled) {
-  border-color: var(--gm);
-  color: var(--gm);
-}
-.sim-nav-btn.primary {
-  background: var(--dark);
-  border-color: var(--dark);
-  color: var(--bg-card);
-}
-.sim-nav-btn.primary:hover:not(:disabled) {
-  background: var(--green);
-  border-color: var(--green);
-  color: #fff;
-}
-.sim-nav-btn.launch {
-  background: var(--gm);
-  border-color: var(--gm);
-  color: #fff;
-  min-width: 240px;
-}
-.sim-nav-btn.launch:hover:not(:disabled) {
-  background: var(--green);
-  border-color: var(--green);
-}
-.sim-nav-btn:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-}
-.sim-nav-btn.launch:disabled,
-.sim-nav-btn.primary:disabled {
-  background: var(--soft);
-  border-color: var(--border);
-  color: var(--gray);
-  opacity: 1;
-}
-
-/* --- Responsive --- */
-@media (max-width: 720px) {
-  .sim-step-label { display: none; }
-  .sim-wiz-body { padding: 20px 18px; }
-  .sim-wiz-q { font-size: 20px; }
-  .sim-nav-btn.launch { min-width: 0; flex: 1; }
-  .sim-wiz-cards-big { grid-template-columns: 1fr; }
-  .sim-wiz-cards-big .sim-wiz-card { min-height: 0; padding: 22px 20px; }
-  .sim-cond-tiles { grid-template-columns: 1fr; }
-  .sim-wiz-body-center { justify-content: flex-start; }
 }
