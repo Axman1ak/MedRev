@@ -118,6 +118,7 @@ export interface Lesson {
   steps: (StepEntry | null)[]  // length 14
   ai_questions: AiQuestion[]
   flashcards?: Flashcard[]     // ← ajouté 2026-06 : cartes recto/verso maison
+  chapter?: string | null      // ← ajouté 2026-06 : chapitre libre (sous-matière légère)
   media?: LessonMedia | null   // ← ajouté 2026-05 : sources du cours
   // ← ajouté 2026-06 : Reporter / Annuler un palier (sans toucher à steps).
   // skips = indices de paliers annulés ; postpones = { "indice": "YYYY-MM-DD" }.

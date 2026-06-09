@@ -179,6 +179,7 @@ export default function FichesPage() {
   const [newLesName, setNewLesName] = useState('')
   const [newLesDate, setNewLesDate] = useState('')
   const [newLesSysId, setNewLesSysId] = useState('')
+  const [newLesChapter, setNewLesChapter] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
   const [lesError, setLesError] = useState<string | null>(null)
 
@@ -187,11 +188,12 @@ export default function FichesPage() {
   const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
 
   // Menu contextuel (⋯) + éditer / supprimer
-  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string; semestre?: 1 | 2 } | null
+  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string; semestre?: 1 | 2; chapter?: string } | null
   type DeleteTarget = { type: 'system' | 'lesson'; id: string; name: string; childCount?: number } | null
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditTarget>(null)
   const [editName, setEditName] = useState('')
+  const [editChapter, setEditChapter] = useState('')
   // Semestre en cours d'édition (uniquement utilisé quand type === 'system').
   // Permet à l'user de déplacer une matière entre S1 et S2 si la pré-config
   // au signup ne correspond pas à son vrai cursus.
@@ -296,6 +298,7 @@ export default function FichesPage() {
     const { data, error } = await supabase.from('lessons').insert({
       user_id: userId, system_id: newLesSysId, name: newLesName.trim(),
       learn_date: newLesDate || today, steps: new Array(J.length).fill(null), ai_questions: [],
+      chapter: newLesChapter.trim() || null,
     }).select().single()
     setLesLoading(false)
     if (error || !data) {
@@ -307,7 +310,7 @@ export default function FichesPage() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('medrev-lesson-created'))
     }
-    setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
+    setShowNewLesson(false); setNewLesName(''); setNewLesDate(''); setNewLesChapter('')
   }
 
   // ---- Review session : ouverture / mise à jour / fermeture ----
@@ -337,8 +340,16 @@ export default function FichesPage() {
       const sys = systems.find(s => s.id === id)
       if (sys) currentSemestre = (sys.semestre === 1 ? 1 : 2)
     }
-    setEditing({ type, id, name, semestre: currentSemestre })
+    // Pour une fiche : on charge aussi son chapitre actuel.
+    let currentChapter = ''
+    if (type === 'lesson') {
+      const les = lessons.find(l => l.id === id)
+      const c = les ? (les as { chapter?: string | null }).chapter : null
+      currentChapter = c && c.trim() ? c.trim() : ''
+    }
+    setEditing({ type, id, name, semestre: currentSemestre, chapter: currentChapter })
     setEditName(name)
+    setEditChapter(currentChapter)
     setEditSemestre(currentSemestre)
     setMenuOpenFor(null)
   }
@@ -369,9 +380,10 @@ export default function FichesPage() {
         console.error('[saveEdit] system update failed:', error)
       }
     } else {
-      const { error } = await supabase.from('lessons').update({ name: trimmed }).eq('id', editing.id)
+      const chapterVal = editChapter.trim() || null
+      const { error } = await supabase.from('lessons').update({ name: trimmed, chapter: chapterVal }).eq('id', editing.id)
       if (!error) {
-        setLessons(prev => prev.map(l => l.id === editing.id ? ({ ...l, name: trimmed } as Lesson) : l))
+        setLessons(prev => prev.map(l => l.id === editing.id ? ({ ...l, name: trimmed, chapter: chapterVal } as Lesson) : l))
       } else {
         console.error('[saveEdit] lesson update failed:', error)
       }
@@ -419,6 +431,24 @@ export default function FichesPage() {
 
   // ---- Dérivées ----
   const selectedSystem = semSystems.find(s => s.id === selectedSystemId) ?? null
+
+  // Chapitre d'une fiche (champ libre, null/vide = sans chapitre).
+  function lessonChapter(l: Lesson): string {
+    const c = (l as { chapter?: string | null }).chapter
+    return c && c.trim() ? c.trim() : ''
+  }
+
+  // Chapitres déjà utilisés dans une matière — alimente les <datalist> pour
+  // garder une nomenclature cohérente (chaque prépa/fac a son propre découpage).
+  function chaptersOfSystem(sysId: string): string[] {
+    const set = new Set<string>()
+    lessons.forEach(l => {
+      if (l.system_id !== sysId) return
+      const c = lessonChapter(l)
+      if (c) set.add(c)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }
 
   const colorOfSystem = useMemo(() => {
     const map = new Map<string, string>()
@@ -650,10 +680,9 @@ export default function FichesPage() {
           </div>
         )}
 
-        {/* Grille de cartes */}
-        {semSystems.length > 0 && visibleLessons.length > 0 && (
-          <div className="fi-grid">
-            {visibleLessons.map(lesson => {
+        {/* Grille de cartes — groupée par chapitre quand la matière en a */}
+        {semSystems.length > 0 && visibleLessons.length > 0 && (() => {
+            const renderCard = (lesson: Lesson) => {
               const st = cardStatus(lesson)
               const nr = nextRevLabel(lesson, today)
               return (
@@ -723,9 +752,42 @@ export default function FichesPage() {
                   </div>
                 </div>
               )
-            })}
-          </div>
-        )}
+            }
+
+            // Vue "à réviser" (multi-matières) ou matière sans chapitres :
+            // grille à plat, comme avant.
+            const hasChapters = !showDueOnly && visibleLessons.some(l => lessonChapter(l) !== '')
+            if (!hasChapters) {
+              return <div className="fi-grid">{visibleLessons.map(renderCard)}</div>
+            }
+
+            // Regroupe par chapitre (alphabétique), "Sans chapitre" en dernier.
+            const groups = new Map<string, Lesson[]>()
+            visibleLessons.forEach(l => {
+              const c = lessonChapter(l)
+              const arr = groups.get(c)
+              if (arr) arr.push(l); else groups.set(c, [l])
+            })
+            const chapNames = Array.from(groups.keys()).filter(c => c !== '').sort((a, b) => a.localeCompare(b))
+            if (groups.has('')) chapNames.push('')
+            return (
+              <div className="fi-chap-sections">
+                {chapNames.map(c => {
+                  const list = groups.get(c) ?? []
+                  return (
+                    <section key={c || '__none'} className="fi-chap-section">
+                      <h2 className="fi-chap-head">
+                        <span className="fi-chap-name">{c || 'Sans chapitre'}</span>
+                        <span className="fi-chap-count">{list.length}</span>
+                        <span className="fi-chap-rule" aria-hidden="true" />
+                      </h2>
+                      <div className="fi-grid">{list.map(renderCard)}</div>
+                    </section>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
         {/* Empty state filtre vide */}
         {semSystems.length > 0 && visibleLessons.length === 0 && (
@@ -843,6 +905,23 @@ export default function FichesPage() {
                 </option>)}
               </select>
             </div>
+            <div style={{ marginBottom: 16 }}>
+              <label className="fi-label">Chapitre <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(optionnel)</span></label>
+              <input
+                className="fi-input"
+                type="text"
+                placeholder="ex : Membre supérieur, UE1 chap. 3…"
+                value={newLesChapter}
+                onChange={e => setNewLesChapter(e.target.value)}
+                list="fi-chapters-create"
+              />
+              <datalist id="fi-chapters-create">
+                {chaptersOfSystem(newLesSysId).map(c => <option key={c} value={c} />)}
+              </datalist>
+              <p style={{ fontSize: 11, color: 'var(--gray)', marginTop: 5 }}>
+                Regroupe tes fiches selon le découpage de ta fac ou de ta prépa.
+              </p>
+            </div>
             <div style={{ marginBottom: 4 }}>
               <label className="fi-label">Date d&apos;apprentissage (J0)</label>
               <input className="fi-input" type="date" value={newLesDate} onChange={e => setNewLesDate(e.target.value)} />
@@ -879,10 +958,10 @@ export default function FichesPage() {
         <div className="fi-overlay" onClick={() => setEditing(null)}>
           <div className="fi-modal" onClick={e => e.stopPropagation()}>
             <div className="fi-modal-title">
-              {editing.type === 'system' ? 'Modifier la matière' : 'Renommer la fiche'}
+              {editing.type === 'system' ? 'Modifier la matière' : 'Modifier la fiche'}
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label className="fi-label">{editing.type === 'system' ? 'Nom de la matière' : 'Nouveau nom'}</label>
+              <label className="fi-label">{editing.type === 'system' ? 'Nom de la matière' : 'Nom de la fiche'}</label>
               <input
                 className="fi-input"
                 type="text"
@@ -892,6 +971,27 @@ export default function FichesPage() {
                 onKeyDown={e => { if (e.key === 'Enter' && editName.trim()) saveEdit() }}
               />
             </div>
+            {/* Chapitre : uniquement pour les fiches. Datalist = chapitres déjà
+                utilisés dans la matière de cette fiche. */}
+            {editing.type === 'lesson' && (() => {
+              const sysIdOfLesson = lessons.find(l => l.id === editing.id)?.system_id ?? ''
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <label className="fi-label">Chapitre <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(optionnel)</span></label>
+                  <input
+                    className="fi-input"
+                    type="text"
+                    placeholder="ex : Membre supérieur, UE1 chap. 3…"
+                    value={editChapter}
+                    onChange={e => setEditChapter(e.target.value)}
+                    list="fi-chapters-edit"
+                  />
+                  <datalist id="fi-chapters-edit">
+                    {chaptersOfSystem(sysIdOfLesson).map(c => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
+              )
+            })()}
             {/* Picker S1/S2 : visible uniquement pour les matières. Permet de
                 corriger la pré-config du signup si l'user a une matière dans
                 le mauvais semestre selon sa fac. */}
@@ -938,13 +1038,13 @@ export default function FichesPage() {
                   || editLoading
                   || (editing.type === 'system'
                     ? editName.trim() === editing.name && editSemestre === editing.semestre
-                    : editName.trim() === editing.name)
+                    : (editName.trim() === editing.name && editChapter.trim() === (editing.chapter ?? '')))
                 }
                 style={{
                   opacity: (!editName.trim()
                     || (editing.type === 'system'
                       ? editName.trim() === editing.name && editSemestre === editing.semestre
-                      : editName.trim() === editing.name)) ? .5 : 1,
+                      : (editName.trim() === editing.name && editChapter.trim() === (editing.chapter ?? '')))) ? .5 : 1,
                 }}
               >
                 {editLoading ? 'Enregistrement…' : 'Enregistrer'}
