@@ -174,6 +174,8 @@ export default function SimulateurPage() {
   const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(new Set())
   const [source, setSource] = useState<'genere' | 'rate' | 'annales'>('genere')
   const [lessonSearch, setLessonSearch] = useState('')
+  // Quelles matières ont leur groupe de fiches déplié (étape 1). Repliées par défaut.
+  const [openSys, setOpenSys] = useState<Set<string>>(new Set())
 
   const [nbQuestions, setNbQuestions] = useState(20)
   const [duration, setDuration] = useState<number | null>(30)
@@ -311,6 +313,21 @@ export default function SimulateurPage() {
   }, [lessons, selectedSysIds, selectedLessonIds, systems])
 
   const totalAvailable = availableQuestions.length
+
+  // Conditions d'examen (étape 4) : l'élève ne choisit rien, on s'aligne sur
+  // les conditions réelles. Toutes les questions de la portée, et un chrono
+  // imposé en mode examen (~1,5 min/question = rythme concours). En mode
+  // apprentissage, pas de chrono (correction en direct).
+  const examQuestionCount = totalAvailable
+  const examDurationMin = mode === 'examen' ? Math.max(1, Math.ceil(examQuestionCount * 1.5)) : null
+
+  // On pousse ces valeurs calculées dans l'état que lit launchSession.
+  // Mis à jour dès que la portée ou le mode change, donc nbQuestions/duration
+  // sont déjà corrects quand on arrive à l'étape 4 et qu'on lance.
+  useEffect(() => {
+    setNbQuestions(examQuestionCount)
+    setDuration(examDurationMin)
+  }, [examQuestionCount, examDurationMin])
 
   useEffect(() => {
     if (phase !== 'session' || duration === null) return
@@ -537,11 +554,6 @@ export default function SimulateurPage() {
   function renderConfig() {
     const launchableCount = Math.min(nbQuestions, totalAvailable)
     const nbMatieres = selectedSysIds.size
-    const nbFiches = selectedLessonIds.size > 0
-      ? selectedLessonIds.size
-      : pickerLessons.length
-    const sourceLabel = source === 'rate' ? "Ce que j'ai raté" : source === 'annales' ? 'Annales' : 'QCM généré'
-    const modeLabel = mode === 'apprentissage' ? 'Apprentissage' : 'Examen blanc'
 
     // Validation par étape pour activer "Suivant".
     const step1Ok = selectedSysIds.size > 0 && totalAvailable > 0
@@ -593,12 +605,11 @@ export default function SimulateurPage() {
           {step === 1 && (
             <div className="sim-wiz-body">
               <div className="sim-wiz-q">Quoi réviser ?</div>
-              <div className="sim-wiz-hint">Choisis tes matières.</div>
 
               <div className="sim-wiz-mat-head">
                 <span className="sim-wiz-mat-count">
                   {nbMatieres} matière{nbMatieres > 1 ? 's' : ''}
-                  {totalAvailable > 0 ? ` · ${totalAvailable} question${totalAvailable > 1 ? 's' : ''} dispo` : ''}
+                  {totalAvailable > 0 ? ` · ${totalAvailable} question${totalAvailable > 1 ? 's' : ''}` : ''}
                 </span>
                 <button
                   type="button"
@@ -652,63 +663,118 @@ export default function SimulateurPage() {
                 })}
               </div>
 
-              {pickerLessons.length > 0 && (
-                <div className="sim-wiz-fiches">
-                  <div className="sim-wiz-fiches-head">
-                    <span className="sim-wiz-sublabel">Fiches (optionnel)</span>
-                    <span className="sim-wiz-sublabel-note">
-                      {selectedLessonIds.size === 0
-                        ? 'Aucune cochée = toutes les fiches des matières choisies'
-                        : `${selectedLessonIds.size} fiche${selectedLessonIds.size > 1 ? 's' : ''} ciblée${selectedLessonIds.size > 1 ? 's' : ''}`}
-                    </span>
-                    {selectedLessonIds.size > 0 && (
-                      <button type="button" className="sim-wiz-link" onClick={() => setSelectedLessonIds(new Set())}>
-                        Réinitialiser
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    className="sim-wiz-search"
-                    placeholder="Rechercher une fiche…"
-                    value={lessonSearch}
-                    onChange={e => setLessonSearch(e.target.value)}
-                  />
-                  <div className="sim-wiz-fiche-list">
-                    {pickerLessons
-                      .filter(l => {
-                        const q = lessonSearch.trim().toLowerCase()
-                        if (!q) return true
-                        return l.name.toLowerCase().includes(q) || l.systemName.toLowerCase().includes(q)
-                      })
-                      .map(l => {
-                        const checked = selectedLessonIds.has(l.id)
-                        const ficheColor = colorOfSystem.get(l.systemId) ?? PALETTE[0]
+              {pickerLessons.length > 0 && (() => {
+                const q = lessonSearch.trim().toLowerCase()
+                const matchFiche = (l: typeof pickerLessons[number]) =>
+                  !q || l.name.toLowerCase().includes(q)
+                // Fiches groupées par matière sélectionnée, dans l'ordre du grid.
+                const groups = semSystems
+                  .filter(sys => selectedSysIds.has(sys.id))
+                  .map(sys => ({
+                    sys,
+                    fiches: pickerLessons.filter(l => l.systemId === sys.id),
+                  }))
+                  .filter(g => g.fiches.length > 0)
+                return (
+                  <div className="sim-wiz-fiches">
+                    <div className="sim-wiz-fiches-head">
+                      <span className="sim-wiz-sublabel">Fiches</span>
+                      <span className="sim-wiz-sublabel-note">
+                        {selectedLessonIds.size === 0
+                          ? 'aucune cochée = toutes'
+                          : `${selectedLessonIds.size} ciblée${selectedLessonIds.size > 1 ? 's' : ''}`}
+                      </span>
+                      {selectedLessonIds.size > 0 && (
+                        <button type="button" className="sim-wiz-link" onClick={() => setSelectedLessonIds(new Set())}>
+                          Réinitialiser
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      className="sim-wiz-search"
+                      placeholder="Rechercher une fiche…"
+                      value={lessonSearch}
+                      onChange={e => setLessonSearch(e.target.value)}
+                    />
+                    <div className="sim-wiz-groups">
+                      {groups.map(({ sys, fiches }) => {
+                        const visible = fiches.filter(matchFiche)
+                        if (q && visible.length === 0) return null
+                        const expanded = openSys.has(sys.id) || q.length > 0
+                        const sysColor = colorOfSystem.get(sys.id) ?? PALETTE[0]
+                        const pickedInSys = fiches.filter(l => selectedLessonIds.has(l.id)).length
                         return (
-                          <button
-                            key={l.id}
-                            type="button"
-                            className={`sim-wiz-fiche${checked ? ' sel' : ''}`}
-                            onClick={() => {
-                              const next = new Set(selectedLessonIds)
-                              if (checked) next.delete(l.id); else next.add(l.id)
-                              setSelectedLessonIds(next)
-                            }}
-                            style={{ ['--chip' as never]: ficheColor }}
-                          >
-                            <span className="sim-wiz-fiche-check" />
-                            <span className="sim-wiz-fiche-ic"><SubjectIcon name={l.systemName} /></span>
-                            <span className="sim-wiz-fiche-main">
-                              <span className="sim-wiz-fiche-name">{l.name}</span>
-                              <span className="sim-wiz-fiche-sys">{l.systemName}</span>
-                            </span>
-                            <span className="sim-wiz-fiche-q">{l.qCount}</span>
-                          </button>
+                          <div key={sys.id} className="sim-wiz-group">
+                            <button
+                              type="button"
+                              className={`sim-wiz-group-head${expanded ? ' open' : ''}`}
+                              onClick={() => {
+                                const next = new Set(openSys)
+                                if (next.has(sys.id)) next.delete(sys.id); else next.add(sys.id)
+                                setOpenSys(next)
+                              }}
+                              style={{ ['--chip' as never]: sysColor }}
+                            >
+                              <span className="sim-wiz-group-ic"><SubjectIcon name={sys.name} /></span>
+                              <span className="sim-wiz-group-name">{sys.name}</span>
+                              <span className="sim-wiz-group-count">{pickedInSys}/{fiches.length} fiches</span>
+                              <span className="sim-wiz-group-chev" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                              </span>
+                            </button>
+                            {expanded && (
+                              <div className="sim-wiz-group-body">
+                                <div className="sim-wiz-group-actions">
+                                  <button
+                                    type="button"
+                                    className="sim-wiz-link"
+                                    onClick={() => {
+                                      const next = new Set(selectedLessonIds)
+                                      fiches.forEach(l => next.add(l.id))
+                                      setSelectedLessonIds(next)
+                                    }}
+                                  >Toutes</button>
+                                  <button
+                                    type="button"
+                                    className="sim-wiz-link"
+                                    onClick={() => {
+                                      const next = new Set(selectedLessonIds)
+                                      fiches.forEach(l => next.delete(l.id))
+                                      setSelectedLessonIds(next)
+                                    }}
+                                  >Aucune</button>
+                                </div>
+                                <div className="sim-wiz-group-list">
+                                  {visible.map(l => {
+                                    const checked = selectedLessonIds.has(l.id)
+                                    return (
+                                      <button
+                                        key={l.id}
+                                        type="button"
+                                        className={`sim-wiz-fiche${checked ? ' sel' : ''}`}
+                                        onClick={() => {
+                                          const next = new Set(selectedLessonIds)
+                                          if (checked) next.delete(l.id); else next.add(l.id)
+                                          setSelectedLessonIds(next)
+                                        }}
+                                      >
+                                        <span className="sim-wiz-fiche-check" />
+                                        <span className="sim-wiz-fiche-name">{l.name}</span>
+                                        <span className="sim-wiz-fiche-q">{l.qCount}</span>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           )}
 
@@ -848,98 +914,27 @@ export default function SimulateurPage() {
           {/* ====================== ÉTAPE 4 — Réglages + récap ====================== */}
           {step === 4 && (
             <div className="sim-wiz-body">
-              <div className="sim-wiz-q">Conditions d&apos;examen</div>
-              <div className="sim-wiz-hint">
-                On reproduit les conditions du jour J : durée, nombre de questions et barème de ta fac.
-              </div>
+              <div className="sim-wiz-q">Conditions {mode === 'examen' ? <em>réelles</em> : <em>d&apos;entraînement</em>}</div>
 
-              <div className="sim-exam-grid">
-                <div className="sim-exam-card">
-                  <div className="sim-exam-card-h">Durée de l&apos;épreuve</div>
-                  <div className="sim-exam-card-note">Le chronomètre est imposé, comme à l&apos;examen.</div>
-                  <div className="sim-opt-pills">
-                    {[15, 30, 45, null].map(d => (
-                      <button
-                        key={d ?? 'libre'}
-                        type="button"
-                        className={`sim-opt-pill${duration === d ? ' sel' : ''}`}
-                        onClick={() => setDuration(d)}
-                      >
-                        {d === null ? 'Libre' : `${d} min`}
-                      </button>
-                    ))}
-                  </div>
+              <div className="sim-cond-tiles">
+                <div className="sim-cond-tile">
+                  <div className="sim-cond-tile-v">{examQuestionCount}</div>
+                  <div className="sim-cond-tile-l">questions</div>
                 </div>
-
-                <div className="sim-exam-card">
-                  <div className="sim-exam-card-h">Nombre de questions</div>
-                  <div className="sim-exam-card-note">
-                    {totalAvailable > 0 ? `${totalAvailable} disponibles au total.` : 'Aucune question disponible.'}
+                {mode === 'examen' ? (
+                  <div className="sim-cond-tile">
+                    <div className="sim-cond-tile-v">{examDurationMin} min</div>
+                    <div className="sim-cond-tile-l">chrono imposé</div>
                   </div>
-                  <div className="sim-opt-pills">
-                    {[10, 20, 30, 50].map(n => {
-                      const disabled = totalAvailable > 0 && n > totalAvailable
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          className={`sim-opt-pill${nbQuestions === n ? ' sel' : ''}`}
-                          disabled={disabled}
-                          onClick={() => setNbQuestions(n)}
-                        >
-                          {n}
-                        </button>
-                      )
-                    })}
+                ) : (
+                  <div className="sim-cond-tile wide">
+                    <div className="sim-cond-tile-v">Sans chrono</div>
+                    <div className="sim-cond-tile-l">correction en direct</div>
                   </div>
-                </div>
-              </div>
-
-              <div className="sim-bareme">
-                <div className="sim-bareme-head">
-                  <span className="sim-bareme-tag">Barème automatique</span>
-                  <span className="sim-bareme-fac">
-                    {profile?.fac ? `Appliqué selon ta fac · ${profile.fac}` : 'Appliqué selon ta fac'}
-                  </span>
-                </div>
-                <div className="sim-bareme-label">{scoring.label}</div>
-                <div className="sim-bareme-desc">{scoring.desc}</div>
-                <div className="sim-bareme-note">
-                  Tu ne choisis pas le barème : il est appliqué automatiquement, comme le jour de l&apos;examen.
-                </div>
-              </div>
-
-              <div className="sim-wiz-recap">
-                <div className="sim-wiz-recap-h">Récapitulatif</div>
-                <div className="sim-wiz-recap-grid">
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Matières</span>
-                    <span className="sim-wiz-recap-v">{nbMatieres}</span>
-                  </div>
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Fiches</span>
-                    <span className="sim-wiz-recap-v">{nbFiches}</span>
-                  </div>
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Source</span>
-                    <span className="sim-wiz-recap-v">{sourceLabel}</span>
-                  </div>
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Mode</span>
-                    <span className="sim-wiz-recap-v">{modeLabel}</span>
-                  </div>
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Questions</span>
-                    <span className="sim-wiz-recap-v">{launchableCount}</span>
-                  </div>
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Durée</span>
-                    <span className="sim-wiz-recap-v">{duration ? `${duration} min` : 'Libre'}</span>
-                  </div>
-                  <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Barème</span>
-                    <span className="sim-wiz-recap-v">{scoring.label}</span>
-                  </div>
+                )}
+                <div className="sim-cond-tile" title={scoring.desc}>
+                  <div className="sim-cond-tile-v sm">{scoring.label}</div>
+                  <div className="sim-cond-tile-l">barème</div>
                 </div>
               </div>
 

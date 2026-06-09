@@ -1645,6 +1645,86 @@
 }
 .sim-wiz-chip.sel .sim-wiz-chip-q { color: var(--gm); }
 
+/* --- Étape 1 : groupes de fiches repliables (scale 50+ fiches) --- */
+.sim-wiz-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sim-wiz-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card);
+}
+.sim-wiz-group-head {
+  --chip: var(--gm);
+  width: 100%;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--soft);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.sim-wiz-group-head:hover { background: var(--gl); }
+.sim-wiz-group-ic {
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  color: var(--chip);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sim-wiz-group-ic svg { width: 100%; height: 100%; }
+.sim-wiz-group-name {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.sim-wiz-group-count {
+  font-family: var(--font-bricolage), serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--gray);
+  white-space: nowrap;
+}
+.sim-wiz-group-chev {
+  width: 18px; height: 18px;
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s;
+}
+.sim-wiz-group-head.open .sim-wiz-group-chev { transform: rotate(180deg); }
+.sim-wiz-group-body {
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+.sim-wiz-group-actions {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.sim-wiz-group-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  align-content: start;
+}
+
 /* --- Étape 1 : picker de fiches --- */
 .sim-wiz-fiches {
   margin-top: 14px;
@@ -1688,9 +1768,8 @@
   align-content: start;
 }
 .sim-wiz-fiche {
-  --chip: var(--gm);
   display: grid;
-  grid-template-columns: 16px 18px minmax(0, 1fr) auto;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   padding: 8px 11px;
@@ -1861,153 +1940,44 @@
   min-height: 320px;
 }
 
-/* --- Étape 4 : conditions d'examen + récap --- */
-.sim-wiz-settings { margin-top: 6px; margin-bottom: 18px; }
-.sim-exam-grid {
+/* --- Étape 4 : conditions réelles, aucun choix, presque pas de texte --- */
+.sim-cond-tiles {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-top: 6px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
 }
-.sim-exam-card {
+.sim-cond-tile {
   background: var(--soft);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.sim-exam-card-h {
-  font-family: var(--font-bricolage), serif;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--dark);
-  letter-spacing: -.01em;
-}
-.sim-exam-card-note {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 12px;
-  color: var(--gray);
-  margin-bottom: 6px;
-}
-.sim-exam-card .sim-opt-pills { gap: 6px; }
-
-/* Barème (lecture seule, imposé par la fac) */
-.sim-bareme {
-  background: var(--gl);
-  border: 1.5px solid var(--gm);
-  border-radius: 12px;
-  padding: 18px 22px;
-  margin-bottom: 16px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
-.sim-bareme-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-.sim-bareme-tag {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  color: #fff;
-  background: var(--gm);
-  border-radius: 999px;
-  padding: 3px 11px;
-}
-.sim-bareme-fac {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 12px;
-  color: var(--gm);
-  margin-right: auto;
-}
-.sim-bareme-label {
+.sim-cond-tile.wide { grid-column: span 1; }
+.sim-cond-tile-v {
   font-family: var(--font-bricolage), serif;
-  font-size: 19px;
+  font-size: 30px;
   font-weight: 500;
+  color: var(--dark);
+  letter-spacing: -.02em;
+  line-height: 1.05;
+}
+.sim-cond-tile-v.sm {
+  font-size: 17px;
   color: var(--green);
   letter-spacing: -.01em;
 }
-.sim-bareme-desc {
+.sim-cond-tile-l {
   font-family: var(--font-hanken), sans-serif;
-  font-size: 13px;
-  color: var(--dark);
-  line-height: 1.45;
-}
-.sim-bareme-note {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 12px;
-  color: var(--gray);
-  margin-top: 4px;
-}
-
-.sim-opt-pill:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
-.sim-opt-pill:disabled:hover {
-  border-color: var(--border);
-  color: var(--gray);
-}
-.sim-wiz-recap {
-  background: var(--soft);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px 22px;
-}
-.sim-wiz-recap-h {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .16em;
-  color: var(--gray);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.sim-wiz-recap-h::before {
-  content: '';
-  width: 4px; height: 12px;
-  background: var(--gm);
-  border-radius: 2px;
-}
-.sim-wiz-recap-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px 28px;
-}
-.sim-wiz-recap-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.sim-wiz-recap-l {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .1em;
   color: var(--gray);
-}
-.sim-wiz-recap-v {
-  font-family: var(--font-bricolage), serif;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--dark);
-  letter-spacing: -.005em;
 }
 .sim-wiz-error {
   margin-top: 14px;
@@ -2083,6 +2053,6 @@
   .sim-nav-btn.launch { min-width: 0; flex: 1; }
   .sim-wiz-cards-big { grid-template-columns: 1fr; }
   .sim-wiz-cards-big .sim-wiz-card { min-height: 0; padding: 22px 20px; }
-  .sim-exam-grid { grid-template-columns: 1fr; }
+  .sim-cond-tiles { grid-template-columns: 1fr; }
   .sim-wiz-body-center { justify-content: flex-start; }
 }
