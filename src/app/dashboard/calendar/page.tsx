@@ -396,6 +396,19 @@ export default function CalendarPage() {
             <button className="cal-today-btn" onClick={goToday}>Aujourd&apos;hui</button>
             <button onClick={next} aria-label="Suivant">{'›'}</button>
           </div>
+          {view === 'week' && hasAnyLesson && (
+            <button
+              className="cal-print-trigger"
+              onClick={() => window.print()}
+              title="Imprimer la semaine affichée"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect x="6" y="14" width="12" height="7" rx="1"/>
+              </svg>
+              Imprimer
+            </button>
+          )}
         </div>
       </div>
 
@@ -623,6 +636,60 @@ export default function CalendarPage() {
           </div>
         )
       })()}
+
+      {/* FEUILLE D'IMPRESSION (cachée à l'écran, seule visible en @media print) */}
+      {hasAnyLesson && (
+        <div className="cal-print" aria-hidden="true">
+          <div className="cal-print-head">
+            <span className="cal-print-brand">Med·Rev</span>
+            <span className="cal-print-title">Semaine du {weekLabel}</span>
+            <span className="cal-print-meta">
+              {weekTotal} révision{weekTotal > 1 ? 's' : ''}
+              {' · '}{semester === 'year' ? 'Année' : `Semestre ${semester}`}
+              {' · '}imprimé le {new Date().toLocaleDateString('fr-FR')}
+            </span>
+          </div>
+          <div className="cal-print-grid">
+            {weekDays.map((day, i) => {
+              const dateStr = toDateStr(day)
+              const occs = byDate.get(dateStr) ?? []
+              return (
+                <div key={i} className="cal-print-day">
+                  <div className="cal-print-day-head">
+                    <span className="cal-print-day-name">{DAY_LABELS_LONG[i]}</span>
+                    <span className="cal-print-day-num">{day.getDate()}</span>
+                  </div>
+                  {occs.length === 0 ? (
+                    <div className="cal-print-none">—</div>
+                  ) : (
+                    occs.map(occ => {
+                      const done = occ.scoreForThisJ !== null
+                      const sysName = systemsById.get(occ.lesson.system_id)?.name ?? ''
+                      return (
+                        <div
+                          key={`${occ.lesson.id}-${occ.stepIndex}`}
+                          className={`cal-print-item${done ? ' cal-print-done' : ''}`}
+                        >
+                          <span className="cal-print-box">{done ? '✓' : ''}</span>
+                          <span className="cal-print-item-body">
+                            <span className="cal-print-item-name">{occ.lesson.name}</span>
+                            <span className="cal-print-item-sub">
+                              {sysName ? `${sysName} · ` : ''}J+{J[occ.stepIndex]}
+                            </span>
+                          </span>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <div className="cal-print-foot">
+            Coche chaque case une fois la révision faite, puis note la fiche dans MedRev.
+          </div>
+        </div>
+      )}
 
       {/* REVIEW MODAL (partagé) */}
       {reviewing && (
