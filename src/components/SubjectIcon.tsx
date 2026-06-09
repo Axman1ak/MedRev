@@ -15,7 +15,7 @@ const RULES: { keys: string[]; icon: string }[] = [
   { keys: ['cardio', 'coeur', 'cardiovasc'], icon: 'heart' },
   { keys: ['neuro', 'cerveau', 'nerveux', 'psychiatr', 'psy'], icon: 'brain' },
   { keys: ['respi', 'pneumo', 'poumon', 'thorax', 'pleur'], icon: 'lungs' },
-  { keys: ['os ', 'osseux', 'rhumato', 'locomoteur', 'squelette', 'ortho', 'articul', 'arthro'], icon: 'bone' },
+  { keys: ['osteo', 'osseux', 'rhumato', 'locomoteur', 'squelette', 'ortho', 'articul', 'arthro'], icon: 'bone' },
   { keys: ['cellul', 'cyto', 'cellule'], icon: 'cell' },
   { keys: ['biochim', 'metabol'], icon: 'molecule' },
   { keys: ['chimie', 'chim'], icon: 'flask' },
@@ -41,7 +41,7 @@ const RULES: { keys: string[]; icon: string }[] = [
 function iconKey(name: string): string {
   const n = norm(name)
   for (const r of RULES) {
-    if (r.keys.some(k => n.includes(k.trim()))) return r.icon
+    if (r.keys.some(k => n.includes(k))) return r.icon
   }
   return 'default'
 }
