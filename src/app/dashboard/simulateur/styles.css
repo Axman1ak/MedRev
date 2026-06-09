@@ -377,142 +377,18 @@
   line-height: 1.4;
 }
 
-/* === MINI VISUEL — base commune === */
-.sim-mp-vis {
-  flex: 1;
-  background: var(--soft);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  display: grid;
-  gap: 5px;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Apprentissage : auto + 5×1fr + auto */
-.sim-mp-vis-app {
-  grid-template-rows: auto repeat(5, 1fr) auto;
-}
-.sim-mp-app-q {
-  font-family: var(--font-bricolage), serif;
-  font-size: 10.5px;
-  color: var(--gray);
-  font-style: italic;
-  line-height: 1.2;
-}
-.sim-mp-app-opt {
+/* === MODE — icône claire unique par carte === */
+.sim-mode-pill-ic {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--gm);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 7px;
-  border-radius: 4px;
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 10.5px;
-  line-height: 1.2;
-  min-height: 0;
+  justify-content: center;
 }
-.sim-mp-app-opt.dim {
-  color: var(--dim);
-  background: rgba(255, 255, 255, .4);
-}
-.sim-mp-app-opt.wrong {
-  color: var(--rose);
-  background: var(--rose-soft);
-  border-left: 2px solid var(--rose);
-}
-.sim-mp-app-opt.right {
-  color: var(--green);
-  background: var(--gl);
-  border-left: 2px solid var(--gm);
-  font-weight: 600;
-}
-.sim-mp-app-opt .mark {
-  font-family: var(--font-bricolage), serif;
-  font-weight: 700;
-  font-size: 11px;
-}
-.sim-mp-app-opt .check {
-  margin-left: auto;
-  font-weight: 700;
-}
-.sim-mp-app-explain {
-  padding: 6px 8px;
-  background: var(--gold-soft);
-  border-radius: 4px;
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 11px;
-  color: #5C4419;
-  line-height: 1.3;
-  border-left: 2px solid var(--gold);
-  overflow: hidden;
-}
-[data-theme="dark"] .sim-mp-app-explain { color: var(--gold); }
-
-/* Examen blanc : auto + 5×1fr + auto */
-.sim-mp-vis-ex {
-  grid-template-rows: auto repeat(5, 1fr) auto;
-}
-.sim-mp-ex-header {
-  display: grid;
-  grid-template-columns: 18px repeat(5, 1fr);
-  gap: 5px 6px;
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 9px;
-  color: var(--gray);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  text-align: center;
-  padding-bottom: 3px;
-  border-bottom: 1px solid var(--border);
-}
-.sim-mp-ex-row {
-  display: grid;
-  grid-template-columns: 18px repeat(5, 1fr);
-  gap: 5px 6px;
-  align-items: center;
-}
-.sim-mp-ex-row.current {
-  background: var(--gl);
-  border-radius: 4px;
-  margin: 0 -4px;
-  padding: 0 4px;
-}
-.sim-mp-ex-row .num {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 9px;
-  color: var(--gray);
-  font-weight: 600;
-  text-align: right;
-}
-.sim-mp-ex-row.current .num { color: var(--gm); font-weight: 700; }
-.sim-mp-ex-row .bubble {
-  width: 100%;
-  height: 11px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: var(--card);
-}
-.sim-mp-ex-row .bubble.filled {
-  background: var(--dark);
-  border-color: var(--dark);
-}
-.sim-mp-ex-row.current .bubble.filled {
-  background: var(--gm);
-  border-color: var(--gm);
-}
-.sim-mp-ex-bottom {
-  font-family: var(--font-hanken), serif;
-  font-style: italic;
-  font-size: 10.5px;
-  color: var(--gray);
-  text-align: center;
-  line-height: 1.3;
-  padding-top: 3px;
-  border-top: 1px solid var(--border);
-}
+.sim-mode-pill-ic svg { width: 100%; height: 100%; }
+.sim-mode-pill.sel .sim-mode-pill-ic { color: var(--green); }
 
 /* HERO CTA (col 2) */
 .sim-hero {
@@ -880,11 +756,12 @@
   gap: 14px;
   line-height: 1.4;
 }
-.sim-ses-q-opt:hover:not(:disabled) {
+.sim-ses-q-opt:hover:not(:disabled):not(.readonly) {
   border-color: var(--gm);
   background: var(--soft);
 }
 .sim-ses-q-opt:disabled { cursor: default; }
+.sim-ses-q-opt.readonly { cursor: default; }
 .sim-ses-q-opt.sel {
   border-color: var(--gm);
   background: var(--gl);
@@ -1573,7 +1450,7 @@
 }
 .sim-wiz-link:hover { color: var(--green); }
 
-/* --- Étape 1 : matières (chips) --- */
+/* --- Étape 1 : liste unifiée des matières (select + déplier dans la même ligne) --- */
 .sim-wiz-mat-head {
   display: flex;
   align-items: baseline;
@@ -1587,33 +1464,67 @@
   color: var(--gray);
   margin-right: auto;
 }
-.sim-wiz-mat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.sim-wiz-chip {
-  --chip: var(--gm);
+.sim-wiz-mat-count em { font-style: italic; color: var(--gm); }
+
+.sim-wiz-mats {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  background: var(--soft);
-  border: 1.5px solid var(--border);
-  cursor: pointer;
-  transition: all .12s;
-  text-align: left;
-  font-family: inherit;
-  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
 }
-.sim-wiz-chip:hover { border-color: var(--gm); }
-.sim-wiz-chip.sel {
+.sim-wiz-mat {
+  --chip: var(--gm);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--soft);
+  transition: border-color .12s, background .12s;
+}
+.sim-wiz-mat:hover { border-color: var(--gm); }
+.sim-wiz-mat.sel {
   background: var(--gl);
   border-color: var(--gm);
 }
-.sim-wiz-chip-ic {
+.sim-wiz-mat-row {
+  display: grid;
+  grid-template-columns: 22px 22px minmax(0, 1fr) auto auto 28px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+}
+/* toggle de sélection (checkbox) */
+.sim-wiz-mat-toggle {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sim-wiz-mat-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+}
+.sim-wiz-mat.sel .sim-wiz-mat-check {
+  background: var(--gm);
+  border-color: var(--gm);
+}
+.sim-wiz-mat.sel .sim-wiz-mat-check::after {
+  content: '\2713';
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sim-wiz-mat-ic {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
@@ -1622,11 +1533,10 @@
   align-items: center;
   justify-content: center;
 }
-.sim-wiz-chip-ic svg { width: 100%; height: 100%; }
-.sim-wiz-chip-name {
-  flex: 1;
+.sim-wiz-mat-ic svg { width: 100%; height: 100%; }
+.sim-wiz-mat-name {
   font-family: var(--font-hanken), sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--dark);
   overflow: hidden;
@@ -1634,8 +1544,21 @@
   white-space: nowrap;
   min-width: 0;
 }
-.sim-wiz-chip.sel .sim-wiz-chip-name { color: var(--green); font-weight: 600; }
-.sim-wiz-chip-q {
+.sim-wiz-mat.sel .sim-wiz-mat-name { color: var(--green); font-weight: 600; }
+.sim-wiz-mat-picked {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--gm);
+  background: var(--card);
+  border: 1px solid var(--gm);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.sim-wiz-mat-q {
   font-family: var(--font-bricolage), serif;
   font-size: 14px;
   font-weight: 500;
@@ -1643,80 +1566,37 @@
   flex-shrink: 0;
   letter-spacing: -.01em;
 }
-.sim-wiz-chip.sel .sim-wiz-chip-q { color: var(--gm); }
-
-/* --- Étape 1 : groupes de fiches repliables (scale 50+ fiches) --- */
-.sim-wiz-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sim-wiz-group {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--card);
-}
-.sim-wiz-group-head {
-  --chip: var(--gm);
-  width: 100%;
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto 18px;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  background: var(--soft);
+.sim-wiz-mat.sel .sim-wiz-mat-q { color: var(--gm); }
+.sim-wiz-mat-chev {
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
+  background: none;
+  color: var(--gray);
   cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-}
-.sim-wiz-group-head:hover { background: var(--gl); }
-.sim-wiz-group-ic {
-  width: 22px; height: 22px;
-  flex-shrink: 0;
-  color: var(--chip);
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 7px;
+  transition: transform .15s, background .12s;
 }
-.sim-wiz-group-ic svg { width: 100%; height: 100%; }
-.sim-wiz-group-name {
-  font-family: var(--font-hanken), sans-serif;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--dark);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.sim-wiz-group-count {
-  font-family: var(--font-bricolage), serif;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--gray);
-  white-space: nowrap;
-}
-.sim-wiz-group-chev {
-  width: 18px; height: 18px;
-  color: var(--gray);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform .15s;
-}
-.sim-wiz-group-head.open .sim-wiz-group-chev { transform: rotate(180deg); }
-.sim-wiz-group-body {
-  padding: 8px 12px 12px;
+.sim-wiz-mat-chev svg { width: 18px; height: 18px; }
+.sim-wiz-mat-chev:hover { background: var(--card); color: var(--gm); }
+.sim-wiz-mat-chev.open { transform: rotate(180deg); }
+.sim-wiz-mat-chev.placeholder { cursor: default; }
+.sim-wiz-mat-body {
+  padding: 8px 14px 12px;
   border-top: 1px solid var(--border);
 }
-.sim-wiz-group-actions {
+.sim-wiz-mat-actions {
   display: flex;
+  align-items: baseline;
   gap: 14px;
   margin-bottom: 8px;
 }
-.sim-wiz-group-list {
+.sim-wiz-mat-actions .sim-wiz-sublabel-note { margin-right: auto; }
+.sim-wiz-mat-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 6px;
@@ -1725,23 +1605,7 @@
   align-content: start;
 }
 
-/* --- Étape 1 : picker de fiches --- */
-.sim-wiz-fiches {
-  margin-top: 14px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.sim-wiz-fiches-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-.sim-wiz-fiches-head .sim-wiz-sublabel-note { margin-right: auto; }
+/* --- Étape 1 : champ de recherche fiche --- */
 .sim-wiz-search {
   width: 100%;
   padding: 9px 14px;
@@ -1937,7 +1801,12 @@
 /* --- Étape 3 : modes (réutilise .sim-mode-pill) --- */
 .sim-wiz-modes {
   margin-top: 8px;
-  min-height: 320px;
+}
+.sim-wiz-modes .sim-mode-pill {
+  padding: 28px 24px;
+  gap: 16px;
+  min-height: 160px;
+  justify-content: flex-start;
 }
 
 /* --- Étape 4 : conditions réelles, aucun choix, presque pas de texte --- */
