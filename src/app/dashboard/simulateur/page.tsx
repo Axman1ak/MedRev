@@ -849,13 +849,14 @@ export default function SimulateurPage() {
                     <div className="sim-mode-pill-sub">Réponse révélée + explication à chaque question. Tu apprends en faisant.</div>
                   </div>
                   <div className="sim-mode-pill-illus" aria-hidden="true">
-                    <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="6" y="9" width="64" height="42" rx="7" fill="currentColor" fillOpacity="0.07" />
-                      <line x1="16" y1="20" x2="58" y2="20" opacity="0.4" />
-                      <line x1="16" y1="29" x2="48" y2="29" opacity="0.4" />
-                      <line x1="16" y1="38" x2="54" y2="38" opacity="0.4" />
-                      <circle cx="92" cy="38" r="16" fill="currentColor" stroke="none" />
-                      <path d="m85 38 4.5 4.6 9-9.6" stroke="#fff" strokeWidth="2.6" />
+                    {/* QCM avec la bonne réponse révélée (vert + check) */}
+                    <svg viewBox="0 0 124 74" fill="none">
+                      <line x1="12" y1="11" x2="78" y2="11" stroke="#9AA4B2" strokeWidth="3" strokeLinecap="round" />
+                      <rect x="12" y="22" width="100" height="12" rx="3.5" stroke="#C2C9D4" strokeWidth="1.5" />
+                      <rect x="12" y="38" width="100" height="12" rx="3.5" fill="#1B7A4B" fillOpacity="0.14" stroke="#1B7A4B" strokeWidth="1.8" />
+                      <circle cx="102" cy="44" r="6.5" fill="#1B7A4B" />
+                      <path d="m98.8 44 2 2 4.6-4.9" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <rect x="12" y="54" width="100" height="12" rx="3.5" stroke="#C2C9D4" strokeWidth="1.5" />
                     </svg>
                   </div>
                 </button>
@@ -876,17 +877,12 @@ export default function SimulateurPage() {
                     <div className="sim-mode-pill-sub">Chrono imposé, aucun feedback. Corrections à la fin, comme au concours.</div>
                   </div>
                   <div className="sim-mode-pill-illus" aria-hidden="true">
-                    <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="6" y="9" width="56" height="42" rx="6" fill="currentColor" fillOpacity="0.07" />
-                      <circle cx="18" cy="20" r="3" />
-                      <line x1="27" y1="20" x2="54" y2="20" opacity="0.4" />
-                      <circle cx="18" cy="30" r="3" fill="currentColor" stroke="none" />
-                      <line x1="27" y1="30" x2="54" y2="30" opacity="0.4" />
-                      <circle cx="18" cy="40" r="3" />
-                      <line x1="27" y1="40" x2="48" y2="40" opacity="0.4" />
-                      <circle cx="93" cy="37" r="17" fill="var(--card)" />
-                      <circle cx="93" cy="37" r="17" />
-                      <path d="M93 27v10l6 4" />
+                    {/* Même QCM en noir & blanc, AUCUNE réponse révélée */}
+                    <svg viewBox="0 0 124 74" fill="none">
+                      <line x1="12" y1="11" x2="78" y2="11" stroke="#B7BECB" strokeWidth="3" strokeLinecap="round" />
+                      <rect x="12" y="22" width="100" height="12" rx="3.5" stroke="#C2C9D4" strokeWidth="1.5" />
+                      <rect x="12" y="38" width="100" height="12" rx="3.5" fill="#C2C9D4" fillOpacity="0.35" stroke="#9AA4B2" strokeWidth="1.6" />
+                      <rect x="12" y="54" width="100" height="12" rx="3.5" stroke="#C2C9D4" strokeWidth="1.5" />
                     </svg>
                   </div>
                 </button>
