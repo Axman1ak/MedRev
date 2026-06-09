@@ -698,7 +698,7 @@ export default function DashboardPage() {
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(p.lesson) }}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="ftag">{sysName.slice(0, 2).toUpperCase()}</div>
+                  <div className="ftag"><SubjectIcon name={sysName} /></div>
                   <div className="fmid">
                     <div className="fnm">{p.lesson.name}</div>
                     <div className="fsub">{sysName}

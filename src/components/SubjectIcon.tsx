@@ -19,7 +19,7 @@ const RULES: { keys: string[]; icon: string }[] = [
   { keys: ['cellul', 'cyto', 'cellule'], icon: 'cell' },
   { keys: ['biochim', 'metabol'], icon: 'molecule' },
   { keys: ['chimie', 'chim'], icon: 'flask' },
-  { keys: ['biophys', 'physique', 'physiq'], icon: 'atom' },
+  { keys: ['biophys', 'physique', 'physiq'], icon: 'flask' },
   { keys: ['genet', 'adn', 'heredit', 'molecula'], icon: 'dna' },
   { keys: ['histo', 'anatomo-path', 'microscop'], icon: 'microscope' },
   { keys: ['physio'], icon: 'pulse' },
@@ -29,7 +29,7 @@ const RULES: { keys: string[]; icon: string }[] = [
   { keys: ['immuno', 'bacterio', 'viro', 'infectio', 'micro'], icon: 'microbe' },
   { keys: ['ophtalmo', 'oeil', 'vision'], icon: 'eye' },
   { keys: ['dent', 'odonto'], icon: 'tooth' },
-  { keys: ['stat', 'biostat', 'proba', 'epidemio'], icon: 'chart' },
+  { keys: ['stat', 'biostat', 'proba', 'epidemio'], icon: 'mathsym' },
   { keys: ['shs', 'sciences humaines', 'ethiq', 'socio', 'sante publique', 'droit'], icon: 'people' },
   { keys: ['anglais', 'langue', 'espagnol', 'lve', 'lv1'], icon: 'globe' },
   { keys: ['nephro', 'rein', 'urinaire', 'uro'], icon: 'drop' },
@@ -85,6 +85,9 @@ function paths(key: string): ReactElement {
       return <path d="M7 4c-2 0-3 1.6-3 4 0 3 1 4 1.5 7 .4 2.4.6 5 1.5 5 1.2 0 1-3 3-3s1.8 3 3 3c.9 0 1.1-2.6 1.5-5 .5-3 1.5-4 1.5-7 0-2.4-1-4-3-4-1.5 0-2 1-3 1s-1.5-1-3-1z" />
     case 'chart':
       return <path d="M5 20V10M12 20V4M19 20v-7" />
+    case 'mathsym':
+      // Sigma Σ — symbole mathématique pour biostatistiques.
+      return <path d="M17.5 5H6.5l6 7-6 7h11" />
     case 'people':
       return <><circle cx="12" cy="8" r="3.4" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>
     case 'globe':

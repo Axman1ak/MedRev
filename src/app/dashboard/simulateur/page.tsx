@@ -839,9 +839,13 @@ export default function SimulateurPage() {
                   type="button"
                 >
                   <div className="sim-mode-pill-ic" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="9" />
-                      <path d="m8.5 12 2.5 2.5 4.5-5" />
+                    <svg viewBox="0 0 72 52" width="72" height="52" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="8" width="40" height="34" rx="6" fill="currentColor" fillOpacity="0.09" />
+                      <line x1="16" y1="18" x2="38" y2="18" opacity="0.4" />
+                      <line x1="16" y1="25" x2="32" y2="25" opacity="0.4" />
+                      <line x1="16" y1="32" x2="36" y2="32" opacity="0.4" />
+                      <circle cx="51" cy="38" r="12" fill="currentColor" stroke="none" />
+                      <path d="m45.5 38 3.5 3.6 7-7.6" stroke="#fff" strokeWidth="2.4" />
                     </svg>
                   </div>
                   <div className="sim-mode-pill-top">
@@ -856,10 +860,17 @@ export default function SimulateurPage() {
                   type="button"
                 >
                   <div className="sim-mode-pill-ic" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="13" r="8" />
-                      <path d="M12 9v4l2.5 2.5" />
-                      <path d="M9 2h6M12 5V2" />
+                    <svg viewBox="0 0 72 52" width="72" height="52" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="8" y="8" width="34" height="36" rx="5" fill="currentColor" fillOpacity="0.09" />
+                      <circle cx="16" cy="17" r="2.2" />
+                      <line x1="22" y1="17" x2="36" y2="17" opacity="0.4" />
+                      <circle cx="16" cy="26" r="2.2" fill="currentColor" stroke="none" />
+                      <line x1="22" y1="26" x2="36" y2="26" opacity="0.4" />
+                      <circle cx="16" cy="35" r="2.2" />
+                      <line x1="22" y1="35" x2="32" y2="35" opacity="0.4" />
+                      <circle cx="52" cy="36" r="12" fill="var(--card)" />
+                      <circle cx="52" cy="36" r="12" />
+                      <path d="M52 30v6.5l4.2 3" />
                     </svg>
                   </div>
                   <div className="sim-mode-pill-top">
