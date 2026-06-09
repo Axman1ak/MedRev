@@ -38,7 +38,7 @@
   gap: 14px;
   background: var(--cal-bg);
   box-sizing: border-box;
-  font-family: var(--font-hanken), -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
   color: var(--cal-dark);
   font-size: 13px;
   line-height: 1.5;
@@ -54,7 +54,7 @@
   flex-shrink: 0;
 }
 .cal-title {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 24px;
   font-weight: 500;
   letter-spacing: -.015em;
@@ -67,7 +67,7 @@
   color: var(--cal-gray);
   margin-top: 2px;
   font-style: italic;
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
 }
 
 .cal-controls {
@@ -135,8 +135,9 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 10px;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: 100%;
   overflow: hidden;
 }
 .cal-day {
@@ -156,9 +157,7 @@
 }
 
 .cal-day-head {
-  height: 62px;
-  box-sizing: border-box;
-  padding: 12px 14px 10px;
+  padding: 14px 14px 11px;
   border-bottom: 1px dashed var(--cal-border);
   flex-shrink: 0;
 }
@@ -177,7 +176,7 @@
   margin-top: 3px;
 }
 .cal-day-num {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 24px;
   font-weight: 500;
   letter-spacing: -.02em;
@@ -310,7 +309,7 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--cal-gray);
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   line-height: 1.25;
   min-width: 0;
   width: 100%;
@@ -371,40 +370,9 @@
   justify-content: center;
   color: var(--cal-dim);
   font-size: 16px;
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-style: italic;
 }
-
-/* =========== Vue semaine : rectangles plats par fiche =========== */
-.cal-week .cal-day-list { gap: 4px; padding: 8px 8px 10px; }
-.cal-week .cal-fiche {
-  height: 30px;
-  align-items: center;
-  gap: 7px;
-  padding: 0 9px;
-  margin: 0;
-  border-radius: 7px;
-  background: var(--cal-soft);
-  border: 1px solid var(--cal-border);
-}
-.cal-week .cal-fiche:hover { background: var(--cal-gl); border-color: var(--cal-gm); transform: none; }
-.cal-week .cal-fiche-dot { margin-top: 0; }
-.cal-week .cal-fiche-body {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-.cal-week .cal-fiche-name {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  font-size: 11.5px;
-  color: var(--cal-dark);
-  flex: 1 1 auto;
-  width: auto;
-}
-.cal-week .cal-fiche-j { font-size: 9px; padding: 1px 6px; }
-.cal-week .cal-day-more { margin: 4px 6px 6px; padding: 6px; font-size: 10.5px; }
 
 /* =========== MONTH GRID =========== */
 .cal-month {
@@ -508,47 +476,6 @@
 .cal-month-dot.s4 { background: var(--cal-s4); }
 .cal-month-dot.s5 { background: var(--cal-s5); }
 
-/* Titres de fiches (remplacent les points) */
-.cal-month-titles {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
-  min-height: 0;
-  overflow: hidden;
-}
-.cal-month-title {
-  font-size: 10.5px;
-  line-height: 1.3;
-  color: var(--cal-gray);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-left: 6px;
-  border-left: 2px solid var(--cal-neutral);
-  font-family: var(--font-hanken), sans-serif;
-}
-.cal-month-title.s1 { border-left-color: var(--cal-s1); }
-.cal-month-title.s2 { border-left-color: var(--cal-s2); }
-.cal-month-title.s3 { border-left-color: var(--cal-s3); }
-.cal-month-title.s4 { border-left-color: var(--cal-s4); }
-.cal-month-title.s5 { border-left-color: var(--cal-s5); }
-.cal-month-title.cal-done { color: var(--cal-dim); text-decoration: line-through; }
-.cal-month-more {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: var(--cal-gm);
-  padding: 1px 6px 0;
-  margin-top: 1px;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-  letter-spacing: .02em;
-}
-.cal-month-more:hover { color: var(--cal-green); text-decoration: underline; }
-
 /* =========== LEGEND NOTE =========== */
 .cal-legend {
   flex-shrink: 0;
@@ -575,7 +502,7 @@
 .cal-legend-hint {
   margin-left: auto;
   font-style: italic;
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   color: var(--cal-gray);
 }
 
@@ -614,7 +541,7 @@
   flex-shrink: 0;
 }
 .cal-overflow-title {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 18px;
   font-weight: 500;
   color: var(--cal-dark);
@@ -625,7 +552,7 @@
   color: var(--cal-gray);
   margin-top: 2px;
   font-style: italic;
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
 }
 .cal-overflow-close {
   width: 30px; height: 30px;
@@ -659,15 +586,6 @@
 .cal-overflow-list .cal-fiche-name { font-size: 13px; }
 .cal-overflow-list .cal-fiche-j { font-size: 10px; }
 
-/* Lignes visuelles de la modale jour (voir plus) */
-.cal-overflow-list .cal-of-row { gap: 12px; padding: 11px 13px; border: 1px solid var(--cal-border); border-radius: 12px; background: var(--cal-card); align-items: center; }
-.cal-overflow-list .cal-of-row:hover { border-color: var(--cal-gm); background: var(--cal-soft); }
-.cal-of-ic { width: 36px; height: 36px; border-radius: 10px; background: var(--cal-gl); color: var(--cal-gm); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.cal-of-ic svg { width: 20px; height: 20px; }
-.cal-of-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
-.cal-of-sub { font-size: 11.5px; color: var(--cal-gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.cal-overflow-list .cal-of-row .cal-fiche-dot { margin-top: 0; }
-
 .cal-empty-state {
   flex: 1;
   display: flex;
@@ -681,14 +599,14 @@
   margin: 0 auto;
 }
 .cal-empty-icon {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-size: 36px;
   color: var(--cal-gm);
   opacity: .45;
   line-height: 1;
 }
 .cal-empty-title {
-  font-family: var(--font-bricolage), serif;
+  font-family: 'Fraunces', serif;
   font-weight: 500;
   font-size: 21px;
   color: var(--cal-dark);
@@ -696,7 +614,7 @@
   line-height: 1.3;
 }
 .cal-empty-text {
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   line-height: 1.6;
   color: var(--cal-gray);
@@ -707,7 +625,7 @@
   background: var(--cal-gm);
   color: white !important;
   text-decoration: none;
-  font-family: var(--font-hanken), sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
   padding: 11px 22px;
