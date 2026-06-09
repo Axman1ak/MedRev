@@ -653,6 +653,15 @@ export default function CalendarPage() {
             {weekDays.map((day, i) => {
               const dateStr = toDateStr(day)
               const occs = byDate.get(dateStr) ?? []
+              // Groupe par matière : nom de matière affiché une seule fois
+              // (au lieu d'une sous-ligne par fiche) → colonne bien plus courte.
+              const bySys = new Map<string, FicheOccurrence[]>()
+              occs.forEach(o => {
+                const sn = systemsById.get(o.lesson.system_id)?.name ?? 'Autre'
+                const arr = bySys.get(sn)
+                if (arr) arr.push(o)
+                else bySys.set(sn, [o])
+              })
               return (
                 <div key={i} className="cal-print-day">
                   <div className="cal-print-day-head">
@@ -662,24 +671,26 @@ export default function CalendarPage() {
                   {occs.length === 0 ? (
                     <div className="cal-print-none">—</div>
                   ) : (
-                    occs.map(occ => {
-                      const done = occ.scoreForThisJ !== null
-                      const sysName = systemsById.get(occ.lesson.system_id)?.name ?? ''
-                      return (
-                        <div
-                          key={`${occ.lesson.id}-${occ.stepIndex}`}
-                          className={`cal-print-item${done ? ' cal-print-done' : ''}`}
-                        >
-                          <span className="cal-print-box">{done ? '✓' : ''}</span>
-                          <span className="cal-print-item-body">
-                            <span className="cal-print-item-name">{occ.lesson.name}</span>
-                            <span className="cal-print-item-sub">
-                              {sysName ? `${sysName} · ` : ''}J+{J[occ.stepIndex]}
-                            </span>
-                          </span>
-                        </div>
-                      )
-                    })
+                    Array.from(bySys.entries()).map(([sysName, list]) => (
+                      <div key={sysName} className="cal-print-group">
+                        <div className="cal-print-group-name">{sysName}</div>
+                        {list.map(occ => {
+                          const done = occ.scoreForThisJ !== null
+                          return (
+                            <div
+                              key={`${occ.lesson.id}-${occ.stepIndex}`}
+                              className={`cal-print-item${done ? ' cal-print-done' : ''}`}
+                            >
+                              <span className="cal-print-box">{done ? '✓' : ''}</span>
+                              <span className="cal-print-item-name">
+                                {occ.lesson.name}
+                                <span className="cal-print-item-j"> J+{J[occ.stepIndex]}</span>
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))
                   )}
                 </div>
               )
