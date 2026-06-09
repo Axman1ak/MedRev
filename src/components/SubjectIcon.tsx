@@ -86,8 +86,9 @@ function paths(key: string): ReactElement {
     case 'chart':
       return <path d="M5 20V10M12 20V4M19 20v-7" />
     case 'mathsym':
-      // Sigma Σ — symbole mathématique pour biostatistiques.
-      return <path d="M17.5 5H6.5l6 7-6 7h11" />
+      // π (pi) — symbole mathématique lisible pour biostatistiques.
+      return <path d="M4.5 8h15M9 8v11M15 8v10.5q0 1.5 2 1" />
+
     case 'people':
       return <><circle cx="12" cy="8" r="3.4" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>
     case 'globe':
