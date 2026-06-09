@@ -1,13 +1,11 @@
 'use client'
 // src/app/dashboard/page.tsx
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import DashTodo from '@/components/DashTodo'
-import ReviewModal from '@/components/ReviewModal'
-import SubjectIcon from '@/components/SubjectIcon'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -136,26 +134,12 @@ function getNextRevDate(lesson: Lesson): string | null {
   return null
 }
 
-// Reporter / Annuler (colonnes lessons.skips / lessons.postpones — n'affectent
-// pas steps, donc moyennes/tampons/stats restent intacts).
-function lessonSkips(l: Lesson): number[] {
-  const s = (l as { skips?: unknown }).skips
-  return Array.isArray(s) ? (s as number[]) : []
-}
-function lessonPostpones(l: Lesson): Record<string, string> {
-  const p = (l as { postpones?: unknown }).postpones
-  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
-}
-
 function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
-  const skips = lessonSkips(lesson)
-  const postpones = lessonPostpones(lesson)
   for (let i = 0; i < J.length; i++) {
     if (stepScore(steps[i])) continue
-    if (skips.includes(i)) continue            // palier annulé → on passe au suivant
-    const dd = postpones[String(i)] ?? stepDate(lesson, i)  // report éventuel
+    const dd = stepDate(lesson, i)
     if (dd <= today) {
       return {
         stepIndex: i,
@@ -419,13 +403,16 @@ function readBibLocal(userId: string): BibSnapshot {
 // ======================= MINI BIBLIOTHÈQUE COMPONENT =======================
 // Aperçu compact de la bibliothèque annuelle. Utilise <BibliothecaSvg> pour
 // un rendu identique au focus, juste à plus petite échelle.
-function DashGarden({ userId }: { userId: string | null }) {
+function DashGarden({
+  userId, queueLength, startHref,
+}: { userId: string | null; queueLength: number; startHref: string }) {
   const supabase = createClient()
   const [bib, setBib] = useState<BibSnapshot | null>(null)
 
   useEffect(() => {
     if (!userId) return
     setBib(readBibLocal(userId))
+    // Pull cloud (best-effort) si plus à jour que local
     void (async () => {
       try {
         const { data } = await supabase
@@ -434,26 +421,37 @@ function DashGarden({ userId }: { userId: string | null }) {
           .eq('user_id', userId)
           .maybeSingle()
         if (!data) return
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cloudFiches = Number((data as any).fiches_count ?? 0)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
+        const cloudFiches = Number((data as any).fiches_count ?? 0)
         setBib(prev => {
           const local = prev ?? { elapsedMs: 0, fichesCount: 0 }
-          return { elapsedMs: Math.max(local.elapsedMs, cloudElapsed), fichesCount: Math.max(local.fichesCount, cloudFiches) }
+          return {
+            elapsedMs: Math.max(local.elapsedMs, cloudElapsed),
+            fichesCount: Math.max(local.fichesCount, cloudFiches),
+          }
         })
-      } catch {}
+      } catch {
+        // swallow
+      }
     })()
+
+    // Re-load si Focus écrit dans localStorage pendant que le dashboard est ouvert.
+    if (!userId) return
     const uid: string = userId
-    function onStorage(e: StorageEvent) { if (e.key === 'medrev-garden-' + uid) setBib(readBibLocal(uid)) }
+    function onStorage(e: StorageEvent) {
+      if (e.key === 'medrev-garden-' + uid) setBib(readBibLocal(uid))
+    }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [userId, supabase])
 
+  // Refresh visibilité si on revient sur l'onglet (ex: après une session focus).
   useEffect(() => {
     if (!userId) return
     const uid = userId
-    function onVisible() { if (document.visibilityState === 'visible') setBib(readBibLocal(uid)) }
+    function onVisible() {
+      if (document.visibilityState === 'visible') setBib(readBibLocal(uid))
+    }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [userId])
@@ -461,38 +459,79 @@ function DashGarden({ userId }: { userId: string | null }) {
   const fichesCount = bib?.fichesCount ?? 0
   const treasures = unlockedTreasuresCount(fichesCount)
   const upcoming = nextBibTreasure(fichesCount)
-  const progPct = Math.min(100, Math.round((treasures / 6) * 100))
 
-  const shelves = useMemo(() => {
-    const cols = ['#15304E', '#22507E', '#2E5E8E', '#3E6F9C', '#6E93B8']
-    return [0, 1].map(row => Array.from({ length: 22 }, (_, i) => {
-      const gold = (i + row * 5) % 9 === 4
-      const sh = cols[(i * 3 + row * 5) % 5]
-      const h = 30 + Math.round(Math.abs(Math.sin((i + row * 5) * 1.3)) * 30)
-      return { bg: gold ? '#BE914A' : sh, h }
-    }))
-  }, [])
+  const [showFullscreen, setShowFullscreen] = useState(false)
+
+  // Fermeture modale par ESC
+  useEffect(() => {
+    if (!showFullscreen) return
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setShowFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showFullscreen])
 
   return (
-    <div className="panel bib reveal d3">
-      <div className="phead">
-        <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h6v14H4zM10 5h6v14h-6z" strokeLinejoin="round"/><path d="M16 6l4 .8-2.4 13.3-3.9-.8" strokeLinejoin="round"/></svg></div>
-        <div><div className="ptitle">Bibliothèque</div><div className="psub">ta collection grandit</div></div>
-      </div>
-      <div className="case">
-        {shelves.map((row, r) => (
-          <div className="shelf" key={r}>
-            {row.map((b, i) => <span key={i} className="bk" style={{ background: b.bg, height: b.h }} />)}
+    <>
+      <aside className="dash-bib-side" data-tour="bib-area" aria-label="Ma bibliothèque">
+        <div className="dash-bib-thumb">
+          <BibliothecaSvg fichesCount={fichesCount} />
+        </div>
+        <div className="dash-bib-stats">
+          <span className="dash-bib-stats-num">{fichesCount}</span>
+          <span className="dash-bib-stats-tot">/ {BIBLIOTHECA_TOTAL_CAPACITY}</span>
+          <span className="dash-bib-stats-lbl">Ouvrages</span>
+        </div>
+        <div className="dash-bib-tres">
+          <div className="dash-bib-tres-dots" aria-hidden="true">
+            {BIBLIOTHECA_TREASURES.map(t => (
+              <span key={t.unlockAt} className={`dash-bib-tres-dot${fichesCount >= t.unlockAt ? ' on' : ''}`} title={`${t.unlockAt}h · ${t.name}`} />
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="bib-foot">
-        <div className="bignum">{fichesCount} <small>ouvrage{fichesCount > 1 ? 's' : ''}</small></div>
-        <div className="tres-pill"><span className="gd" />{treasures} trésor{treasures > 1 ? 's' : ''}</div>
-      </div>
-      <div className="prog"><i style={{ width: progPct + '%' }} /></div>
-      <div className="prog-lbl">{upcoming ? `prochain trésor à ${upcoming.at} h de focus` : 'tous les trésors débloqués'}</div>
-    </div>
+          <span className="dash-bib-tres-lbl">
+            {treasures}/6 trésors{upcoming ? ` · prochain à ${upcoming.at} h` : ' · complet'}
+          </span>
+        </div>
+        <Link
+          data-tour="bib-cta"
+          href={startHref}
+          className={`dash-bib-cta${queueLength === 0 ? ' disabled' : ''}`}
+          style={{ pointerEvents: 'auto' }}
+        >
+          {queueLength === 0
+            ? 'Voir la session focus'
+            : `Démarrer · ${queueLength} ${queueLength > 1 ? 'fiches' : 'fiche'}`}
+        </Link>
+        <button
+          data-tour="bib-link"
+          type="button"
+          className="dash-bib-link"
+          onClick={() => setShowFullscreen(true)}
+        >
+          Voir ma bibliothèque entièrement →
+        </button>
+      </aside>
+
+      {showFullscreen && (
+        <div
+          className="dash-bib-fullscreen"
+          role="dialog"
+          aria-label="Bibliothèque complète"
+          onClick={() => setShowFullscreen(false)}
+        >
+          <button
+            data-tour="bib-fullscreen-close"
+            type="button"
+            className="dash-bib-fullscreen-close"
+            onClick={() => setShowFullscreen(false)}
+            aria-label="Fermer"
+          >×</button>
+          <div className="dash-bib-fullscreen-stage" onClick={e => e.stopPropagation()}>
+            <BibliothecaSvg fichesCount={fichesCount} className="dash-bib-fullscreen-svg" />
+            <BibliothecaTreasuresPanel fichesCount={fichesCount} className="dash-bib-fullscreen-panel" />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -504,12 +543,9 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<{ name?: string } | null>(null)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
   const [showTodayModal, setShowTodayModal] = useState(false)
   const [showWeakModal, setShowWeakModal] = useState(false)
-  const flistRef = useRef<HTMLDivElement>(null)
-  const [flistM, setFlistM] = useState<{ h: number; stride: number }>({ h: 0, stride: 74 })
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -577,22 +613,6 @@ export default function DashboardPage() {
     if (main) main.scrollTop = 0
   }, [])
 
-  // Mesure combien de fiches « du jour » tiennent SANS scroll (hauteur réelle
-  // d'une ligne) ; au-delà : bouton « voir plus » → modale complète.
-  useEffect(() => {
-    const el = flistRef.current
-    if (!el) return
-    const compute = () => {
-      const row = el.querySelector('.fiche') as HTMLElement | null
-      const stride = (row ? row.offsetHeight : 64) + 9
-      setFlistM({ h: el.clientHeight, stride })
-    }
-    compute()
-    const ro = new ResizeObserver(compute)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [userId, lessons])
-
   // ================= DONNÉES DÉRIVÉES =================
   // En mode 'year' : tous les systèmes ; sinon filtre par semestre
   const semSystems = useMemo(
@@ -636,119 +656,120 @@ export default function DashboardPage() {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric'
   })
 
-  function openReview(lesson: Lesson) { setReviewLesson(lesson) }
-  function handleReviewUpdated(updated: Lesson) {
-    setLessons(prev => prev.map(l => (l.id === updated.id ? updated : l)))
-    setReviewLesson(prev => (prev && prev.id === updated.id ? updated : prev))
-  }
-
-  const reviewSystemName = reviewLesson
-    ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
-    : ''
-
-  // Tri par palier J croissant (plus petit J d'abord) — ordre visuel & de révision.
-  const sortedQueue = useMemo(
-    () => [...todayQueue].sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex]),
-    [todayQueue]
-  )
-  // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
-  // bouton, sinon on ne réserve que la hauteur du bouton « voir plus » (~44px),
-  // pas une ligne entière → moins de vide en bas.
-  const fitAll = Math.max(1, Math.floor((flistM.h + 9) / flistM.stride))
-  const moreThanFit = sortedQueue.length > fitAll
-  const fitWithBtn = Math.max(1, Math.floor((flistM.h - 44) / flistM.stride))
-  const visibleQueue = moreThanFit ? sortedQueue.slice(0, fitWithBtn) : sortedQueue
-  const hiddenCount = sortedQueue.length - visibleQueue.length
-
   if (!userId) return null
 
   return (
-    <div className="dvx">
-      <div className="topbar reveal d1">
+    <div className="dash-page">
+
+      {/* ====== TOP BAR ====== */}
+      <div className="dash-top">
         <div>
-          <div className="kick">{todayLabel}</div>
-          <h1 className="hi">Bonjour {firstName}</h1>
+          <h1 className="dash-title">
+            {firstName ? <>Bonjour <em>{firstName}</em></> : <>Bonjour</>}
+          </h1>
+          <div className="dash-hello">Encore une journée pour avancer.</div>
         </div>
-        <div className="search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" strokeLinecap="round"/></svg>
-          Rechercher une fiche, une matière…
+        <div className="dash-topbar-right">
+          <div className="dash-search"><span className="dash-search-ic">⌕</span> Rechercher une fiche, une matière…</div>
+          <div className="dash-date">{todayLabel}</div>
         </div>
       </div>
 
-      <div className="grid">
-        <div className="panel reveal d2">
-          <div className="phead">
-            <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 6v14M5 8v11a1 1 0 0 0 1 1h6M19 8v11a1 1 0 0 1-1 1h-6M5 8a3 3 0 0 1 3-3 4 4 0 0 1 4 3 4 4 0 0 1 4-3 3 3 0 0 1 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-            <div>
-              <div className="ptitle">Fiches du jour</div>
-              <div className="psub"><b>{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''}</b> à réviser</div>
+      {/* ====== 4 ZONES ====== */}
+      <div className="dash">
+
+        {/* ZONE 1 : AUJOURD'HUI */}
+        <div className="today">
+          <div className="today-left">
+            <div className="today-head">
+              <span className="today-label"><span className="today-label-dot" /> Fiches du jour</span>
+              <div className="today-head-actions">
+                {todayQueue.length > 5 && (
+                  <button className="see-more" onClick={() => setShowTodayModal(true)}>
+                    Voir les {todayQueue.length} révisions
+                  </button>
+                )}
+                {todayQueue.length > 0 && (
+                  <Link href={startSessionHref} className="today-start-btn">Commencer →</Link>
+                )}
+              </div>
             </div>
-            {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer →</Link>}
-          </div>
-          <div className="flist" ref={flistRef}>
+
             {todayQueue.length === 0 ? (
-              <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune révision aujourd&apos;hui. Profite de ta journée !</div>
-            ) : (<>{visibleQueue.map((p, idx) => {
-              const sys = semSystems.find(s => s.id === p.lesson.system_id)
-              const sysName = sys?.name ?? 'Matière'
-              const overdue = p.due.status === 'missed'
-              return (
-                <div
-                  key={p.lesson.id}
-                  className={`fiche${idx === 0 ? ' hot' : ''}`}
-                  onClick={() => openReview(p.lesson)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(p.lesson) }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="ftag"><SubjectIcon name={sysName} /></div>
-                  <div className="fmid">
-                    <div className="fnm">{p.lesson.name}</div>
-                    <div className="fsub">{sysName}
-                      <span className="fj">J+{J[p.due.stepIndex]}</span>
-                    </div>
-                  </div>
-                  {overdue
-                    ? <span className="badge-late">en retard · {p.due.overdueDays} j</span>
-                    : <span className="fdue">aujourd&apos;hui</span>}
+              <>
+                <h2 className="today-intro">Aucune révision pour aujourd&apos;hui</h2>
+                <div className="today-sub">Profite de ta journée, ou ajoute des fiches pour démarrer.</div>
+                <div className="today-empty">Rien à faire aujourd&apos;hui.</div>
+              </>
+            ) : (
+              <>
+                <h2 className="today-intro">{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''} à réviser aujourd&apos;hui</h2>
+                <div className="today-sub">
+                  la première est prioritaire — tu peux skip ou reporter à tout moment
                 </div>
-              )
-            })}
-            {hiddenCount > 0 && (
-              <button
-                type="button"
-                className="flist-more"
-                onClick={() => setShowTodayModal(true)}
-              >Voir {hiddenCount} fiche{hiddenCount > 1 ? 's' : ''} de plus →</button>
+
+                <div className="today-list">
+                  {todayQueue.slice(0, 5).map((p, idx) => {
+                    const sys = semSystems.find(s => s.id === p.lesson.system_id)
+                    const sysName = sys?.name ?? 'Matière'
+                    const highlight = idx === 0
+                    const overdue = p.due.status === 'missed'
+                    return (
+                      <div key={p.lesson.id} className={`today-item${highlight ? ' highlight' : ''}`}>
+                        <div className="today-item-tag">{sysName.slice(0, 2).toUpperCase()}</div>
+                        <div className="today-item-main">
+                          <div className="today-item-name">{p.lesson.name}</div>
+                          <div className="today-item-meta">
+                            <span>{sysName}</span>
+                            {p.lastScore !== null && (
+                              <span className="today-dots">
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <span key={n} className={`today-dot${n <= (p.lastScore || 0) ? ' on' : ''}`} />
+                                ))}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {overdue
+                          ? <span className="today-badge-late">en retard · {p.due.overdueDays} j</span>
+                          : <span className="today-due">aujourd&apos;hui</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
-            </>)}
           </div>
+
         </div>
 
-        <div className="col-r">
+        {/* Colonne droite : À faire + Bibliothèque */}
+        <div className="dash-right">
           <DashTodo userId={userId} />
-          <DashGarden userId={userId} />
+          <DashGarden
+            userId={userId}
+            queueLength={todayQueue.length}
+            startHref={startSessionHref}
+          />
         </div>
       </div>
 
-      {reviewLesson && (
-        <ReviewModal
-          lesson={reviewLesson}
-          systemName={reviewSystemName}
-          initialStepIdx={null}
-          onClose={() => setReviewLesson(null)}
-          onUpdated={handleReviewUpdated}
-        />
-      )}
-
+      {/* ====== MODALE : AUJOURD'HUI ====== */}
       {showTodayModal && (
         <TodayModal
-          queue={sortedQueue}
+          queue={todayQueue}
           systems={semSystems}
           startHref={startSessionHref}
           onClose={() => setShowTodayModal(false)}
           todayLabel={todayLabel}
+        />
+      )}
+
+      {/* ====== MODALE : POINT FAIBLE ====== */}
+      {showWeakModal && (
+        <WeakModal
+          stats={matiereStats}
+          onClose={() => setShowWeakModal(false)}
         />
       )}
     </div>
@@ -767,7 +788,7 @@ function TodayModal({
   onClose: () => void
   todayLabel: string
 }) {
-  const [sort, setSort] = useState<TodaySort>('j')
+  const [sort, setSort] = useState<TodaySort>('priority')
   const [subjectFilter, setSubjectFilter] = useState<string>('all')
 
   const sortedFiltered = useMemo(() => {
@@ -788,6 +809,8 @@ function TodayModal({
     return list
   }, [queue, systems, sort, subjectFilter])
 
+  const totalMin = queue.length * 8
+
   const subjectsInQueue = useMemo(() => {
     const ids = new Set(queue.map(p => p.lesson.system_id))
     return systems.filter(s => ids.has(s.id))
@@ -799,19 +822,23 @@ function TodayModal({
 
         <div className="full-header">
           <div className="full-title-wrap">
-            <div className="full-title-ic">{'●'}</div>
+            <div className="full-title-ic">{'\u25CF'}</div>
             <div>
               <h2 className="full-title">Révisions du jour</h2>
               <div className="full-sub">{todayLabel}</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
         </div>
 
         <div className="full-today-stats">
           <div>
             <div className="full-stat-label">Total</div>
             <div className="full-stat-val"><em>{queue.length}</em> révision{queue.length > 1 ? 's' : ''}</div>
+          </div>
+          <div>
+            <div className="full-stat-label">Temps estimé</div>
+            <div className="full-stat-val">~ {totalMin} <span className="small">min</span></div>
           </div>
           <Link href={startHref} className="btn-focus-lg" onClick={onClose}>
             Démarrer la session focus
@@ -857,26 +884,31 @@ function TodayModal({
             ) : sortedFiltered.map((p, idx) => {
               const sys = systems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
-              const late = p.due.status === 'missed'
+              const highlight = sort === 'priority' && idx === 0
+              const minTime = 8
               return (
-                <div key={p.lesson.id} className={`full-row${idx === 0 ? ' highlight' : ''}`}>
-                  <span className="full-row-ic"><SubjectIcon name={sysName} /></span>
-                  <div className="full-row-main">
+                <div key={p.lesson.id} className={`full-row${highlight ? ' highlight' : ''}`}>
+                  <div className="full-row-num">{highlight ? '!' : idx + 1}</div>
+                  <div>
                     <div className="full-row-name">{p.lesson.name}</div>
-                    <div className="full-row-sub">{sysName}</div>
+                    <div className="full-row-meta">
+                      {p.due.status === 'missed'
+                        ? <><strong>J+{J[p.due.stepIndex]} manqué depuis {p.due.overdueDays} j</strong> · {sysName} · ~{minTime} min</>
+                        : <>J+{J[p.due.stepIndex]} dû aujourd&apos;hui · {sysName} · ~{minTime} min</>}
+                    </div>
                   </div>
-                  <span className={`full-row-j${late ? ' late' : ''}`}>J+{J[p.due.stepIndex]}</span>
-                  <span className={`full-row-state${late ? ' late' : ''}`}>
-                    {late ? `+${p.due.overdueDays} j` : "aujourd'hui"}
-                  </span>
-                  <span className={p.lastScore ? `full-row-score s${p.lastScore}` : 'full-row-score none'}>
+                  <div className={p.lastScore ? `score-chip s${p.lastScore}` : 'score-chip none'}>
                     {p.lastScore ?? '—'}
-                  </span>
-                  <Link
-                    href={`/dashboard/focus?lesson=${p.lesson.id}`}
-                    className="full-row-go"
-                    onClick={onClose}
-                  >Faire →</Link>
+                  </div>
+                  <div className="full-row-actions">
+                    <Link
+                      href={`/dashboard/focus?lesson=${p.lesson.id}`}
+                      className="row-btn go"
+                      onClick={onClose}
+                    >
+                      Faire
+                    </Link>
+                  </div>
                 </div>
               )
             })}
@@ -904,13 +936,13 @@ function WeakModal({
 
         <div className="full-header">
           <div className="full-title-wrap">
-            <div className="full-title-ic rose">{'◆'}</div>
+            <div className="full-title-ic rose">{'\u25C6'}</div>
             <div>
               <h2 className="full-title">Toutes tes matières</h2>
               <div className="full-sub">Classées par moyenne, du plus faible au plus maîtrisé</div>
             </div>
           </div>
-          <button className="full-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
+          <button className="full-close" onClick={onClose} aria-label="Fermer">{'\u00D7'}</button>
         </div>
 
         {stats.length > 0 && (
