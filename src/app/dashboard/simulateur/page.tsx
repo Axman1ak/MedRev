@@ -838,19 +838,25 @@ export default function SimulateurPage() {
                   onClick={() => setMode('apprentissage')}
                   type="button"
                 >
-                  <div className="sim-mode-pill-ic" aria-hidden="true">
-                    <svg viewBox="0 0 72 52" width="72" height="52" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="8" width="40" height="34" rx="6" fill="currentColor" fillOpacity="0.09" />
-                      <line x1="16" y1="18" x2="38" y2="18" opacity="0.4" />
-                      <line x1="16" y1="25" x2="32" y2="25" opacity="0.4" />
-                      <line x1="16" y1="32" x2="36" y2="32" opacity="0.4" />
-                      <circle cx="51" cy="38" r="12" fill="currentColor" stroke="none" />
-                      <path d="m45.5 38 3.5 3.6 7-7.6" stroke="#fff" strokeWidth="2.4" />
+                  <span className="sim-mode-pill-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="m8.5 12 2.5 2.5 4.5-5" />
                     </svg>
-                  </div>
+                  </span>
                   <div className="sim-mode-pill-top">
                     <div className="sim-mode-pill-h">Apprentissage</div>
                     <div className="sim-mode-pill-sub">Réponse révélée + explication à chaque question. Tu apprends en faisant.</div>
+                  </div>
+                  <div className="sim-mode-pill-illus" aria-hidden="true">
+                    <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="6" y="9" width="64" height="42" rx="7" fill="currentColor" fillOpacity="0.07" />
+                      <line x1="16" y1="20" x2="58" y2="20" opacity="0.4" />
+                      <line x1="16" y1="29" x2="48" y2="29" opacity="0.4" />
+                      <line x1="16" y1="38" x2="54" y2="38" opacity="0.4" />
+                      <circle cx="92" cy="38" r="16" fill="currentColor" stroke="none" />
+                      <path d="m85 38 4.5 4.6 9-9.6" stroke="#fff" strokeWidth="2.6" />
+                    </svg>
                   </div>
                 </button>
 
@@ -859,23 +865,29 @@ export default function SimulateurPage() {
                   onClick={() => setMode('examen')}
                   type="button"
                 >
-                  <div className="sim-mode-pill-ic" aria-hidden="true">
-                    <svg viewBox="0 0 72 52" width="72" height="52" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="8" y="8" width="34" height="36" rx="5" fill="currentColor" fillOpacity="0.09" />
-                      <circle cx="16" cy="17" r="2.2" />
-                      <line x1="22" y1="17" x2="36" y2="17" opacity="0.4" />
-                      <circle cx="16" cy="26" r="2.2" fill="currentColor" stroke="none" />
-                      <line x1="22" y1="26" x2="36" y2="26" opacity="0.4" />
-                      <circle cx="16" cy="35" r="2.2" />
-                      <line x1="22" y1="35" x2="32" y2="35" opacity="0.4" />
-                      <circle cx="52" cy="36" r="12" fill="var(--card)" />
-                      <circle cx="52" cy="36" r="12" />
-                      <path d="M52 30v6.5l4.2 3" />
+                  <span className="sim-mode-pill-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 2" />
                     </svg>
-                  </div>
+                  </span>
                   <div className="sim-mode-pill-top">
                     <div className="sim-mode-pill-h">Examen blanc</div>
                     <div className="sim-mode-pill-sub">Chrono imposé, aucun feedback. Corrections à la fin, comme au concours.</div>
+                  </div>
+                  <div className="sim-mode-pill-illus" aria-hidden="true">
+                    <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="6" y="9" width="56" height="42" rx="6" fill="currentColor" fillOpacity="0.07" />
+                      <circle cx="18" cy="20" r="3" />
+                      <line x1="27" y1="20" x2="54" y2="20" opacity="0.4" />
+                      <circle cx="18" cy="30" r="3" fill="currentColor" stroke="none" />
+                      <line x1="27" y1="30" x2="54" y2="30" opacity="0.4" />
+                      <circle cx="18" cy="40" r="3" />
+                      <line x1="27" y1="40" x2="48" y2="40" opacity="0.4" />
+                      <circle cx="93" cy="37" r="17" fill="var(--card)" />
+                      <circle cx="93" cy="37" r="17" />
+                      <path d="M93 27v10l6 4" />
+                    </svg>
                   </div>
                 </button>
               </div>

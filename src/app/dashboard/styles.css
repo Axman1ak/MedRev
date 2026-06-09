@@ -52,6 +52,7 @@
 .dvx .fmid{flex:1;min-width:0}
 .dvx .fnm{font-size:15.5px;font-weight:600;color:var(--ink)}
 .dvx .fsub{font-size:12px;color:var(--gray);margin-top:1px;display:flex;align-items:center}
+.dvx .fj{margin-left:8px;font-size:11px;font-weight:700;color:var(--marine2);background:var(--marine-soft);padding:1px 7px;border-radius:6px;font-variant-numeric:tabular-nums;flex-shrink:0}
 .dvx .dots{display:inline-flex;gap:3px;margin-left:8px;vertical-align:middle}
 .dvx .dot{width:6px;height:6px;border-radius:50%;background:var(--line2)}
 .dvx .dot.f{background:var(--marine2)}
@@ -63,7 +64,7 @@
 .dvx .fa-btn{font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--gray);background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:5px 10px;cursor:pointer;transition:.15s;white-space:nowrap}
 .dvx .fa-btn:hover{border-color:var(--marine3);color:var(--marine2)}
 .dvx .fa-skip:hover{border-color:var(--alert);color:var(--alert)}
-.dvx .flist-more{margin-top:4px;padding:12px;border:1px dashed var(--line2);background:transparent;border-radius:12px;color:var(--marine2);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;flex-shrink:0;text-align:center}
+.dvx .flist-more{margin-top:4px;padding:9px;border:1px dashed var(--line2);background:transparent;border-radius:12px;color:var(--marine2);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;flex-shrink:0;text-align:center}
 .dvx .flist-more:hover{background:var(--marine-soft);border-color:var(--marine3)}
 
 .dvx .todo{display:flex;align-items:center;gap:11px;padding:8px 0;font-size:14.5px}

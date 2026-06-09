@@ -509,7 +509,7 @@ export default function DashboardPage() {
   const [showTodayModal, setShowTodayModal] = useState(false)
   const [showWeakModal, setShowWeakModal] = useState(false)
   const flistRef = useRef<HTMLDivElement>(null)
-  const [fitFiches, setFitFiches] = useState(6)
+  const [flistM, setFlistM] = useState<{ h: number; stride: number }>({ h: 0, stride: 74 })
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -585,7 +585,7 @@ export default function DashboardPage() {
     const compute = () => {
       const row = el.querySelector('.fiche') as HTMLElement | null
       const stride = (row ? row.offsetHeight : 64) + 9
-      setFitFiches(Math.max(1, Math.floor((el.clientHeight + 9) / stride)))
+      setFlistM({ h: el.clientHeight, stride })
     }
     compute()
     const ro = new ResizeObserver(compute)
@@ -651,8 +651,13 @@ export default function DashboardPage() {
     () => [...todayQueue].sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex]),
     [todayQueue]
   )
-  const moreThanFit = sortedQueue.length > fitFiches
-  const visibleQueue = moreThanFit ? sortedQueue.slice(0, Math.max(1, fitFiches - 1)) : sortedQueue
+  // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
+  // bouton, sinon on ne réserve que la hauteur du bouton « voir plus » (~44px),
+  // pas une ligne entière → moins de vide en bas.
+  const fitAll = Math.max(1, Math.floor((flistM.h + 9) / flistM.stride))
+  const moreThanFit = sortedQueue.length > fitAll
+  const fitWithBtn = Math.max(1, Math.floor((flistM.h - 44) / flistM.stride))
+  const visibleQueue = moreThanFit ? sortedQueue.slice(0, fitWithBtn) : sortedQueue
   const hiddenCount = sortedQueue.length - visibleQueue.length
 
   if (!userId) return null
@@ -687,7 +692,6 @@ export default function DashboardPage() {
               const sys = semSystems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
               const overdue = p.due.status === 'missed'
-              const score = p.lastScore || 0
               return (
                 <div
                   key={p.lesson.id}
@@ -702,7 +706,7 @@ export default function DashboardPage() {
                   <div className="fmid">
                     <div className="fnm">{p.lesson.name}</div>
                     <div className="fsub">{sysName}
-                      <span className="dots">{[1, 2, 3, 4, 5].map(n => <span key={n} className={`dot${n <= score ? ' f' : ''}`} />)}</span>
+                      <span className="fj">J+{J[p.due.stepIndex]}</span>
                     </div>
                   </div>
                   {overdue

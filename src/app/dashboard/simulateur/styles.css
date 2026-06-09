@@ -359,7 +359,7 @@
   border-color: var(--gm);
   background: var(--gl);
 }
-.sim-mode-pill-top { flex-shrink: 0; order: 1; }
+.sim-mode-pill-top { flex-shrink: 0; }
 .sim-mode-pill-h {
   font-family: var(--font-bricolage), serif;
   font-size: 17px;
@@ -379,16 +379,25 @@
 
 /* === MODE — icône claire unique par carte === */
 .sim-mode-pill-ic {
-  width: 72px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   color: var(--gm);
   display: flex;
   align-items: center;
   justify-content: center;
-  order: 2;
-  margin-top: 16px;
 }
+.sim-mode-pill-illus {
+  flex: 1;
+  min-height: 78px;
+  margin-top: 6px;
+  color: var(--gm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sim-mode-pill-illus svg { width: 100%; height: 100%; max-height: 92px; }
+.sim-mode-pill.sel .sim-mode-pill-illus { color: var(--green); }
 .sim-mode-pill-ic svg { width: 100%; height: 100%; }
 .sim-mode-pill.sel .sim-mode-pill-ic { color: var(--green); }
 
