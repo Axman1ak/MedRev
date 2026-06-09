@@ -1688,8 +1688,9 @@
   align-content: start;
 }
 .sim-wiz-fiche {
+  --chip: var(--gm);
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  grid-template-columns: 16px 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   padding: 8px 11px;
@@ -1700,6 +1701,22 @@
   transition: all .12s;
   text-align: left;
   font-family: inherit;
+}
+.sim-wiz-fiche-ic {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--chip);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sim-wiz-fiche-ic svg { width: 100%; height: 100%; }
+.sim-wiz-fiche-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 .sim-wiz-fiche:hover { border-color: var(--gm); }
 .sim-wiz-fiche.sel { background: var(--gl); border-color: var(--gm); }
@@ -1755,6 +1772,34 @@
   gap: 12px;
   margin-top: 6px;
 }
+/* Variante "remplit l'écran, centrée" pour l'étape source */
+.sim-wiz-body-center { justify-content: center; }
+.sim-wiz-cards-big {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 10px;
+  align-items: stretch;
+}
+.sim-wiz-cards-big .sim-wiz-card {
+  padding: 34px 26px;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 240px;
+}
+.sim-wiz-card-ic {
+  width: 46px;
+  height: 46px;
+  color: var(--gm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+.sim-wiz-card-ic svg { width: 100%; height: 100%; }
+.sim-wiz-card.sel .sim-wiz-card-ic { color: var(--green); }
+.sim-wiz-cards-big .sim-wiz-card-h { font-size: 20px; }
+.sim-wiz-cards-big .sim-wiz-card-sub { font-size: 13.5px; }
 .sim-wiz-card {
   padding: 22px 22px;
   border-radius: 12px;
@@ -1816,8 +1861,97 @@
   min-height: 320px;
 }
 
-/* --- Étape 4 : réglages + récap --- */
+/* --- Étape 4 : conditions d'examen + récap --- */
 .sim-wiz-settings { margin-top: 6px; margin-bottom: 18px; }
+.sim-exam-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 6px;
+  margin-bottom: 16px;
+}
+.sim-exam-card {
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sim-exam-card-h {
+  font-family: var(--font-bricolage), serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--dark);
+  letter-spacing: -.01em;
+}
+.sim-exam-card-note {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--gray);
+  margin-bottom: 6px;
+}
+.sim-exam-card .sim-opt-pills { gap: 6px; }
+
+/* Barème (lecture seule, imposé par la fac) */
+.sim-bareme {
+  background: var(--gl);
+  border: 1.5px solid var(--gm);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sim-bareme-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.sim-bareme-tag {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: #fff;
+  background: var(--gm);
+  border-radius: 999px;
+  padding: 3px 11px;
+}
+.sim-bareme-fac {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--gm);
+  margin-right: auto;
+}
+.sim-bareme-label {
+  font-family: var(--font-bricolage), serif;
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--green);
+  letter-spacing: -.01em;
+}
+.sim-bareme-desc {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 13px;
+  color: var(--dark);
+  line-height: 1.45;
+}
+.sim-bareme-note {
+  font-family: var(--font-hanken), serif;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--gray);
+  margin-top: 4px;
+}
+
 .sim-opt-pill:disabled {
   opacity: .4;
   cursor: not-allowed;
@@ -1947,4 +2081,8 @@
   .sim-wiz-body { padding: 20px 18px; }
   .sim-wiz-q { font-size: 20px; }
   .sim-nav-btn.launch { min-width: 0; flex: 1; }
+  .sim-wiz-cards-big { grid-template-columns: 1fr; }
+  .sim-wiz-cards-big .sim-wiz-card { min-height: 0; padding: 22px 20px; }
+  .sim-exam-grid { grid-template-columns: 1fr; }
+  .sim-wiz-body-center { justify-content: flex-start; }
 }

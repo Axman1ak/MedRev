@@ -556,7 +556,7 @@ export default function SimulateurPage() {
       { n: 1, label: 'Quoi réviser' },
       { n: 2, label: 'Avec quoi' },
       { n: 3, label: 'Comment' },
-      { n: 4, label: 'Réglages' },
+      { n: 4, label: 'Conditions' },
     ]
 
     return (
@@ -593,9 +593,7 @@ export default function SimulateurPage() {
           {step === 1 && (
             <div className="sim-wiz-body">
               <div className="sim-wiz-q">Quoi réviser ?</div>
-              <div className="sim-wiz-hint">
-                Choisis les matières. Tu pourras affiner par fiche juste en dessous.
-              </div>
+              <div className="sim-wiz-hint">Choisis tes matières.</div>
 
               <div className="sim-wiz-mat-head">
                 <span className="sim-wiz-mat-count">
@@ -685,6 +683,7 @@ export default function SimulateurPage() {
                       })
                       .map(l => {
                         const checked = selectedLessonIds.has(l.id)
+                        const ficheColor = colorOfSystem.get(l.systemId) ?? PALETTE[0]
                         return (
                           <button
                             key={l.id}
@@ -695,10 +694,14 @@ export default function SimulateurPage() {
                               if (checked) next.delete(l.id); else next.add(l.id)
                               setSelectedLessonIds(next)
                             }}
+                            style={{ ['--chip' as never]: ficheColor }}
                           >
                             <span className="sim-wiz-fiche-check" />
-                            <span className="sim-wiz-fiche-name">{l.name}</span>
-                            <span className="sim-wiz-fiche-sys">{l.systemName}</span>
+                            <span className="sim-wiz-fiche-ic"><SubjectIcon name={l.systemName} /></span>
+                            <span className="sim-wiz-fiche-main">
+                              <span className="sim-wiz-fiche-name">{l.name}</span>
+                              <span className="sim-wiz-fiche-sys">{l.systemName}</span>
+                            </span>
                             <span className="sim-wiz-fiche-q">{l.qCount}</span>
                           </button>
                         )
@@ -711,18 +714,23 @@ export default function SimulateurPage() {
 
           {/* ====================== ÉTAPE 2 — Source ====================== */}
           {step === 2 && (
-            <div className="sim-wiz-body">
+            <div className="sim-wiz-body sim-wiz-body-center">
               <div className="sim-wiz-q">Avec quoi tu révises ?</div>
               <div className="sim-wiz-hint">La source des questions de cette session.</div>
 
-              <div className="sim-wiz-cards">
+              <div className="sim-wiz-cards sim-wiz-cards-big">
                 <button
                   type="button"
                   className={`sim-wiz-card${source === 'genere' ? ' sel' : ''}`}
                   onClick={() => setSource('genere')}
                 >
+                  <span className="sim-wiz-card-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2Z" />
+                    </svg>
+                  </span>
                   <div className="sim-wiz-card-h">QCM généré</div>
-                  <div className="sim-wiz-card-sub">Les questions générées par l&apos;IA depuis tes fiches.</div>
+                  <div className="sim-wiz-card-sub">Questions générées par l&apos;IA depuis tes fiches.</div>
                 </button>
 
                 <button
@@ -730,8 +738,15 @@ export default function SimulateurPage() {
                   className={`sim-wiz-card${source === 'rate' ? ' sel' : ''}`}
                   onClick={() => setSource('rate')}
                 >
+                  <span className="sim-wiz-card-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a10 10 0 1 0 10 10" />
+                      <path d="M22 12A10 10 0 0 0 12 2v10Z" />
+                      <path d="m8 12 3 3 5-6" />
+                    </svg>
+                  </span>
                   <div className="sim-wiz-card-h">{"Ce que j'ai raté"}</div>
-                  <div className="sim-wiz-card-sub">Priorise tes points faibles, à partir de tes fiches les plus basses.</div>
+                  <div className="sim-wiz-card-sub">Priorise tes points faibles, tes fiches les plus basses.</div>
                 </button>
 
                 <button
@@ -740,6 +755,12 @@ export default function SimulateurPage() {
                   disabled
                   aria-disabled="true"
                 >
+                  <span className="sim-wiz-card-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                      <path d="M14 2v6h6M9 13h6M9 17h6" />
+                    </svg>
+                  </span>
                   <div className="sim-wiz-card-h">
                     Annales
                     <span className="sim-wiz-badge">Bientôt</span>
@@ -827,12 +848,34 @@ export default function SimulateurPage() {
           {/* ====================== ÉTAPE 4 — Réglages + récap ====================== */}
           {step === 4 && (
             <div className="sim-wiz-body">
-              <div className="sim-wiz-q">Derniers réglages</div>
-              <div className="sim-wiz-hint">Combien de questions, et combien de temps.</div>
+              <div className="sim-wiz-q">Conditions d&apos;examen</div>
+              <div className="sim-wiz-hint">
+                On reproduit les conditions du jour J : durée, nombre de questions et barème de ta fac.
+              </div>
 
-              <div className="sim-opt-row sim-wiz-settings">
-                <div className="sim-opt-card">
-                  <div className="sim-opt-h">Nb questions</div>
+              <div className="sim-exam-grid">
+                <div className="sim-exam-card">
+                  <div className="sim-exam-card-h">Durée de l&apos;épreuve</div>
+                  <div className="sim-exam-card-note">Le chronomètre est imposé, comme à l&apos;examen.</div>
+                  <div className="sim-opt-pills">
+                    {[15, 30, 45, null].map(d => (
+                      <button
+                        key={d ?? 'libre'}
+                        type="button"
+                        className={`sim-opt-pill${duration === d ? ' sel' : ''}`}
+                        onClick={() => setDuration(d)}
+                      >
+                        {d === null ? 'Libre' : `${d} min`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sim-exam-card">
+                  <div className="sim-exam-card-h">Nombre de questions</div>
+                  <div className="sim-exam-card-note">
+                    {totalAvailable > 0 ? `${totalAvailable} disponibles au total.` : 'Aucune question disponible.'}
+                  </div>
                   <div className="sim-opt-pills">
                     {[10, 20, 30, 50].map(n => {
                       const disabled = totalAvailable > 0 && n > totalAvailable
@@ -850,20 +893,19 @@ export default function SimulateurPage() {
                     })}
                   </div>
                 </div>
-                <div className="sim-opt-card">
-                  <div className="sim-opt-h">Durée</div>
-                  <div className="sim-opt-pills">
-                    {[15, 30, 45, null].map(d => (
-                      <button
-                        key={d ?? 'libre'}
-                        type="button"
-                        className={`sim-opt-pill${duration === d ? ' sel' : ''}`}
-                        onClick={() => setDuration(d)}
-                      >
-                        {d === null ? 'Libre' : d}
-                      </button>
-                    ))}
-                  </div>
+              </div>
+
+              <div className="sim-bareme">
+                <div className="sim-bareme-head">
+                  <span className="sim-bareme-tag">Barème automatique</span>
+                  <span className="sim-bareme-fac">
+                    {profile?.fac ? `Appliqué selon ta fac · ${profile.fac}` : 'Appliqué selon ta fac'}
+                  </span>
+                </div>
+                <div className="sim-bareme-label">{scoring.label}</div>
+                <div className="sim-bareme-desc">{scoring.desc}</div>
+                <div className="sim-bareme-note">
+                  Tu ne choisis pas le barème : il est appliqué automatiquement, comme le jour de l&apos;examen.
                 </div>
               </div>
 
@@ -871,10 +913,12 @@ export default function SimulateurPage() {
                 <div className="sim-wiz-recap-h">Récapitulatif</div>
                 <div className="sim-wiz-recap-grid">
                   <div className="sim-wiz-recap-row">
-                    <span className="sim-wiz-recap-l">Portée</span>
-                    <span className="sim-wiz-recap-v">
-                      {nbMatieres} matière{nbMatieres > 1 ? 's' : ''} · {nbFiches} fiche{nbFiches > 1 ? 's' : ''}
-                    </span>
+                    <span className="sim-wiz-recap-l">Matières</span>
+                    <span className="sim-wiz-recap-v">{nbMatieres}</span>
+                  </div>
+                  <div className="sim-wiz-recap-row">
+                    <span className="sim-wiz-recap-l">Fiches</span>
+                    <span className="sim-wiz-recap-v">{nbFiches}</span>
                   </div>
                   <div className="sim-wiz-recap-row">
                     <span className="sim-wiz-recap-l">Source</span>
@@ -891,6 +935,10 @@ export default function SimulateurPage() {
                   <div className="sim-wiz-recap-row">
                     <span className="sim-wiz-recap-l">Durée</span>
                     <span className="sim-wiz-recap-v">{duration ? `${duration} min` : 'Libre'}</span>
+                  </div>
+                  <div className="sim-wiz-recap-row">
+                    <span className="sim-wiz-recap-l">Barème</span>
+                    <span className="sim-wiz-recap-v">{scoring.label}</span>
                   </div>
                 </div>
               </div>
