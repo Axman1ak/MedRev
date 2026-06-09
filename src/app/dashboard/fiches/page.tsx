@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
-import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -545,15 +544,11 @@ export default function FichesPage() {
                   tabIndex={0}
                   onClick={() => { setSelectedSystemId(sys.id); setShowDueOnly(false) }}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelectedSystemId(sys.id); setShowDueOnly(false) } }}
-                  style={active ? { background: c, borderColor: c } : undefined}
+                  style={{ position: 'relative' }}
                 >
-                  <span className="micon" style={active ? undefined : { color: c, background: `${c}1A` }}>
-                    <SubjectIcon name={sys.name} />
-                  </span>
-                  <span className="mtab-txt">
-                    <span className="nm">{sys.name}</span>
-                    <span className="ct">{counts.total} fiche{counts.total > 1 ? 's' : ''}</span>
-                  </span>
+                  <span className="mdot" style={{ background: c }} />
+                  <span className="nm">{sys.name}</span>
+                  <span className="ct">{counts.total}</span>
                   {counts.due > 0 && <span className="urg" />}
                   <button
                     type="button"
@@ -578,6 +573,15 @@ export default function FichesPage() {
               )
             })}
 
+            {dueTodayCount > 0 && (
+              <button
+                className={`mtab-review${showDueOnly ? ' active' : ''}`}
+                onClick={() => setShowDueOnly(v => !v)}
+              >
+                À réviser
+                <span className="ct">{dueTodayCount}</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -794,7 +798,7 @@ export default function FichesPage() {
                     border: `1.5px solid ${newSysSemestre === s ? 'var(--accent-medium)' : 'var(--border)'}`,
                     background: newSysSemestre === s ? 'var(--accent-soft)' : 'var(--card)',
                     color: newSysSemestre === s ? 'var(--accent-on-soft)' : 'var(--gray)',
-                    fontFamily: "var(--font-hanken), sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                    fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer'
                   }}>
                     Semestre {s}
                   </button>
