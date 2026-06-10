@@ -284,14 +284,6 @@
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
-.stats-card-title::before {
-  content: '';
-  width: 4px;
-  height: 12px;
-  background: var(--gm);
-  border-radius: 2px;
-  flex-shrink: 0;
-}
 .stats-card-sub {
   font-family: var(--font-bricolage), serif;
   font-weight: 400;
@@ -1120,18 +1112,14 @@
   min-width: 0;
 }
 .st-col .stats-card { margin-bottom: 0; }
-.st-fill {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.st-fill .st-sys-list,
-.st-fill .st-next-list {
-  flex: 1;
-  min-height: 0;
+/* Les cartes gardent leur hauteur naturelle (pas d'étirement = pas de
+   grands vides blancs). La colonne scrolle en interne si vraiment trop
+   de contenu — la page, elle, ne bouge pas. */
+.st-fill { display: flex; flex-direction: column; }
+.st-col {
   overflow-y: auto;
   scrollbar-width: thin;
+  padding-bottom: 2px;
 }
 /* La grille une-page compresse un peu le héros */
 .st-hero2 { padding: 18px 22px; gap: 26px; margin-bottom: 0; }
@@ -1145,7 +1133,7 @@
 }
 
 /* Mini heatmap 12 semaines (plan Premium) */
-.st-mini-heat { margin-top: auto; padding-top: 14px; }
+.st-mini-heat { padding-top: 14px; }
 .st-mini-heat-grid {
   display: flex;
   gap: 3px;
@@ -1154,12 +1142,11 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  flex: 1;
 }
 .st-mini-heat-grid .stats-heatmap-cell {
-  width: auto;
-  aspect-ratio: 1;
-  height: auto;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
 }
 .st-mini-heat-lbl {
   margin-top: 7px;
