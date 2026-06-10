@@ -9,7 +9,7 @@ import DashTodo from '@/components/DashTodo'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
-import type { System, Lesson } from '@/types'
+import type { System, Lesson, TdEvent } from '@/types'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -510,6 +510,20 @@ export default function DashboardPage() {
   const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
   const [showTodayModal, setShowTodayModal] = useState(false)
+  // TD du jour (table td_events) — affichés en tête du panneau Fiches du jour.
+  const [todayTds, setTodayTds] = useState<TdEvent[]>([])
+  useEffect(() => {
+    if (!userId) return
+    const dateStr = new Date().toISOString().split('T')[0]
+    supabase
+      .from('td_events')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', dateStr)
+      .order('start_time')
+      .then(({ data }) => setTodayTds((data as TdEvent[] | null) ?? []))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
   const [showWeakModal, setShowWeakModal] = useState(false)
   const flistRef = useRef<HTMLDivElement>(null)
   const [flistM, setFlistM] = useState<{ h: number; stride: number }>({ h: 0, stride: 74 })
@@ -665,6 +679,13 @@ export default function DashboardPage() {
 
   if (!userId) return null
 
+  // "14:00:00" → "14h" · "14:30:00" → "14h30"
+  const fmtTd = (t: string | null) => {
+    if (!t) return ''
+    const [h, m] = t.split(':')
+    return m === '00' ? `${parseInt(h, 10)}h` : `${parseInt(h, 10)}h${m}`
+  }
+
   return (
     <div className="dvx">
       <div className="topbar reveal d1">
@@ -688,6 +709,23 @@ export default function DashboardPage() {
             </div>
             {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer →</Link>}
           </div>
+
+          {/* TD du jour — l'emploi du temps réel passe avant les révisions */}
+          {todayTds.length > 0 && (
+            <Link href="/dashboard/calendar" className="td-today" title="Voir le calendrier">
+              {todayTds.map(td => (
+                <span key={td.id} className="td-today-row">
+                  <strong className="td-today-time">
+                    {td.start_time ? fmtTd(td.start_time) : 'TD'}
+                    {td.end_time ? `–${fmtTd(td.end_time)}` : ''}
+                  </strong>
+                  <span className="td-today-title">{td.title}</span>
+                  {td.location && <span className="td-today-loc">{td.location}</span>}
+                </span>
+              ))}
+            </Link>
+          )}
+
           <div className="flist" ref={flistRef}>
             {todayQueue.length === 0 ? (
               <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune révision aujourd&apos;hui. Profite de ta journée !</div>

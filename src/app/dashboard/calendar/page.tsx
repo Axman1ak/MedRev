@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { System, Lesson } from '@/types'
+import type { System, Lesson, TdEvent } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
@@ -77,6 +77,21 @@ function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0]
 }
 
+// "14:00:00" → "14h" · "14:30:00" → "14h30" · null → ''
+function fmtTdTime(t: string | null): string {
+  if (!t) return ''
+  const [h, m] = t.split(':')
+  return m === '00' ? `${parseInt(h, 10)}h` : `${parseInt(h, 10)}h${m}`
+}
+
+// Plage horaire compacte d'un TD : "14h–16h", "14h", ou ''.
+function tdTimeRange(td: TdEvent): string {
+  const a = fmtTdTime(td.start_time)
+  const b = fmtTdTime(td.end_time)
+  if (a && b) return `${a}–${b}`
+  return a || b
+}
+
 // Reporter / Annuler (colonnes lessons.skips / lessons.postpones).
 function lessonSkips(l: Lesson): number[] {
   const s = (l as { skips?: unknown }).skips
@@ -143,6 +158,20 @@ export default function CalendarPage() {
   const [view, setView] = useState<'week' | 'month'>('week')
   const [showAllForDay, setShowAllForDay] = useState<string | null>(null)
   const [reviewing, setReviewing] = useState<{ lesson: Lesson; stepIdx: number } | null>(null)
+
+  // TD de fac (table td_events) — type d'événement à part des révisions.
+  const [tds, setTds] = useState<TdEvent[]>([])
+  // Modal TD : null = fermé · 'new' = création · TdEvent = édition.
+  const [tdModal, setTdModal] = useState<'new' | TdEvent | null>(null)
+  const [tdTitle, setTdTitle] = useState('')
+  const [tdSysId, setTdSysId] = useState('')
+  const [tdDate, setTdDate] = useState('')
+  const [tdStart, setTdStart] = useState('')
+  const [tdEnd, setTdEnd] = useState('')
+  const [tdLocation, setTdLocation] = useState('')
+  const [tdRepeatUntil, setTdRepeatUntil] = useState('')
+  const [tdSaving, setTdSaving] = useState(false)
+  const [tdError, setTdError] = useState<string | null>(null)
   const weekRef = useRef<HTMLDivElement>(null)
   const [weekPx, setWeekPx] = useState(0)
   const monthRef = useRef<HTMLDivElement>(null)
@@ -152,12 +181,14 @@ export default function CalendarPage() {
 
   // ============= Load =============
   const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }] = await Promise.all([
+    const [{ data: sys }, { data: les }, { data: td }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid),
+      supabase.from('td_events').select('*').eq('user_id', uid).order('date').order('start_time'),
     ])
     setSystems((sys as System[] | null) ?? [])
     setLessons((les as Lesson[] | null) ?? [])
+    setTds((td as TdEvent[] | null) ?? [])
   }, [supabase])
 
   useEffect(() => {
@@ -228,6 +259,18 @@ export default function CalendarPage() {
 
   const occurrences = useMemo(() => computeOccurrences(semLessons), [semLessons])
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences])
+
+  // TD groupés par date (non filtrés par semestre : c'est l'emploi du temps réel).
+  const tdsByDate = useMemo(() => {
+    const map = new Map<string, TdEvent[]>()
+    tds.forEach(td => {
+      const list = map.get(td.date)
+      if (list) list.push(td)
+      else map.set(td.date, [td])
+    })
+    map.forEach(list => list.sort((a, b) => (a.start_time ?? '') < (b.start_time ?? '') ? -1 : 1))
+    return map
+  }, [tds])
 
   // ============= Week computations =============
   const weekMonday = useMemo(() => {
@@ -318,6 +361,86 @@ export default function CalendarPage() {
     else setMonthOffset(m => m + 1)
   }
 
+  // ---- TD : création / édition / suppression ----
+  function openTdNew(dateStr?: string) {
+    setTdTitle(''); setTdSysId(''); setTdDate(dateStr ?? today)
+    setTdStart(''); setTdEnd(''); setTdLocation(''); setTdRepeatUntil('')
+    setTdError(null)
+    setTdModal('new')
+  }
+
+  function openTdEdit(td: TdEvent) {
+    setTdTitle(td.title); setTdSysId(td.system_id ?? ''); setTdDate(td.date)
+    setTdStart(td.start_time ? td.start_time.slice(0, 5) : '')
+    setTdEnd(td.end_time ? td.end_time.slice(0, 5) : '')
+    setTdLocation(td.location ?? ''); setTdRepeatUntil('')
+    setTdError(null)
+    setTdModal(td)
+  }
+
+  async function saveTd() {
+    if (!userId || !tdTitle.trim() || !tdDate || tdSaving) return
+    setTdSaving(true)
+    setTdError(null)
+    const base = {
+      user_id: userId,
+      system_id: tdSysId || null,
+      title: tdTitle.trim(),
+      start_time: tdStart || null,
+      end_time: tdEnd || null,
+      location: tdLocation.trim() || null,
+    }
+    try {
+      if (tdModal === 'new') {
+        // Récurrence par duplication : une row par semaine jusqu'à la date
+        // limite (cap 30 occurrences = ~7 mois, garde-fou anti-typo).
+        const dates: string[] = [tdDate]
+        if (tdRepeatUntil && tdRepeatUntil > tdDate) {
+          let d = tdDate
+          while (dates.length < 30) {
+            d = addDaysToDate(new Date(d + 'T12:00:00'), 7).toISOString().split('T')[0]
+            if (d > tdRepeatUntil) break
+            dates.push(d)
+          }
+        }
+        const { data, error } = await supabase
+          .from('td_events')
+          .insert(dates.map(date => ({ ...base, date })))
+          .select()
+        if (error) throw error
+        setTds(prev => [...prev, ...((data as TdEvent[] | null) ?? [])])
+      } else if (tdModal) {
+        const { data, error } = await supabase
+          .from('td_events')
+          .update({ ...base, date: tdDate })
+          .eq('id', tdModal.id)
+          .select()
+          .single()
+        if (error) throw error
+        setTds(prev => prev.map(t => (t.id === tdModal.id ? (data as TdEvent) : t)))
+      }
+      setTdModal(null)
+    } catch (e) {
+      setTdError(e instanceof Error ? e.message : 'Enregistrement impossible. Réessaie.')
+    } finally {
+      setTdSaving(false)
+    }
+  }
+
+  async function deleteTd(id: string) {
+    setTdSaving(true)
+    try {
+      const { error } = await supabase.from('td_events').delete().eq('id', id)
+      if (error) throw error
+      setTds(prev => prev.filter(t => t.id !== id))
+      setTdModal(null)
+    } catch (e) {
+      setTdError(e instanceof Error ? e.message : 'Suppression impossible.')
+    } finally {
+      setTdSaving(false)
+    }
+  }
+
   function clickMonthDay(d: Date) {
     const thisMonday = getMondayOfWeek(new Date())
     const targetMonday = getMondayOfWeek(d)
@@ -329,12 +452,14 @@ export default function CalendarPage() {
   // Combien de rectangles tiennent dans une colonne semaine (hauteur fixe).
   // ROW_H = hauteur rectangle (30) + gap (4) ; DAY_HEAD_H/LIST_PAD = chrome colonne.
   const DAY_HEAD_H = 62, LIST_PAD = 18, ROW_H = 34, MORE_H = 34
-  function daySlots(count: number): { visible: number; overflow: number } {
+  // tdCount : les TD du jour occupent leurs propres lignes en haut de la
+  // colonne — on les retranche de la place disponible pour les fiches.
+  function daySlots(count: number, tdCount: number): { visible: number; overflow: number } {
     if (!weekPx) {
-      const v = Math.min(count, 8)
+      const v = Math.min(count, Math.max(1, 8 - tdCount))
       return { visible: v, overflow: count - v }
     }
-    const avail = weekPx - DAY_HEAD_H - LIST_PAD
+    const avail = weekPx - DAY_HEAD_H - LIST_PAD - tdCount * ROW_H
     const maxFull = Math.max(1, Math.floor(avail / ROW_H))
     if (count <= maxFull) return { visible: count, overflow: 0 }
     const v = Math.max(1, Math.floor((avail - MORE_H) / ROW_H))
@@ -396,7 +521,14 @@ export default function CalendarPage() {
             <button className="cal-today-btn" onClick={goToday}>Aujourd&apos;hui</button>
             <button onClick={next} aria-label="Suivant">{'›'}</button>
           </div>
-          {view === 'week' && hasAnyLesson && (
+          <button
+            className="cal-td-trigger"
+            onClick={() => openTdNew()}
+            title="Ajouter un TD / cours dans le calendrier"
+          >
+            + TD
+          </button>
+          {view === 'week' && (hasAnyLesson || tds.length > 0) && (
             <button
               className="cal-print-trigger"
               onClick={() => window.print()}
@@ -413,7 +545,7 @@ export default function CalendarPage() {
       </div>
 
       {/* EMPTY STATE */}
-      {!hasAnyLesson && (
+      {!hasAnyLesson && tds.length === 0 && (
         <div className="cal-empty-state">
           <div className="cal-empty-icon" aria-hidden>▦</div>
           <div className="cal-empty-title">
@@ -431,14 +563,15 @@ export default function CalendarPage() {
       )}
 
       {/* WEEK VIEW */}
-      {hasAnyLesson && view === 'week' && (
+      {(hasAnyLesson || tds.length > 0) && view === 'week' && (
         <div className="cal-week" ref={weekRef}>
           {weekDays.map((day, i) => {
             const dateStr = toDateStr(day)
             const occs = byDate.get(dateStr) ?? []
+            const dayTds = tdsByDate.get(dateStr) ?? []
             const isToday = dateStr === today
             const isPast = dateStr < today
-            const { visible, overflow } = daySlots(occs.length)
+            const { visible, overflow } = daySlots(occs.length, dayTds.length)
             const shown = occs.slice(0, visible)
 
             const classes = [
@@ -461,8 +594,30 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
+                {/* TD du jour — toujours en tête de colonne, bord couleur matière */}
+                {dayTds.length > 0 && (
+                  <div className="cal-tds">
+                    {dayTds.map(td => {
+                      const sys = td.system_id ? systemsById.get(td.system_id) : undefined
+                      const c = (sys as unknown as { color?: string } | undefined)?.color
+                      return (
+                        <button
+                          key={td.id}
+                          className="cal-td"
+                          style={c ? { borderLeftColor: c } : undefined}
+                          onClick={() => openTdEdit(td)}
+                          title={`${td.title}${sys ? ' · ' + sys.name : ''}${td.location ? ' · ' + td.location : ''}`}
+                        >
+                          {tdTimeRange(td) && <span className="cal-td-time">{tdTimeRange(td)}</span>}
+                          <span className="cal-td-title">{td.title}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
                 {occs.length === 0 ? (
-                  <div className="cal-day-empty">{'·'}</div>
+                  dayTds.length === 0 ? <div className="cal-day-empty">{'·'}</div> : <div style={{ flex: 1 }} />
                 ) : (
                   <>
                     <div className="cal-day-list">
@@ -504,7 +659,7 @@ export default function CalendarPage() {
       )}
 
       {/* MONTH VIEW */}
-      {hasAnyLesson && view === 'month' && (
+      {(hasAnyLesson || tds.length > 0) && view === 'month' && (
         <div className="cal-month">
           <div className="cal-month-head">
             {DAY_LABELS.map(d => (
@@ -516,9 +671,13 @@ export default function CalendarPage() {
               if (!day) return <div key={i} className="cal-month-cell cal-empty" />
               const dateStr = toDateStr(day)
               const occs = byDate.get(dateStr) ?? []
+              const mTds = tdsByDate.get(dateStr) ?? []
               const isToday = dateStr === today
               const isPast = dateStr < today
-              const { visible: mVisible, overflow: mOverflow } = monthSlots(occs.length)
+              // Les TD occupent des lignes de titre : on les retranche du quota.
+              const slots = monthSlots(occs.length + mTds.length)
+              const mVisible = Math.max(0, slots.visible - mTds.length)
+              const mOverflow = occs.length - mVisible
               const titleOccs = occs.slice(0, mVisible)
               const classes = [
                 'cal-month-cell',
@@ -539,8 +698,18 @@ export default function CalendarPage() {
                       <span className="cal-month-count">{occs.length}</span>
                     )}
                   </div>
-                  {titleOccs.length > 0 && (
+                  {(titleOccs.length > 0 || mTds.length > 0) && (
                     <div className="cal-month-titles">
+                      {mTds.map(td => (
+                        <button
+                          key={td.id}
+                          className="cal-month-td"
+                          onClick={(e) => { e.stopPropagation(); openTdEdit(td) }}
+                          title={`${td.title}${td.location ? ' · ' + td.location : ''}`}
+                        >
+                          {tdTimeRange(td) && <strong>{tdTimeRange(td)}</strong>} {td.title}
+                        </button>
+                      ))}
                       {titleOccs.map(o => {
                         const done = o.scoreForThisJ !== null
                         const cls = scoreClass(done ? o.scoreForThisJ : o.lastScore)
@@ -638,7 +807,7 @@ export default function CalendarPage() {
       })()}
 
       {/* FEUILLE D'IMPRESSION (cachée à l'écran, seule visible en @media print) */}
-      {hasAnyLesson && (
+      {(hasAnyLesson || tds.length > 0) && (
         <div className="cal-print" aria-hidden="true">
           <div className="cal-print-head">
             <span className="cal-print-brand">Med·Rev</span>
@@ -653,6 +822,7 @@ export default function CalendarPage() {
             {weekDays.map((day, i) => {
               const dateStr = toDateStr(day)
               const occs = byDate.get(dateStr) ?? []
+              const dayTds = tdsByDate.get(dateStr) ?? []
               // Groupe par matière : nom de matière affiché une seule fois
               // (au lieu d'une sous-ligne par fiche) → colonne bien plus courte.
               const bySys = new Map<string, FicheOccurrence[]>()
@@ -668,6 +838,16 @@ export default function CalendarPage() {
                     <span className="cal-print-day-name">{DAY_LABELS_LONG[i]}</span>
                     <span className="cal-print-day-num">{day.getDate()}</span>
                   </div>
+                  {/* TD du jour — avant les révisions */}
+                  {dayTds.map(td => (
+                    <div key={td.id} className="cal-print-tdrow">
+                      <span className="cal-print-td-time">{tdTimeRange(td) || '·'}</span>
+                      <span className="cal-print-td-title">
+                        {td.title}
+                        {td.location ? ` · ${td.location}` : ''}
+                      </span>
+                    </div>
+                  ))}
                   {occs.length === 0 ? (
                     <div className="cal-print-none">—</div>
                   ) : (
@@ -698,6 +878,108 @@ export default function CalendarPage() {
           </div>
           <div className="cal-print-foot">
             Coche chaque case une fois la révision faite, puis note la fiche dans MedRev.
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TD : création / édition */}
+      {tdModal && (
+        <div className="cal-overflow" onClick={() => setTdModal(null)}>
+          <div className="cal-overflow-card cal-tdmodal" onClick={e => e.stopPropagation()}>
+            <div className="cal-overflow-head">
+              <div>
+                <h2 className="cal-overflow-title">
+                  {tdModal === 'new' ? 'Nouveau TD / cours' : 'Modifier le TD'}
+                </h2>
+                <div className="cal-overflow-sub">
+                  {tdModal === 'new'
+                    ? 'Un événement de ton emploi du temps, distinct des révisions.'
+                    : 'Cette occurrence uniquement.'}
+                </div>
+              </div>
+              <button className="cal-overflow-close" onClick={() => setTdModal(null)} aria-label="Fermer">{'×'}</button>
+            </div>
+            <div className="cal-tdform">
+              <label className="cal-tdfield">
+                <span className="cal-tdlabel">Intitulé</span>
+                <input
+                  className="cal-tdinput"
+                  type="text"
+                  placeholder="ex : TD Anatomie, CM Biochimie, colle…"
+                  value={tdTitle}
+                  onChange={e => setTdTitle(e.target.value)}
+                  autoFocus
+                />
+              </label>
+              <div className="cal-tdrow2">
+                <label className="cal-tdfield">
+                  <span className="cal-tdlabel">Matière (optionnel)</span>
+                  <select className="cal-tdinput" value={tdSysId} onChange={e => setTdSysId(e.target.value)}>
+                    <option value="">Aucune</option>
+                    {systems.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </label>
+                <label className="cal-tdfield">
+                  <span className="cal-tdlabel">Date</span>
+                  <input className="cal-tdinput" type="date" value={tdDate} onChange={e => setTdDate(e.target.value)} />
+                </label>
+              </div>
+              <div className="cal-tdrow2">
+                <label className="cal-tdfield">
+                  <span className="cal-tdlabel">Début</span>
+                  <input className="cal-tdinput" type="time" value={tdStart} onChange={e => setTdStart(e.target.value)} />
+                </label>
+                <label className="cal-tdfield">
+                  <span className="cal-tdlabel">Fin</span>
+                  <input className="cal-tdinput" type="time" value={tdEnd} onChange={e => setTdEnd(e.target.value)} />
+                </label>
+              </div>
+              <label className="cal-tdfield">
+                <span className="cal-tdlabel">Lieu (optionnel)</span>
+                <input
+                  className="cal-tdinput"
+                  type="text"
+                  placeholder="ex : amphi B, salle 204…"
+                  value={tdLocation}
+                  onChange={e => setTdLocation(e.target.value)}
+                />
+              </label>
+              {tdModal === 'new' && (
+                <label className="cal-tdfield">
+                  <span className="cal-tdlabel">Répéter chaque semaine jusqu&apos;au (optionnel)</span>
+                  <input
+                    className="cal-tdinput"
+                    type="date"
+                    value={tdRepeatUntil}
+                    min={tdDate}
+                    onChange={e => setTdRepeatUntil(e.target.value)}
+                  />
+                  <span className="cal-tdhint">Crée une occurrence par semaine, modifiable une par une (30 max).</span>
+                </label>
+              )}
+              {tdError && <div className="cal-tderror">{tdError}</div>}
+              <div className="cal-tdactions">
+                {tdModal !== 'new' && (
+                  <button
+                    className="cal-tdbtn cal-tdbtn-danger"
+                    onClick={() => deleteTd(tdModal.id)}
+                    disabled={tdSaving}
+                  >
+                    Supprimer
+                  </button>
+                )}
+                <div className="cal-tdactions-right">
+                  <button className="cal-tdbtn" onClick={() => setTdModal(null)} disabled={tdSaving}>Annuler</button>
+                  <button
+                    className="cal-tdbtn cal-tdbtn-primary"
+                    onClick={saveTd}
+                    disabled={!tdTitle.trim() || !tdDate || tdSaving}
+                  >
+                    {tdSaving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

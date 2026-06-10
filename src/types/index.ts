@@ -97,6 +97,21 @@ export interface Annale {
   created_at: string
 }
 
+// TD / cours de fac dans le calendrier — table td_events, migration 2026-06.
+// Type d'événement à part des révisions. Récurrence par duplication à la
+// création (rows indépendantes), heures au format "HH:MM:SS" (time Postgres).
+export interface TdEvent {
+  id: string
+  user_id: string
+  system_id: string | null
+  title: string
+  date: string                 // YYYY-MM-DD
+  start_time: string | null    // HH:MM:SS
+  end_time: string | null
+  location: string | null
+  created_at: string
+}
+
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
 export interface LessonMedia {
