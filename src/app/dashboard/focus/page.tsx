@@ -13,7 +13,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, bookSpotAt, BIB_VIEWBOX } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -62,7 +62,10 @@ type Result = {
     | { kind: 'reported'; atMs: number }
 }
 
-type Phase = 'loading' | 'session' | 'done' | 'empty'
+// 'lobby' = vue contemplative : la bibliothèque entière + bouton "Commencer".
+// La session ne montre QUE le livre qui s'écrit (modèle Forest/Focus Tree :
+// le jardin se contemple avant et après, jamais pendant).
+type Phase = 'loading' | 'lobby' | 'session' | 'done' | 'empty'
 
 // ===================== HELPERS =====================
 function dateStrFromOffset(base: string, offset: number): string {
@@ -555,10 +558,11 @@ function FocusPageBody() {
   // Position optionnelle (x, y) en coords viewBox jardin.
   const [particleBurst, setParticleBurst] = useState<{ ts: number; x?: number; y?: number } | null>(null)
 
-  // Vol du livre refermé : du pupitre vers sa place exacte sur l'étagère.
-  // Coordonnées ÉCRAN (px) calculées depuis le viewBox du SVG (mode "slice"
-  // = cover CSS). Ghost séparé du LiveBook : il survit au changement de fiche.
+  // Vol du livre refermé : du pupitre vers le compteur-bibliothèque de la
+  // topbar (la bibliothèque elle-même n'est plus visible pendant la session —
+  // modèle Forest). Ghost séparé du LiveBook : il survit au changement de fiche.
   const [bookFly, setBookFly] = useState<{ x: number; y: number; ts: number } | null>(null)
+  const libChipRef = useRef<HTMLDivElement | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -647,9 +651,11 @@ function FocusPageBody() {
       const q = buildQueue(lesList, sysList, lessonParam, systemParam, lessonsParam, today)
       setQueue(q)
       setResults(new Array(q.length).fill(null))
-      setPhase(q.length === 0 ? 'empty' : 'session')
+      // Lobby d'abord : la bibliothèque se contemple, la session se CHOISIT.
+      // startedAt reste à 0 jusqu'au clic "Commencer" (le cleanup de
+      // démontage ignore startedAt === 0, donc pas de temps fantôme).
+      setPhase(q.length === 0 ? 'empty' : 'lobby')
       setCurrentIdx(0)
-      setStartedAt(Date.now())
       setNow(Date.now())
     })()
     return () => { cancelled = true }
@@ -757,21 +763,12 @@ function FocusPageBody() {
       // il retrouve son dernier livre tout de suite.
       pushBibToSupabase(supabase, userIdRef.current, updatedGarden)
 
-      // Écho visuel : le livre du pupitre se referme et vole vers SA place
-      // (le livre de rang fichesCount-1, celui qui vient d'apparaître).
-      // Mapping viewBox → écran : preserveAspectRatio "slice" = cover CSS.
-      const spot = bookSpotAt(updatedGarden.fichesCount - 1)
-      if (spot && typeof window !== 'undefined') {
-        const vw = window.innerWidth
-        const vh = window.innerHeight
-        const scale = Math.max(vw / BIB_VIEWBOX.w, vh / BIB_VIEWBOX.h)
-        const offX = (vw - BIB_VIEWBOX.w * scale) / 2
-        const offY = (vh - BIB_VIEWBOX.h * scale) / 2
-        setBookFly({
-          x: offX + (spot.cx - BIB_VIEWBOX.x) * scale,
-          y: offY + (spot.top - BIB_VIEWBOX.y) * scale,
-          ts: Date.now(),
-        })
+      // Écho visuel : le livre du pupitre se referme et vole vers le
+      // compteur-bibliothèque de la topbar (il "part" se ranger).
+      const chip = libChipRef.current
+      if (chip) {
+        const r = chip.getBoundingClientRect()
+        setBookFly({ x: r.left + r.width / 2, y: r.top + r.height / 2, ts: Date.now() })
       }
     }
 
@@ -880,6 +877,62 @@ function FocusPageBody() {
                   : "Tu es à jour. Profite de ta journée."}
             </p>
             <Link href="/dashboard" className="focus-empty-cta">Retour au tableau de bord</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ============ phase === 'lobby' : la bibliothèque + "Commencer" ============
+  // Modèle Forest : on contemple le jardin, puis on choisit de planter.
+  if (phase === 'lobby') {
+    const treasures = unlockedTreasuresCount(dayGarden.fichesCount)
+    return (
+      <div className="focus-root">
+        <div className="focus-topbar">
+          <div className="focus-brand">
+            <span className="focus-brand-dot" aria-hidden="true" />
+            MedRev <span className="focus-brand-mode">focus</span>
+          </div>
+          <div className="focus-topbar-right">
+            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
+            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+          </div>
+        </div>
+
+        <div className="focus-stage">
+          {/* La bibliothèque entière, sans rien devant */}
+          <div className="focus-garden">
+            <BibliothecaSvg
+              fichesCount={dayGarden.fichesCount}
+              className="focus-garden-svg"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </div>
+
+          {/* Jalons sur la gauche */}
+          <BibliothecaTreasuresPanel fichesCount={dayGarden.fichesCount} />
+
+          {/* Invitation à la session, en bas au centre */}
+          <div className="focus-lobby-card">
+            <div className="focus-lobby-kicker">Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors</div>
+            <div className="focus-lobby-title">
+              {queue.length} fiche{queue.length > 1 ? 's' : ''} à réviser
+            </div>
+            <div className="focus-lobby-sub">
+              Chaque fiche notée ajoute un livre à ta bibliothèque.
+            </div>
+            <button
+              type="button"
+              className="focus-lobby-start"
+              onClick={() => {
+                setStartedAt(Date.now())
+                setNow(Date.now())
+                setPhase('session')
+              }}
+            >
+              Commencer la session →
+            </button>
           </div>
         </div>
       </div>
@@ -1052,6 +1105,20 @@ function FocusPageBody() {
           MedRev <span className="focus-brand-mode">focus</span>
         </div>
         <div className="focus-topbar-right">
+          {/* Compteur-bibliothèque : cible du vol du livre refermé.
+              key = re-pop de l'anim à chaque livre rangé. */}
+          <div
+            className="focus-lib-chip"
+            ref={libChipRef}
+            title="Livres rangés dans ta bibliothèque cette session"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13ZM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-2.5" />
+            </svg>
+            <strong key={Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)} className="focus-lib-chip-num">
+              +{Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)}
+            </strong>
+          </div>
           <div className="focus-progress-chip" aria-label={`Fiche ${currentIdx + 1} sur ${total}`}>
             <span className="focus-progress-chip-lbl">Fiche</span>
             <strong className="focus-progress-chip-num">{currentIdx + 1}</strong>
@@ -1074,31 +1141,24 @@ function FocusPageBody() {
         </div>
       </div>
 
-      {/* STAGE : jardin (gauche) + zone card avec flèches (droite) */}
+      {/* STAGE de session : ÉPURÉ. Pas de bibliothèque, pas de panel —
+          seulement le livre qui s'écrit (hero) + la card de notation.
+          La bibliothèque se contemple au lobby et au bilan (modèle Forest). */}
       <div className="focus-stage">
 
-        {/* Zone BIBLIOTHÈQUE — état cumulé annuel, se peuple à chaque fiche notée */}
-        <div className="focus-garden">
-          <BibliothecaSvg
-            fichesCount={dayGarden.fichesCount}
-            className="focus-garden-svg"
-            preserveAspectRatio="xMidYMid slice"
-          />
-        </div>
+        {/* Fond sobre : dégradé marine + vignette, rien d'autre */}
+        <div className="focus-session-bg" aria-hidden="true" />
 
-        {/* Panel des trésors (left-side, vertical) — montre les 6 trésors avec
-            leur palier en heures. Verrouillés masqués, débloqués révélés. */}
-        <BibliothecaTreasuresPanel fichesCount={dayGarden.fichesCount} />
-
-        {/* PUPITRE : le livre de la fiche courante s'écrit en temps réel.
+        {/* LE LIVRE : héros de la session, il s'écrit en temps réel.
             Remonté (key) à chaque fiche → chrono et pages repartent à zéro. */}
         <LiveBook
           key={`${current.lesson.id}-${currentIdx}`}
           lessonName={current.lesson.name}
+          className="lb-desk-hero"
         />
 
-        {/* GHOST : livre refermé qui vole du pupitre vers sa place exacte
-            sur l'étagère. Séparé du pupitre pour survivre au changement de fiche. */}
+        {/* GHOST : livre refermé qui vole du pupitre vers le compteur-
+            bibliothèque. Séparé du pupitre pour survivre au changement de fiche. */}
         {bookFly && (
           <div
             key={bookFly.ts}
