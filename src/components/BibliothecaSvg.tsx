@@ -26,31 +26,33 @@ import { useMemo, useEffect, useRef, type CSSProperties } from 'react'
 // musée (anthracite / acier brossé / cyan LED).
 const BIB_TOKENS_CSS = `
 :root, [data-theme="light"] {
-  --bib-wall-1: #FAFAF7;
-  --bib-wall-2: #F0EAD8;
-  --bib-wall-3: #E5DCC2;
-  --bib-floor-1: #A48159;
-  --bib-floor-2: #5C3A21;
-  --bib-walnut-face-1: #B89366;
-  --bib-walnut-face-2: #8C6839;
-  --bib-walnut-face-3: #6E4F2B;
-  --bib-walnut-side-1: #8C6839;
-  --bib-walnut-side-2: #5C3A21;
-  --bib-shelf-board-1: #8C6839;
-  --bib-shelf-board-2: #5C3A21;
-  --bib-shelf-board-3: #3D2516;
-  --bib-warm-glow-1: rgba(255, 244, 210, 0.20);
-  --bib-warm-glow-2: rgba(255, 220, 170, 0.06);
-  --bib-vignette-edge: rgba(60, 30, 15, 0.35);
-  --bib-light-shaft-1: rgba(255, 240, 200, 0.20);
-  --bib-light-shaft-2: rgba(255, 230, 180, 0.06);
-  --bib-interior-bg: #E8DEC4;
-  --bib-line-dark: #5C3A21;
-  --bib-line-darker: #2A1810;
-  --bib-brass-1: #E8C77A;
-  --bib-brass-2: #C19542;
-  --bib-brass-3: #8E6F2A;
-  --bib-dust: rgba(193, 149, 66, 0.55);
+  /* "Bibliothèque de nuit" — accordée à la palette Marine du site
+     (rail #15304E, accent #7FB0D4). Le laiton devient argent lunaire. */
+  --bib-wall-1: #23456A;
+  --bib-wall-2: #16314E;
+  --bib-wall-3: #0D2138;
+  --bib-floor-1: #13283E;
+  --bib-floor-2: #081624;
+  --bib-walnut-face-1: #33485E;
+  --bib-walnut-face-2: #22344A;
+  --bib-walnut-face-3: #16243A;
+  --bib-walnut-side-1: #22344A;
+  --bib-walnut-side-2: #101E32;
+  --bib-shelf-board-1: #33485E;
+  --bib-shelf-board-2: #1C2C42;
+  --bib-shelf-board-3: #101E30;
+  --bib-warm-glow-1: rgba(127, 176, 212, 0.14);
+  --bib-warm-glow-2: rgba(127, 176, 212, 0.05);
+  --bib-vignette-edge: rgba(2, 10, 20, 0.50);
+  --bib-light-shaft-1: rgba(168, 208, 236, 0.16);
+  --bib-light-shaft-2: rgba(168, 208, 236, 0.05);
+  --bib-interior-bg: #0F2236;
+  --bib-line-dark: #0E1E30;
+  --bib-line-darker: #040C16;
+  --bib-brass-1: #C8DCEC;
+  --bib-brass-2: #7FB0D4;
+  --bib-brass-3: #3E6E96;
+  --bib-dust: rgba(168, 208, 236, 0.50);
 }
 [data-theme="dark"] {
   --bib-wall-1: #0E1218;
@@ -117,31 +119,33 @@ const BOARD_THICKNESS = 7
 
 // ============ PALETTE CUIR (commune aux 2 thèmes) ============
 // 18 tons de cuir vieilli, saturation modérée pour cohésion visuelle.
+// Palette "nuit" : cuirs assourdis froids (ardoise, sapin, prune, bordeaux
+// éteint, indigo) + titres argentés — accordés au mur marine.
 type LeatherTone = { main: string; accent: string; title: string }
 const PALETTE: LeatherTone[] = [
-  { main: '#5A2424', accent: '#8A4040', title: '#D8A848' },
-  { main: '#6E2A2A', accent: '#9C4040', title: '#D8A848' },
-  { main: '#2A4030', accent: '#48684E', title: '#C89040' },
-  { main: '#1E3624', accent: '#385840', title: '#B88838' },
-  { main: '#1F2E50', accent: '#3D5278', title: '#D8A848' },
-  { main: '#1A2840', accent: '#324868', title: '#C89040' },
-  { main: '#7A4A2A', accent: '#A8704A', title: '#E8C088' },
-  { main: '#8A5828', accent: '#B07440', title: '#E8C088' },
-  { main: '#3A2030', accent: '#5C3E50', title: '#C89040' },
-  { main: '#4A2840', accent: '#6E4868', title: '#D8A848' },
-  { main: '#4A5060', accent: '#6E7888', title: '#C89040' },
-  { main: '#3A4A55', accent: '#5A6A75', title: '#A88040' },
-  { main: '#5C5A28', accent: '#7E7A48', title: '#E8C088' },
-  { main: '#3D2A14', accent: '#5C4028', title: '#A86A28' },
-  { main: '#1F1810', accent: '#3A2C20', title: '#9A6E20' },
-  { main: '#A88058', accent: '#C8A078', title: '#E8C088' },
-  { main: '#C8B898', accent: '#D8C8A8', title: '#8A5828' },
-  { main: '#604A38', accent: '#806648', title: '#C89040' },
+  { main: '#27435E', accent: '#3C5F80', title: '#A9CBE4' },
+  { main: '#1C3247', accent: '#2E4A64', title: '#8FB8D8' },
+  { main: '#1F3D33', accent: '#33584A', title: '#9CC4B4' },
+  { main: '#162D26', accent: '#27443A', title: '#86AE9E' },
+  { main: '#3A2A3E', accent: '#56425C', title: '#C0A8C8' },
+  { main: '#2A1F33', accent: '#43344E', title: '#A890B8' },
+  { main: '#52303A', accent: '#714752', title: '#D0A0AC' },
+  { main: '#3E2430', accent: '#5A3A48', title: '#C094A4' },
+  { main: '#33414F', accent: '#4C5D6E', title: '#B0C4D6' },
+  { main: '#222E3A', accent: '#374656', title: '#94AABE' },
+  { main: '#4E4A38', accent: '#6B6650', title: '#CCC4A4' },
+  { main: '#37342A', accent: '#504C3E', title: '#B2AC90' },
+  { main: '#1A2742', accent: '#2C3D5E', title: '#92AEDA' },
+  { main: '#10182E', accent: '#202C4A', title: '#7E96C6' },
+  { main: '#54442E', accent: '#736046', title: '#D6BE96' },
+  { main: '#6E7A86', accent: '#8C98A4', title: '#1C2B3C' },
+  { main: '#A8B8C4', accent: '#C2D0DA', title: '#3E5366' },
+  { main: '#46324A', accent: '#624A66', title: '#BCA0C0' },
 ]
 
-// Cuirs des OUVRAGES DORÉS (rares). Déclaré ici car utilisé par l'IIFE
+// Cuirs des OUVRAGES D'ARGENT (rares). Déclaré ici car utilisé par l'IIFE
 // ALL_BOOKS qui s'exécute au chargement du module (ordre d'évaluation).
-const RARE_LEATHERS = ['#2A1208', '#3A1020', '#101A30', '#1A2410', '#240E2E']
+const RARE_LEATHERS = ['#0E1C30', '#1C1430', '#0E2628', '#241430', '#101A3A']
 
 // ============ ZONES RÉSERVÉES POUR LES TRÉSORS ============
 // Positions remappées sur le viewBox étendu (FRAME_RIGHT 1755 vs 1470 original) :
@@ -314,7 +318,7 @@ function renderShelfPlaque(s: number): string {
     <rect x="-54" y="1.4" width="108" height="${BOARD_THICKNESS - 2.8}" rx="1" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="0.3"/>
     <circle cx="-51" cy="${BOARD_THICKNESS / 2}" r="0.7" fill="rgba(0,0,0,0.4)"/>
     <circle cx="51" cy="${BOARD_THICKNESS / 2}" r="0.7" fill="rgba(0,0,0,0.4)"/>
-    <text y="${BOARD_THICKNESS / 2 + 1.7}" text-anchor="middle" font-family="Cinzel,serif" font-size="4.6" fill="rgba(40,22,8,0.85)" letter-spacing="1.2">RAYON ${ROMAN[s]} · COMPLET</text>
+    <text y="${BOARD_THICKNESS / 2 + 1.7}" text-anchor="middle" font-family="Cinzel,serif" font-size="4.6" fill="rgba(8,20,34,0.88)" letter-spacing="1.2">RAYON ${ROMAN[s]} · COMPLET</text>
   </g>`
 }
 
@@ -328,7 +332,7 @@ function renderBook(
   s += `<rect x="0" y="0" width="${w}" height="1.3" fill="${c.accent}"/>`
   s += `<rect x="0" y="1.3" width="${w}" height="0.5" fill="rgba(0,0,0,0.4)"/>`
   s += `<rect x="0" y="${(h - 1.5).toFixed(1)}" width="${w}" height="1.5" fill="rgba(0,0,0,0.55)"/>`
-  s += `<rect x="0" y="0" width="0.9" height="${h}" fill="rgba(255,220,180,0.25)"/>`
+  s += `<rect x="0" y="0" width="0.9" height="${h}" fill="rgba(200,224,244,0.22)"/>`
   s += `<rect x="${(w - 0.6).toFixed(1)}" y="0" width="0.6" height="${h}" fill="rgba(0,0,0,0.4)"/>`
   if (rand() < 0.88) {
     const y1 = h * (0.20 + rand() * 0.08)
@@ -366,8 +370,8 @@ function renderRareBook(
   x: number, y: number, w: number, h: number, rand: () => number
 ): string {
   const main = RARE_LEATHERS[Math.floor(rand() * RARE_LEATHERS.length)]
-  const gold = '#E8C26A'
-  const goldDeep = '#A87C2A'
+  const gold = '#C8DFF0'      // argent lunaire (palette Marine du site)
+  const goldDeep = '#6E9CC0'
   const delay = (rand() * 7).toFixed(2)
   const dur = (6 + rand() * 3).toFixed(2)
   let s = `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">`
@@ -388,7 +392,7 @@ function renderRareBook(
   s += `<circle cx="${(w / 2).toFixed(1)}" cy="${(h * 0.45).toFixed(1)}" r="1.5" fill="#B23040"/>`
   s += `<circle cx="${(w / 2 - 0.4).toFixed(1)}" cy="${(h * 0.45 - 0.4).toFixed(1)}" r="0.5" fill="rgba(255,230,230,0.9)"/>`
   // Lumières de matière
-  s += `<rect x="0" y="0" width="1.1" height="${h}" fill="rgba(255,230,180,0.30)"/>`
+  s += `<rect x="0" y="0" width="1.1" height="${h}" fill="rgba(214,232,246,0.30)"/>`
   s += `<rect x="${(w - 0.7).toFixed(1)}" y="0" width="0.7" height="${h}" fill="rgba(0,0,0,0.45)"/>`
   // Glint périodique (désynchronisé par livre)
   s += `<rect class="bib-rare-glint" width="${w}" height="${h}" fill="url(#bib-rareGlint)" style="animation-delay:${delay}s;animation-duration:${dur}s"/>`
@@ -600,6 +604,17 @@ export const BIBLIOTHECA_TREASURES = DECORATIONS.map(d => ({ unlockAt: d.unlockA
 /** Nombre total de livres effectivement générés (peut différer de TOTAL_CAPACITY de quelques unités). */
 export const BIBLIOTHECA_BOOKS_GENERATED = ALL_BOOKS.length
 
+/** ViewBox du SVG — pour mapper des coordonnées internes vers l'écran
+ *  (preserveAspectRatio "slice" = comportement CSS cover). */
+export const BIB_VIEWBOX = { x: VIEWBOX_X, y: VIEWBOX_Y, w: VIEWBOX_W, h: VIEWBOX_H }
+
+/** Position (coordonnées viewBox) du livre de rang `index` (0-based).
+ *  Utilisé par le pupitre Focus : le livre refermé vole vers cette place. */
+export function bookSpotAt(index: number): { cx: number; top: number } | null {
+  if (index < 0 || index >= ALL_BOOKS.length) return null
+  return { cx: ALL_BOOKS[index].cx, top: ALL_BOOKS[index].top }
+}
+
 // ============ PROPS ============
 type BibliothecaSvgProps = {
   /** Nombre de fiches notées (cumulé sur l'année). 1 fiche = 1 livre ajouté. */
@@ -710,9 +725,9 @@ export default function BibliothecaSvg({
           100% { transform: scaleY(1) translateY(0); opacity: 1; }
         }
         @keyframes bib-book-glow {
-          0%   { filter: drop-shadow(0 0 0 rgba(216, 168, 72, 0)); }
-          40%  { filter: drop-shadow(0 0 8px rgba(216, 168, 72, 0.85)); }
-          100% { filter: drop-shadow(0 0 0 rgba(216, 168, 72, 0)); }
+          0%   { filter: drop-shadow(0 0 0 rgba(151, 196, 228, 0)); }
+          40%  { filter: drop-shadow(0 0 8px rgba(151, 196, 228, 0.9)); }
+          100% { filter: drop-shadow(0 0 0 rgba(151, 196, 228, 0)); }
         }
         .bib-book-pop {
           transform-box: fill-box;
@@ -892,9 +907,9 @@ export default function BibliothecaSvg({
           <stop offset="100%" stopColor="#A88058" />
         </linearGradient>
         <linearGradient id="bib-rareGlint" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="rgba(255,236,180,0)" />
-          <stop offset="50%" stopColor="rgba(255,236,180,0.85)" />
-          <stop offset="100%" stopColor="rgba(255,236,180,0)" />
+          <stop offset="0%" stopColor="rgba(214,232,246,0)" />
+          <stop offset="50%" stopColor="rgba(214,232,246,0.85)" />
+          <stop offset="100%" stopColor="rgba(214,232,246,0)" />
         </linearGradient>
       </defs>
 

@@ -13,7 +13,8 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, bookSpotAt, BIB_VIEWBOX } from '@/components/BibliothecaSvg'
+import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
 import './styles.css'
 
@@ -554,6 +555,11 @@ function FocusPageBody() {
   // Position optionnelle (x, y) en coords viewBox jardin.
   const [particleBurst, setParticleBurst] = useState<{ ts: number; x?: number; y?: number } | null>(null)
 
+  // Vol du livre refermé : du pupitre vers sa place exacte sur l'étagère.
+  // Coordonnées ÉCRAN (px) calculées depuis le viewBox du SVG (mode "slice"
+  // = cover CSS). Ghost séparé du LiveBook : il survit au changement de fiche.
+  const [bookFly, setBookFly] = useState<{ x: number; y: number; ts: number } | null>(null)
+
   const today = new Date().toISOString().split('T')[0]
 
   // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
@@ -750,6 +756,23 @@ function FocusPageBody() {
       // Push cloud immédiat : si l'utilisateur change d'appareil juste après,
       // il retrouve son dernier livre tout de suite.
       pushBibToSupabase(supabase, userIdRef.current, updatedGarden)
+
+      // Écho visuel : le livre du pupitre se referme et vole vers SA place
+      // (le livre de rang fichesCount-1, celui qui vient d'apparaître).
+      // Mapping viewBox → écran : preserveAspectRatio "slice" = cover CSS.
+      const spot = bookSpotAt(updatedGarden.fichesCount - 1)
+      if (spot && typeof window !== 'undefined') {
+        const vw = window.innerWidth
+        const vh = window.innerHeight
+        const scale = Math.max(vw / BIB_VIEWBOX.w, vh / BIB_VIEWBOX.h)
+        const offX = (vw - BIB_VIEWBOX.w * scale) / 2
+        const offY = (vh - BIB_VIEWBOX.h * scale) / 2
+        setBookFly({
+          x: offX + (spot.cx - BIB_VIEWBOX.x) * scale,
+          y: offY + (spot.top - BIB_VIEWBOX.y) * scale,
+          ts: Date.now(),
+        })
+      }
     }
 
     setParticleBurst({ ts: Date.now(), x: 800, y: 550 })
@@ -1066,6 +1089,28 @@ function FocusPageBody() {
         {/* Panel des trésors (left-side, vertical) — montre les 6 trésors avec
             leur palier en heures. Verrouillés masqués, débloqués révélés. */}
         <BibliothecaTreasuresPanel fichesCount={dayGarden.fichesCount} />
+
+        {/* PUPITRE : le livre de la fiche courante s'écrit en temps réel.
+            Remonté (key) à chaque fiche → chrono et pages repartent à zéro. */}
+        <LiveBook
+          key={`${current.lesson.id}-${currentIdx}`}
+          lessonName={current.lesson.name}
+        />
+
+        {/* GHOST : livre refermé qui vole du pupitre vers sa place exacte
+            sur l'étagère. Séparé du pupitre pour survivre au changement de fiche. */}
+        {bookFly && (
+          <div
+            key={bookFly.ts}
+            className="lb-ghost"
+            style={{
+              ['--tx' as never]: `${bookFly.x.toFixed(0)}px`,
+              ['--ty' as never]: `${bookFly.y.toFixed(0)}px`,
+            }}
+            onAnimationEnd={() => setBookFly(null)}
+            aria-hidden="true"
+          />
+        )}
 
         {/* Zone CARD : la card flotte en glass, navigation discrète en pied de card */}
         <div className="focus-card-zone">

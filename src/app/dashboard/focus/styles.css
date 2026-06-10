@@ -1162,29 +1162,29 @@
 
 /* --- Topbar progress chip : verre parchemin sur fond sombre --- */
 .focus-progress-chip {
-  background: rgba(232, 220, 180, 0.10);
-  border: 1px solid rgba(216, 168, 72, 0.35);
+  background: rgba(200, 220, 236, 0.10);
+  border: 1px solid rgba(127, 176, 212, 0.35);
   color: #E8DDC5;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
-.focus-progress-chip-divider { background: rgba(216, 168, 72, 0.3); }
+.focus-progress-chip-divider { background: rgba(127, 176, 212, 0.3); }
 
 /* --- Brand : remplace l'accent vert par du laiton --- */
 .focus-brand-dot {
-  background: #D8A848;
-  box-shadow: 0 0 10px rgba(216, 168, 72, 0.7);
+  background: #7FB0D4;
+  box-shadow: 0 0 10px rgba(127, 176, 212, 0.7);
 }
-.focus-brand-mode { color: #D8A848; }
+.focus-brand-mode { color: #7FB0D4; }
 
 /* --- Quit button : verre parchemin --- */
 .focus-quit {
-  background: rgba(232, 220, 180, 0.10);
-  border: 1px solid rgba(216, 168, 72, 0.35);
+  background: rgba(200, 220, 236, 0.10);
+  border: 1px solid rgba(127, 176, 212, 0.35);
   color: #E8DDC5;
 }
 .focus-quit:hover {
-  background: rgba(232, 220, 180, 0.22);
+  background: rgba(200, 220, 236, 0.22);
 }
 
 /* --- Bouton mode immersif (plein écran + wake lock) --- */
@@ -1194,8 +1194,8 @@
   justify-content: center;
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: rgba(232, 220, 180, 0.10);
-  border: 1px solid rgba(216, 168, 72, 0.35);
+  background: rgba(200, 220, 236, 0.10);
+  border: 1px solid rgba(127, 176, 212, 0.35);
   color: #E8DDC5;
   font-size: 17px;
   line-height: 1;
@@ -1206,132 +1206,132 @@
   padding: 0;
 }
 .focus-immersive:hover {
-  background: rgba(232, 220, 180, 0.22);
+  background: rgba(200, 220, 236, 0.22);
   transform: scale(1.05);
 }
 .focus-immersive.active {
-  background: rgba(216, 168, 72, 0.28);
-  border-color: rgba(216, 168, 72, 0.65);
+  background: rgba(127, 176, 212, 0.28);
+  border-color: rgba(127, 176, 212, 0.65);
   color: #FFE598;
-  box-shadow: 0 0 0 2px rgba(216, 168, 72, 0.18);
+  box-shadow: 0 0 0 2px rgba(127, 176, 212, 0.18);
 }
 
 /* --- Card centrale : verre dépoli sombre (même palette que le panel trésors) --- */
 .focus-card {
-  background: rgba(15, 8, 5, 0.78);
+  background: rgba(8, 16, 28, 0.78);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(216, 168, 72, 0.32);
+  border: 1px solid rgba(127, 176, 212, 0.32);
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.65),
     0 6px 18px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(216, 168, 72, 0.18);
+    inset 0 1px 0 rgba(127, 176, 212, 0.18);
 }
 
 /* --- Texte de la card : cream/gold sur fond sombre --- */
 .focus-name { color: #F0DDB8; }
 .focus-kicker { color: #A88058; }
 .focus-kicker-sys { color: #F0DDB8; }
-.focus-kicker-sep { color: rgba(216, 168, 72, 0.4); }
+.focus-kicker-sep { color: rgba(127, 176, 212, 0.4); }
 .focus-kicker-status {
-  background: rgba(216, 168, 72, 0.12) !important;
-  border: 1px solid rgba(216, 168, 72, 0.25);
+  background: rgba(127, 176, 212, 0.12) !important;
+  border: 1px solid rgba(127, 176, 212, 0.25);
 }
 .focus-kicker-status.missed { color: #E89070; }
-.focus-kicker-status.today { color: #D8A848; }
-.focus-kicker-status.fresh { color: #C8A878; }
-.focus-last { color: #C8A878; }
+.focus-kicker-status.today { color: #7FB0D4; }
+.focus-kicker-status.fresh { color: #8FB8D8; }
+.focus-last { color: #8FB8D8; }
 .focus-ask { color: #A88058; }
 
 /* --- Actions/séparateur de la card --- */
-.focus-actions { border-top: 1px solid rgba(216, 168, 72, 0.18); }
+.focus-actions { border-top: 1px solid rgba(127, 176, 212, 0.18); }
 
 /* --- Report : verre + texte gold --- */
 .focus-report {
-  border: 1px solid rgba(216, 168, 72, 0.30);
-  color: #C8A878;
+  border: 1px solid rgba(127, 176, 212, 0.30);
+  color: #8FB8D8;
   background: transparent;
 }
 .focus-report:hover:not(:disabled) {
-  border-color: #D8A848;
-  color: #D8A848;
-  background: rgba(216, 168, 72, 0.10);
+  border-color: #7FB0D4;
+  color: #7FB0D4;
+  background: rgba(127, 176, 212, 0.10);
 }
 
 /* --- Nav dots : palette gold --- */
 .focus-nav-dot {
-  background: rgba(216, 168, 72, 0.10);
-  border: 1px solid rgba(216, 168, 72, 0.25);
-  color: #C8A878;
+  background: rgba(127, 176, 212, 0.10);
+  border: 1px solid rgba(127, 176, 212, 0.25);
+  color: #8FB8D8;
 }
 .focus-nav-dot:hover:not(:disabled) {
-  background: rgba(216, 168, 72, 0.20);
-  border-color: rgba(216, 168, 72, 0.50);
-  color: #D8A848;
+  background: rgba(127, 176, 212, 0.20);
+  border-color: rgba(127, 176, 212, 0.50);
+  color: #7FB0D4;
 }
 .focus-nav-dot-next {
-  background: #9A6E20;
+  background: #3E6E96;
   color: #1A0F08;
   border-color: transparent;
 }
 .focus-nav-dot-next:hover:not(:disabled) {
-  background: #D8A848;
+  background: #7FB0D4;
   color: #1A0F08;
 }
 
 /* --- Hint clavier (cream/gold sur fond sombre) --- */
 .focus-hint { color: rgba(232, 200, 152, 0.85); }
 .focus-hint kbd {
-  background: rgba(232, 220, 180, 0.10);
-  border: 1px solid rgba(216, 168, 72, 0.30);
-  color: #E8C898;
+  background: rgba(200, 220, 236, 0.10);
+  border: 1px solid rgba(127, 176, 212, 0.30);
+  color: #C8DCEC;
 }
-.focus-hint-sep { color: rgba(216, 168, 72, 0.4); }
+.focus-hint-sep { color: rgba(127, 176, 212, 0.4); }
 
 /* --- États empty/loading --- */
 .focus-loading { color: #9A8470; }
 .focus-empty-mark {
-  background: rgba(216, 168, 72, 0.18);
-  color: #D8A848;
+  background: rgba(127, 176, 212, 0.18);
+  color: #7FB0D4;
 }
 .focus-empty-title { color: #F0DDB8; }
 .focus-empty-sub { color: #A88058; }
 .focus-empty-cta {
-  background: #9A6E20;
+  background: #3E6E96;
   color: #1A0F08;
 }
-.focus-empty-cta:hover { background: #D8A848; }
+.focus-empty-cta:hover { background: #7FB0D4; }
 
 /* --- Done card (bilan) : même verre dépoli sombre --- */
 .focus-done-card { color: #F0DDB8; }
 .focus-done-kicker { color: #A88058; }
 .focus-done-title { color: #F0DDB8; }
-.focus-done-sep { color: rgba(216, 168, 72, 0.4); }
-.focus-done-reported { color: #D8A848; }
+.focus-done-sep { color: rgba(127, 176, 212, 0.4); }
+.focus-done-reported { color: #7FB0D4; }
 
 .focus-done-recap {
-  background: rgba(216, 168, 72, 0.10);
-  border-left: 3px solid #D8A848;
+  background: rgba(127, 176, 212, 0.10);
+  border-left: 3px solid #7FB0D4;
 }
 .focus-done-recap-text { color: #F0DDB8; }
-.focus-done-recap-empty { color: #C8A878; }
+.focus-done-recap-empty { color: #8FB8D8; }
 .focus-done-recap-gains-lbl { color: #A88058; }
 .focus-done-recap-pill {
-  background: rgba(216, 168, 72, 0.12);
+  background: rgba(127, 176, 212, 0.12);
   color: #F0DDB8;
-  border: 1px solid rgba(216, 168, 72, 0.30);
+  border: 1px solid rgba(127, 176, 212, 0.30);
 }
-.focus-done-recap-pill strong { color: #D8A848; }
+.focus-done-recap-pill strong { color: #7FB0D4; }
 .focus-done-recap-pill.rare {
-  background: rgba(216, 168, 72, 0.22);
+  background: rgba(127, 176, 212, 0.22);
   color: #FFE598;
-  border-color: #D8A848;
+  border-color: #7FB0D4;
 }
 .focus-done-recap-pill.rare strong { color: #FFE598; }
 
 .focus-done-list { color: #F0DDB8; }
 .focus-done-row {
-  border-bottom: 1px solid rgba(216, 168, 72, 0.15);
+  border-bottom: 1px solid rgba(127, 176, 212, 0.15);
 }
 .focus-done-row-sys { color: #A88058; }
 
@@ -1344,19 +1344,19 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
-  background: rgba(15, 8, 5, 0.72);
+  background: rgba(8, 16, 28, 0.72);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(216, 168, 72, 0.32);
+  border: 1px solid rgba(127, 176, 212, 0.32);
   border-radius: 14px;
   padding: 18px 18px 16px;
   min-width: 220px;
   max-width: 250px;
-  color: #E8C898;
+  color: #C8DCEC;
   font-family: var(--font-hanken), var(--font-bricolage), Georgia, serif;
   box-shadow:
     0 16px 40px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(216, 168, 72, 0.18);
+    inset 0 1px 0 rgba(127, 176, 212, 0.18);
 }
 
 /* Variante : panel positionné à droite (utilisé sur le bilan) */
@@ -1368,14 +1368,14 @@
 .bib-treasures-header {
   margin-bottom: 14px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(216, 168, 72, 0.22);
+  border-bottom: 1px solid rgba(127, 176, 212, 0.22);
 }
 .bib-treasures-kicker {
   font-family: var(--font-bricolage), serif;
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 3px;
-  color: #C8A878;
+  color: #8FB8D8;
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -1392,7 +1392,7 @@
   letter-spacing: -0.02em;
   line-height: 1;
 }
-.bib-treasures-count-sep { color: rgba(216, 168, 72, 0.4); font-size: 17px; }
+.bib-treasures-count-sep { color: rgba(127, 176, 212, 0.4); font-size: 17px; }
 .bib-treasures-count-tot { color: #A88058; font-size: 14px; }
 .bib-treasures-count-lbl {
   font-family: var(--font-bricolage), serif;
@@ -1406,13 +1406,13 @@
 .bib-treasures-progress {
   margin-top: 10px;
   height: 3px;
-  background: rgba(232, 220, 180, 0.08);
+  background: rgba(200, 220, 236, 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
 .bib-treasures-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #5A3520 0%, #9A6E20 60%, #D8A848 100%);
+  background: linear-gradient(90deg, #1C2C42 0%, #3E6E96 60%, #7FB0D4 100%);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1421,7 +1421,7 @@
   font-size: 9.5px;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #C8A878;
+  color: #8FB8D8;
   margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
@@ -1466,7 +1466,7 @@
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: #E8C898;
+  color: #C8DCEC;
   line-height: 1.1;
 }
 .bib-treasure-name {
@@ -1479,9 +1479,9 @@
 }
 
 .bib-treasure.unlocked .bib-treasure-marker {
-  background: linear-gradient(135deg, #D8A848 0%, #9A6E20 100%);
+  background: linear-gradient(135deg, #7FB0D4 0%, #3E6E96 100%);
   color: #1A0F08;
-  box-shadow: 0 0 0 1px rgba(216, 168, 72, 0.4), 0 2px 6px rgba(216, 168, 72, 0.25);
+  box-shadow: 0 0 0 1px rgba(127, 176, 212, 0.4), 0 2px 6px rgba(127, 176, 212, 0.25);
 }
 .bib-treasure.unlocked .bib-treasure-name {
   color: #F0DDB8;
@@ -1507,20 +1507,20 @@
   opacity: 1;
 }
 .bib-treasure.next .bib-treasure-marker {
-  background: rgba(216, 168, 72, 0.18);
-  color: #D8A848;
-  border: 1px solid rgba(216, 168, 72, 0.55);
+  background: rgba(127, 176, 212, 0.18);
+  color: #7FB0D4;
+  border: 1px solid rgba(127, 176, 212, 0.55);
   animation: bib-next-pulse 2.4s ease-in-out infinite;
 }
 .bib-treasure.next .bib-treasure-name {
-  color: #D8A848;
+  color: #7FB0D4;
   font-style: italic;
 }
 .bib-treasure.next .bib-treasure-threshold { color: #F0DDB8; }
 
 @keyframes bib-next-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(216, 168, 72, 0); }
-  50%      { box-shadow: 0 0 0 4px rgba(216, 168, 72, 0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(127, 176, 212, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(127, 176, 212, 0.15); }
 }
 
 /* --- Responsive : panel adapté sur écrans <1100px --- */
@@ -1836,8 +1836,8 @@ html:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-threshold { color
 .bib-next-goal {
   margin: 12px 0 4px;
   padding: 10px 12px;
-  background: rgba(216, 168, 72, 0.08);
-  border: 1px solid rgba(216, 168, 72, 0.25);
+  background: rgba(127, 176, 212, 0.08);
+  border: 1px solid rgba(127, 176, 212, 0.25);
   border-radius: 10px;
 }
 .bib-next-goal-row {
@@ -1852,12 +1852,12 @@ html:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-threshold { color
   font-weight: 600;
   letter-spacing: 2.4px;
   text-transform: uppercase;
-  color: #C8A878;
+  color: #8FB8D8;
 }
 .bib-next-goal-left {
   font-size: 10.5px;
   font-weight: 700;
-  color: #E8C26A;
+  color: #A9CBE4;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1866,20 +1866,140 @@ html:not([data-theme="dark"]) .bib-treasure.next .bib-treasure-threshold { color
   font-family: var(--font-bricolage), serif;
   font-size: 13px;
   font-weight: 500;
-  color: #F0DCB0;
+  color: #D6E8F6;
   line-height: 1.3;
 }
 .bib-next-goal-bar {
   margin-top: 7px;
   height: 4px;
-  background: rgba(232, 220, 180, 0.10);
+  background: rgba(200, 220, 236, 0.10);
   border-radius: 2px;
   overflow: hidden;
 }
 .bib-next-goal-fill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, #9A6E20 0%, #D8A848 70%, #F0DCA0 100%);
-  box-shadow: 0 0 6px rgba(216, 168, 72, 0.55);
+  background: linear-gradient(90deg, #3E6E96 0%, #7FB0D4 70%, #D6E8F6 100%);
+  box-shadow: 0 0 6px rgba(127, 176, 212, 0.55);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =========== LE LIVRE QUI S'ÉCRIT (pupitre de session) =========== */
+.lb-desk {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-58%);
+  z-index: 4;
+  width: 380px;
+  background: rgba(8, 16, 28, 0.74);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(127, 176, 212, 0.32);
+  border-radius: 14px;
+  padding: 12px 14px 10px;
+  color: #C8DCEC;
+  font-family: var(--font-hanken), sans-serif;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(127, 176, 212, 0.18);
+}
+.lb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.lb-kicker {
+  font-family: var(--font-bricolage), serif;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: #8FB8D8;
+}
+.lb-timer {
+  font-size: 12px;
+  font-weight: 700;
+  color: #D6E8F6;
+  font-variant-numeric: tabular-nums;
+}
+.lb-title {
+  margin-top: 2px;
+  font-family: var(--font-bricolage), serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-style: italic;
+  color: #D6E8F6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-svg {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+/* La position de la plume est portée par l'attribut SVG transform (ne PAS
+   animer transform sur .lb-quill : ça écraserait la position). Le mouvement
+   d'écriture est un tilt sur la plume elle-même : */
+.lb-quill > path:first-child { animation: lb-quill-tilt 0.9s ease-in-out infinite; transform-box: fill-box; transform-origin: 10% 95%; }
+@keyframes lb-quill-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-4deg); }
+}
+.lb-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 4px;
+}
+.lb-foot-pages {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #8FB8D8;
+  font-variant-numeric: tabular-nums;
+}
+.lb-foot-hint {
+  font-size: 10px;
+  font-style: italic;
+  font-family: var(--font-bricolage), serif;
+  color: rgba(200, 220, 236, 0.55);
+}
+
+/* GHOST : livre refermé qui vole du pupitre vers sa place sur l'étagère */
+.lb-ghost {
+  position: fixed;
+  left: 42vw;
+  top: calc(100vh - 150px);
+  width: 26px;
+  height: 36px;
+  border-radius: 2px 4px 4px 2px;
+  background: linear-gradient(90deg, #16243A 0%, #22344A 30%, #2C415A 100%);
+  border-left: 3px solid #7FB0D4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 12px rgba(127, 176, 212, 0.45);
+  z-index: 5;
+  pointer-events: none;
+  animation: lb-fly 0.85s cubic-bezier(0.45, 0.05, 0.55, 1) both;
+}
+@keyframes lb-fly {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  70% { opacity: 1; }
+  100% {
+    transform: translate(calc(var(--tx) - 42vw), calc(var(--ty) - (100vh - 150px))) scale(0.18) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .lb-desk { display: none; }
+  .lb-ghost { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-quill > path:first-child { animation: none !important; }
+  .lb-ghost { animation-duration: 0.01s !important; }
 }
