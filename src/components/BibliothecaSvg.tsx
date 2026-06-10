@@ -46,7 +46,7 @@ const BIB_TOKENS_CSS = `
   --bib-vignette-edge: rgba(2, 10, 20, 0.50);
   --bib-light-shaft-1: rgba(168, 208, 236, 0.16);
   --bib-light-shaft-2: rgba(168, 208, 236, 0.05);
-  --bib-interior-bg: #0F2236;
+  --bib-interior-bg: #122A44;
   --bib-line-dark: #0E1E30;
   --bib-line-darker: #040C16;
   --bib-brass-1: #C8DCEC;
@@ -122,25 +122,30 @@ const BOARD_THICKNESS = 7
 // Palette "nuit" : cuirs assourdis froids (ardoise, sapin, prune, bordeaux
 // éteint, indigo) + titres argentés — accordés au mur marine.
 type LeatherTone = { main: string; accent: string; title: string }
+// Palette "joyaux de nuit" : les tons éteints précédents se fondaient dans
+// le mur marine (retour Lou : "trop fade"). Cuirs francs et saturés —
+// royal, émeraude, bordeaux, violet, turquoise + quelques chauds de
+// bibliothèque classique (caramel, brique) — qui ressortent sur le fond
+// sombre tout en restant nocturnes.
 const PALETTE: LeatherTone[] = [
-  { main: '#27435E', accent: '#3C5F80', title: '#A9CBE4' },
-  { main: '#1C3247', accent: '#2E4A64', title: '#8FB8D8' },
-  { main: '#1F3D33', accent: '#33584A', title: '#9CC4B4' },
-  { main: '#162D26', accent: '#27443A', title: '#86AE9E' },
-  { main: '#3A2A3E', accent: '#56425C', title: '#C0A8C8' },
-  { main: '#2A1F33', accent: '#43344E', title: '#A890B8' },
-  { main: '#52303A', accent: '#714752', title: '#D0A0AC' },
-  { main: '#3E2430', accent: '#3E5366', title: '#C094A4' },
-  { main: '#33414F', accent: '#4C5D6E', title: '#B0C4D6' },
-  { main: '#222E3A', accent: '#374656', title: '#94AABE' },
-  { main: '#4E4A38', accent: '#6B6650', title: '#CCC4A4' },
-  { main: '#37342A', accent: '#504C3E', title: '#B2AC90' },
-  { main: '#1A2742', accent: '#2C3D5E', title: '#92AEDA' },
-  { main: '#10182E', accent: '#202C4A', title: '#7E96C6' },
-  { main: '#54442E', accent: '#736046', title: '#D6BE96' },
-  { main: '#6E7A86', accent: '#8C98A4', title: '#1C2B3C' },
-  { main: '#A8B8C4', accent: '#C2D0DA', title: '#3E5366' },
-  { main: '#46324A', accent: '#624A66', title: '#BCA0C0' },
+  { main: '#2E5A8E', accent: '#4878B0', title: '#C8E0F4' },
+  { main: '#1E3E66', accent: '#33598C', title: '#9CC0E4' },
+  { main: '#1E5E48', accent: '#338068', title: '#A8DCC8' },
+  { main: '#174434', accent: '#2A6650', title: '#8CC4AC' },
+  { main: '#7A2E3E', accent: '#A04458', title: '#ECB8C4' },
+  { main: '#5C2030', accent: '#84364A', title: '#D8A4B4' },
+  { main: '#4A3070', accent: '#684E96', title: '#CCB8EC' },
+  { main: '#38245C', accent: '#543E80', title: '#B4A0DC' },
+  { main: '#1E6070', accent: '#338698', title: '#A8DCE8' },
+  { main: '#14485C', accent: '#256880', title: '#90C4D8' },
+  { main: '#8A5A2E', accent: '#B07A44', title: '#F0D8B0' },
+  { main: '#934832', accent: '#B86448', title: '#F0C0AC' },
+  { main: '#34509E', accent: '#4C6CC0', title: '#C0D0F4' },
+  { main: '#24356E', accent: '#3A4E94', title: '#A4B4E8' },
+  { main: '#6E6028', accent: '#94823C', title: '#E8D898' },
+  { main: '#8CA4BC', accent: '#A8BCD0', title: '#1C2B3C' },
+  { main: '#C4D4E4', accent: '#D8E4F0', title: '#3E5366' },
+  { main: '#643A78', accent: '#86549E', title: '#DCBCEC' },
 ]
 
 // Cuirs des OUVRAGES D'ARGENT (rares). Déclaré ici car utilisé par l'IIFE

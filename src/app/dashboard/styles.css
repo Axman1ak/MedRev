@@ -155,3 +155,7 @@
 .dvx .full-row-go{flex-shrink:0;background:var(--marine);color:#fff;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:9px;text-decoration:none;transition:background .15s}
 .dvx .full-row-go:hover{background:var(--marine2)}
 @media (max-width:560px){.dvx .full-row-state{display:none}.dvx .full-today-stats{flex-wrap:wrap;gap:14px}}
+
+/* Lien "Contempler la bibliothèque" sous la carte Bibliothèque */
+.dvx .bib-visit{display:block;margin-top:10px;text-align:center;font-size:12px;font-weight:600;color:var(--accent-medium);text-decoration:none;padding:8px 10px;border:1px solid var(--border-subtle);border-radius:8px;transition:all .15s}
+.dvx .bib-visit:hover{border-color:var(--accent-medium);background:var(--accent-soft)}

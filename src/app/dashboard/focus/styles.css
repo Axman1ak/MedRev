@@ -2390,3 +2390,25 @@
     animation-delay: 0s !important;
   }
 }
+
+/* =========== MODE GALERIE (?vue=biblio) : légende flottante =========== */
+.focus-gallery-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  text-align: center;
+}
+.focus-gallery-line {
+  font-family: var(--font-bricolage), serif;
+  font-size: 13.5px;
+  font-style: italic;
+  color: #C8DCEC;
+  text-shadow: 0 2px 12px rgba(2, 8, 16, 0.9);
+}
+.focus-gallery-line strong { color: #EAF2F8; font-style: normal; }

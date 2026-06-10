@@ -492,6 +492,9 @@ function DashGarden({ userId }: { userId: string | null }) {
       </div>
       <div className="prog"><i style={{ width: progPct + '%' }} /></div>
       <div className="prog-lbl">{upcoming ? `prochain trésor à ${upcoming.at} h de focus` : 'tous les trésors débloqués'}</div>
+      <Link href="/dashboard/focus?vue=biblio" className="bib-visit">
+        Contempler la bibliothèque →
+      </Link>
     </div>
   )
 }

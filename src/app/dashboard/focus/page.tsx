@@ -493,6 +493,9 @@ function FocusPageBody() {
   const lessonParam = searchParams.get('lesson')
   const systemParam = searchParams.get('system')
   const lessonsParam = searchParams.get('lessons')
+  // ?vue=biblio : mode GALERIE — contempler la bibliothèque sans session
+  // (accessible depuis la carte Bibliothèque du dashboard).
+  const isGallery = searchParams.get('vue') === 'biblio'
 
   const [userId, setUserId] = useState<string | null>(null)
   const [systems, setSystems] = useState<System[]>([])
@@ -664,12 +667,13 @@ function FocusPageBody() {
       // Lobby d'abord : la bibliothèque se contemple, la session se CHOISIT.
       // startedAt reste à 0 jusqu'au clic "Commencer" (le cleanup de
       // démontage ignore startedAt === 0, donc pas de temps fantôme).
-      setPhase(q.length === 0 ? 'empty' : 'lobby')
+      // En mode galerie, on montre la bibliothèque même sans fiche due.
+      setPhase(isGallery ? 'lobby' : (q.length === 0 ? 'empty' : 'lobby'))
       setCurrentIdx(0)
       setNow(Date.now())
     })()
     return () => { cancelled = true }
-  }, [supabase, router, lessonParam, systemParam, lessonsParam, today])
+  }, [supabase, router, lessonParam, systemParam, lessonsParam, today, isGallery])
 
   // Sauvegarde périodique de l'elapsed cumul (toutes les 30s) pour ne pas perdre
   // le temps écoulé si l'utilisateur ferme l'onglet. Push aussi Supabase.
@@ -953,9 +957,25 @@ function FocusPageBody() {
             />
           </div>
 
+          {/* MODE GALERIE : contemplation pure — une légende flottante, rien d'autre. */}
+          {isGallery && (
+            <div className="focus-gallery-caption">
+              <div className="focus-gallery-line">
+                Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors
+                {(() => {
+                  const goal = nextMilestone(dayGarden.fichesCount)
+                  if (!goal) return null
+                  return <> · prochain jalon : <strong>{goal.label}</strong> dans {goal.at - dayGarden.fichesCount} livre{goal.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
+                })()}
+              </div>
+              <Link href="/dashboard" className="focus-link">{'←'} Retour au tableau de bord</Link>
+            </div>
+          )}
+
           {/* Invitation à la session, en bas au centre. Le prochain jalon est
               intégré ICI — plus de panneau qui recouvre le meuble, les trésors
               se découvrent sur les étagères elles-mêmes. */}
+          {!isGallery && (
           <div className="focus-lobby-card">
             <div className="focus-lobby-kicker">Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors</div>
             <div className="focus-lobby-title">
@@ -993,6 +1013,7 @@ function FocusPageBody() {
               Commencer la session →
             </button>
           </div>
+          )}
         </div>
       </div>
     )
