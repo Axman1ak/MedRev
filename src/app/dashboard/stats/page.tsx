@@ -20,7 +20,6 @@ import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
-const TARGET_INDEX = 85
 const COVERED_AT = 3 // une fiche est "couverte" à partir de 3 paliers officiels
 
 // ===================== TYPES =====================
@@ -488,18 +487,6 @@ export default function StatsPage() {
     ? `/dashboard/focus?lessons=${weakFiches.map(f => f.lesson.id).join(',')}`
     : '/dashboard/focus'
 
-  // Matière la plus fragile (contexte du levier maîtrise)
-  const weakestSystem = useMemo(() => {
-    let worst: { name: string; index: number } | null = null
-    for (const sys of semSystems) {
-      const sysLessons = semLessons.filter(l => l.system_id === sys.id)
-      if (sysLessons.length === 0) continue
-      const idx = computeReadiness(sysLessons, activeDays, today)
-      if (worst === null || idx < worst.index) worst = { name: sys.name, index: idx }
-    }
-    return worst
-  }, [semSystems, semLessons, activeDays, today])
-
   // ===== LEVIER COUVERTURE : fiches les moins avancées dans la courbe J =====
   const uncovered = useMemo(() => {
     const rows = semLessons
@@ -507,14 +494,12 @@ export default function StatsPage() {
       .map(l => ({ lesson: l, n: officialCount(l), sysName: semSystems.find(s => s.id === l.system_id)?.name ?? '' }))
       .filter(r => r.n < COVERED_AT)
       .sort((a, b) => a.n - b.n)
-    return { count: rows.length, top: rows.slice(0, 2) }
+    return { count: rows.length, top: rows.slice(0, 3) }
   }, [semLessons, semSystems])
 
   // ===== LEVIER ASSIDUITÉ : journée + 14 jours =====
   const dueToday = useMemo(() => semLessons.filter(l => isDueToday(l, today)).length, [semLessons, today])
   const doneToday = activityIndex.get(today) ?? 0
-  const dayGoal = Math.max(dueToday + doneToday, doneToday, 1)
-  const dayPct = Math.min(100, Math.round((doneToday / dayGoal) * 100))
   const dayValidated = doneToday > 0 && dueToday === 0
 
   // ===== TRAJECTOIRE (Premium) =====
@@ -522,6 +507,9 @@ export default function StatsPage() {
     if (!examDate || examDate <= today) return null
     return Math.round((new Date(examDate + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000)
   }, [examDate, today])
+
+  // Prévision : points gagnés la semaine prochaine au rythme des 30 derniers jours.
+  const perWeek = useMemo(() => Math.round(((index - index30) / 30) * 7), [index, index30])
 
   const projected = useMemo(() => {
     if (daysToExam === null) return null
@@ -559,10 +547,23 @@ export default function StatsPage() {
 
   return (
     <div className="stats-page">
-      <div className="stats-header">
+      <div className="stats-header st6-header">
         <h1 className="stats-title">
           Suis-je <em>prêt</em> ? <span className="st5-header-sem">· {semLabel(semestre)}</span>
         </h1>
+        {isPro && (
+          <label className="st6-examdate">
+            <span className="st6-examdate-lbl">Concours</span>
+            <input
+              type="date"
+              className="st-plan-date-input st6-examdate-input"
+              value={examDate}
+              min={today}
+              onChange={e => chooseExamDate(e.target.value)}
+            />
+            {daysToExam !== null && <span className="st6-examdate-jd">J-{daysToExam}</span>}
+          </label>
+        )}
       </div>
 
       <div className="st-cols st5-cols">
@@ -586,6 +587,18 @@ export default function StatsPage() {
               <div className={`st4-delta ${delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : ''}`}>
                 {delta7 > 0 ? `▲ +${delta7} pts cette semaine` : delta7 < 0 ? `▼ ${delta7} pts cette semaine` : '= stable cette semaine'}
               </div>
+              {isPro ? (
+                <div className="st6-forecast">
+                  prévision : <strong>{perWeek >= 0 ? `+${perWeek}` : perWeek} pts</strong> la semaine prochaine
+                  {daysToExam !== null && projected !== null && (
+                    <> · <strong style={{ color: rankFor(projected).color }}>{projected}/100</strong> le jour J</>
+                  )}
+                </div>
+              ) : (
+                <Link href="/dashboard/pricing" className="st6-forecast-teaser">
+                  Projette ton score jusqu&apos;au concours — Premium →
+                </Link>
+              )}
             </div>
 
             {rank.next && (
@@ -612,53 +625,6 @@ export default function StatsPage() {
             </div>
           </div>
 
-          {/* PLAN JUSQU'AU CONCOURS */}
-          {!isPro && (
-            <div className="stats-card st-plan-teaser st5-plan">
-              <div className="st-plan-teaser-kicker">Premium</div>
-              <div className="st-plan-teaser-title">Ton plan jusqu&apos;au concours</div>
-              <p className="st-plan-teaser-text">
-                Fixe ta date de concours : vois ton <strong>indice projeté le jour J</strong> au
-                rythme actuel, et ce qu&apos;il faut viser chaque semaine pour être prêt.
-              </p>
-              <Link href="/dashboard/pricing" className="st-cta-primary">Débloquer mon plan →</Link>
-            </div>
-          )}
-
-          {isPro && (
-            <div className="stats-card st-plan st5-plan">
-              <div className="stats-card-title">Le plan jusqu&apos;au concours</div>
-              <div className="st-plan-row st5-plan-row">
-                <label className="st-plan-date">
-                  <span className="st-plan-date-lbl">Date du concours</span>
-                  <input
-                    type="date"
-                    className="st-plan-date-input"
-                    value={examDate}
-                    min={today}
-                    onChange={e => chooseExamDate(e.target.value)}
-                  />
-                </label>
-                {daysToExam !== null && projected !== null ? (
-                  <div className="st-plan-proj">
-                    <div className="st-plan-days">J-{daysToExam}</div>
-                    <div className="st-plan-proj-main">
-                      Au rythme des 30 derniers jours :{' '}
-                      <strong style={{ color: rankFor(projected).color }}>{projected}/100</strong>{' '}
-                      ({rankFor(projected).name}) le jour J.
-                      {projected >= TARGET_INDEX
-                        ? ' Tiens le cap.'
-                        : ` Vise ${Math.max(1, Math.ceil(((TARGET_INDEX - index) / Math.max(1, daysToExam)) * 7))} pts de plus par semaine pour atteindre ${TARGET_INDEX}.`}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="st-plan-proj st-empty">
-                    Choisis ta date de concours pour voir ta trajectoire.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ============ COLONNE B : LES 3 LEVIERS ============ */}
@@ -684,11 +650,6 @@ export default function StatsPage() {
                 ))
               ) : (
                 <div className="st-empty">Aucune fiche en dessous de 3/5 — belle maîtrise.</div>
-              )}
-              {weakestSystem && (
-                <div className="st5-lever-note">
-                  Matière la plus fragile : <strong>{weakestSystem.name}</strong> ({weakestSystem.index}/100)
-                </div>
               )}
             </div>
             {weakFiches.length > 0 && (
@@ -753,16 +714,7 @@ export default function StatsPage() {
                   ))}
                 </div>
               </div>
-              <div className="st4-day-row">
-                <div className="st4-day-count">
-                  <strong>{doneToday}</strong>
-                  <span> / {dayGoal} aujourd&apos;hui</span>
-                </div>
-                <div className="st4-day-bar">
-                  <i style={{ width: `${dayPct}%`, background: dayValidated ? '#2D6A4F' : rank.color }} />
-                </div>
-                {dayValidated && <span className="st4-day-ok">✓ journée validée</span>}
-              </div>
+              {dayValidated && <div className="st4-day-ok">✓ journée validée</div>}
             </div>
             {!dayValidated && (
               <Link href="/dashboard/focus" className="st-act st5-lever-cta">

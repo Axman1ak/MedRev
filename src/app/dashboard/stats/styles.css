@@ -1482,3 +1482,49 @@
 .st5-heat-cell.i4 { background: #1F4468; }
 .st5-heat-cell.today { box-shadow: 0 0 0 1.5px var(--gm); }
 .st5-heat-cell.future { opacity: 0.35; }
+
+/* =========== v5.2 : header avec date du concours + forecast dans le rang =========== */
+.st6-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.st6-examdate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.st6-examdate-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--gray);
+}
+.st6-examdate-input { padding: 7px 9px; font-size: 12.5px; }
+.st6-examdate-jd {
+  font-family: var(--font-bricolage), serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.st6-forecast {
+  font-size: 12.5px;
+  color: var(--gray);
+  margin-top: 4px;
+}
+.st6-forecast strong { color: var(--dark); font-variant-numeric: tabular-nums; }
+.st6-forecast-teaser {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gm);
+  text-decoration: none;
+}
+.st6-forecast-teaser:hover { text-decoration: underline; }
+.st4-day-ok { margin-top: 6px; }
