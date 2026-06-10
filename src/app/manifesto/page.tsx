@@ -7,26 +7,32 @@ import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Manifesto — MedRev',
+  title: 'Manifesto · MedRev',
   description: 'La médecine devrait être méritocratique. Pourquoi MedRev existe.',
 }
 
 export default function ManifestoPage() {
   return (
-    <div className="lp-page">
+    <div className="lp-page ln-doc">
       <MarketingNav current="manifesto" />
 
-      <div className="manifesto-wrap">
-        <span className="manifesto-kicker">Manifesto</span>
-        <h1 className="manifesto-h1">
-          La médecine<br />devrait être<br /><em>méritocratique.</em>
+      <section className="ln-subhero">
+        <span className="ln-kicker">Manifesto</span>
+        <h1 className="ln-subhero-h1">
+          La médecine devrait être
+          <span className="ln-line2"><em>méritocratique.</em></span>
         </h1>
-        <p className="manifesto-lede">
-          En France, la P1 décide qui sera médecin. Elle devrait départager
-          <strong> les élèves sur leur travail, peu importe leur budget familial.</strong>
+        <p className="ln-subhero-sub">
+          En France, la première année décide qui sera médecin. Elle devrait
+          départager <strong>les élèves sur leur travail, peu importe leur
+          budget familial.</strong>
         </p>
+      </section>
+
+      <div className="manifesto-wrap">
 
         <section className="manifesto-section">
           <div className="manifesto-num">01 · Le constat</div>

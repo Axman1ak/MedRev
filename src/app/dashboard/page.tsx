@@ -915,7 +915,7 @@ function TodayModal({
                     {late ? `+${p.due.overdueDays} j` : "aujourd'hui"}
                   </span>
                   <span className={p.lastScore ? `full-row-score s${p.lastScore}` : 'full-row-score none'}>
-                    {p.lastScore ?? '—'}
+                    {p.lastScore ?? '·'}
                   </span>
                   <Link
                     href={`/dashboard/focus?lesson=${p.lesson.id}`}

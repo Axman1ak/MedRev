@@ -596,7 +596,7 @@ export default function StatsPage() {
                 </div>
               ) : (
                 <Link href="/dashboard/pricing" className="st6-forecast-teaser">
-                  Projette ton score jusqu&apos;aux examens — Premium →
+                  Projette ton score jusqu&apos;aux examens (Premium) →
                 </Link>
               )}
             </div>
@@ -649,7 +649,7 @@ export default function StatsPage() {
                   </div>
                 ))
               ) : (
-                <div className="st-empty">Aucune fiche en dessous de 3/5 — belle maîtrise.</div>
+                <div className="st-empty">Aucune fiche en dessous de 3/5. Belle maîtrise.</div>
               )}
             </div>
             {weakFiches.length > 0 && (
@@ -677,7 +677,7 @@ export default function StatsPage() {
                 </div>
               ))}
               {uncovered.count === 0 && (
-                <div className="st-empty">Toutes tes fiches sont couvertes — continue les paliers.</div>
+                <div className="st-empty">Toutes tes fiches sont couvertes. Continue les paliers.</div>
               )}
             </div>
             <Link href="/dashboard/focus" className="st-act st5-lever-cta">

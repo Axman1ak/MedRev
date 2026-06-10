@@ -283,7 +283,7 @@ export default function ReviewModal({
     setUploadError(null)
     const userId = lesson.user_id
     if (!userId) {
-      setUploadError("Impossible d'identifier l'utilisateur — recharge la page.")
+      setUploadError("Impossible d'identifier l'utilisateur. Recharge la page.")
       return
     }
 
@@ -651,7 +651,7 @@ export default function ReviewModal({
                     className={`rmod-jstep${isLocked ? ' locked' : ''}`}
                     disabled={isLocked}
                     onClick={() => selectStep(i)}
-                    title={isLocked ? 'Révision future — verrouillée' : `Noter J+${jVal}`}
+                    title={isLocked ? 'Révision future (verrouillée)' : `Noter J+${jVal}`}
                   >
                     <span className="rmod-jlbl">J+{jVal}</span>
                     <span className={`rmod-jbig rmod-stamp ${stampCls}`}>
@@ -666,7 +666,7 @@ export default function ReviewModal({
             </div>
 
             <div className="rmod-hint">
-              Clique sur un J pour le noter. Les J futurs sont verrouillés — ils se débloqueront à la bonne date.
+              Clique sur un J pour le noter. Les J futurs sont verrouillés : ils se débloqueront à la bonne date.
             </div>
 
             {/* ─────────────────────────────────────────────── */}

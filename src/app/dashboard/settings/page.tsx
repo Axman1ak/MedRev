@@ -225,12 +225,20 @@ export default function SettingsPage() {
     <div className="set-page">
       <div className="set-wrap">
         <div className="set-head">
-          <h1 className="set-h1">Paramètres</h1>
-          <p className="set-sub">Gère ton compte, ton profil et ton mot de passe.</p>
+          <h1 className="set-h1">Réglages</h1>
+          <nav className="set-anchors" aria-label="Sections des réglages">
+            <a href="#set-profil">Profil</a>
+            <a href="#set-compte">Compte</a>
+            <a href="#set-mdp">Mot de passe</a>
+            <a href="#set-apparence">Apparence</a>
+            <a href="#set-aide">Aide</a>
+            <a href="#set-session">Session</a>
+            <a href="#set-danger" className="set-anchor-danger">Supprimer</a>
+          </nav>
         </div>
 
         {/* PROFIL */}
-        <section className="set-card">
+        <section className="set-card" id="set-profil">
           <div className="set-card-h">Profil</div>
 
           <div className="set-row">
@@ -283,7 +291,7 @@ export default function SettingsPage() {
         </section>
 
         {/* COMPTE */}
-        <section className="set-card">
+        <section className="set-card" id="set-compte">
           <div className="set-card-h">Compte</div>
 
           <div className="set-row">
@@ -405,7 +413,7 @@ export default function SettingsPage() {
         </section>
 
         {/* MOT DE PASSE */}
-        <section className="set-card">
+        <section className="set-card" id="set-mdp">
           <div className="set-card-h">Mot de passe</div>
 
           <div className="set-row">
@@ -448,7 +456,7 @@ export default function SettingsPage() {
         </section>
 
         {/* APPARENCE */}
-        <section className="set-card">
+        <section className="set-card" id="set-apparence">
           <div className="set-card-h">Apparence</div>
 
           <div className="set-row">
@@ -498,7 +506,7 @@ export default function SettingsPage() {
         </section>
 
         {/* AIDE */}
-        <section className="set-card">
+        <section className="set-card" id="set-aide">
           <div className="set-card-h">Aide</div>
 
           <div className="set-row">
@@ -527,7 +535,7 @@ export default function SettingsPage() {
         </section>
 
         {/* DÉCONNEXION */}
-        <section className="set-card set-card-danger">
+        <section className="set-card" id="set-session">
           <div className="set-card-h">Session</div>
           <p className="set-hint">Tu peux te déconnecter sans risque : tes données restent en place et tu pourras te reconnecter à tout moment.</p>
           <div className="set-actions">
@@ -538,7 +546,7 @@ export default function SettingsPage() {
         </section>
 
         {/* SUPPRIMER MON COMPTE, droit à l'effacement RGPD */}
-        <section className="set-card set-card-danger">
+        <section className="set-card set-card-danger" id="set-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">
             La suppression est <strong>définitive et immédiate</strong> : toutes

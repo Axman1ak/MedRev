@@ -110,7 +110,7 @@ export default function LandingPage() {
           </h1>
           <p className="ln-sub ln-h1c">
             Importe tes cours : MedRev écrit tes <strong>30 QCM</strong>, programme
-            tes <strong>14 paliers de révision</strong> et mesure ta régularité —
+            tes <strong>14 paliers de révision</strong> et mesure ta régularité,
             le levier qui compte avec le contrôle continu.
           </p>
           <div className="ln-ctas ln-h1d">
@@ -202,7 +202,7 @@ export default function LandingPage() {
             <h3>La courbe J planifie tes révisions</h3>
             <p>
               À partir du jour où tu apprends une fiche, <strong>14
-              paliers</strong> se programment seuls — J1, J3, J7… jusqu&apos;à
+              paliers</strong> se programment seuls : J1, J3, J7… jusqu&apos;à
               J+120. Le calendrier accueille aussi tes <strong>TD de fac</strong>{' '}
               et s&apos;imprime d&apos;un clic.
             </p>
@@ -228,7 +228,7 @@ export default function LandingPage() {
             <p>
               En session Focus, un livre <strong>s&apos;écrit pendant que tu
               révises</strong>. Tu notes la fiche en apposant un sceau de cire,
-              et le livre vole se ranger dans ta <strong>bibliothèque</strong> —
+              et le livre vole se ranger dans ta <strong>bibliothèque</strong> :
               2000 livres pour boucler l&apos;année, 6 trésors à débloquer.
             </p>
           </div>
@@ -240,8 +240,8 @@ export default function LandingPage() {
         <h2 className="ln-h2 ln-h2-light rv">D&apos;Apprenti à <em>Maître</em></h2>
         <p className="ln-ranks-sub rv">
           Ton indice de préparation combine maîtrise, couverture et assiduité.
-          Un jour compte à partir de <strong>10 minutes</strong> de révision —
-          tiens ta série, fais monter ton rang.
+          Un jour compte à partir de <strong>10 minutes</strong> de révision.
+          Tiens ta série, fais monter ton rang.
         </p>
         <div className="ln-ranks-row">
           {RANKS.map((r, i) => (
@@ -258,11 +258,11 @@ export default function LandingPage() {
         <h2 className="ln-h2 rv">Tout ce qu&apos;il faut, <em>rien de plus</em></h2>
         <div className="ln-features-grid">
           {[
-            { h: 'Simulateur d’examen', p: 'QCM générés, « Ce que j’ai raté », ou tes annales importées — barème officiel, multi-coche, chrono.' },
+            { h: 'Simulateur d’examen', p: 'QCM générés, « Ce que j’ai raté », ou tes annales importées : barème officiel, multi-coche, chrono.' },
             { h: 'Annales en un glisser', p: 'Importe un vrai sujet PDF : les questions et le corrigé en sont extraits automatiquement.' },
             { h: 'Flashcards recto/verso', p: 'Tes propres cartes pour les définitions et valeurs seuils, avec session de révision intégrée.' },
             { h: 'Retour à la source', p: 'Une question ratée ? Saute au timestamp exact de la vidéo ou à la page du PDF.' },
-            { h: 'Chapitres libres', p: 'Organise tes fiches selon le découpage de ta fac ou de ta prépa — pas l’inverse.' },
+            { h: 'Chapitres libres', p: 'Organise tes fiches selon le découpage de ta fac ou de ta prépa, pas l’inverse.' },
             { h: 'Plan jusqu’aux examens', p: 'Fixe ta date : MedRev projette ton score le jour J au rythme actuel.' },
           ].map((f, i) => (
             <div key={f.h} className={`ln-feature rv rv-d${i % 3}`}>

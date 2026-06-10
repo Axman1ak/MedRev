@@ -268,7 +268,7 @@ const STEPS: Step[] = [
         d&apos;aujourd&apos;hui</strong> sont notables. Les J{' '}
         <strong>futurs</strong> sont verrouillés. Ils se débloquent à la bonne date.
         <br /><br />
-        (Pendant le tutoriel, ces paliers sont juste pour la démo —
+        (Pendant le tutoriel, ces paliers sont juste pour la démo :
         clique <strong>Suivant</strong> pour continuer.)
       </>
     ),
@@ -342,7 +342,7 @@ const STEPS: Step[] = [
     body: (
       <>
         Tes fiches sont <strong>programmées automatiquement</strong> à tous les
-        paliers J — de J0 à J+120. Ajoute aussi tes <strong>TD et cours de
+        paliers J, de J0 à J+120. Ajoute aussi tes <strong>TD et cours de
         fac</strong> avec le bouton <strong>+ TD</strong> (répétables chaque
         semaine), et <strong>imprime ta semaine</strong> d&apos;un clic pour
         l&apos;avoir sur ton bureau.
@@ -414,7 +414,7 @@ const STEPS: Step[] = [
       <>
         Trois sources au choix : tes <strong>QCM générés</strong>, «{' '}
         <strong>Ce que j&apos;ai raté</strong> » (tes points faibles), ou tes{' '}
-        <strong>annales en PDF</strong> — importe un vrai sujet, les questions
+        <strong>annales en PDF</strong> : importe un vrai sujet, les questions
         en sont extraites automatiquement.
         <br /><br />
         Mode <strong>Apprentissage</strong> avec corrections, ou{' '}
@@ -448,7 +448,7 @@ const STEPS: Step[] = [
         <strong>rang</strong> (d&apos;Apprenti à Maître), avec les trois
         leviers pour les faire monter : <strong>Maîtrise</strong>,{' '}
         <strong>Couverture</strong>, <strong>Assiduité</strong>. Un jour
-        compte à partir de <strong>10 minutes</strong> de révision — tiens
+        compte à partir de <strong>10 minutes</strong> de révision. Tiens
         ta série.
         <br /><br />
         <em className="ont-premium-note">

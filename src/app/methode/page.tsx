@@ -10,27 +10,26 @@ import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'La méthode — MedRev',
+  title: 'La méthode · MedRev',
   description: 'Courbe d\'Ebbinghaus, 14 paliers J0 → J+120, génération QCM par IA, mode angles morts. La méthode MedRev expliquée en détail.',
 }
 
 export default function MethodePage() {
   return (
-    <div className="lp-page">
+    <div className="lp-page ln-doc">
       <MarketingNav current="methode" />
 
       {/* Hero */}
-      <section className="lp-hero" style={{ paddingBottom: 60 }}>
-        <span className="lp-hero-kicker">La méthode</span>
-        <h1 className="lp-hero-h1" style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}>
-          Une P1, c&apos;est <em>environ 200 fiches à oublier</em>
-          <span className="line2" style={{ fontStyle: 'normal', color: 'var(--lp-text)' }}>
-            quatre fois.
-          </span>
+      <section className="ln-subhero">
+        <span className="ln-kicker">La méthode</span>
+        <h1 className="ln-subhero-h1">
+          Une année de santé, c&apos;est <em>200 fiches à oublier</em>
+          <span className="ln-line2">quatre fois.</span>
         </h1>
-        <p className="lp-hero-sub">
+        <p className="ln-subhero-sub">
           MedRev s&apos;appuie sur 140 ans de psychologie cognitive pour
           décider <strong>quoi te faire réviser, quand, et pourquoi</strong>.
           Voici comment.

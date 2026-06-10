@@ -849,7 +849,7 @@ export default function CalendarPage() {
                     </div>
                   ))}
                   {occs.length === 0 ? (
-                    <div className="cal-print-none">—</div>
+                    <div className="cal-print-none">·</div>
                   ) : (
                     Array.from(bySys.entries()).map(([sysName, list]) => (
                       <div key={sysName} className="cal-print-group">

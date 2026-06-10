@@ -13,7 +13,7 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = 'MedRev — Tes cours, tes QCM, ton planning.'
+export const alt = 'MedRev · Tes cours, tes QCM, ton planning.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -155,7 +155,7 @@ export default async function Image() {
             fontFamily: 'serif',
           }}
         >
-          medrev — méthode des prépas, sans le prix
+          medrev · la méthode des prépas, sans le prix
         </div>
       </div>
     ),

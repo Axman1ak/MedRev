@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-      setMsg({ kind: 'ok', text: 'Mot de passe modifié — redirection…' })
+      setMsg({ kind: 'ok', text: 'Mot de passe modifié, redirection en cours…' })
       setTimeout(() => router.push('/dashboard'), 800)
     } catch (e: unknown) {
       setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Erreur inconnue' })

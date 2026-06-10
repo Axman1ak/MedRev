@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 const FACS = [
   { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6', hasOptions: true },
@@ -364,19 +365,19 @@ function AuthContent() {
   }
 
   return (
-    <div className="lp-page">
+    <div className="lp-page ln-doc">
       <MarketingNav />
 
+      <section className="ln-subhero ln-subhero-auth">
+        <span className="ln-kicker">Inscription · 2 minutes</span>
+        <h1 className="ln-subhero-h1">Commence à retenir<span className="ln-line2"><em>pour de bon.</em></span></h1>
+        <p className="ln-subhero-sub">
+          Tes matières du S1 et du S2 sont pré-configurées selon ta fac.
+          Pas de carte bleue, pas d&apos;engagement.
+        </p>
+      </section>
+
       <div className="auth-page">
-        <div className="auth-page-head">
-          <span className="lp-hero-kicker">Inscription · 2 minutes</span>
-          <h1 className="auth-h1">Commence à retenir<br /><em>pour de bon.</em></h1>
-          <p className="auth-sub">
-            Crée ton compte en 2 minutes. Tes matières du S1 et S2 sont
-            déjà pré-configurées selon ta fac. Pas de carte bleue, pas
-            d&apos;engagement.
-          </p>
-        </div>
 
         <div className="auth-grid">
           <div>
@@ -469,7 +470,7 @@ function AuthContent() {
                 <div className="auth-step-title">Quelle est ta mineure disciplinaire ?</div>
                 <div className="auth-step-sub">
                   Choisis ta mineure pour pré-configurer tes matières. La
-                  répartition S1/S2 ci-dessous est <em>indicative</em> — elle
+                  répartition S1/S2 ci-dessous est <em>indicative</em> : elle
                   est basée sur les programmes officiels mais peut varier
                   d&apos;une année à l&apos;autre. Tu pourras déplacer une
                   matière entre S1 et S2 (ou la renommer, la supprimer)

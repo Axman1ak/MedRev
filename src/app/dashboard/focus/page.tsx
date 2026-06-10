@@ -1125,10 +1125,10 @@ function FocusPageBody() {
             </div>
             <div className="focus-bilan-next">
               {sessionTreasuresUnlocked > 0
-                ? <>✦ {sessionTreasuresUnlocked > 1 ? `${sessionTreasuresUnlocked} nouveaux trésors débloqués` : 'Nouveau trésor débloqué'} — regarde tes étagères</>
+                ? <>✦ {sessionTreasuresUnlocked > 1 ? `${sessionTreasuresUnlocked} nouveaux trésors débloqués` : 'Nouveau trésor débloqué'}. Regarde tes étagères</>
                 : upcomingTreasure
-                  ? <>Prochain trésor : <strong>{upcomingTreasure.name}</strong> — encore {upcomingTreasure.at - dayGarden.fichesCount} fiche{upcomingTreasure.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
-                  : <>Tous les trésors sont débloqués — bravo !</>}
+                  ? <>Prochain trésor : <strong>{upcomingTreasure.name}</strong>, encore {upcomingTreasure.at - dayGarden.fichesCount} fiche{upcomingTreasure.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
+                  : <>Tous les trésors sont débloqués, bravo !</>}
             </div>
 
             <div className="focus-bilan-list">
@@ -1312,7 +1312,7 @@ function FocusPageBody() {
                 className={`focus-seal s${n}${alreadyRated && ratedScore === n ? ' sealed' : ''}`}
                 onClick={() => rate(n)}
                 disabled={loading}
-                title={`Note ${n}/5 — raccourci ${n}`}
+                title={`Note ${n}/5 (raccourci ${n})`}
               >
                 <span className="focus-seal-wax" aria-hidden="true">
                   <span className="focus-seal-num">{n}</span>
@@ -1331,7 +1331,7 @@ function FocusPageBody() {
               className="focus-link"
               onClick={report}
               disabled={loading || alreadyReported}
-              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
+              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain (raccourci R)'}
             >
               {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
             </button>
