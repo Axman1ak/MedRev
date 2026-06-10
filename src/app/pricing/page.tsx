@@ -44,7 +44,7 @@ export default function PricingPublicPage() {
       </section>
 
       {/* Cards */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      <section className="lp-section" style={{ paddingTop: 64 }}>
         <div className="lp-pricing-teaser">
           <div className="lp-pt-card">
             <div className="lp-pt-tag">Pour découvrir</div>
