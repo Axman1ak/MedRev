@@ -85,7 +85,9 @@ export const metadata: Metadata = {
     'La méthode des prépas, sans le prix. Importe ta vidéo de cours et ton poly, MedRev génère 30 QCM et programme tes 14 paliers de révision. Pour les P1 françaises.',
 
   keywords: [
-    'P1', 'PASS', 'LAS', 'médecine', 'révisions', 'QCM', 'concours médecine',
+    'P1', 'PASS', 'LAS', '1re année santé', 'voie unique santé',
+    'réforme études de santé 2027', 'médecine', 'révisions', 'QCM',
+    'concours médecine', 'examens médecine', 'contrôle continu santé',
     'prépa médecine', 'Sorbonne', 'Paris Cité', 'Ebbinghaus',
     'spaced repetition', 'fiches de révision', 'planning révision',
   ],
@@ -101,7 +103,7 @@ export const metadata: Metadata = {
     siteName: 'MedRev',
     title: 'MedRev — Tes cours, tes QCM, ton planning.',
     description:
-      'La méthode des prépas, sans le prix. 30 QCM générés sur ta vidéo, planning J0 → J+120, simulateur type concours.',
+      'La méthode des prépas, sans le prix. 30 QCM générés sur ta vidéo, planning J0 → J+120, simulateur type examens.',
   },
 
   twitter: {

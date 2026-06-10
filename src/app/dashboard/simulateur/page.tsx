@@ -1190,7 +1190,7 @@ export default function SimulateurPage() {
                   </span>
                   <div className="sim-mode-pill-top">
                     <div className="sim-mode-pill-h">Examen blanc</div>
-                    <div className="sim-mode-pill-sub">Chrono imposé, aucun feedback. Corrections à la fin, comme au concours.</div>
+                    <div className="sim-mode-pill-sub">Chrono imposé, aucun feedback. Corrections à la fin, comme aux examens.</div>
                   </div>
                   <div className="sim-mode-pill-illus" aria-hidden="true">
                     {/* Même QCM en noir & blanc, AUCUNE réponse révélée */}

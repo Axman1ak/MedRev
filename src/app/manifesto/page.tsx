@@ -42,13 +42,13 @@ export default function ManifestoPage() {
           <p className="manifesto-p">
             Les boursiers, les enfants de classes populaires, celles et ceux
             dont les parents ne peuvent pas suivre cet effort financier passent
-            le même concours avec moins d&apos;heures encadrées. La médecine
+            les mêmes épreuves avec moins d&apos;heures encadrées. La médecine
             devrait recruter ses futurs praticiens <strong>sur la rigueur,
             pas sur le compte bancaire</strong>.
           </p>
           <div className="manifesto-quote">
-            « Payer plusieurs milliers d&apos;euros par an pour préparer un
-            concours public est devenu la norme pour beaucoup. On voulait que
+            « Payer plusieurs milliers d&apos;euros par an pour préparer une
+            année de fac publique est devenu la norme pour beaucoup. On voulait que
             ça ne soit plus <strong>une condition d&apos;accès</strong>. »
           </div>
         </section>

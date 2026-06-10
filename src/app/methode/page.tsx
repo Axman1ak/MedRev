@@ -156,7 +156,7 @@ export default function MethodePage() {
               Tu charges la <strong>vidéo de la rediffusion</strong> du cours
               et le <strong>poly PDF</strong>. MedRev les envoie à Gemini
               (Google), qui transcrit l&apos;audio puis génère 30 QCM type
-              concours.
+              examen.
             </p>
             <p className="lp-method-p">
               Chaque question vient avec un <strong>retour direct vers la
@@ -166,7 +166,7 @@ export default function MethodePage() {
             <p className="lp-method-p">
               Format strict : 5 options A-E, niveau annales EDN. Mix de QCS
               (une seule bonne réponse) et de QCM (plusieurs bonnes), comme
-              au vrai concours. Les options sont mélangées aléatoirement après
+              aux vrais examens. Les options sont mélangées aléatoirement après
               génération pour casser le biais des LLM (qui placent souvent
               la bonne en B/C).
             </p>
@@ -228,7 +228,7 @@ export default function MethodePage() {
             </p>
             <p className="lp-method-p">
               Résultat : tu passes ton temps sur <strong>les notions où tu
-              perds le concours</strong>, pas sur celles que tu maîtrises
+              perds des points</strong>, pas sur celles que tu maîtrises
               déjà.
             </p>
           </div>

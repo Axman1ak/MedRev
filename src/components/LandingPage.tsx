@@ -1,213 +1,308 @@
 'use client'
 // src/components/LandingPage.tsx
 //
-// Landing page MedRev, version simplifiée mai 2026.
-// Suite au feedback : H1 plus concret, hero épuré (1 mockup focalisé au
-// lieu du dashboard dense), stream "Sous le capot" supprimée, features
-// réduites de 9 à 6.
+// Landing "Bibliothèque de nuit" — refonte juin 2026.
+// Narration : chaque soir de travail devient un livre dans ta bibliothèque.
+// - Héro immersif : la vraie bibliothèque (BibliothecaSvg) en fond de nuit,
+//   entrée séquencée en CSS pur.
+// - Bandeau réforme 2027 : voie unique + contrôle continu → la régularité
+//   devient LE levier, et MedRev la mesure (indice, rang, série).
+// - La méthode en 3 actes (reveal au scroll, visuels SVG animés).
+// - Les 6 rangs d'érudit (sceaux qui se révèlent en cascade).
+// - Features compactes, pricing teaser, CTA final.
+//
+// ⚠ landing-styles.css reste importé (la nav/footer marketing et /auth
+// l'utilisent) mais N'EST PAS modifié. Tout le nouveau style vit dans
+// landing-night.css (classes ln-*), avec quelques overrides SCOPÉS .ln-page.
+
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
+import BibliothecaSvg from '@/components/BibliothecaSvg'
 import './landing-styles.css'
-export default function LandingPage() {
+import './landing-night.css'
+
+// ============ Reveal au scroll (IntersectionObserver → classe .in) ============
+function useReveal() {
+  const ref = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const root = ref.current
+    if (!root || typeof IntersectionObserver === 'undefined') return
+    const els = Array.from(root.querySelectorAll('.rv'))
+    const io = new IntersectionObserver(
+      entries => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in')
+            io.unobserve(e.target)
+          }
+        }
+      },
+      { threshold: 0.18 }
+    )
+    els.forEach(el => io.observe(el))
+    return () => io.disconnect()
+  }, [])
+  return ref
+}
+
+// ============ Sceau de rang (copie locale, autonome) ============
+function Seal({ color, tier }: { color: string; tier: number }) {
   return (
-    <div className="lp-page">
+    <svg viewBox="0 0 120 120" className="ln-seal" aria-hidden="true">
+      <path d="M 22 48 L 8 60 L 22 72 L 28 66 L 21 60 L 28 54 Z" fill={color} opacity="0.55" />
+      <path d="M 98 48 L 112 60 L 98 72 L 92 66 L 99 60 L 92 54 Z" fill={color} opacity="0.55" />
+      <g transform="rotate(45 60 60)">
+        <rect x="29" y="29" width="62" height="62" rx="7" fill={color} opacity="0.22" />
+        <rect x="37" y="37" width="46" height="46" rx="6" fill={color} opacity="0.5" />
+        <rect x="45" y="45" width="30" height="30" rx="5" fill={color} />
+      </g>
+      <path d="M 60 39 L 75 60 L 60 60 Z" fill="rgba(255,255,255,0.4)" />
+      <path d="M 60 60 L 60 81 L 45 60 Z" fill="rgba(0,0,0,0.18)" />
+      {[0, 1, 2].map(i => (
+        <circle
+          key={i}
+          cx={48 + i * 12}
+          cy="106"
+          r="3.4"
+          fill={i < (4 - tier) ? color : 'none'}
+          stroke={color}
+          strokeWidth="1.2"
+          opacity={i < (4 - tier) ? 1 : 0.45}
+        />
+      ))}
+    </svg>
+  )
+}
+
+const RANKS = [
+  { name: 'Apprenti', color: '#8CA4BC', tier: 3 },
+  { name: 'Copiste', color: '#B86448', tier: 3 },
+  { name: 'Scribe', color: '#7FB0D4', tier: 2 },
+  { name: 'Lettré', color: '#D9B24A', tier: 2 },
+  { name: 'Érudit', color: '#7AA56B', tier: 1 },
+  { name: 'Maître', color: '#15304E', tier: 1 },
+]
+
+export default function LandingPage() {
+  const pageRef = useReveal()
+
+  return (
+    <div className="lp-page ln-page" ref={pageRef}>
       <MarketingNav current="home" />
-      {/* HERO, simplifié */}
-      <section className="lp-hero">
-        <span className="lp-hero-kicker">Pour les P1 · Rentrée 2026</span>
-        <h1 className="lp-hero-h1">
-          Tes cours, tes QCM,
-          <span className="line2"><em>ton planning.</em></span>
-        </h1>
-        <p className="lp-hero-sub">
-          Importe ta vidéo de cours et ton poly. <strong>MedRev génère 30
-          QCM</strong>, programme tes 14 paliers de révision, et te dit
-          chaque jour quoi travailler. <em>La méthode des prépas, sans
-          le prix.</em>
+
+      {/* ============ HÉRO : LA BIBLIOTHÈQUE DE NUIT ============ */}
+      <section className="ln-hero">
+        <div className="ln-hero-bib" aria-hidden="true">
+          <BibliothecaSvg fichesCount={760} preserveAspectRatio="xMidYMid slice" className="ln-hero-svg" />
+        </div>
+        <div className="ln-hero-veil" aria-hidden="true" />
+        <div className="ln-hero-glow" aria-hidden="true" />
+
+        <div className="ln-hero-inner">
+          <span className="ln-kicker ln-h1a">
+            1re année santé · prêt pour la réforme 2027
+          </span>
+          <h1 className="ln-h1 ln-h1b">
+            Chaque soir de travail
+            <span className="ln-h1-line2">devient <em>un livre</em>.</span>
+          </h1>
+          <p className="ln-sub ln-h1c">
+            Importe tes cours : MedRev écrit tes <strong>30 QCM</strong>, programme
+            tes <strong>14 paliers de révision</strong> et mesure ta régularité —
+            le levier qui compte avec le contrôle continu.
+          </p>
+          <div className="ln-ctas ln-h1d">
+            <Link href="/auth" className="ln-btn-primary">Commencer gratuit →</Link>
+            <Link href="/methode" className="ln-btn-ghost">La méthode</Link>
+          </div>
+          <div className="ln-scrollhint ln-h1e" aria-hidden="true">
+            <span className="ln-scrollhint-dot" />
+          </div>
+        </div>
+      </section>
+
+      {/* ============ BANDEAU RÉFORME 2027 ============ */}
+      <section className="ln-reform">
+        <div className="ln-reform-inner">
+          <div className="ln-reform-item rv">
+            <div className="ln-reform-h">Fin du PASS/LAS en 2027</div>
+            <p>Une <strong>voie unique</strong> pour toutes les filières santé,
+            harmonisée au niveau national.</p>
+          </div>
+          <div className="ln-reform-item rv rv-d1">
+            <div className="ln-reform-h">Plus de concours unique</div>
+            <p>Le classement se joue sur <strong>tout le parcours</strong> :
+            chaque semaine de travail compte.</p>
+          </div>
+          <div className="ln-reform-item rv rv-d2">
+            <div className="ln-reform-h">La régularité devient le levier</div>
+            <p>MedRev la <strong>mesure et la construit</strong> : indice de
+            préparation, série de jours, plan jusqu&apos;aux examens.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ LA MÉTHODE EN 3 ACTES ============ */}
+      <section className="ln-acts">
+        <h2 className="ln-h2 rv">Trois gestes, <em>chaque jour</em></h2>
+
+        {/* Acte 1 — l'IA écrit tes QCM */}
+        <div className="ln-act rv">
+          <div className="ln-act-visual" aria-hidden="true">
+            <svg viewBox="0 0 280 170" className="ln-act-svg">
+              <rect x="20" y="18" width="240" height="134" rx="10" fill="#E9EFF5" />
+              <rect x="20" y="18" width="240" height="134" rx="10" fill="none" stroke="#7FB0D4" strokeWidth="1.4" opacity="0.5" />
+              {[0, 1, 2, 3, 4].map(i => (
+                <rect
+                  key={i}
+                  className={`ln-ink ln-ink-${i}`}
+                  x="44"
+                  y={44 + i * 22}
+                  width={150 - i * 12}
+                  height="5"
+                  rx="2.5"
+                  fill="#2E5570"
+                />
+              ))}
+              <g className="ln-actquill" transform="translate(214 118)">
+                <path d="M 0 0 Q 5 -14 2 -34 Q 14 -44 22 -39 Q 12 -24 7 -7 Z" fill="#C8DCEC" stroke="#7FB0D4" strokeWidth="1" />
+              </g>
+            </svg>
+          </div>
+          <div className="ln-act-copy">
+            <span className="ln-act-num">01</span>
+            <h3>Importe ton cours, l&apos;IA écrit tes QCM</h3>
+            <p>
+              Vidéo de la rediffusion + poly PDF → <strong>30 QCM type
+              examen</strong>, tirés de <em>tes</em> supports. Chaque question
+              pointe vers le timestamp de la vidéo ou la page du PDF.
+            </p>
+          </div>
+        </div>
+
+        {/* Acte 2 — la courbe J planifie */}
+        <div className="ln-act ln-act-rev rv">
+          <div className="ln-act-visual" aria-hidden="true">
+            <svg viewBox="0 0 280 170" className="ln-act-svg">
+              <line x1="28" y1="92" x2="252" y2="92" stroke="#3E6E96" strokeWidth="2" opacity="0.5" />
+              {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                <g key={i} className={`ln-jdot ln-jdot-${i}`}>
+                  <circle cx={36 + i * 30} cy="92" r="8" fill="#7FB0D4" />
+                  <text x={36 + i * 30} y="122" textAnchor="middle" fontSize="10" fill="#8FB8D8" fontFamily="var(--font-hanken), sans-serif">
+                    {['J0', 'J1', 'J3', 'J7', 'J15', 'J30', 'J60', 'J120'][i]}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          </div>
+          <div className="ln-act-copy">
+            <span className="ln-act-num">02</span>
+            <h3>La courbe J planifie tes révisions</h3>
+            <p>
+              À partir du jour où tu apprends une fiche, <strong>14
+              paliers</strong> se programment seuls — J1, J3, J7… jusqu&apos;à
+              J+120. Le calendrier accueille aussi tes <strong>TD de fac</strong>{' '}
+              et s&apos;imprime d&apos;un clic.
+            </p>
+          </div>
+        </div>
+
+        {/* Acte 3 — le sceau et le livre */}
+        <div className="ln-act rv">
+          <div className="ln-act-visual" aria-hidden="true">
+            <svg viewBox="0 0 280 170" className="ln-act-svg">
+              <path d="M 60 40 L 60 130 Q 100 138 140 132 Q 180 138 220 130 L 220 40 Q 180 32 140 38 Q 100 32 60 40 Z" fill="#1B2C40" stroke="#7FB0D4" strokeWidth="1" opacity="0.95" />
+              <path d="M 68 46 Q 104 39 138 44 L 138 124 Q 104 130 68 122 Z" fill="#E9EFF5" />
+              <path d="M 142 44 Q 176 39 212 46 L 212 122 Q 176 130 142 124 Z" fill="#E2EAF2" />
+              <g className="ln-stamp">
+                <circle cx="178" cy="84" r="20" fill="#7AA56B" stroke="rgba(0,0,0,0.3)" strokeWidth="1" />
+                <text x="178" y="91" textAnchor="middle" fontSize="18" fontWeight="700" fill="rgba(8,14,24,0.6)" fontFamily="var(--font-bricolage), serif">5</text>
+              </g>
+            </svg>
+          </div>
+          <div className="ln-act-copy">
+            <span className="ln-act-num">03</span>
+            <h3>Note d&apos;un sceau, range le livre</h3>
+            <p>
+              En session Focus, un livre <strong>s&apos;écrit pendant que tu
+              révises</strong>. Tu notes la fiche en apposant un sceau de cire,
+              et le livre vole se ranger dans ta <strong>bibliothèque</strong> —
+              2000 livres pour boucler l&apos;année, 6 trésors à débloquer.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ LES RANGS ============ */}
+      <section className="ln-ranks">
+        <h2 className="ln-h2 ln-h2-light rv">D&apos;Apprenti à <em>Maître</em></h2>
+        <p className="ln-ranks-sub rv">
+          Ton indice de préparation combine maîtrise, couverture et assiduité.
+          Un jour compte à partir de <strong>10 minutes</strong> de révision —
+          tiens ta série, fais monter ton rang.
         </p>
-        <div className="lp-hero-ctas">
-          <Link href="/auth" className="lp-btn-primary">Commencer gratuit →</Link>
-          <Link href="/methode" className="lp-btn-secondary">▶ Voir la méthode</Link>
-        </div>
-        <div className="lp-trust-row">
-          <span><span className="lp-trust-dot" />Gratuit pour démarrer</span>
-          <span><span className="lp-trust-dot" />Données en France</span>
-          <span><span className="lp-trust-dot" />Sans pub, sans engagement</span>
-        </div>
-        {/* Mockup focal : un seul card QCM avec source vidéo, pas le dashboard
-            entier. Communique en un coup d'œil ce que MedRev fait. */}
-        <FocusedMockup />
-      </section>
-      {/* FACS */}
-      <section className="lp-facs">
-        <div className="lp-facs-label">Conçu pour les P1 françaises</div>
-        <div className="lp-facs-grid">
-          <div className="lp-fac-name">Sorbonne Université<em>Paris 6</em></div>
-          <div className="lp-fac-name">Université Paris Cité<em>Paris 5</em></div>
-          <div className="lp-fac-name">Sorbonne Paris Nord<em>Paris 13</em></div>
-          <div className="lp-fac-name">UPEC<em>Créteil</em></div>
-          <div className="lp-fac-name">Université de Lyon<em>Lyon</em></div>
-          <div className="lp-fac-name">Montpellier<em>Hérault</em></div>
-        </div>
-      </section>
-      {/* COMMENT ÇA MARCHE, gardé tel quel, c'est clair */}
-      <section className="lp-section">
-        <div className="lp-section-head">
-          <div className="lp-section-kicker">La méthode</div>
-          <h2 className="lp-section-h2">Trois gestes, <em>zéro organisation manuelle.</em></h2>
-          <p className="lp-section-sub">
-            Tu donnes tes cours. MedRev fait le reste : QCM, planning, sessions
-            de révision et statistiques pour mesurer ta progression.
-          </p>
-        </div>
-        <div className="lp-steps">
-          <div className="lp-step">
-            <span className="lp-step-num">01</span>
-            <h3 className="lp-step-title">Importe ton cours</h3>
-            <p className="lp-step-desc">Vidéo de la rediffusion ou poly PDF. Glisse-dépose, c&apos;est tout.</p>
-            <div className="lp-step-mockup">
-              <div className="lp-mockup-import">
-                <div className="lp-mockup-file"><span className="lp-mockup-file-icon">▶</span>cours-cardio.mp4<span className="lp-mockup-file-meta">142 Mo</span></div>
-                <div className="lp-mockup-file"><span className="lp-mockup-file-icon">P</span>poly-cardio-2026.pdf<span className="lp-mockup-file-meta">8 Mo</span></div>
-              </div>
-            </div>
-          </div>
-          <div className="lp-step">
-            <span className="lp-step-num">02</span>
-            <h3 className="lp-step-title">L&apos;IA génère 30 QCM</h3>
-            <p className="lp-step-desc">Type concours, avec retour direct vers le passage source.</p>
-            <div className="lp-step-mockup">
-              <div style={{ width: '100%' }}>
-                <div className="lp-mockup-qcm-q">L&apos;enzyme régulatrice de la glycolyse est :</div>
-                <div className="lp-mockup-qcm-opts">
-                  <div className="lp-mockup-qcm-opt">A. Hexokinase</div>
-                  <div className="lp-mockup-qcm-opt ok">B. Phosphofructokinase ✓</div>
-                  <div className="lp-mockup-qcm-opt">C. Pyruvate kinase</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="lp-step">
-            <span className="lp-step-num">03</span>
-            <h3 className="lp-step-title">Le planning J se construit</h3>
-            <p className="lp-step-desc">14 paliers J0 → J+120 basés sur la courbe d&apos;Ebbinghaus.</p>
-            <div className="lp-step-mockup">
-              <div className="lp-mockup-cal">
-                <span className="lp-mockup-cal-stamp s5">5</span>
-                <span className="lp-mockup-cal-stamp s4">4</span>
-                <span className="lp-mockup-cal-stamp s5">5</span>
-                <span className="lp-mockup-cal-stamp s3">3</span>
-                <span className="lp-mockup-cal-stamp s4">4</span>
-                <span className="lp-mockup-cal-stamp s5">5</span>
-                <span className="lp-mockup-cal-stamp future">·</span>
-                <span className="lp-mockup-cal-stamp future">·</span>
-                <span className="lp-mockup-cal-stamp future">·</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* FEATURES, 6 au lieu de 9 */}
-      <section className="lp-section">
-        <div className="lp-section-head">
-          <div className="lp-section-kicker">Ce que tu débloques</div>
-          <h2 className="lp-section-h2">Un coach, <em>pas un cahier.</em></h2>
-          <p className="lp-section-sub">
-            Tes fiches en vrac ne savent pas que tes partiels sont dans trois semaines.
-            MedRev oui. Et il sait quoi faire à propos.
-          </p>
-        </div>
-        <div className="lp-features">
-          {[
-            { icon: '▦', title: 'Bibliothèque vivante', desc: "Chaque fiche notée ajoute un livre. 2000 ouvrages à amasser sur l'année, 6 trésors à débloquer aux paliers 100, 300, 600, 900, 1200 et 1500." },
-            { icon: '◷', title: 'Courbe J intelligente', desc: "14 paliers de J0 à J+120. Une note basse re-programme une révision automatiquement. Une note haute t'épargne." },
-            { icon: '⊕', title: 'Sessions Focus', desc: "Mode plein écran, distractions verrouillées. La bibliothèque en fond, tu coches tes fiches du jour. Apaisant." },
-            { icon: '◎', title: 'Mode angles morts', desc: "Le simulateur cible tes fiches faibles automatiquement. 80 % du temps sur 20 % des notions à problème." },
-            { icon: '∿', title: 'Stats avancées', desc: "Heatmap année 52 sem, sparkline 12 sem, dumbbell par matière. Vois où tu progresses, où tu stagnes." },
-            { icon: '▶', title: 'Examen blanc', desc: "Type concours : timer, grille de réponses, 0 indice avant la fin. Avec corrigé détaillé après. Comme le vrai jour." },
-          ].map((f) => (
-            <div key={f.title} className="lp-feature">
-              <div className="lp-feature-icon">{f.icon}</div>
-              <h3 className="lp-feature-title">{f.title}</h3>
-              <p className="lp-feature-desc">{f.desc}</p>
+        <div className="ln-ranks-row">
+          {RANKS.map((r, i) => (
+            <div key={r.name} className={`ln-rank rv rv-d${i % 4}`}>
+              <Seal color={r.color} tier={r.tier} />
+              <span className="ln-rank-name">{r.name}</span>
             </div>
           ))}
         </div>
       </section>
-      {/* PROOF */}
-      <section className="lp-section">
-        <div className="lp-proof">
-          <p className="lp-proof-quote">
-            « Une P1 typique fait <strong>environ 200 fiches</strong> dans
-            l&apos;année. MedRev les organise toutes pour toi, te génère
-            <strong> jusqu&apos;à 30 QCM par fiche</strong> sur tes vrais cours,
-            et te demande chaque jour <strong>quoi réviser</strong>. »
-          </p>
-          <div className="lp-proof-stats">
-            <div><div className="lp-proof-stat-num">30</div><div className="lp-proof-stat-lbl">QCM / fiche</div></div>
-            <div><div className="lp-proof-stat-num">14</div><div className="lp-proof-stat-lbl">Paliers J</div></div>
-            <div><div className="lp-proof-stat-num">6</div><div className="lp-proof-stat-lbl">Trésors</div></div>
-            <div><div className="lp-proof-stat-num">100 %</div><div className="lp-proof-stat-lbl">Auto-organisé</div></div>
+
+      {/* ============ FEATURES COMPACTES ============ */}
+      <section className="ln-features">
+        <h2 className="ln-h2 rv">Tout ce qu&apos;il faut, <em>rien de plus</em></h2>
+        <div className="ln-features-grid">
+          {[
+            { h: 'Simulateur d’examen', p: 'QCM générés, « Ce que j’ai raté », ou tes annales importées — barème officiel, multi-coche, chrono.' },
+            { h: 'Annales en un glisser', p: 'Importe un vrai sujet PDF : les questions et le corrigé en sont extraits automatiquement.' },
+            { h: 'Flashcards recto/verso', p: 'Tes propres cartes pour les définitions et valeurs seuils, avec session de révision intégrée.' },
+            { h: 'Retour à la source', p: 'Une question ratée ? Saute au timestamp exact de la vidéo ou à la page du PDF.' },
+            { h: 'Chapitres libres', p: 'Organise tes fiches selon le découpage de ta fac ou de ta prépa — pas l’inverse.' },
+            { h: 'Plan jusqu’aux examens', p: 'Fixe ta date : MedRev projette ton score le jour J au rythme actuel.' },
+          ].map((f, i) => (
+            <div key={f.h} className={`ln-feature rv rv-d${i % 3}`}>
+              <h3>{f.h}</h3>
+              <p>{f.p}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ PRICING TEASER ============ */}
+      <section className="ln-pricing">
+        <div className="ln-pricing-card rv">
+          <div className="ln-pricing-col">
+            <div className="ln-pricing-name">Gratuit</div>
+            <div className="ln-pricing-price">0 €</div>
+            <p>Fiches et planning illimités · 10 générations IA · 3 sessions simulateur</p>
           </div>
+          <div className="ln-pricing-sep" aria-hidden="true" />
+          <div className="ln-pricing-col">
+            <div className="ln-pricing-name">Premium</div>
+            <div className="ln-pricing-price">69 €<small>/an</small></div>
+            <p>IA illimitée · examens blancs · plan jusqu&apos;aux examens · vidéos longues</p>
+          </div>
+          <Link href="/pricing" className="ln-btn-ghost ln-pricing-cta">Comparer →</Link>
         </div>
       </section>
-      {/* FINAL CTA */}
-      <section className="lp-cta">
-        <h2 className="lp-cta-h2">
-          La P1 commence.<br />
-          <em>Tu commences avec elle.</em>
-        </h2>
-        <p className="lp-cta-sub">
-          Pré-configure ton compte en 2 minutes. Tes matières Sorbonne /
-          Paris Cité / Lyon… sont déjà prêtes selon ta fac.
-        </p>
-        <div className="lp-cta-buttons">
-          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
-          <Link href="/pricing" className="lp-btn-secondary">Voir les tarifs détaillés</Link>
+
+      {/* ============ CTA FINAL ============ */}
+      <section className="ln-final">
+        <div className="ln-final-inner rv">
+          <h2 className="ln-h2 ln-h2-light">Ta bibliothèque <em>t&apos;attend</em>.</h2>
+          <p className="ln-final-sub">
+            Gratuit pour commencer. Deux minutes pour créer ta première fiche.
+          </p>
+          <Link href="/auth" className="ln-btn-primary ln-btn-big">Commencer gratuit →</Link>
         </div>
       </section>
+
       <MarketingFooter />
-    </div>
-  )
-}
-// ============================================================
-// FOCUSED MOCKUP, visualise « ta vidéo, l'IA, 1 QCM avec source »
-// Beaucoup plus simple que le dashboard complet : une seule chose à
-// regarder, on comprend en 1 seconde ce que MedRev fait.
-// ============================================================
-function FocusedMockup() {
-  return (
-    <div className="lp-focus-mockup">
-      <div className="lp-focus-source">
-        <span className="lp-focus-icon">▶</span>
-        <span className="lp-focus-source-name">cours-glycolyse.mp4</span>
-        <span className="lp-focus-source-meta">47 min · uploadé</span>
-      </div>
-      <div className="lp-focus-arrow">
-        <div className="lp-focus-arrow-label">L&apos;IA en 90 secondes</div>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 5v14M5 12l7 7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-      <div className="lp-focus-card">
-        <div className="lp-focus-card-kicker">Question 12 / 30</div>
-        <div className="lp-focus-card-q">
-          L&apos;enzyme régulatrice de la glycolyse, dont l&apos;activité est
-          inhibée par l&apos;ATP, est :
-        </div>
-        <div className="lp-focus-card-opts">
-          <div className="lp-focus-card-opt">A. Hexokinase</div>
-          <div className="lp-focus-card-opt ok">B. Phosphofructokinase ✓</div>
-          <div className="lp-focus-card-opt">C. Pyruvate kinase</div>
-          <div className="lp-focus-card-opt">D. Aldolase</div>
-          <div className="lp-focus-card-opt">E. Énolase</div>
-        </div>
-        <div className="lp-focus-card-source">
-          <span className="lp-focus-icon-small">▶</span>
-          Source : Vidéo · 18:42
-        </div>
-      </div>
     </div>
   )
 }

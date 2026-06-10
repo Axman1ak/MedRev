@@ -110,7 +110,7 @@ function PricingContent() {
         <header className="pri-head">
           <div className="pri-kicker">Tarifs</div>
           <h1 className="pri-h1">
-            Choisis le plan <em>qui te porte</em> jusqu&apos;au concours
+            Choisis le plan <em>qui te porte</em> jusqu&apos;aux examens
           </h1>
           <p className="pri-sub">
             La P1 est une année difficile. MedRev t&apos;accompagne avec un

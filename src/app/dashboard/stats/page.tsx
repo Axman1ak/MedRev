@@ -553,7 +553,7 @@ export default function StatsPage() {
         </h1>
         {isPro && (
           <label className="st6-examdate">
-            <span className="st6-examdate-lbl">Concours</span>
+            <span className="st6-examdate-lbl">Examens</span>
             <input
               type="date"
               className="st-plan-date-input st6-examdate-input"
@@ -596,7 +596,7 @@ export default function StatsPage() {
                 </div>
               ) : (
                 <Link href="/dashboard/pricing" className="st6-forecast-teaser">
-                  Projette ton score jusqu&apos;au concours — Premium →
+                  Projette ton score jusqu&apos;aux examens — Premium →
                 </Link>
               )}
             </div>

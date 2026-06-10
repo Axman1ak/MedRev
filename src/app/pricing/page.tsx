@@ -21,7 +21,7 @@ import '@/components/landing-styles.css'
 
 export const metadata = {
   title: 'Tarifs · MedRev',
-  description: 'Choisis le plan qui te porte jusqu\'au concours. Gratuit pour démarrer, Premium à 69 €/an.',
+  description: 'Choisis le plan qui te porte jusqu\'aux examens. Gratuit pour démarrer, Premium à 69 €/an.',
 }
 
 export default function PricingPublicPage() {
