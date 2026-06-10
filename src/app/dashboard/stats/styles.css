@@ -1116,11 +1116,6 @@
    grands vides blancs). La colonne scrolle en interne si vraiment trop
    de contenu — la page, elle, ne bouge pas. */
 .st-fill { display: flex; flex-direction: column; }
-.st-col {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  padding-bottom: 2px;
-}
 /* La grille une-page compresse un peu le héros */
 .st-hero2 { padding: 18px 22px; gap: 26px; margin-bottom: 0; }
 .st-hero2-gauge { width: 210px; }
@@ -1296,4 +1291,114 @@
   .st4-cols { grid-template-columns: 1fr; }
   .st4-hero { gap: 14px; }
   .st4-sys-list { justify-content: flex-start; gap: 2px; }
+}
+
+/* =========== v5 : SCORE À GAUCHE, 3 LEVIERS À DROITE =========== */
+.st5-header-sem {
+  font-size: 14px;
+  color: var(--gray);
+  font-weight: 400;
+  font-style: italic;
+}
+.st5-cols { grid-template-columns: 0.85fr 1.15fr; }
+.st5-col { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+
+/* Héros : remplit l'espace au-dessus du plan, contenu réparti */
+.st5-hero {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  text-align: center;
+  padding: 18px 26px;
+  margin-bottom: 0;
+}
+.st5-rank-level {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--gray);
+  margin-top: 2px;
+}
+
+/* Plan : hauteur naturelle en bas de colonne */
+.st5-plan { margin-bottom: 0; flex-shrink: 0; }
+.st5-plan-row { margin-bottom: 0; }
+
+/* Les 3 leviers : tiers égaux de la colonne, contenu réparti haut/milieu/bas */
+.st5-lever {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  padding: 16px 20px;
+}
+.st5-lever-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.st5-lever-name {
+  font-family: var(--font-bricolage), serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--dark);
+}
+.st5-lever-how { font-size: 12px; color: var(--gray); }
+.st5-lever-score {
+  margin-left: auto;
+  font-family: var(--font-bricolage), serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.st5-lever-bar {
+  height: 6px;
+  background: var(--soft);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.st5-lever-bar i { display: block; height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.st5-lever-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0 4px;
+  min-height: 0;
+  overflow: hidden;
+}
+.st5-lever-note { font-size: 12px; color: var(--gray); line-height: 1.5; }
+.st5-lever-note strong { color: var(--dark); }
+.st5-lever-cta { flex-shrink: 0; font-size: 12.5px; }
+
+/* 14 derniers jours en points */
+.st5-days { display: flex; gap: 5px; align-items: center; }
+.st5-day {
+  flex: 1;
+  max-width: 22px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--soft);
+  border: 1px solid var(--border);
+}
+.st5-day.on { background: var(--gm); border-color: var(--gm); }
+.st5-day.today { box-shadow: 0 0 0 2px var(--gl); }
+.st5-day.today:not(.on) { border-style: dashed; border-color: var(--gm); }
+
+@media (max-width: 980px) {
+  .st5-cols { grid-template-columns: 1fr; }
+  .st5-hero { gap: 12px; }
+  .st5-lever { flex: 0 0 auto; }
 }
