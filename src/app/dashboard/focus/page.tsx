@@ -561,8 +561,18 @@ function FocusPageBody() {
   // Vol du livre refermé : du pupitre vers le compteur-bibliothèque de la
   // topbar (la bibliothèque elle-même n'est plus visible pendant la session —
   // modèle Forest). Ghost séparé du LiveBook : il survit au changement de fiche.
-  const [bookFly, setBookFly] = useState<{ x: number; y: number; ts: number } | null>(null)
+  const [bookFly, setBookFly] = useState<{ x: number; y: number; ts: number; color: string } | null>(null)
   const libChipRef = useRef<HTMLDivElement | null>(null)
+
+  // Chorégraphie de notation : l'empreinte de cire s'imprime sur la page,
+  // le livre se referme, PUIS il s'envole et la fiche suivante arrive.
+  // null = pas de cérémonie en cours.
+  const [sealStamp, setSealStamp] = useState<{ score: Score; ts: number } | null>(null)
+
+  // Cascade du bilan : on rejoue l'arrivée des livres de la session un par un
+  // (le compteur affiché monte de sessionStart → final, chaque pas déclenche
+  // le pop + burst du SVG). null = pas de cascade (affichage direct).
+  const [bilanReveal, setBilanReveal] = useState<number | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -687,6 +697,23 @@ function FocusPageBody() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Cascade du bilan : rejoue l'arrivée des livres de la session, un par un.
+  useEffect(() => {
+    if (phase !== 'done') { setBilanReveal(null); return }
+    const end = dayGardenRef.current.fichesCount
+    const start = Math.min(end, sessionStartFichesCount)
+    if (end <= start) return
+    setBilanReveal(start)
+    let v = start
+    const t = setInterval(() => {
+      v++
+      setBilanReveal(v)
+      if (v >= end) clearInterval(t)
+    }, 170)
+    return () => clearInterval(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
   // Tick chrono en mode session
   useEffect(() => {
     if (phase !== 'session') return
@@ -762,28 +789,44 @@ function FocusPageBody() {
       // Push cloud immédiat : si l'utilisateur change d'appareil juste après,
       // il retrouve son dernier livre tout de suite.
       pushBibToSupabase(supabase, userIdRef.current, updatedGarden)
-
-      // Écho visuel : le livre du pupitre se referme et vole vers le
-      // compteur-bibliothèque de la topbar (il "part" se ranger).
-      const chip = libChipRef.current
-      if (chip) {
-        const r = chip.getBoundingClientRect()
-        setBookFly({ x: r.left + r.width / 2, y: r.top + r.height / 2, ts: Date.now() })
-      }
     }
 
     setParticleBurst({ ts: Date.now(), x: 800, y: 550 })
 
-    // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
     if (wasEmpty) {
-      const next = findNextEmptyIdx(newResults, currentIdx)
-      if (next === -1) setPhase('done')
-      else setCurrentIdx(next)
+      // CHORÉGRAPHIE (visuel uniquement — la DB est déjà écrite ci-dessus) :
+      //   0-450 ms   l'empreinte de cire s'imprime sur la page
+      //   450-850 ms le livre se referme (page droite se rabat, puis compactage)
+      //   850 ms     le livre fermé s'envole vers le compteur-bibliothèque
+      //   980 ms     fiche suivante (nouveau livre vierge)
+      // loading reste true pendant la cérémonie : pas de double clic possible.
+      setSealStamp({ score, ts: Date.now() })
+      const sys = systems.find(s => s.id === current.lesson.system_id)
+      const flyColor = (sys as { color?: string } | undefined)?.color || '#2C415A'
+      const chip = libChipRef.current
+      const target = chip ? chip.getBoundingClientRect() : null
+      window.setTimeout(() => {
+        if (target) {
+          setBookFly({
+            x: target.left + target.width / 2,
+            y: target.top + target.height / 2,
+            ts: Date.now(),
+            color: flyColor,
+          })
+        }
+      }, 850)
+      window.setTimeout(() => {
+        setSealStamp(null)
+        const next = findNextEmptyIdx(newResults, currentIdx)
+        if (next === -1) setPhase('done')
+        else setCurrentIdx(next)
+        setLoading(false)
+      }, 980)
+    } else {
+      // Re-rating : pas de cérémonie, on reste sur la fiche.
+      setLoading(false)
     }
-    // Si re-rating : on reste sur la fiche, l'utilisateur peut vérifier ou naviguer.
-
-    setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, cumElapsedAtStart])
+  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, cumElapsedAtStart, systems])
 
   // ============ Actions : report ============
   const report = useCallback(async () => {
@@ -992,10 +1035,12 @@ function FocusPageBody() {
 
         <div className="focus-stage">
 
-          {/* BIBLIOTHÈQUE visible en fond — état cumulé annuel (livres + trésors débloqués) */}
+          {/* BIBLIOTHÈQUE visible en fond — les livres de la session arrivent
+              en CASCADE (bilanReveal monte un par un, chaque pas déclenche le
+              pop + la bouffée de poussière du SVG). */}
           <div className="focus-garden">
             <BibliothecaSvg
-              fichesCount={dayGarden.fichesCount}
+              fichesCount={bilanReveal ?? dayGarden.fichesCount}
               className="focus-garden-svg"
               preserveAspectRatio="xMidYMid slice"
             />
@@ -1196,6 +1241,8 @@ function FocusPageBody() {
             key={`${current.lesson.id}-${currentIdx}`}
             lessonName={current.lesson.name}
             className="lb-hero"
+            coverColor={sysColor}
+            stamp={sealStamp ? { score: sealStamp.score, color: SCORE_COLORS[sealStamp.score] } : null}
           />
 
           {/* LES CIRES : 1 À revoir … 5 Maîtrisé */}
@@ -1249,6 +1296,7 @@ function FocusPageBody() {
             style={{
               ['--tx' as never]: `${bookFly.x.toFixed(0)}px`,
               ['--ty' as never]: `${bookFly.y.toFixed(0)}px`,
+              background: bookFly.color,
             }}
             onAnimationEnd={() => setBookFly(null)}
             aria-hidden="true"
