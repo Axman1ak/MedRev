@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
@@ -129,10 +130,72 @@ function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
   return m
 }
 
+// ===================== JOURS ACTIFS (règle des 10 minutes) =====================
+// Un jour COMPTE (assiduité, série) à partir de 10 minutes de révision réelle
+// sur l'appli (gardens.day_log, alimenté par la session Focus).
+// Fallback historique : avant l'existence du suivi de temps, un jour avec au
+// moins une révision notée compte — sinon tout l'historique s'éteindrait.
+const TEN_MIN_MS = 10 * 60 * 1000
+
+function buildActiveDays(activityIndex: Map<string, number>, dayLog: Record<string, number>): Set<string> {
+  const firstLog = Object.keys(dayLog).sort()[0] ?? null
+  const set = new Set<string>()
+  for (const [d, ms] of Object.entries(dayLog)) {
+    if (ms >= TEN_MIN_MS) set.add(d)
+  }
+  activityIndex.forEach((_, d) => {
+    if (firstLog === null || d < firstLog) set.add(d)
+  })
+  return set
+}
+
+// ===================== HEATMAP ANNÉE (façon Anki) =====================
+type HeatmapCell = { date: string; count: number; isToday: boolean; inFuture: boolean }
+
+function buildYearHeatmap(activityIndex: Map<string, number>, today: string): HeatmapCell[][] {
+  const todayD = new Date(today + 'T12:00:00')
+  const dow = todayD.getDay()
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const thisMonday = new Date(todayD)
+  thisMonday.setDate(todayD.getDate() + mondayOffset)
+
+  const weeks: HeatmapCell[][] = []
+  for (let w = 51; w >= 0; w--) {
+    const week: HeatmapCell[] = []
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(thisMonday)
+      date.setDate(thisMonday.getDate() - w * 7 + d)
+      const ds = date.toISOString().split('T')[0]
+      week.push({
+        date: ds,
+        count: activityIndex.get(ds) ?? 0,
+        isToday: ds === today,
+        inFuture: ds > today,
+      })
+    }
+    weeks.push(week)
+  }
+  return weeks
+}
+
+function intensityClass(count: number, max: number): string {
+  if (count === 0) return 'i0'
+  const ratio = count / max
+  if (ratio < 0.25) return 'i1'
+  if (ratio < 0.5) return 'i2'
+  if (ratio < 0.75) return 'i3'
+  return 'i4'
+}
+
+function fmtMonth(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+}
+
 // ===================== INDICE (40 maîtrise / 25 couverture / 35 assiduité) =====================
 function computeReadiness(
   lessons: Lesson[],
-  activityIndex: Map<string, number>,
+  activeDays: Set<string>,
   asOf: string
 ): number {
   if (lessons.length === 0) return 0
@@ -155,14 +218,13 @@ function computeReadiness(
   const coverage = covered / lessons.length
   let active14 = 0
   for (let k = 0; k < 14; k++) {
-    const ds = shiftDate(asOf, -k)
-    if ((activityIndex.get(ds) ?? 0) > 0) active14++
+    if (activeDays.has(shiftDate(asOf, -k))) active14++
   }
   const assiduite = Math.min(1, active14 / 10)
   return Math.round(100 * (0.4 * mastery + 0.25 * coverage + 0.35 * assiduite))
 }
 
-function computeParts(lessons: Lesson[], activityIndex: Map<string, number>, today: string) {
+function computeParts(lessons: Lesson[], activeDays: Set<string>, today: string) {
   let mSum = 0, mN = 0, covered = 0
   for (const l of lessons) {
     const steps = (l.steps as StepEntry[]) || []
@@ -178,8 +240,7 @@ function computeParts(lessons: Lesson[], activityIndex: Map<string, number>, tod
   }
   let active14 = 0
   for (let k = 0; k < 14; k++) {
-    const ds = shiftDate(today, -k)
-    if ((activityIndex.get(ds) ?? 0) > 0) active14++
+    if (activeDays.has(shiftDate(today, -k))) active14++
   }
   return {
     mastery: mN > 0 ? (mSum / mN) / 5 : 0,
@@ -281,6 +342,8 @@ export default function StatsPage() {
   const [semestre, setSemestre] = useState<Semestre>(2)
   const [isPro, setIsPro] = useState(false)
   const [examDate, setExamDate] = useState('')
+  // Temps de révision par jour (gardens.day_log) — règle des 10 minutes.
+  const [dayLog, setDayLog] = useState<Record<string, number>>({})
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
@@ -314,15 +377,26 @@ export default function StatsPage() {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-      const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
+      const [{ data: sys }, { data: les }, { data: prof }, { data: garden }] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id).order('semestre').order('created_at'),
         supabase.from('lessons').select('*').eq('user_id', user.id).order('created_at'),
         supabase.from('profiles').select('plan').eq('id', user.id).single(),
+        supabase.from('gardens').select('day_log').eq('user_id', user.id).maybeSingle(),
       ])
       if (cancelled) return
       setSystems((sys as System[] | null) ?? [])
       setLessons((les as Lesson[] | null) ?? [])
       setIsPro((prof?.plan as string) === 'pro')
+      {
+        const raw = (garden as { day_log?: unknown } | null)?.day_log
+        const log: Record<string, number> = {}
+        if (raw && typeof raw === 'object') {
+          for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            if (typeof v === 'number' && v > 0) log[k] = v
+          }
+        }
+        setDayLog(log)
+      }
       setLoading(false)
     })()
     return () => { cancelled = true }
@@ -336,6 +410,25 @@ export default function StatsPage() {
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
   const activityIndex = useMemo(() => buildActivityIndex(semLessons), [semLessons])
+  const activeDays = useMemo(() => buildActiveDays(activityIndex, dayLog), [activityIndex, dayLog])
+  const heatmap = useMemo(() => buildYearHeatmap(activityIndex, today), [activityIndex, today])
+  const heatmapMax = useMemo(() => {
+    let max = 1
+    activityIndex.forEach(v => { if (v > max) max = v })
+    return max
+  }, [activityIndex])
+  const monthLabels = useMemo(() => {
+    const out: { weekIdx: number; label: string }[] = []
+    let lastMonth = -1
+    heatmap.forEach((week, wi) => {
+      const m = new Date(week[0].date + 'T12:00:00').getMonth()
+      if (m !== lastMonth) {
+        out.push({ weekIdx: wi, label: fmtMonth(week[0].date) })
+        lastMonth = m
+      }
+    })
+    return out.slice(1)
+  }, [heatmap])
 
   const totalRevs = useMemo(() => {
     let n = 0
@@ -344,28 +437,28 @@ export default function StatsPage() {
   }, [activityIndex])
 
   // ===== INDICE + RANG =====
-  const index = useMemo(() => computeReadiness(semLessons, activityIndex, today), [semLessons, activityIndex, today])
-  const index7 = useMemo(() => computeReadiness(semLessons, activityIndex, shiftDate(today, -7)), [semLessons, activityIndex, today])
-  const index30 = useMemo(() => computeReadiness(semLessons, activityIndex, shiftDate(today, -30)), [semLessons, activityIndex, today])
+  const index = useMemo(() => computeReadiness(semLessons, activeDays, today), [semLessons, activeDays, today])
+  const index7 = useMemo(() => computeReadiness(semLessons, activeDays, shiftDate(today, -7)), [semLessons, activeDays, today])
+  const index30 = useMemo(() => computeReadiness(semLessons, activeDays, shiftDate(today, -30)), [semLessons, activeDays, today])
   const delta7 = index - index7
-  const parts = useMemo(() => computeParts(semLessons, activityIndex, today), [semLessons, activityIndex, today])
+  const parts = useMemo(() => computeParts(semLessons, activeDays, today), [semLessons, activeDays, today])
   const rank = useMemo(() => rankFor(index), [index])
 
   // ===== SÉRIE =====
   const currentStreak = useMemo(() => {
     let n = 0
     let cursor = today
-    if ((activityIndex.get(cursor) ?? 0) === 0) cursor = shiftDate(cursor, -1)
-    while ((activityIndex.get(cursor) ?? 0) > 0) {
+    if (!activeDays.has(cursor)) cursor = shiftDate(cursor, -1)
+    while (activeDays.has(cursor)) {
       n++
       cursor = shiftDate(cursor, -1)
     }
     return n
-  }, [activityIndex, today])
+  }, [activeDays, today])
 
   const recordStreak = useMemo(() => {
-    if (activityIndex.size === 0) return 0
-    const dates = Array.from(activityIndex.keys()).sort()
+    if (activeDays.size === 0) return 0
+    const dates = Array.from(activeDays).sort()
     let max = 1, cur = 1
     for (let i = 1; i < dates.length; i++) {
       const diff = Math.round(
@@ -374,7 +467,7 @@ export default function StatsPage() {
       if (diff === 1) { cur++; if (cur > max) max = cur } else cur = 1
     }
     return max
-  }, [activityIndex])
+  }, [activeDays])
 
   // ===== LEVIER MAÎTRISE : fiches aux dernières notes faibles =====
   const weakFiches = useMemo(() => {
@@ -401,11 +494,11 @@ export default function StatsPage() {
     for (const sys of semSystems) {
       const sysLessons = semLessons.filter(l => l.system_id === sys.id)
       if (sysLessons.length === 0) continue
-      const idx = computeReadiness(sysLessons, activityIndex, today)
+      const idx = computeReadiness(sysLessons, activeDays, today)
       if (worst === null || idx < worst.index) worst = { name: sys.name, index: idx }
     }
     return worst
-  }, [semSystems, semLessons, activityIndex, today])
+  }, [semSystems, semLessons, activeDays, today])
 
   // ===== LEVIER COUVERTURE : fiches les moins avancées dans la courbe J =====
   const uncovered = useMemo(() => {
@@ -423,15 +516,6 @@ export default function StatsPage() {
   const dayGoal = Math.max(dueToday + doneToday, doneToday, 1)
   const dayPct = Math.min(100, Math.round((doneToday / dayGoal) * 100))
   const dayValidated = doneToday > 0 && dueToday === 0
-
-  const last14 = useMemo(() => {
-    const out: { date: string; active: boolean; isToday: boolean }[] = []
-    for (let k = 13; k >= 0; k--) {
-      const ds = shiftDate(today, -k)
-      out.push({ date: ds, active: (activityIndex.get(ds) ?? 0) > 0, isToday: ds === today })
-    }
-    return out
-  }, [activityIndex, today])
 
   // ===== TRAJECTOIRE (Premium) =====
   const daysToExam = useMemo(() => {
@@ -591,10 +675,11 @@ export default function StatsPage() {
             <div className="st5-lever-body">
               {weakFiches.length > 0 ? (
                 weakFiches.map(f => (
-                  <div key={f.lesson.id} className="st-next-row">
-                    <span className="st-next-nm">{f.lesson.name}</span>
-                    <span className="st-next-sys">{f.sysName}</span>
-                    <span className="st-next-why weak">notée {f.last}/5</span>
+                  <div key={f.lesson.id} className="st5-fiche">
+                    <span className="st5-fiche-ic"><SubjectIcon name={f.sysName} /></span>
+                    <span className="st5-fiche-nm">{f.lesson.name}</span>
+                    <span className="st5-fiche-sys">{f.sysName}</span>
+                    <span className="st5-fiche-badge weak">notée {f.last}/5</span>
                   </div>
                 ))
               ) : (
@@ -622,17 +707,17 @@ export default function StatsPage() {
             </div>
             <div className="st5-lever-bar"><i style={{ width: `${Math.round(parts.coverage * 100)}%`, background: rank.color }} /></div>
             <div className="st5-lever-body">
-              <div className="st5-lever-note">
-                <strong>{parts.coveredCount}</strong> fiche{parts.coveredCount > 1 ? 's' : ''} couverte{parts.coveredCount > 1 ? 's' : ''} sur {semLessons.length}
-                {' '}(≥ {COVERED_AT} paliers notés). Chaque palier J fait au bon jour rapproche une fiche de la couverture.
-              </div>
               {uncovered.top.map(r => (
-                <div key={r.lesson.id} className="st-next-row">
-                  <span className="st-next-nm">{r.lesson.name}</span>
-                  <span className="st-next-sys">{r.sysName}</span>
-                  <span className="st-next-why">{r.n} / {COVERED_AT} paliers</span>
+                <div key={r.lesson.id} className="st5-fiche">
+                  <span className="st5-fiche-ic"><SubjectIcon name={r.sysName} /></span>
+                  <span className="st5-fiche-nm">{r.lesson.name}</span>
+                  <span className="st5-fiche-sys">{r.sysName}</span>
+                  <span className="st5-fiche-badge">{r.n} / {COVERED_AT} paliers</span>
                 </div>
               ))}
+              {uncovered.count === 0 && (
+                <div className="st-empty">Toutes tes fiches sont couvertes — continue les paliers.</div>
+              )}
             </div>
             <Link href="/dashboard/focus" className="st-act st5-lever-cta">
               Faire les révisions du jour →
@@ -648,14 +733,25 @@ export default function StatsPage() {
             </div>
             <div className="st5-lever-bar"><i style={{ width: `${Math.round(parts.assiduite * 100)}%`, background: rank.color }} /></div>
             <div className="st5-lever-body">
-              <div className="st5-days">
-                {last14.map(d => (
-                  <span
-                    key={d.date}
-                    className={`st5-day${d.active ? ' on' : ''}${d.isToday ? ' today' : ''}`}
-                    title={d.date}
-                  />
-                ))}
+              <div className="st5-heat">
+                <div className="st5-heat-months">
+                  {monthLabels.map((m, idx) => (
+                    <span key={idx} style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
+                  ))}
+                </div>
+                <div className="st5-heat-grid">
+                  {heatmap.map((week, wi) => (
+                    <div key={wi} className="st5-heat-week">
+                      {week.map((cell, di) => {
+                        const cls = ['st5-heat-cell',
+                          cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
+                          cell.isToday ? 'today' : '',
+                        ].filter(Boolean).join(' ')
+                        return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
+                      })}
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="st4-day-row">
                 <div className="st4-day-count">

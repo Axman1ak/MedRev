@@ -1402,3 +1402,83 @@
   .st5-hero { gap: 12px; }
   .st5-lever { flex: 0 0 auto; }
 }
+
+/* =========== v5.1 : fiches bordées + heatmap Anki =========== */
+/* Lignes-fiches : reconnaissables au premier regard, comme sur le dashboard
+   (trait très fin + icône de matière). */
+.st5-fiche {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  min-width: 0;
+}
+.st5-fiche-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--gl);
+  color: var(--gm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.st5-fiche-ic svg { width: 15px; height: 15px; }
+.st5-fiche-nm {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.st5-fiche-sys { font-size: 11px; color: var(--gray); white-space: nowrap; flex-shrink: 0; }
+.st5-fiche-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.st5-fiche-badge.weak { color: var(--danger); }
+
+/* Heatmap année (façon Anki) dans la carte Assiduité */
+.st5-heat { width: 100%; }
+.st5-heat-months {
+  position: relative;
+  height: 14px;
+  font-size: 9.5px;
+  color: var(--gray);
+}
+.st5-heat-months span { position: absolute; top: 0; }
+.st5-heat-grid {
+  display: flex;
+  gap: 2px;
+}
+.st5-heat-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.st5-heat-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 11px;
+  border-radius: 2px;
+  background: var(--soft);
+}
+.st5-heat-cell.i1 { background: #BCD4E8; }
+.st5-heat-cell.i2 { background: #8FB8D8; }
+.st5-heat-cell.i3 { background: #4878A8; }
+.st5-heat-cell.i4 { background: #1F4468; }
+.st5-heat-cell.today { box-shadow: 0 0 0 1.5px var(--gm); }
+.st5-heat-cell.future { opacity: 0.35; }

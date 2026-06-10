@@ -375,6 +375,28 @@ type DayBibliothecaState = {
   startedDate?: string  // date de la première session
   elapsedMs: number     // temps cumulé total (sur l'année), pour stats
   fichesCount: number   // nombre total de fiches notées (sur l'année)
+  // Temps de révision PAR JOUR (ms) — { "YYYY-MM-DD": ms }. Alimenté par le
+  // tick de sauvegarde (30 s). Sert à la règle d'assiduité de la page Stats :
+  // un jour compte à partir de 10 minutes de révision réelle.
+  dayLog: Record<string, number>
+}
+
+// Garde les ~220 derniers jours du dayLog (le jsonb reste petit).
+function pruneDayLog(log: Record<string, number>): Record<string, number> {
+  const keys = Object.keys(log).sort()
+  if (keys.length <= 220) return log
+  const out: Record<string, number> = {}
+  for (const k of keys.slice(-220)) out[k] = log[k]
+  return out
+}
+
+function parseDayLog(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'number' && v > 0) out[k] = v
+  }
+  return out
 }
 
 const BIB_KEY_BASE = 'medrev-garden'
@@ -385,7 +407,7 @@ function bibKey(userId: string | null): string | null {
 }
 
 function loadDayBibliotheca(today: string, userId: string | null): DayBibliothecaState {
-  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0 }
+  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {} }
   if (typeof window === 'undefined') return empty
   const key = bibKey(userId)
   if (!key) return empty
@@ -397,6 +419,7 @@ function loadDayBibliotheca(today: string, userId: string | null): DayBibliothec
         startedDate: parsed.startedDate ?? today,
         elapsedMs: typeof parsed.elapsedMs === 'number' ? parsed.elapsedMs : 0,
         fichesCount: typeof parsed.fichesCount === 'number' ? parsed.fichesCount : 0,
+        dayLog: parseDayLog((parsed as { dayLog?: unknown }).dayLog),
       }
     }
     return empty
@@ -429,7 +452,7 @@ async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<
   try {
     const { data, error } = await supabase
       .from('gardens')
-      .select('started_date, elapsed_ms, fiches_count')
+      .select('started_date, elapsed_ms, fiches_count, day_log')
       .eq('user_id', userId)
       .maybeSingle()
     if (error || !data) return null
@@ -437,6 +460,7 @@ async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<
       startedDate: (data as any).started_date ?? undefined,
       elapsedMs: Number((data as any).elapsed_ms ?? 0),
       fichesCount: Number((data as any).fiches_count ?? 0),
+      dayLog: parseDayLog((data as any).day_log),
     }
   } catch {
     return null
@@ -453,6 +477,7 @@ function pushBibToSupabase(supabase: SbClient, userId: string | null, state: Day
         started_date: state.startedDate ?? null,
         elapsed_ms: state.elapsedMs,
         fiches_count: state.fichesCount,
+        day_log: pruneDayLog(state.dayLog),
         elements: [],  // legacy, conservé vide pour compat
       },
       { onConflict: 'user_id' }
@@ -465,10 +490,15 @@ function mergeBibStates(a: DayBibliothecaState, b: DayBibliothecaState): DayBibl
   let startedDate: string | undefined
   if (a.startedDate && b.startedDate) startedDate = a.startedDate < b.startedDate ? a.startedDate : b.startedDate
   else startedDate = a.startedDate ?? b.startedDate
+  const dayLog: Record<string, number> = { ...a.dayLog }
+  for (const [k, v] of Object.entries(b.dayLog)) {
+    dayLog[k] = Math.max(dayLog[k] ?? 0, v)
+  }
   return {
     startedDate,
     elapsedMs: Math.max(a.elapsedMs, b.elapsedMs),
     fichesCount: Math.max(a.fichesCount, b.fichesCount),
+    dayLog,
   }
 }
 
@@ -582,7 +612,7 @@ function FocusPageBody() {
   // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
   // Persisté en localStorage avec clé 'medrev-garden' (sans date). Cultivé toute l'année.
   // elapsedMs cumulé sur l'ensemble de l'année. Jamais reset.
-  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0 })
+  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {} })
   const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
   // Stocke le nombre de fiches CUMULÉES au DÉMARRAGE de la session courante.
   // Utilisé pour le recap : permet de calculer combien de livres ont été ajoutés pendant cette session.
@@ -681,7 +711,14 @@ function FocusPageBody() {
     if (phase !== 'session') return
     const intv = setInterval(() => {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const next: DayBibliothecaState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
+      const cur = dayGardenRef.current
+      const dk = new Date().toISOString().split('T')[0]
+      const next: DayBibliothecaState = {
+        ...cur,
+        elapsedMs: totalElapsed,
+        // +30 s de révision sur la journée courante (règle des 10 min/jour)
+        dayLog: pruneDayLog({ ...cur.dayLog, [dk]: (cur.dayLog[dk] ?? 0) + 30000 }),
+      }
       dayGardenRef.current = next
       saveDayBibliotheca(next, userIdRef.current)
       pushBibToSupabase(supabase, userIdRef.current, next)
