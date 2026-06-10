@@ -98,6 +98,21 @@ function stepDate(lesson: Lesson, i: number): string {
   return dateStrFromOffset(lesson.learn_date, J[i])
 }
 
+// Date de la dernière activité sur une fiche : dernier score officiel ou
+// temporaire posé, sinon la date d'apprentissage. Pour mesurer l'ancienneté.
+function lastActivityDate(l: Lesson): string {
+  const steps = (l.steps as StepEntry[]) || []
+  let best = l.learn_date ?? ''
+  for (const s of steps) {
+    if (!s) continue
+    const d = (s as { date?: string }).date ?? ''
+    const td = (s as { temp_date?: string }).temp_date ?? ''
+    if (d > best) best = d
+    if (td > best) best = td
+  }
+  return best
+}
+
 function getLastScore(lesson: Lesson): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = J.length - 1; i >= 0; i--) {
@@ -620,6 +635,41 @@ export default function DashboardPage() {
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
   const todayQueue = useMemo(() => computeTodayQueue(semLessons, today), [semLessons, today])
+
+  // Suggestions proactives : 3 fiches à retravailler EN PLUS du dû du jour.
+  // Mix : dernières notes faibles (poids fort) + fiches pas revues depuis
+  // longtemps. Exclut le dû du jour (déjà listé au-dessus) et les fiches
+  // toutes neuves (la courbe J s'en occupe).
+  const suggestions = useMemo(() => {
+    const dueIds = new Set(todayQueue.map(q => q.lesson.id))
+    const out: { lesson: Lesson; sysName: string; why: string; weak: boolean; w: number }[] = []
+    for (const l of semLessons) {
+      if (!l.learn_date || dueIds.has(l.id)) continue
+      const last = getLastScore(l)
+      const lastD = lastActivityDate(l)
+      const days = lastD
+        ? Math.max(0, Math.round((new Date(today).getTime() - new Date(lastD).getTime()) / 86400000))
+        : 0
+      if (last === null && days < 3) continue
+      const weak = last !== null && last <= 2
+      const w = (last === null ? 3 : 6 - last) * 10 + Math.min(days, 60) / 2
+      const sysName = semSystems.find(s => s.id === l.system_id)?.name ?? 'Matière'
+      out.push({
+        lesson: l,
+        sysName,
+        weak,
+        w,
+        why: weak
+          ? `notée ${last}/5`
+          : days > 0 ? `pas revue depuis ${days} j` : 'à consolider',
+      })
+    }
+    return out.sort((a, b) => b.w - a.w).slice(0, 3)
+  }, [semLessons, todayQueue, today, semSystems])
+
+  const suggestionsHref = suggestions.length > 0
+    ? `/dashboard/focus?lessons=${suggestions.map(s => s.lesson.id).join(',')}`
+    : '/dashboard/focus'
   const activeDays = useMemo(() => buildActiveDaysSet(semLessons), [semLessons])
   const streak = useMemo(() => computeStreak(activeDays, today), [activeDays, today])
   const recordStreak = useMemo(() => computeRecordStreak(activeDays), [activeDays])
@@ -765,6 +815,25 @@ export default function DashboardPage() {
             )}
             </>)}
           </div>
+
+          {/* SUGGESTIONS PROACTIVES — toujours une raison d'ouvrir Focus */}
+          {suggestions.length > 0 && (
+            <div className="sugg">
+              <div className="sugg-head">
+                <span className="sugg-kicker">Et si tu révisais…</span>
+                <Link href={suggestionsHref} className="sugg-go">
+                  Lancer ces {suggestions.length} fiche{suggestions.length > 1 ? 's' : ''} →
+                </Link>
+              </div>
+              {suggestions.map(s => (
+                <Link href={suggestionsHref} key={s.lesson.id} className="sugg-row">
+                  <span className="sugg-ic"><SubjectIcon name={s.sysName} /></span>
+                  <span className="sugg-nm">{s.lesson.name}</span>
+                  <span className={`sugg-why${s.weak ? ' weak' : ''}`}>{s.why}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="col-r">
