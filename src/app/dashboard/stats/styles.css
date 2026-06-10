@@ -792,3 +792,187 @@
     padding: 14px 10px;
   }
 }
+
+/* =========== DIAGNOSTIC → ACTION (refonte 2026-06) =========== */
+/* Zone 1 — pouls compact (remplace le hero + 3 cards) */
+.st-pulse {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 16px 22px;
+  margin-bottom: 18px;
+}
+.st-pulse-item { display: flex; flex-direction: column; gap: 2px; }
+.st-pulse-num {
+  font-family: var(--font-bricolage), serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.st-pulse-num small { font-size: 15px; color: var(--text-secondary); font-weight: 500; }
+.st-pulse-lbl { font-size: 11.5px; color: var(--text-secondary); }
+.st-pulse-sep { width: 1px; height: 34px; background: var(--border-subtle); }
+
+/* Zone 2 — points faibles */
+.st-row2 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.st-sys-list { display: flex; flex-direction: column; gap: 4px; }
+.st-sys-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  min-width: 0;
+}
+.st-sys-row:hover { background: var(--bg-soft); }
+.st-sys-name {
+  width: 160px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.st-sys-bar {
+  flex: 1;
+  height: 7px;
+  background: var(--bg-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.st-sys-bar i { display: block; height: 100%; border-radius: 4px; }
+.st-sys-bar i.s1 { background: #C75050; }
+.st-sys-bar i.s2 { background: #E08B3C; }
+.st-sys-bar i.s3 { background: #D9B24A; }
+.st-sys-bar i.s4 { background: #7AA56B; }
+.st-sys-bar i.s5 { background: #1B4332; }
+.st-sys-avg {
+  width: 30px;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.st-sys-weak { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; flex-shrink: 0; width: 70px; }
+.st-sys-weak.has { color: var(--danger); font-weight: 700; }
+.st-act {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.st-act:hover { text-decoration: underline; }
+
+.st-qcm-list { display: flex; flex-direction: column; gap: 6px; }
+.st-qcm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  text-decoration: none;
+  min-width: 0;
+  transition: border-color .15s;
+}
+.st-qcm-row:hover { border-color: var(--accent-medium); }
+.st-qcm-rate {
+  font-family: var(--font-bricolage), serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  width: 44px;
+}
+.st-qcm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.st-qcm-q {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-qcm-les { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Zone 3 — quoi réviser maintenant */
+.st-next { margin-bottom: 18px; }
+.st-next-list { display: flex; flex-direction: column; gap: 3px; }
+.st-next-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 6px;
+  border-radius: 8px;
+  min-width: 0;
+}
+.st-next-row:hover { background: var(--bg-soft); }
+.st-next-nm {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.st-next-sys { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+.st-next-why { margin-left: auto; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+.st-next-why.weak { color: var(--danger); font-weight: 700; }
+.st-next-ctas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.st-cta-primary {
+  background: var(--accent-medium);
+  color: #fff;
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity .15s;
+}
+.st-cta-primary:hover { opacity: .9; }
+.st-cta-ghost {
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all .15s;
+}
+.st-cta-ghost:hover { border-color: var(--accent-medium); color: var(--accent-medium); }
+
+.st-empty {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  padding: 14px 6px;
+}
+
+@media (max-width: 900px) {
+  .st-row2 { grid-template-columns: 1fr; }
+  .st-pulse { gap: 16px; }
+  .st-pulse-sep { display: none; }
+  .st-sys-name { width: 110px; }
+}

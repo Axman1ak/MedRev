@@ -88,6 +88,30 @@ function computeLessonAgg(lesson: Lesson): LessonAgg {
   }
 }
 
+// Dernier score effectif (officiel ou temp) d'une fiche, en remontant les J.
+function getLastEffScore(lesson: Lesson): Score | null {
+  const steps = (lesson.steps as StepEntry[]) || []
+  for (let i = J.length - 1; i >= 0; i--) {
+    const sc = effectiveStepScore(steps[i])
+    if (sc) return sc
+  }
+  return null
+}
+
+// Date de la dernière activité (score officiel ou temp), sinon learn_date.
+function lastActivityDate(l: Lesson): string {
+  const steps = (l.steps as StepEntry[]) || []
+  let best = l.learn_date ?? ''
+  for (const s of steps) {
+    if (!s) continue
+    const d = (s as { date?: string }).date ?? ''
+    const td = (s as { temp_date?: string }).temp_date ?? ''
+    if (d > best) best = d
+    if (td > best) best = td
+  }
+  return best
+}
+
 // ===================== ACTIVITÉ =====================
 function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
   const m = new Map<string, number>()
@@ -294,11 +318,6 @@ function fmtMonth(dateStr: string): string {
   return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
 }
 
-function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '')
-}
-
 function semLabel(s: Semestre): string {
   if (s === 'year') return 'Année complète'
   return `Semestre ${s}`
@@ -393,6 +412,73 @@ export default function StatsPage() {
   const revsPerDay = activeDays > 0 ? totalRevs / activeDays : 0
   const activePct = daySpan > 0 ? Math.round((activeDays / daySpan) * 100) : 0
 
+  // ===== DIAGNOSTIC → ACTION =====
+  // Matières classées de la plus fragile à la plus solide.
+  const weakSystems = useMemo(() => {
+    return semSystems
+      .map(sys => {
+        const sysAggs = aggs.filter(a => a.lesson.system_id === sys.id)
+        const scored = sysAggs.filter(a => a.avg !== null)
+        const avg = scored.length > 0
+          ? scored.reduce((s, a) => s + (a.avg as number), 0) / scored.length
+          : null
+        const weakCount = sysAggs.filter(a => {
+          const last = getLastEffScore(a.lesson)
+          return last !== null && last <= 2
+        }).length
+        return { system: sys, avg, weakCount, total: sysAggs.length }
+      })
+      .filter(r => r.total > 0)
+      .sort((a, b) => (a.avg ?? 6) - (b.avg ?? 6))
+  }, [semSystems, aggs])
+
+  // QCM chroniquement ratés (compteurs attempts/correct des sessions QCM).
+  const chronicQcm = useMemo(() => {
+    const out: { lesson: Lesson; question: string; rate: number; attempts: number }[] = []
+    for (const l of semLessons) {
+      const qs = Array.isArray(l.ai_questions) ? l.ai_questions : []
+      for (const q of qs) {
+        const at = (q as { attempts?: number }).attempts ?? 0
+        const ok = (q as { correct?: number }).correct ?? 0
+        if (at < 2) continue
+        const rate = ok / at
+        if (rate >= 0.6) continue
+        out.push({ lesson: l, question: String((q as { question?: string }).question ?? ''), rate, attempts: at })
+      }
+    }
+    return out.sort((a, b) => a.rate - b.rate || b.attempts - a.attempts).slice(0, 3)
+  }, [semLessons])
+
+  // "Quoi réviser maintenant" — déménagé du dashboard. Mix notes faibles
+  // (poids fort) + fiches anciennes ; fiches toutes neuves exclues.
+  const suggestions = useMemo(() => {
+    const out: { lesson: Lesson; sysName: string; why: string; weak: boolean; w: number }[] = []
+    for (const l of semLessons) {
+      if (!l.learn_date) continue
+      const last = getLastEffScore(l)
+      const lastD = lastActivityDate(l)
+      const days = lastD
+        ? Math.max(0, Math.round((new Date(today).getTime() - new Date(lastD).getTime()) / 86400000))
+        : 0
+      if (last === null && days < 3) continue
+      const weak = last !== null && last <= 2
+      const w = (last === null ? 3 : 6 - last) * 10 + Math.min(days, 60) / 2
+      const sysName = semSystems.find(s => s.id === l.system_id)?.name ?? 'Matière'
+      out.push({
+        lesson: l,
+        sysName,
+        weak,
+        w,
+        why: weak ? `notée ${last}/5` : days > 0 ? `pas revue depuis ${days} j` : 'à consolider',
+      })
+    }
+    return out.sort((a, b) => b.w - a.w).slice(0, 5)
+  }, [semLessons, semSystems, today])
+
+  const suggestionsHref = suggestions.length > 0
+    ? `/dashboard/focus?lessons=${suggestions.map(s => s.lesson.id).join(',')}`
+    : '/dashboard/focus'
+
   if (loading) {
     return (
       <div className="stats-page">
@@ -455,59 +541,111 @@ export default function StatsPage() {
       </div>
 
       {/* HERO + 3 SECONDAIRES */}
-      <div className="stats-totals-grid">
-        <div className="stats-hero-card">
-          <div className="stats-hero-label">
-            Révisions cumulées · {semLabel(semestre)}
+      {/* === ZONE 1 — OÙ J'EN SUIS (pouls compact) === */}
+      <div className="st-pulse">
+        <div className="st-pulse-item">
+          <span className="st-pulse-num">{totalRevs}</span>
+          <span className="st-pulse-lbl">révisions notées</span>
+        </div>
+        <span className="st-pulse-sep" aria-hidden="true" />
+        <div className="st-pulse-item">
+          <span className="st-pulse-num">{activeDays}</span>
+          <span className="st-pulse-lbl">jours actifs · {revsPerDay.toFixed(1)}/j · {activePct}% du temps</span>
+        </div>
+        <span className="st-pulse-sep" aria-hidden="true" />
+        <div className="st-pulse-item">
+          <span className="st-pulse-num">{longestStreak.length}</span>
+          <span className="st-pulse-lbl">jours de série max</span>
+        </div>
+        <span className="st-pulse-sep" aria-hidden="true" />
+        <div className="st-pulse-item">
+          <span className="st-pulse-num">{masteredCount}<small>/{totalFiches}</small></span>
+          <span className="st-pulse-lbl">fiches maîtrisées</span>
+        </div>
+      </div>
+
+      {/* === ZONE 2 — MES POINTS FAIBLES === */}
+      <div className="st-row2">
+        <div className="stats-card">
+          <div className="stats-card-title">
+            Par matière
+            <span className="stats-card-sub">de la plus fragile à la plus solide</span>
           </div>
-          <div className="stats-hero-display">
-            <span className="stats-hero-num">{totalRevs}</span>
-            <span className="stats-hero-unit">
-              révision{totalRevs > 1 ? 's' : ''}<br />
-              {firstDay ? <em>depuis le {fmtDate(firstDay)}</em> : <em>aucune révision</em>}
-            </span>
-          </div>
-          <div className="stats-hero-sub">
-            {activeDays > 0 ? (
-              <>Soit <strong>{revsPerDay.toFixed(1)} révisions/jour</strong> en moyenne sur tes {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}{daySpan > 0 ? ` (${activePct}% des ${daySpan} jours écoulés)` : ''}.</>
-            ) : (
-              <>Pas encore de révisions enregistrées sur cette période.</>
+          <div className="st-sys-list">
+            {weakSystems.map(r => {
+              const pct = r.avg !== null ? (r.avg / 5) * 100 : 0
+              const cls = scoreClass(r.avg)
+              return (
+                <div key={r.system.id} className="st-sys-row">
+                  <span className="st-sys-name">{r.system.name}</span>
+                  <span className="st-sys-bar"><i className={cls} style={{ width: `${pct}%` }} /></span>
+                  <span className="st-sys-avg">{r.avg !== null ? r.avg.toFixed(1) : '·'}</span>
+                  <span className={`st-sys-weak${r.weakCount > 0 ? ' has' : ''}`}>
+                    {r.weakCount > 0 ? `${r.weakCount} faible${r.weakCount > 1 ? 's' : ''}` : 'ok'}
+                  </span>
+                  <Link href={`/dashboard/focus?system=${r.system.id}`} className="st-act">Réviser →</Link>
+                </div>
+              )
+            })}
+            {weakSystems.length === 0 && (
+              <div className="st-empty">Note quelques fiches pour voir tes points faibles ici.</div>
             )}
           </div>
         </div>
 
-        <div className="stats-secondary">
-          <div className="stats-sec">
-            <div className="stats-sec-num">{activeDays}</div>
-            <div className="stats-sec-info">
-              <div className="stats-sec-label">Jours actifs</div>
-              <div className="stats-sec-sub">
-                {daySpan > 0 ? `sur ${daySpan} jours · ${activePct}% de présence` : '·'}
-              </div>
-            </div>
+        <div className="stats-card">
+          <div className="stats-card-title">
+            QCM chroniquement ratés
+            <span className="stats-card-sub">échoués sur plusieurs sessions</span>
           </div>
-          <div className="stats-sec">
-            <div className="stats-sec-num">{longestStreak.length}</div>
-            <div className="stats-sec-info">
-              <div className="stats-sec-label">Plus longue série</div>
-              <div className="stats-sec-sub">
-                {longestStreak.length >= 2 && longestStreak.start && longestStreak.end
-                  ? `jours · ${fmtDate(longestStreak.start)} → ${fmtDate(longestStreak.end)}`
-                  : 'jour'}
-              </div>
-            </div>
-          </div>
-          <div className="stats-sec">
-            <div className="stats-sec-num">{masteredCount}</div>
-            <div className="stats-sec-info">
-              <div className="stats-sec-label">Fiches maîtrisées</div>
-              <div className="stats-sec-sub">
-                sur {totalFiches} · avg ≥ 4 sur 5+ J
-              </div>
-            </div>
+          <div className="st-qcm-list">
+            {chronicQcm.map((q, i) => (
+              <Link key={i} href={`/dashboard/fiches/${q.lesson.id}/qcm`} className="st-qcm-row">
+                <span className="st-qcm-rate">{Math.round(q.rate * 100)}%</span>
+                <span className="st-qcm-main">
+                  <span className="st-qcm-q">{q.question}</span>
+                  <span className="st-qcm-les">{q.lesson.name} · {q.attempts} tentatives</span>
+                </span>
+                <span className="st-act">S&apos;entraîner →</span>
+              </Link>
+            ))}
+            {chronicQcm.length === 0 && (
+              <div className="st-empty">Fais quelques sessions QCM : les questions qui te résistent apparaîtront ici.</div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* === ZONE 3 — QUOI RÉVISER MAINTENANT === */}
+      <div className="stats-card st-next">
+        <div className="stats-card-title">
+          Quoi réviser maintenant
+          <span className="stats-card-sub">notes faibles + fiches pas revues depuis longtemps</span>
+        </div>
+        <div className="st-next-list">
+          {suggestions.map(s => (
+            <div key={s.lesson.id} className="st-next-row">
+              <span className="st-next-nm">{s.lesson.name}</span>
+              <span className="st-next-sys">{s.sysName}</span>
+              <span className={`st-next-why${s.weak ? ' weak' : ''}`}>{s.why}</span>
+            </div>
+          ))}
+          {suggestions.length === 0 && (
+            <div className="st-empty">Rien à signaler — continue comme ça.</div>
+          )}
+        </div>
+        {suggestions.length > 0 && (
+          <div className="st-next-ctas">
+            <Link href={suggestionsHref} className="st-cta-primary">
+              Lancer une session sur ces {suggestions.length} fiche{suggestions.length > 1 ? 's' : ''} →
+            </Link>
+            <Link href="/dashboard/simulateur" className="st-cta-ghost">
+              Simulateur · {'«'} Ce que j&apos;ai raté {'»'}
+            </Link>
+          </div>
+        )}
+      </div>
+
 
 {/* === STATS AVANCÉES (Premium uniquement) === */}
       {!isPro && <PremiumStatsTeaser />}
