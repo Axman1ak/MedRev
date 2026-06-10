@@ -1,13 +1,17 @@
 'use client'
 // src/app/dashboard/stats/page.tsx
 //
-// Bilan annuel — page rétrospective.
-// Hero "847 révisions" + 3 secondaires (jours actifs / série / maîtrisées),
-// puis heatmap année, évolution 12 sem, palier J, dumbbell.
+// Refonte 2026-06 "Indice de préparation" — la page répond à UNE question :
+// « Suis-je prêt ? ». Quatre blocs, du plus global au plus actionnable :
+//   1. LA JAUGE — indice de préparation 0-100 (maîtrise 50% + couverture 30%
+//      + régularité 20%) avec son évolution sur 7 jours.
+//   2. PAR MATIÈRE — le même indice décliné par matière (barres colorées).
+//   3. QUOI RÉVISER MAINTENANT — 3 fiches concrètes + CTA Focus.
+//   4. PREMIUM : LE PLAN JUSQU'AU CONCOURS — date du concours, trajectoire
+//      au rythme actuel, évolution par matière sur 30 j, régularité annuelle.
 //
-// Le filtre semestre est piloté par la sidebar globale (Sem 1 / Sem 2 / Année)
-// via localStorage 'medrev-sem' et l'event 'medrev-sem-change'. Pas de toggle
-// local — la duplication a été supprimée.
+// Le filtre semestre est piloté par la sidebar globale (localStorage
+// 'medrev-sem' + event 'medrev-sem-change').
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -17,6 +21,9 @@ import type { System, Lesson } from '@/types'
 import './styles.css'
 
 const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+
+// Objectif affiché : la "zone verte" de l'indice.
+const TARGET_INDEX = 85
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -61,34 +68,6 @@ function stepPostedDate(s: StepEntry): string | null {
   return null
 }
 
-// ===================== AGRÉGATIONS LESSON =====================
-type LessonAgg = {
-  lesson: Lesson
-  avg: number | null
-  scoredCount: number
-  officialCount: number
-  isMastered: boolean
-}
-
-function computeLessonAgg(lesson: Lesson): LessonAgg {
-  const steps = (lesson.steps as StepEntry[]) || []
-  let sum = 0, n = 0, official = 0
-  for (let i = 0; i < J.length; i++) {
-    const eff = effectiveStepScore(steps[i])
-    if (eff) { sum += eff; n++ }
-    if (stepScore(steps[i])) official++
-  }
-  const avg = n > 0 ? sum / n : null
-  return {
-    lesson,
-    avg,
-    scoredCount: n,
-    officialCount: official,
-    isMastered: official >= 5 && avg !== null && avg >= 4,
-  }
-}
-
-// Dernier score effectif (officiel ou temp) d'une fiche, en remontant les J.
 function getLastEffScore(lesson: Lesson): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = J.length - 1; i >= 0; i--) {
@@ -98,7 +77,6 @@ function getLastEffScore(lesson: Lesson): Score | null {
   return null
 }
 
-// Date de la dernière activité (score officiel ou temp), sinon learn_date.
 function lastActivityDate(l: Lesson): string {
   const steps = (l.steps as StepEntry[]) || []
   let best = l.learn_date ?? ''
@@ -128,145 +106,86 @@ function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
   return m
 }
 
-function totalRevisions(activityIndex: Map<string, number>): number {
-  let n = 0
-  activityIndex.forEach(v => { n += v })
-  return n
+function shiftDate(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
 }
 
-function activeDaysCount(activityIndex: Map<string, number>): number {
-  return activityIndex.size
-}
-
-type Streak = { length: number; start: string | null; end: string | null }
-
-function computeLongestStreak(activityIndex: Map<string, number>): Streak {
-  if (activityIndex.size === 0) return { length: 0, start: null, end: null }
-  const dates = Array.from(activityIndex.keys()).sort()
-  let maxLen = 1, maxStart = dates[0], maxEnd = dates[0]
-  let curLen = 1, curStart = dates[0]
-  for (let i = 1; i < dates.length; i++) {
-    const prev = new Date(dates[i - 1] + 'T12:00:00')
-    const curr = new Date(dates[i] + 'T12:00:00')
-    const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000)
-    if (diff === 1) {
-      curLen++
-      if (curLen > maxLen) { maxLen = curLen; maxStart = curStart; maxEnd = dates[i] }
-    } else {
-      curLen = 1
-      curStart = dates[i]
+// ===================== INDICE DE PRÉPARATION =====================
+// 0-100 = 50% maîtrise (moyenne des fiches notées, /5) + 30% couverture
+// (fiches avec ≥3 paliers officiels) + 20% régularité (jours actifs sur les
+// 14 derniers, cible 10). `asOf` permet de calculer l'indice "tel qu'il
+// était" à une date passée (pour les deltas 7 j / 30 j) en ignorant les
+// scores postés après.
+function computeReadiness(
+  lessons: Lesson[],
+  activityIndex: Map<string, number>,
+  asOf: string
+): number {
+  if (lessons.length === 0) return 0
+  let mSum = 0, mN = 0, covered = 0
+  for (const l of lessons) {
+    const steps = (l.steps as StepEntry[]) || []
+    let sSum = 0, sN = 0, official = 0
+    for (const s of steps) {
+      if (!s) continue
+      const d = stepPostedDate(s)
+      if (!d || d > asOf) continue
+      const eff = effectiveStepScore(s)
+      if (eff) { sSum += eff; sN++ }
+      if (stepScore(s)) official++
     }
+    if (sN > 0) { mSum += sSum / sN; mN++ }
+    if (official >= 3) covered++
   }
-  return { length: maxLen, start: maxStart, end: maxEnd }
+  const mastery = mN > 0 ? (mSum / mN) / 5 : 0
+  const coverage = covered / lessons.length
+  let active14 = 0
+  for (let k = 0; k < 14; k++) {
+    const ds = shiftDate(asOf, -k)
+    if ((activityIndex.get(ds) ?? 0) > 0) active14++
+  }
+  const regularity = Math.min(1, active14 / 10)
+  return Math.round(100 * (0.5 * mastery + 0.3 * coverage + 0.2 * regularity))
 }
 
-function firstActivityDate(activityIndex: Map<string, number>): string | null {
-  if (activityIndex.size === 0) return null
-  return Array.from(activityIndex.keys()).sort()[0]
-}
-
-// ===================== ÉVOLUTION =====================
-function buildWeeklyAvg(lessons: Lesson[], today: string, weeks: number): { weekStart: string; avg: number | null; count: number }[] {
-  const out: { weekStart: string; avg: number | null; count: number }[] = []
-  const todayD = new Date(today + 'T12:00:00')
-  const dow = todayD.getDay()
-  const mondayOffset = dow === 0 ? -6 : 1 - dow
-  const thisMonday = new Date(todayD)
-  thisMonday.setDate(todayD.getDate() + mondayOffset)
-
-  for (let w = weeks - 1; w >= 0; w--) {
-    const weekStart = new Date(thisMonday)
-    weekStart.setDate(thisMonday.getDate() - w * 7)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-    const weekStartStr = weekStart.toISOString().split('T')[0]
-    const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-    let sum = 0, n = 0
-    for (const l of lessons) {
-      const steps = (l.steps as StepEntry[]) || []
-      for (const s of steps) {
-        if (!s) continue
-        const eff = effectiveStepScore(s)
-        if (!eff) continue
-        const d = stepPostedDate(s)
-        if (!d) continue
-        if (d >= weekStartStr && d <= weekEndStr) { sum += eff; n++ }
-      }
+// Sous-composantes pour les 3 mini-barres du héros (à la date du jour).
+function computeParts(lessons: Lesson[], activityIndex: Map<string, number>, today: string) {
+  let mSum = 0, mN = 0, covered = 0
+  for (const l of lessons) {
+    const steps = (l.steps as StepEntry[]) || []
+    let sSum = 0, sN = 0, official = 0
+    for (const s of steps) {
+      if (!s) continue
+      const eff = effectiveStepScore(s)
+      if (eff) { sSum += eff; sN++ }
+      if (stepScore(s)) official++
     }
-    out.push({ weekStart: weekStartStr, avg: n > 0 ? sum / n : null, count: n })
+    if (sN > 0) { mSum += sSum / sN; mN++ }
+    if (official >= 3) covered++
   }
-  return out
-}
-
-function buildJStats(lessons: Lesson[]): { jLabel: string; avg: number | null; count: number }[] {
-  const out: { jLabel: string; avg: number | null; count: number }[] = []
-  for (let i = 0; i < J.length; i++) {
-    let sum = 0, n = 0
-    for (const l of lessons) {
-      const steps = (l.steps as StepEntry[]) || []
-      const sc = stepScore(steps[i])
-      if (sc) { sum += sc; n++ }
-    }
-    out.push({ jLabel: i === 0 ? 'J+0' : `J+${J[i]}`, avg: n > 0 ? sum / n : null, count: n })
+  let active14 = 0
+  for (let k = 0; k < 14; k++) {
+    const ds = shiftDate(today, -k)
+    if ((activityIndex.get(ds) ?? 0) > 0) active14++
   }
-  return out
-}
-
-// ===================== COMPARAISON 1 MOIS → MAINTENANT =====================
-type MatiereComparison = {
-  system: System
-  avgThen: number | null
-  avgNow: number | null
-  delta: number | null
-}
-
-function computeMatiereComparison(systems: System[], lessons: Lesson[], today: string): MatiereComparison[] {
-  const todayD = new Date(today + 'T12:00:00')
-  const monthAgo = new Date(todayD)
-  monthAgo.setDate(todayD.getDate() - 30)
-  const monthAgoStr = monthAgo.toISOString().split('T')[0]
-
-  const out: MatiereComparison[] = []
-
-  for (const sys of systems) {
-    const sysLessons = lessons.filter(l => l.system_id === sys.id)
-    let sumThen = 0, nThen = 0
-    let sumNow = 0, nNow = 0
-
-    for (const l of sysLessons) {
-      const steps = (l.steps as StepEntry[]) || []
-      let lThenSum = 0, lThenN = 0
-      let lNowSum = 0, lNowN = 0
-      for (const s of steps) {
-        const eff = effectiveStepScore(s)
-        if (!eff) continue
-        const d = stepPostedDate(s)
-        if (!d) continue
-        lNowSum += eff; lNowN++
-        if (d <= monthAgoStr) { lThenSum += eff; lThenN++ }
-      }
-      if (lNowN > 0) { sumNow += lNowSum / lNowN; nNow++ }
-      if (lThenN > 0) { sumThen += lThenSum / lThenN; nThen++ }
-    }
-
-    const avgNow = nNow > 0 ? sumNow / nNow : null
-    const avgThen = nThen > 0 ? sumThen / nThen : null
-    const delta = avgNow !== null && avgThen !== null ? avgNow - avgThen : null
-    out.push({ system: sys, avgThen, avgNow, delta })
+  return {
+    mastery: mN > 0 ? (mSum / mN) / 5 : 0,
+    coverage: lessons.length > 0 ? covered / lessons.length : 0,
+    regularity: Math.min(1, active14 / 10),
   }
-
-  return out
-    .filter(m => m.avgNow !== null)
-    .sort((a, b) => {
-      if (a.delta === null && b.delta === null) return (b.avgNow ?? 0) - (a.avgNow ?? 0)
-      if (a.delta === null) return 1
-      if (b.delta === null) return -1
-      return (b.delta ?? 0) - (a.delta ?? 0)
-    })
 }
 
-// ===================== HEATMAP =====================
+// Zone de l'indice → couleur + libellé.
+function indexZone(v: number): { color: string; label: string } {
+  if (v < 40) return { color: '#C75050', label: 'fragile' }
+  if (v < 60) return { color: '#E08B3C', label: 'en route' }
+  if (v < 75) return { color: '#D9B24A', label: 'solide' }
+  return { color: '#2D6A4F', label: 'prêt' }
+}
+
+// ===================== HEATMAP (conservée — la régularité se VOIT) =====================
 type HeatmapCell = { date: string; count: number; isToday: boolean; inFuture: boolean }
 
 function buildYearHeatmap(activityIndex: Map<string, number>, today: string): HeatmapCell[][] {
@@ -304,15 +223,6 @@ function intensityClass(count: number, max: number): string {
   return 'i4'
 }
 
-function scoreClass(avg: number | null): string {
-  if (avg === null) return 's3'
-  if (avg < 2) return 's1'
-  if (avg < 3) return 's2'
-  if (avg < 3.7) return 's3'
-  if (avg < 4.5) return 's4'
-  return 's5'
-}
-
 function fmtMonth(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
@@ -323,6 +233,36 @@ function semLabel(s: Semestre): string {
   return `Semestre ${s}`
 }
 
+// ===================== JAUGE (SVG demi-cercle) =====================
+function Gauge({ value }: { value: number }) {
+  const zone = indexZone(value)
+  // Arc : demi-cercle de rayon 84, circonférence/2 ≈ 264.
+  const HALF = Math.PI * 84
+  const filled = (Math.max(0, Math.min(100, value)) / 100) * HALF
+  return (
+    <svg viewBox="0 0 220 130" className="st-gauge" role="img" aria-label={`Indice de préparation : ${value} sur 100`}>
+      <path
+        d="M 26 114 A 84 84 0 0 1 194 114"
+        fill="none"
+        stroke="var(--bg-soft)"
+        strokeWidth="16"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 26 114 A 84 84 0 0 1 194 114"
+        fill="none"
+        stroke={zone.color}
+        strokeWidth="16"
+        strokeLinecap="round"
+        strokeDasharray={`${filled.toFixed(1)} ${(HALF + 10).toFixed(1)}`}
+        style={{ transition: 'stroke-dasharray .8s cubic-bezier(.4,0,.2,1), stroke .4s' }}
+      />
+      <text x="110" y="96" textAnchor="middle" className="st-gauge-num">{value}</text>
+      <text x="110" y="116" textAnchor="middle" className="st-gauge-sub">/ 100 · {zone.label}</text>
+    </svg>
+  )
+}
+
 // ===================== PAGE =====================
 export default function StatsPage() {
   const supabase = createClient()
@@ -331,19 +271,18 @@ export default function StatsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [semestre, setSemestre] = useState<Semestre>(2)
-  // Plan user — fetché en parallèle des données. Détermine si on affiche les
-  // visualisations avancées (heatmap, sparkline, j-bar, dumbbell) ou le teaser
-  // Premium qui les remplace pour les comptes Gratuit.
   const [isPro, setIsPro] = useState(false)
+  // Date du concours (Premium) — localStorage, pas de migration nécessaire.
+  const [examDate, setExamDate] = useState('')
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
-  // Load initial semester from localStorage + listen to sidebar event
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
     const s: Semestre = raw === '1' ? 1 : raw === 'year' ? 'year' : 2
     setSemestre(s)
+    setExamDate(localStorage.getItem('medrev-exam-date') ?? '')
 
     function onSemChange(e: Event) {
       const ce = e as CustomEvent<Semestre>
@@ -354,6 +293,14 @@ export default function StatsPage() {
     window.addEventListener('medrev-sem-change', onSemChange)
     return () => window.removeEventListener('medrev-sem-change', onSemChange)
   }, [])
+
+  function chooseExamDate(d: string) {
+    setExamDate(d)
+    if (typeof window !== 'undefined') {
+      if (d) localStorage.setItem('medrev-exam-date', d)
+      else localStorage.removeItem('medrev-exam-date')
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -374,7 +321,6 @@ export default function StatsPage() {
     return () => { cancelled = true }
   }, [supabase, router])
 
-  // En mode 'year' on prend tous les systèmes ; sinon on filtre par semestre.
   const semSystems = useMemo(() => {
     if (semestre === 'year') return systems
     return systems.filter(s => s.semestre === semestre)
@@ -382,75 +328,54 @@ export default function StatsPage() {
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
-  const aggs = useMemo(() => semLessons.map(computeLessonAgg), [semLessons])
   const activityIndex = useMemo(() => buildActivityIndex(semLessons), [semLessons])
-  const weeklyAvg = useMemo(() => buildWeeklyAvg(semLessons, today, 12), [semLessons, today])
-  const jStats = useMemo(() => buildJStats(semLessons), [semLessons])
   const heatmap = useMemo(() => buildYearHeatmap(activityIndex, today), [activityIndex, today])
-  const comparison = useMemo(() => computeMatiereComparison(semSystems, semLessons, today), [semSystems, semLessons, today])
-
   const heatmapMax = useMemo(() => {
     let max = 1
     activityIndex.forEach(v => { if (v > max) max = v })
     return max
   }, [activityIndex])
+  const monthLabels = useMemo(() => {
+    const out: { weekIdx: number; label: string }[] = []
+    let lastMonth = -1
+    heatmap.forEach((week, wi) => {
+      const m = new Date(week[0].date + 'T12:00:00').getMonth()
+      if (m !== lastMonth) {
+        out.push({ weekIdx: wi, label: fmtMonth(week[0].date) })
+        lastMonth = m
+      }
+    })
+    return out.slice(1) // saute le label collé au bord gauche
+  }, [heatmap])
 
-  const totalRevs = useMemo(() => totalRevisions(activityIndex), [activityIndex])
-  const activeDays = useMemo(() => activeDaysCount(activityIndex), [activityIndex])
-  const longestStreak = useMemo(() => computeLongestStreak(activityIndex), [activityIndex])
-  const firstDay = useMemo(() => firstActivityDate(activityIndex), [activityIndex])
-  const masteredCount = aggs.filter(a => a.isMastered).length
-  const totalFiches = semLessons.length
+  const totalRevs = useMemo(() => {
+    let n = 0
+    activityIndex.forEach(v => { n += v })
+    return n
+  }, [activityIndex])
 
-  const daySpan = useMemo(() => {
-    if (!firstDay) return 0
-    const t = new Date(today + 'T12:00:00')
-    const f = new Date(firstDay + 'T12:00:00')
-    return Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1)
-  }, [firstDay, today])
+  // ===== L'INDICE =====
+  const index = useMemo(() => computeReadiness(semLessons, activityIndex, today), [semLessons, activityIndex, today])
+  const index7 = useMemo(() => computeReadiness(semLessons, activityIndex, shiftDate(today, -7)), [semLessons, activityIndex, today])
+  const index30 = useMemo(() => computeReadiness(semLessons, activityIndex, shiftDate(today, -30)), [semLessons, activityIndex, today])
+  const delta7 = index - index7
+  const parts = useMemo(() => computeParts(semLessons, activityIndex, today), [semLessons, activityIndex, today])
 
-  const revsPerDay = activeDays > 0 ? totalRevs / activeDays : 0
-  const activePct = daySpan > 0 ? Math.round((activeDays / daySpan) * 100) : 0
-
-  // ===== DIAGNOSTIC → ACTION =====
-  // Matières classées de la plus fragile à la plus solide.
-  const weakSystems = useMemo(() => {
+  // ===== PAR MATIÈRE =====
+  const bySystem = useMemo(() => {
     return semSystems
       .map(sys => {
-        const sysAggs = aggs.filter(a => a.lesson.system_id === sys.id)
-        const scored = sysAggs.filter(a => a.avg !== null)
-        const avg = scored.length > 0
-          ? scored.reduce((s, a) => s + (a.avg as number), 0) / scored.length
-          : null
-        const weakCount = sysAggs.filter(a => {
-          const last = getLastEffScore(a.lesson)
-          return last !== null && last <= 2
-        }).length
-        return { system: sys, avg, weakCount, total: sysAggs.length }
+        const sysLessons = semLessons.filter(l => l.system_id === sys.id)
+        if (sysLessons.length === 0) return null
+        const idx = computeReadiness(sysLessons, activityIndex, today)
+        const idx30 = computeReadiness(sysLessons, activityIndex, shiftDate(today, -30))
+        return { system: sys, index: idx, delta30: idx - idx30, total: sysLessons.length }
       })
-      .filter(r => r.total > 0)
-      .sort((a, b) => (a.avg ?? 6) - (b.avg ?? 6))
-  }, [semSystems, aggs])
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .sort((a, b) => a.index - b.index)
+  }, [semSystems, semLessons, activityIndex, today])
 
-  // QCM chroniquement ratés (compteurs attempts/correct des sessions QCM).
-  const chronicQcm = useMemo(() => {
-    const out: { lesson: Lesson; question: string; rate: number; attempts: number }[] = []
-    for (const l of semLessons) {
-      const qs = Array.isArray(l.ai_questions) ? l.ai_questions : []
-      for (const q of qs) {
-        const at = (q as { attempts?: number }).attempts ?? 0
-        const ok = (q as { correct?: number }).correct ?? 0
-        if (at < 2) continue
-        const rate = ok / at
-        if (rate >= 0.6) continue
-        out.push({ lesson: l, question: String((q as { question?: string }).question ?? ''), rate, attempts: at })
-      }
-    }
-    return out.sort((a, b) => a.rate - b.rate || b.attempts - a.attempts).slice(0, 3)
-  }, [semLessons])
-
-  // "Quoi réviser maintenant" — déménagé du dashboard. Mix notes faibles
-  // (poids fort) + fiches anciennes ; fiches toutes neuves exclues.
+  // ===== QUOI RÉVISER MAINTENANT =====
   const suggestions = useMemo(() => {
     const out: { lesson: Lesson; sysName: string; why: string; weak: boolean; w: number }[] = []
     for (const l of semLessons) {
@@ -472,12 +397,24 @@ export default function StatsPage() {
         why: weak ? `notée ${last}/5` : days > 0 ? `pas revue depuis ${days} j` : 'à consolider',
       })
     }
-    return out.sort((a, b) => b.w - a.w).slice(0, 5)
+    return out.sort((a, b) => b.w - a.w).slice(0, 3)
   }, [semLessons, semSystems, today])
 
   const suggestionsHref = suggestions.length > 0
     ? `/dashboard/focus?lessons=${suggestions.map(s => s.lesson.id).join(',')}`
     : '/dashboard/focus'
+
+  // ===== TRAJECTOIRE (Premium) =====
+  const daysToExam = useMemo(() => {
+    if (!examDate || examDate <= today) return null
+    return Math.round((new Date(examDate + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000)
+  }, [examDate, today])
+
+  const projected = useMemo(() => {
+    if (daysToExam === null) return null
+    const perDay = (index - index30) / 30
+    return Math.max(0, Math.min(100, Math.round(index + perDay * daysToExam)))
+  }, [daysToExam, index, index30])
 
   if (loading) {
     return (
@@ -487,139 +424,105 @@ export default function StatsPage() {
     )
   }
 
-  // Empty state global : aucune révision notée du tout. On évite d'afficher
-  // une heatmap, sparkline et dumbbell tous vides — qui donneraient l'impression
-  // que l'app ne marche pas. On pousse plutôt l'action concrète (créer une
-  // fiche puis la noter au jour J).
+  // Empty state : aucune révision notée — on pousse l'action, pas des zéros.
   if (totalRevs === 0) {
     return (
       <div className="stats-page">
         <div className="stats-empty-global">
           <div className="stats-empty-global-icon" aria-hidden>◈</div>
           <h1 className="stats-empty-global-title">
-            Tes statistiques se construisent au fil des révisions
+            Ton indice de préparation t&apos;attend
           </h1>
           <p className="stats-empty-global-text">
-            Note ta première fiche au jour J pour activer ta heatmap, ton
-            sparkline 12 semaines et tes dumbbells par matière. Les stats
-            n&apos;ont de sens qu&apos;une fois que tu as 5-10 fiches notées,
-            avant ça, elles sont vides.
+            Note tes premières révisions au jour J : cette page calculera où tu
+            en es (maîtrise, couverture, régularité) et ce qu&apos;il te reste à faire.
           </p>
           <Link href="/dashboard/fiches" className="stats-empty-global-btn">
-            Aller à mes cours →
+            Créer ma première fiche →
           </Link>
         </div>
       </div>
     )
   }
 
-  // mois pour la heatmap
-  const monthLabels: { weekIdx: number; label: string }[] = []
-  let lastMonth = ''
-  heatmap.forEach((week, idx) => {
-    const m = fmtMonth(week[0].date)
-    if (m !== lastMonth) {
-      monthLabels.push({ weekIdx: idx, label: m })
-      lastMonth = m
-    }
-  })
+  const zone = indexZone(index)
 
   return (
     <div className="stats-page">
-
+      {/* HEADER */}
       <div className="stats-header">
         <div>
           <h1 className="stats-title">
-            Mon <em>année</em> en révisions
+            Suis-je <em>prêt</em> ?
           </h1>
           <div className="stats-sub">
-            {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}
-            {longestStreak.length >= 2 ? ` · plus longue série : ${longestStreak.length} jours` : ''}
-            {' · '}{masteredCount} fiche{masteredCount > 1 ? 's' : ''} maîtrisée{masteredCount > 1 ? 's' : ''}
+            {semLabel(semestre)} · l&apos;indice combine maîtrise, couverture et régularité
           </div>
         </div>
       </div>
 
-      {/* HERO + 3 SECONDAIRES */}
-      {/* === ZONE 1 — OÙ J'EN SUIS (pouls compact) === */}
-      <div className="st-pulse">
-        <div className="st-pulse-item">
-          <span className="st-pulse-num">{totalRevs}</span>
-          <span className="st-pulse-lbl">révisions notées</span>
+      {/* === 1. LA JAUGE === */}
+      <div className="stats-card st-hero2">
+        <div className="st-hero2-gauge">
+          <Gauge value={index} />
         </div>
-        <span className="st-pulse-sep" aria-hidden="true" />
-        <div className="st-pulse-item">
-          <span className="st-pulse-num">{activeDays}</span>
-          <span className="st-pulse-lbl">jours actifs · {revsPerDay.toFixed(1)}/j · {activePct}% du temps</span>
-        </div>
-        <span className="st-pulse-sep" aria-hidden="true" />
-        <div className="st-pulse-item">
-          <span className="st-pulse-num">{longestStreak.length}</span>
-          <span className="st-pulse-lbl">jours de série max</span>
-        </div>
-        <span className="st-pulse-sep" aria-hidden="true" />
-        <div className="st-pulse-item">
-          <span className="st-pulse-num">{masteredCount}<small>/{totalFiches}</small></span>
-          <span className="st-pulse-lbl">fiches maîtrisées</span>
-        </div>
-      </div>
-
-      {/* === ZONE 2 — MES POINTS FAIBLES === */}
-      <div className="st-row2">
-        <div className="stats-card">
-          <div className="stats-card-title">
-            Par matière
-            <span className="stats-card-sub">de la plus fragile à la plus solide</span>
+        <div className="st-hero2-side">
+          <div className="st-hero2-kicker">Indice de préparation</div>
+          <div className={`st-hero2-delta ${delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : ''}`}>
+            {delta7 > 0 ? `▲ +${delta7} pts cette semaine` : delta7 < 0 ? `▼ ${delta7} pts cette semaine` : '= stable cette semaine'}
           </div>
-          <div className="st-sys-list">
-            {weakSystems.map(r => {
-              const pct = r.avg !== null ? (r.avg / 5) * 100 : 0
-              const cls = scoreClass(r.avg)
-              return (
-                <div key={r.system.id} className="st-sys-row">
-                  <span className="st-sys-name">{r.system.name}</span>
-                  <span className="st-sys-bar"><i className={cls} style={{ width: `${pct}%` }} /></span>
-                  <span className="st-sys-avg">{r.avg !== null ? r.avg.toFixed(1) : '·'}</span>
-                  <span className={`st-sys-weak${r.weakCount > 0 ? ' has' : ''}`}>
-                    {r.weakCount > 0 ? `${r.weakCount} faible${r.weakCount > 1 ? 's' : ''}` : 'ok'}
-                  </span>
-                  <Link href={`/dashboard/focus?system=${r.system.id}`} className="st-act">Réviser →</Link>
-                </div>
-              )
-            })}
-            {weakSystems.length === 0 && (
-              <div className="st-empty">Note quelques fiches pour voir tes points faibles ici.</div>
-            )}
-          </div>
-        </div>
-
-        <div className="stats-card">
-          <div className="stats-card-title">
-            QCM chroniquement ratés
-            <span className="stats-card-sub">échoués sur plusieurs sessions</span>
-          </div>
-          <div className="st-qcm-list">
-            {chronicQcm.map((q, i) => (
-              <Link key={i} href={`/dashboard/fiches/${q.lesson.id}/qcm`} className="st-qcm-row">
-                <span className="st-qcm-rate">{Math.round(q.rate * 100)}%</span>
-                <span className="st-qcm-main">
-                  <span className="st-qcm-q">{q.question}</span>
-                  <span className="st-qcm-les">{q.lesson.name} · {q.attempts} tentatives</span>
-                </span>
-                <span className="st-act">S&apos;entraîner →</span>
-              </Link>
+          <div className="st-parts">
+            {[
+              { lbl: 'Maîtrise', v: parts.mastery, hint: 'moyenne de tes notes' },
+              { lbl: 'Couverture', v: parts.coverage, hint: 'fiches avec ≥3 paliers faits' },
+              { lbl: 'Régularité', v: parts.regularity, hint: 'jours actifs sur 14' },
+            ].map(p => (
+              <div key={p.lbl} className="st-part" title={p.hint}>
+                <span className="st-part-lbl">{p.lbl}</span>
+                <span className="st-part-bar"><i style={{ width: `${Math.round(p.v * 100)}%`, background: zone.color }} /></span>
+                <span className="st-part-val">{Math.round(p.v * 100)}</span>
+              </div>
             ))}
-            {chronicQcm.length === 0 && (
-              <div className="st-empty">Fais quelques sessions QCM : les questions qui te résistent apparaîtront ici.</div>
-            )}
+          </div>
+          <div className="st-hero2-target">
+            Objectif : <strong>{TARGET_INDEX}/100</strong> — la zone {'«'} prêt {'»'}.
           </div>
         </div>
       </div>
 
-      {/* === ZONE 3 — QUOI RÉVISER MAINTENANT === */}
+      {/* === 2. PAR MATIÈRE === */}
+      <div className="stats-card">
+        <div className="stats-card-title">
+          Par matière
+          <span className="stats-card-sub">de la plus fragile à la plus solide</span>
+        </div>
+        <div className="st-sys-list">
+          {bySystem.map(r => {
+            const z = indexZone(r.index)
+            return (
+              <div key={r.system.id} className="st-sys-row">
+                <span className="st-sys-name">{r.system.name}</span>
+                <span className="st-sys-bar"><i style={{ width: `${r.index}%`, background: z.color }} /></span>
+                <span className="st-sys-avg">{r.index}</span>
+                {isPro && (
+                  <span className={`st-sys-trend${r.delta30 > 0 ? ' up' : r.delta30 < 0 ? ' down' : ''}`}>
+                    {r.delta30 > 0 ? `▲ +${r.delta30}` : r.delta30 < 0 ? `▼ ${r.delta30}` : '='}
+                  </span>
+                )}
+                <Link href={`/dashboard/focus?system=${r.system.id}`} className="st-act">Réviser →</Link>
+              </div>
+            )
+          })}
+          {bySystem.length === 0 && (
+            <div className="st-empty">Note quelques fiches pour voir l&apos;état de tes matières.</div>
+          )}
+        </div>
+      </div>
+
+      {/* === 3. QUOI RÉVISER MAINTENANT === */}
       <div className="stats-card st-next">
         <div className="stats-card-title">
-          Quoi réviser maintenant
+          Pour faire monter l&apos;indice maintenant
           <span className="stats-card-sub">notes faibles + fiches pas revues depuis longtemps</span>
         </div>
         <div className="st-next-list">
@@ -637,267 +540,100 @@ export default function StatsPage() {
         {suggestions.length > 0 && (
           <div className="st-next-ctas">
             <Link href={suggestionsHref} className="st-cta-primary">
-              Lancer une session sur ces {suggestions.length} fiche{suggestions.length > 1 ? 's' : ''} →
-            </Link>
-            <Link href="/dashboard/simulateur" className="st-cta-ghost">
-              Simulateur · {'«'} Ce que j&apos;ai raté {'»'}
+              Réviser ces {suggestions.length} fiche{suggestions.length > 1 ? 's' : ''} →
             </Link>
           </div>
         )}
       </div>
 
-
-{/* === STATS AVANCÉES (Premium uniquement) === */}
-      {!isPro && <PremiumStatsTeaser />}
-
-      {isPro && <>
-      {/* HEATMAP */}
-      <div className="stats-card">
-        <div className="stats-card-title">
-          Activité de l&apos;année
-          <span className="stats-card-sub">52 dernières semaines · plus la case est verte, plus tu as révisé</span>
+      {/* === 4. PREMIUM : LE PLAN JUSQU'AU CONCOURS === */}
+      {!isPro && (
+        <div className="stats-card st-plan-teaser">
+          <div className="st-plan-teaser-kicker">Premium</div>
+          <div className="st-plan-teaser-title">Ton plan jusqu&apos;au concours</div>
+          <p className="st-plan-teaser-text">
+            Fixe ta date de concours et vois ta <strong>trajectoire</strong> :
+            où ton indice sera le jour J à ton rythme actuel, quelles matières
+            progressent ou décrochent (évolution sur 30 jours), et ta régularité
+            sur l&apos;année entière.
+          </p>
+          <Link href="/dashboard/pricing" className="st-cta-primary">Débloquer mon plan →</Link>
         </div>
-        <div className="stats-heatmap-wrap">
-          <div className="stats-heatmap-months">
-            {monthLabels.map((m, idx) => (
-              <span key={idx} className="stats-heatmap-month" style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
-            ))}
+      )}
+
+      {isPro && (
+        <div className="stats-card st-plan">
+          <div className="stats-card-title">
+            Le plan jusqu&apos;au concours
+            <span className="stats-card-sub">trajectoire au rythme des 30 derniers jours</span>
           </div>
-          <div className="stats-heatmap">
-            <div className="stats-heatmap-axis">
-              <span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span>
-            </div>
-            <div className="stats-heatmap-grid">
-              {heatmap.map((week, wi) => (
-                <div key={wi} className="stats-heatmap-week">
-                  {week.map((cell, di) => {
-                    const cls = ['stats-heatmap-cell',
-                      cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
-                      cell.isToday ? 'today' : '',
-                    ].filter(Boolean).join(' ')
-                    return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
-                  })}
+          <div className="st-plan-row">
+            <label className="st-plan-date">
+              <span className="st-plan-date-lbl">Date du concours</span>
+              <input
+                type="date"
+                className="st-plan-date-input"
+                value={examDate}
+                min={today}
+                onChange={e => chooseExamDate(e.target.value)}
+              />
+            </label>
+            {daysToExam !== null && projected !== null ? (
+              <div className="st-plan-proj">
+                <div className="st-plan-days">J-{daysToExam}</div>
+                <div className="st-plan-proj-main">
+                  Au rythme actuel, tu seras à{' '}
+                  <strong style={{ color: indexZone(projected).color }}>{projected}/100</strong>{' '}
+                  le jour J
+                  {projected >= TARGET_INDEX
+                    ? ' — en zone « prêt ». Tiens le cap.'
+                    : ` — il manque ${TARGET_INDEX - projected} pts pour la zone « prêt ». Vise ${Math.max(1, Math.ceil(((TARGET_INDEX - index) / Math.max(1, daysToExam)) * 7))} pts de plus par semaine.`}
                 </div>
+              </div>
+            ) : (
+              <div className="st-plan-proj st-empty">
+                Choisis ta date de concours pour voir ta trajectoire.
+              </div>
+            )}
+          </div>
+
+          {/* Régularité annuelle — la seule visualisation conservée : elle se lit d'un coup d'œil */}
+          <div className="stats-heatmap-wrap">
+            <div className="stats-heatmap-months">
+              {monthLabels.map((m, idx) => (
+                <span key={idx} className="stats-heatmap-month" style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
               ))}
             </div>
-          </div>
-          <div className="stats-heatmap-legend">
-            <span>Moins</span>
-            <span className="stats-heatmap-cell i0" />
-            <span className="stats-heatmap-cell i1" />
-            <span className="stats-heatmap-cell i2" />
-            <span className="stats-heatmap-cell i3" />
-            <span className="stats-heatmap-cell i4" />
-            <span>Plus</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="stats-row stats-row-2">
-        <div className="stats-card">
-          <div className="stats-card-title">
-            Évolution de ta moyenne
-            <span className="stats-card-sub">12 dernières semaines</span>
-          </div>
-          <Sparkline data={weeklyAvg} />
-        </div>
-
-        <div className="stats-card">
-          <div className="stats-card-title">
-            Maîtrise par palier J
-            <span className="stats-card-sub">officiel uniquement</span>
-          </div>
-          <div className="stats-jbar">
-            {jStats.map((j, i) => {
-              const pct = j.avg !== null ? (j.avg / 5) * 100 : 0
-              const cls = scoreClass(j.avg)
-              return (
-                <div key={i} className="stats-jbar-col">
-                  <div className="stats-jbar-track">
-                    <div className={`stats-jbar-fill ${cls}`} style={{ height: `${pct}%` }} title={j.avg !== null ? `${j.avg.toFixed(1)}/5 · ${j.count} note${j.count > 1 ? 's' : ''}` : 'aucune note'} />
+            <div className="stats-heatmap">
+              <div className="stats-heatmap-axis">
+                <span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span>
+              </div>
+              <div className="stats-heatmap-grid">
+                {heatmap.map((week, wi) => (
+                  <div key={wi} className="stats-heatmap-week">
+                    {week.map((cell, di) => {
+                      const cls = ['stats-heatmap-cell',
+                        cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
+                        cell.isToday ? 'today' : '',
+                      ].filter(Boolean).join(' ')
+                      return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
+                    })}
                   </div>
-                  <div className="stats-jbar-val">{j.avg !== null ? j.avg.toFixed(1) : '·'}</div>
-                  <div className="stats-jbar-lbl">{j.jLabel}</div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="stats-card">
-        <div className="stats-card-title">
-          Comparaison · il y a 1 mois → aujourd&apos;hui
-          <span className="stats-card-sub">par matière · point gris = il y a 1 mois, point coloré = maintenant</span>
-        </div>
-        <DumbbellChart rows={comparison} />
-      </div>
-      </>}
-
-    </div>
-  )
-}
-
-// ===================== PREMIUM TEASER =====================
-// Remplace les 4 visualisations avancées (heatmap, sparkline, j-bar, dumbbell)
-// pour les comptes Gratuit. Présente ce qu'ils débloqueraient en Premium et
-// renvoie sur la page Pricing.
-function PremiumStatsTeaser() {
-  return (
-    <div className="stats-premium-teaser">
-      <div className="stats-premium-teaser-kicker">Stats avancées · Premium</div>
-      <h2 className="stats-premium-teaser-title">
-        Vois <em>ton année</em> en un coup d&apos;œil
-      </h2>
-      <p className="stats-premium-teaser-sub">
-        Quatre visualisations qui révèlent tes habitudes, tes progrès et
-        tes points faibles.
-      </p>
-
-      <div className="stats-premium-teaser-grid">
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">▦</div>
-          <div className="stats-premium-teaser-item-name">Heatmap année</div>
-          <div className="stats-premium-teaser-item-desc">52 semaines d&apos;activité, jour par jour</div>
-        </div>
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">∿</div>
-          <div className="stats-premium-teaser-item-name">Sparkline 12 sem</div>
-          <div className="stats-premium-teaser-item-desc">Évolution de ta moyenne semaine après semaine</div>
-        </div>
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">▮▮▮</div>
-          <div className="stats-premium-teaser-item-name">Maîtrise par palier J</div>
-          <div className="stats-premium-teaser-item-desc">Vois où tu lâches sur la courbe d&apos;oubli</div>
-        </div>
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">●─●</div>
-          <div className="stats-premium-teaser-item-name">Comparaison 1 mois</div>
-          <div className="stats-premium-teaser-item-desc">Quelles matières remontent, lesquelles décrochent</div>
-        </div>
-      </div>
-
-      <Link href="/dashboard/pricing" className="stats-premium-teaser-cta">
-        Débloquer ces stats avec Premium →
-      </Link>
-    </div>
-  )
-}
-
-// ===================== DUMBBELL =====================
-function DumbbellChart({ rows }: { rows: MatiereComparison[] }) {
-  if (rows.length === 0) {
-    return <div className="stats-empty">Pas encore assez de données pour comparer.</div>
-  }
-
-  return (
-    <div className="stats-dumb">
-      {rows.map(r => {
-        if (r.avgNow === null) return null
-        const nowPct = ((r.avgNow - 1) / 4) * 100
-        const thenPct = r.avgThen !== null ? ((r.avgThen - 1) / 4) * 100 : null
-        const delta = r.delta
-        let trendCls: 'up' | 'down' | 'flat' = 'flat'
-        if (delta !== null) {
-          if (delta >= 0.15) trendCls = 'up'
-          else if (delta <= -0.15) trendCls = 'down'
-        }
-        const lineLeft = thenPct !== null ? Math.min(thenPct, nowPct) : nowPct
-        const lineWidth = thenPct !== null ? Math.abs(nowPct - thenPct) : 0
-        const deltaLabel = delta !== null
-          ? (delta > 0 ? `+${delta.toFixed(1)}` : delta < 0 ? delta.toFixed(1).replace('-', '−') : '0.0')
-          : 'nouveau'
-
-        return (
-          <div key={r.system.id} className="stats-dumb-row">
-            <div className="stats-dumb-name">{r.system.name}</div>
-            <div className="stats-dumb-track">
-              <div className="stats-dumb-axis" />
-              <div className="stats-dumb-grid" style={{ left: '0%' }} />
-              <div className="stats-dumb-grid" style={{ left: '25%' }} />
-              <div className="stats-dumb-grid" style={{ left: '50%' }} />
-              <div className="stats-dumb-grid" style={{ left: '75%' }} />
-              <div className="stats-dumb-grid" style={{ left: '100%' }} />
-              {thenPct !== null && lineWidth > 0 && (
-                <div className={`stats-dumb-line ${trendCls}`} style={{ left: `${lineLeft}%`, width: `${lineWidth}%` }} />
-              )}
-              {thenPct !== null && (
-                <div
-                  className="stats-dumb-dot then"
-                  style={{ left: `${thenPct}%` }}
-                  title={`il y a 1 mois : ${r.avgThen!.toFixed(1)}/5`}
-                />
-              )}
-              <div
-                className={`stats-dumb-dot now ${trendCls}`}
-                style={{ left: `${nowPct}%` }}
-                title={`aujourd'hui : ${r.avgNow.toFixed(1)}/5`}
-              />
+                ))}
+              </div>
             </div>
-            <div className={`stats-dumb-delta ${trendCls}`}>{deltaLabel}</div>
+            <div className="stats-heatmap-legend">
+              <span>Moins</span>
+              <span className="stats-heatmap-cell i0" />
+              <span className="stats-heatmap-cell i1" />
+              <span className="stats-heatmap-cell i2" />
+              <span className="stats-heatmap-cell i3" />
+              <span className="stats-heatmap-cell i4" />
+              <span>Plus</span>
+            </div>
           </div>
-        )
-      })}
-      <div className="stats-dumb-scale">
-        <div />
-        <div className="stats-dumb-ticks">
-          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
         </div>
-        <div />
-      </div>
-    </div>
-  )
-}
-
-// ===================== SPARKLINE =====================
-function Sparkline({ data }: { data: { weekStart: string; avg: number | null; count: number }[] }) {
-  const w = 320
-  const h = 160
-  const pad = 18
-  const validIndices = data.map((d, i) => d.avg !== null ? i : -1).filter(i => i >= 0)
-  if (validIndices.length < 2) {
-    return <div className="stats-empty">Pas assez de données pour tracer une tendance.</div>
-  }
-
-  const xs = data.map((_, i) => pad + (i / Math.max(1, data.length - 1)) * (w - 2 * pad))
-  const ys = data.map(d => d.avg === null ? null : h - pad - ((d.avg - 1) / 4) * (h - 2 * pad))
-
-  const segments: string[] = []
-  let current: string[] = []
-  for (let i = 0; i < ys.length; i++) {
-    if (ys[i] === null) {
-      if (current.length > 0) { segments.push(current.join(' ')); current = [] }
-    } else {
-      current.push(`${current.length === 0 ? 'M' : 'L'} ${xs[i].toFixed(1)} ${(ys[i] as number).toFixed(1)}`)
-    }
-  }
-  if (current.length > 0) segments.push(current.join(' '))
-
-  return (
-    <div className="stats-sparkline-wrap">
-      <svg viewBox={`0 0 ${w} ${h}`} className="stats-sparkline">
-        {[1, 2, 3, 4, 5].map(v => {
-          const y = h - pad - ((v - 1) / 4) * (h - 2 * pad)
-          return (
-            <g key={v}>
-              <line x1={pad} y1={y} x2={w - pad} y2={y} stroke="#E5E2DA" strokeWidth={0.5} strokeDasharray="2 3" />
-              <text x={pad - 4} y={y + 3} textAnchor="end" fontSize={9} fill="#9CA09A">{v}</text>
-            </g>
-          )
-        })}
-        {segments.map((seg, i) => (
-          <path key={i} d={seg} fill="none" stroke="#1B4332" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        {data.map((d, i) => d.avg === null ? null : (
-          <circle key={i} cx={xs[i]} cy={ys[i] as number} r={3} fill="#1B4332" stroke="white" strokeWidth={1.5}>
-            <title>{d.weekStart} · {d.avg.toFixed(1)}/5 · {d.count} révision{d.count > 1 ? 's' : ''}</title>
-          </circle>
-        ))}
-      </svg>
-      <div className="stats-sparkline-meta">
-        <span>S-12</span>
-        <span>aujourd&apos;hui</span>
-      </div>
+      )}
     </div>
   )
 }

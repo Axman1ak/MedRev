@@ -976,3 +976,120 @@
   .st-pulse-sep { display: none; }
   .st-sys-name { width: 110px; }
 }
+
+/* =========== INDICE DE PRÉPARATION (refonte "Suis-je prêt ?") =========== */
+.st-hero2 {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  margin-bottom: 18px;
+  padding: 24px 28px;
+}
+.st-hero2-gauge { flex-shrink: 0; width: 250px; }
+.st-gauge { display: block; width: 100%; }
+.st-gauge-num {
+  font-family: var(--font-bricolage), serif;
+  font-size: 46px;
+  font-weight: 600;
+  fill: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.st-gauge-sub {
+  font-family: var(--font-bricolage), serif;
+  font-size: 12px;
+  font-style: italic;
+  fill: var(--text-secondary);
+}
+.st-hero2-side { flex: 1; min-width: 0; }
+.st-hero2-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-secondary);
+}
+.st-hero2-delta {
+  margin-top: 4px;
+  font-family: var(--font-bricolage), serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.st-hero2-delta.up { color: #2D6A4F; }
+.st-hero2-delta.down { color: var(--danger); }
+.st-parts { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.st-part { display: flex; align-items: center; gap: 10px; }
+.st-part-lbl { width: 86px; font-size: 12px; font-weight: 600; color: var(--text-secondary); flex-shrink: 0; }
+.st-part-bar { flex: 1; height: 7px; background: var(--bg-soft); border-radius: 4px; overflow: hidden; }
+.st-part-bar i { display: block; height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.st-part-val { width: 28px; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.st-hero2-target { margin-top: 14px; font-size: 12.5px; color: var(--text-secondary); font-style: italic; font-family: var(--font-bricolage), serif; }
+.st-hero2-target strong { color: var(--text-primary); font-style: normal; }
+
+.st-sys-trend { width: 48px; font-size: 11.5px; font-weight: 700; color: var(--text-tertiary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.st-sys-trend.up { color: #2D6A4F; }
+.st-sys-trend.down { color: var(--danger); }
+
+/* Plan jusqu'au concours */
+.st-plan-teaser { text-align: center; padding: 30px 28px; }
+.st-plan-teaser-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--accent-medium);
+}
+.st-plan-teaser-title {
+  margin-top: 6px;
+  font-family: var(--font-bricolage), serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.st-plan-teaser-text {
+  max-width: 480px;
+  margin: 8px auto 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.st-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.st-plan-date { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.st-plan-date-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-secondary);
+}
+.st-plan-date-input {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 10px;
+}
+.st-plan-proj { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 240px; }
+.st-plan-days {
+  font-family: var(--font-bricolage), serif;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -.02em;
+  flex-shrink: 0;
+}
+.st-plan-proj-main { font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); }
+.st-plan-proj-main strong { font-size: 16px; }
+
+@media (max-width: 800px) {
+  .st-hero2 { flex-direction: column; gap: 18px; padding: 20px; }
+  .st-hero2-gauge { width: 210px; }
+}
