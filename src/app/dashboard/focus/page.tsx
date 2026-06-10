@@ -1146,15 +1146,49 @@ function FocusPageBody() {
           La bibliothèque se contemple au lobby et au bilan (modèle Forest). */}
       <div className="focus-stage">
 
-        {/* Fond sobre : dégradé marine + vignette, rien d'autre */}
-        <div className="focus-session-bg" aria-hidden="true" />
+        {/* SCÈNE : on est ASSIS dans la bibliothèque, la nuit. Les étagères
+            en silhouette au fond de la pièce, un bureau au premier plan,
+            la lampe de lecture qui éclaire le livre. */}
+        <div className="focus-garden focus-scene-shelves" aria-hidden="true">
+          <BibliothecaSvg
+            fichesCount={dayGarden.fichesCount}
+            className="focus-garden-svg"
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </div>
+        <div className="focus-scene-veil" aria-hidden="true" />
+        <div className="focus-scene-desk" aria-hidden="true" />
+        <div className="focus-scene-glow" aria-hidden="true" />
+
+        {/* Lampe de lecture (banquier), posée sur le bureau à gauche du livre */}
+        <svg className="focus-scene-lamp" viewBox="0 0 220 260" aria-hidden="true">
+          <ellipse cx="110" cy="248" rx="52" ry="8" fill="#0C1828" />
+          <ellipse cx="110" cy="244" rx="44" ry="7" fill="#22384E" />
+          <rect x="105" y="160" width="10" height="84" rx="4" fill="#2C415A" />
+          <rect x="105" y="160" width="3.5" height="84" rx="1.6" fill="rgba(200,220,236,0.25)" />
+          {/* Bras incliné vers le livre */}
+          <path d="M 110 168 Q 138 130 172 122" stroke="#2C415A" strokeWidth="8" fill="none" strokeLinecap="round" />
+          <path d="M 110 168 Q 138 130 172 122" stroke="rgba(200,220,236,0.2)" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          {/* Abat-jour marine, liseré argent */}
+          <path d="M 132 124 Q 172 96 212 124 L 198 146 Q 172 130 146 146 Z" fill="#1B3450" stroke="#0C1828" strokeWidth="1.2" />
+          <path d="M 132 124 Q 172 96 212 124" stroke="#7FB0D4" strokeWidth="1.6" fill="none" />
+          {/* Ampoule + lumière */}
+          <ellipse cx="172" cy="142" rx="17" ry="7" fill="#DFF0FC" opacity="0.95" />
+          <polygon points="150,146 194,146 236,252 112,252" fill="url(#lampCone)" />
+          <defs>
+            <linearGradient id="lampCone" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(207,230,248,0.30)" />
+              <stop offset="100%" stopColor="rgba(207,230,248,0)" />
+            </linearGradient>
+          </defs>
+        </svg>
 
         {/* LE LIVRE : héros de la session, il s'écrit en temps réel.
             Remonté (key) à chaque fiche → chrono et pages repartent à zéro. */}
         <LiveBook
           key={`${current.lesson.id}-${currentIdx}`}
           lessonName={current.lesson.name}
-          className="lb-desk-hero"
+          className="lb-hero"
         />
 
         {/* GHOST : livre refermé qui vole du pupitre vers le compteur-

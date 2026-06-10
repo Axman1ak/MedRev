@@ -130,7 +130,7 @@ const PALETTE: LeatherTone[] = [
   { main: '#3A2A3E', accent: '#56425C', title: '#C0A8C8' },
   { main: '#2A1F33', accent: '#43344E', title: '#A890B8' },
   { main: '#52303A', accent: '#714752', title: '#D0A0AC' },
-  { main: '#3E2430', accent: '#5A3A48', title: '#C094A4' },
+  { main: '#3E2430', accent: '#3E5366', title: '#C094A4' },
   { main: '#33414F', accent: '#4C5D6E', title: '#B0C4D6' },
   { main: '#222E3A', accent: '#374656', title: '#94AABE' },
   { main: '#4E4A38', accent: '#6B6650', title: '#CCC4A4' },
@@ -188,7 +188,7 @@ const SHELVES_HTML: string = (() => {
     const yBoardTop = yCompTop + SHELF_PITCH - BOARD_THICKNESS
     s += `<rect x="${FRAME_LEFT}" y="${yBoardTop - 14}" width="${FRAME_RIGHT - FRAME_LEFT}" height="14" fill="url(#bib-undershadow)"/>`
     s += `<rect x="${FRAME_LEFT - 8}" y="${yBoardTop}" width="${FRAME_RIGHT - FRAME_LEFT + 16}" height="${BOARD_THICKNESS}" fill="url(#bib-shelfBoard)"/>`
-    s += `<line x1="${FRAME_LEFT - 8}" y1="${yBoardTop}" x2="${FRAME_RIGHT + 8}" y2="${yBoardTop}" stroke="var(--bib-line-dark, #5A3520)" stroke-width="0.5" opacity="0.7"/>`
+    s += `<line x1="${FRAME_LEFT - 8}" y1="${yBoardTop}" x2="${FRAME_RIGHT + 8}" y2="${yBoardTop}" stroke="var(--bib-line-dark, #2C415A)" stroke-width="0.5" opacity="0.7"/>`
     s += `<line x1="${FRAME_LEFT - 8}" y1="${yBoardTop + BOARD_THICKNESS}" x2="${FRAME_RIGHT + 8}" y2="${yBoardTop + BOARD_THICKNESS}" stroke="var(--bib-line-darker, #0A0503)" stroke-width="0.8"/>`
   }
   return s
@@ -414,18 +414,18 @@ const DECORATIONS: Decoration[] = [
       return `<g transform="translate(206 ${bb})">
         <rect x="-22" y="-12" width="44" height="12" fill="url(#bib-walnutFace)"/>
         <rect x="-22" y="-12" width="44" height="12" filter="url(#bib-woodGrain)"/>
-        <line x1="-22" y1="-12" x2="22" y2="-12" stroke="#5A3520" stroke-width="0.5"/>
+        <line x1="-22" y1="-12" x2="22" y2="-12" stroke="#2C415A" stroke-width="0.5"/>
         <rect x="-18" y="-15" width="36" height="3" fill="url(#bib-marble)"/>
-        <path d="M -16 -15 Q -14 -32 -10 -38 L 10 -38 Q 14 -32 16 -15 Z" fill="url(#bib-marble)" stroke="#7A6448" stroke-width="0.4"/>
+        <path d="M -16 -15 Q -14 -32 -10 -38 L 10 -38 Q 14 -32 16 -15 Z" fill="url(#bib-marble)" stroke="#5E7A94" stroke-width="0.4"/>
         <rect x="-6" y="-44" width="12" height="9" fill="url(#bib-marble)"/>
-        <ellipse cx="0" cy="-58" rx="13" ry="16" fill="url(#bib-marble)" stroke="#7A6448" stroke-width="0.4"/>
-        <path d="M -13 -65 Q -10 -75 0 -76 Q 10 -75 13 -65 Q 12 -60 8 -60 L -8 -60 Q -12 -60 -13 -65 Z" fill="#9A8470" opacity="0.85"/>
-        <path d="M -8 -50 Q -6 -42 0 -40 Q 6 -42 8 -50 Q 4 -48 0 -48 Q -4 -48 -8 -50 Z" fill="#9A8470" opacity="0.7"/>
-        <circle cx="-4" cy="-60" r="0.7" fill="#3A2818"/>
-        <circle cx="4" cy="-60" r="0.7" fill="#3A2818"/>
+        <ellipse cx="0" cy="-58" rx="13" ry="16" fill="url(#bib-marble)" stroke="#5E7A94" stroke-width="0.4"/>
+        <path d="M -13 -65 Q -10 -75 0 -76 Q 10 -75 13 -65 Q 12 -60 8 -60 L -8 -60 Q -12 -60 -13 -65 Z" fill="#7E96AC" opacity="0.85"/>
+        <path d="M -8 -50 Q -6 -42 0 -40 Q 6 -42 8 -50 Q 4 -48 0 -48 Q -4 -48 -8 -50 Z" fill="#7E96AC" opacity="0.7"/>
+        <circle cx="-4" cy="-60" r="0.7" fill="#22384E"/>
+        <circle cx="4" cy="-60" r="0.7" fill="#22384E"/>
         <ellipse cx="-4" cy="-64" rx="6" ry="5" fill="url(#bib-marbleHi)"/>
-        <path d="M 0 -58 Q -1.5 -54 0 -52 Q 1.5 -54 0 -58 Z" fill="#7A6448" opacity="0.6"/>
-        <text y="-4" text-anchor="middle" font-family="Cinzel,serif" font-size="4" fill="#9A6E20" letter-spacing="0.7">HIPPOCRATES</text>
+        <path d="M 0 -58 Q -1.5 -54 0 -52 Q 1.5 -54 0 -58 Z" fill="#5E7A94" opacity="0.6"/>
+        <text y="-4" text-anchor="middle" font-family="Cinzel,serif" font-size="4" fill="#3E6E96" letter-spacing="0.7">HIPPOCRATES</text>
       </g>`
     })(),
   },
@@ -435,15 +435,15 @@ const DECORATIONS: Decoration[] = [
     svg: (() => {
       const bb = shelfBoardTop(0)
       return `<g transform="translate(1670 ${bb})">
-        <rect x="-18" y="-6" width="36" height="6" fill="url(#bib-brass)" stroke="#3A2818" stroke-width="0.3"/>
+        <rect x="-18" y="-6" width="36" height="6" fill="url(#bib-brass)" stroke="#22384E" stroke-width="0.3"/>
         <rect x="-16" y="-58" width="2" height="52" fill="url(#bib-brass)"/>
         <rect x="14" y="-58" width="2" height="52" fill="url(#bib-brass)"/>
-        <rect x="-18" y="-64" width="36" height="6" fill="url(#bib-brass)" stroke="#3A2818" stroke-width="0.3"/>
-        <path d="M -12 -60 Q -12 -50 -1 -34 L 1 -34 Q 12 -50 12 -60 Z" fill="rgba(220,200,160,0.35)" stroke="#9A8470" stroke-width="0.5"/>
-        <path d="M -12 -8 Q -12 -18 -1 -34 L 1 -34 Q 12 -18 12 -8 Z" fill="rgba(220,200,160,0.35)" stroke="#9A8470" stroke-width="0.5"/>
-        <path d="M -10 -8 Q -10 -14 -1 -22 L 1 -22 Q 10 -14 10 -8 Z" fill="#C89858"/>
-        <path d="M -3 -56 Q -3 -50 -0.5 -38 L 0.5 -38 Q 3 -50 3 -56 Z" fill="#C89858" opacity="0.8"/>
-        <line x1="0" y1="-38" x2="0" y2="-22" stroke="#C89858" stroke-width="0.6"/>
+        <rect x="-18" y="-64" width="36" height="6" fill="url(#bib-brass)" stroke="#22384E" stroke-width="0.3"/>
+        <path d="M -12 -60 Q -12 -50 -1 -34 L 1 -34 Q 12 -50 12 -60 Z" fill="rgba(220,200,160,0.35)" stroke="#7E96AC" stroke-width="0.5"/>
+        <path d="M -12 -8 Q -12 -18 -1 -34 L 1 -34 Q 12 -18 12 -8 Z" fill="rgba(220,200,160,0.35)" stroke="#7E96AC" stroke-width="0.5"/>
+        <path d="M -10 -8 Q -10 -14 -1 -22 L 1 -22 Q 10 -14 10 -8 Z" fill="#9FC4E0"/>
+        <path d="M -3 -56 Q -3 -50 -0.5 -38 L 0.5 -38 Q 3 -50 3 -56 Z" fill="#9FC4E0" opacity="0.8"/>
+        <line x1="0" y1="-38" x2="0" y2="-22" stroke="#9FC4E0" stroke-width="0.6"/>
         <ellipse cx="-7" cy="-50" rx="2" ry="6" fill="rgba(255,255,255,0.3)"/>
         <ellipse cx="-7" cy="-15" rx="2" ry="5" fill="rgba(255,255,255,0.2)"/>
       </g>`
@@ -455,30 +455,30 @@ const DECORATIONS: Decoration[] = [
     svg: (() => {
       const bb = shelfBoardTop(3)
       return `<g transform="translate(932 ${bb})">
-        <rect x="-44" y="-10" width="60" height="10" fill="#5A2424"/>
-        <rect x="-44" y="-10" width="60" height="1.2" fill="#8A4040"/>
+        <rect x="-44" y="-10" width="60" height="10" fill="#27435E"/>
+        <rect x="-44" y="-10" width="60" height="1.2" fill="#3C5F80"/>
         <rect x="-44" y="-2" width="60" height="2" fill="rgba(0,0,0,0.5)"/>
-        <rect x="-46" y="-9" width="2" height="9" fill="#3A1818"/>
-        <line x1="-44" y1="-7" x2="16" y2="-7" stroke="#D8A848" stroke-width="0.5" opacity="0.7"/>
-        <line x1="-44" y1="-4" x2="16" y2="-4" stroke="#D8A848" stroke-width="0.4" opacity="0.6"/>
-        <rect x="-42" y="-20" width="56" height="10" fill="#2A4030"/>
-        <rect x="-42" y="-20" width="56" height="1.2" fill="#48684E"/>
+        <rect x="-46" y="-9" width="2" height="9" fill="#16243A"/>
+        <line x1="-44" y1="-7" x2="16" y2="-7" stroke="#7FB0D4" stroke-width="0.5" opacity="0.7"/>
+        <line x1="-44" y1="-4" x2="16" y2="-4" stroke="#7FB0D4" stroke-width="0.4" opacity="0.6"/>
+        <rect x="-42" y="-20" width="56" height="10" fill="#1F3D33"/>
+        <rect x="-42" y="-20" width="56" height="1.2" fill="#33584A"/>
         <rect x="-42" y="-12" width="56" height="2" fill="rgba(0,0,0,0.5)"/>
-        <rect x="-44" y="-19" width="2" height="9" fill="#1A2A1F"/>
-        <line x1="-42" y1="-17" x2="14" y2="-17" stroke="#C89040" stroke-width="0.5" opacity="0.7"/>
-        <line x1="-42" y1="-14" x2="14" y2="-14" stroke="#C89040" stroke-width="0.4" opacity="0.6"/>
-        <rect x="-40" y="-30" width="52" height="10" fill="#1F2E50"/>
-        <rect x="-40" y="-30" width="52" height="1.2" fill="#3D5278"/>
+        <rect x="-44" y="-19" width="2" height="9" fill="#13281F"/>
+        <line x1="-42" y1="-17" x2="14" y2="-17" stroke="#6E9CC0" stroke-width="0.5" opacity="0.7"/>
+        <line x1="-42" y1="-14" x2="14" y2="-14" stroke="#6E9CC0" stroke-width="0.4" opacity="0.6"/>
+        <rect x="-40" y="-30" width="52" height="10" fill="#1A2742"/>
+        <rect x="-40" y="-30" width="52" height="1.2" fill="#2C3D5E"/>
         <rect x="-40" y="-22" width="52" height="2" fill="rgba(0,0,0,0.5)"/>
-        <rect x="-42" y="-29" width="2" height="9" fill="#101830"/>
-        <line x1="-40" y1="-27" x2="12" y2="-27" stroke="#D8A848" stroke-width="0.5" opacity="0.7"/>
-        <line x1="-40" y1="-24" x2="12" y2="-24" stroke="#D8A848" stroke-width="0.4" opacity="0.6"/>
+        <rect x="-42" y="-29" width="2" height="9" fill="#10182E"/>
+        <line x1="-40" y1="-27" x2="12" y2="-27" stroke="#7FB0D4" stroke-width="0.5" opacity="0.7"/>
+        <line x1="-40" y1="-24" x2="12" y2="-24" stroke="#7FB0D4" stroke-width="0.4" opacity="0.6"/>
         <ellipse cx="32" cy="-30" rx="11" ry="3" fill="url(#bib-brass)"/>
         <rect x="29" y="-44" width="6" height="14" fill="url(#bib-brass)"/>
         <rect x="27" y="-46" width="10" height="3" fill="url(#bib-brass)"/>
-        <rect x="30" y="-62" width="4" height="16" fill="#E8DDC0"/>
-        <rect x="30" y="-62" width="4" height="1" fill="#C8B89C"/>
-        <line x1="32" y1="-62" x2="32" y2="-66" stroke="#3A2818" stroke-width="0.6"/>
+        <rect x="30" y="-62" width="4" height="16" fill="#E2EAF2"/>
+        <rect x="30" y="-62" width="4" height="1" fill="#B6C8D8"/>
+        <line x1="32" y1="-62" x2="32" y2="-66" stroke="#22384E" stroke-width="0.6"/>
         <g class="bib-flame-live">
           <ellipse cx="32" cy="-72" rx="4" ry="7" fill="url(#bib-flame)"/>
           <ellipse cx="32" cy="-70" rx="2" ry="4" fill="rgba(255,255,210,0.9)"/>
@@ -497,9 +497,9 @@ const DECORATIONS: Decoration[] = [
         <rect x="-2" y="-22" width="4" height="14" fill="url(#bib-walnutFace)"/>
         <ellipse cx="0" cy="-46" rx="32" ry="32" fill="none" stroke="url(#bib-brass)" stroke-width="2.4"/>
         <circle cx="0" cy="-46" r="27" fill="url(#bib-globe)"/>
-        <path d="M -18 -56 Q -10 -62 -2 -58 Q 4 -52 -2 -46 Q -10 -42 -16 -48 Z" fill="#7A8A4A" opacity="0.85"/>
-        <path d="M 4 -42 Q 14 -38 18 -32 Q 14 -28 8 -32 Q 4 -36 4 -42 Z" fill="#7A8A4A" opacity="0.8"/>
-        <path d="M -14 -36 Q -8 -32 -4 -28 Q -10 -26 -16 -30 Z" fill="#7A8A4A" opacity="0.85"/>
+        <path d="M -18 -56 Q -10 -62 -2 -58 Q 4 -52 -2 -46 Q -10 -42 -16 -48 Z" fill="#5E8A7A" opacity="0.85"/>
+        <path d="M 4 -42 Q 14 -38 18 -32 Q 14 -28 8 -32 Q 4 -36 4 -42 Z" fill="#5E8A7A" opacity="0.8"/>
+        <path d="M -14 -36 Q -8 -32 -4 -28 Q -10 -26 -16 -30 Z" fill="#5E8A7A" opacity="0.85"/>
         <path d="M -27 -46 Q 0 -56 27 -46 Q 0 -36 -27 -46" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>
         <path d="M 0 -73 Q 14 -46 0 -19 Q -14 -46 0 -73" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>
         <ellipse cx="-9" cy="-56" rx="9" ry="8" fill="rgba(255,240,210,0.18)"/>
@@ -513,27 +513,27 @@ const DECORATIONS: Decoration[] = [
     svg: (() => {
       const bb = shelfBoardTop(7)
       return `<g transform="translate(1625 ${bb})">
-        <ellipse cx="0" cy="-3" rx="55" ry="4" fill="url(#bib-scroll)" stroke="#7A5230" stroke-width="0.4"/>
-        <ellipse cx="-50" cy="-3" rx="6" ry="4" fill="#9A7848" stroke="#5A3520" stroke-width="0.4"/>
-        <ellipse cx="50" cy="-3" rx="6" ry="4" fill="#9A7848" stroke="#5A3520" stroke-width="0.4"/>
+        <ellipse cx="0" cy="-3" rx="55" ry="4" fill="url(#bib-scroll)" stroke="#5E7A94" stroke-width="0.4"/>
+        <ellipse cx="-50" cy="-3" rx="6" ry="4" fill="#7E9CB8" stroke="#2C415A" stroke-width="0.4"/>
+        <ellipse cx="50" cy="-3" rx="6" ry="4" fill="#7E9CB8" stroke="#2C415A" stroke-width="0.4"/>
         <circle cx="0" cy="-3" r="3" fill="#A82828" opacity="0.85"/>
-        <circle cx="0" cy="-3.5" r="1" fill="#3A0808"/>
-        <ellipse cx="-8" cy="-12" rx="48" ry="3.5" fill="url(#bib-scroll)" stroke="#7A5230" stroke-width="0.4"/>
-        <ellipse cx="-50" cy="-12" rx="5" ry="3.5" fill="#9A7848" stroke="#5A3520" stroke-width="0.4"/>
-        <ellipse cx="34" cy="-12" rx="5" ry="3.5" fill="#9A7848" stroke="#5A3520" stroke-width="0.4"/>
+        <circle cx="0" cy="-3.5" r="1" fill="#101C2C"/>
+        <ellipse cx="-8" cy="-12" rx="48" ry="3.5" fill="url(#bib-scroll)" stroke="#5E7A94" stroke-width="0.4"/>
+        <ellipse cx="-50" cy="-12" rx="5" ry="3.5" fill="#7E9CB8" stroke="#2C415A" stroke-width="0.4"/>
+        <ellipse cx="34" cy="-12" rx="5" ry="3.5" fill="#7E9CB8" stroke="#2C415A" stroke-width="0.4"/>
         <g transform="translate(20 -22) rotate(-8)">
-          <rect x="-8" y="-30" width="16" height="32" fill="url(#bib-scroll)" stroke="#7A5230" stroke-width="0.4"/>
-          <ellipse cx="0" cy="-30" rx="8" ry="2.5" fill="#9A7848" stroke="#5A3520" stroke-width="0.4"/>
-          <ellipse cx="0" cy="2" rx="8" ry="2.5" fill="#7A5230"/>
-          <line x1="-5" y1="-22" x2="5" y2="-22" stroke="#7A5230" stroke-width="0.3"/>
-          <line x1="-5" y1="-18" x2="5" y2="-18" stroke="#7A5230" stroke-width="0.3"/>
-          <line x1="-5" y1="-14" x2="5" y2="-14" stroke="#7A5230" stroke-width="0.3"/>
-          <line x1="-5" y1="-10" x2="5" y2="-10" stroke="#7A5230" stroke-width="0.3"/>
-          <line x1="-5" y1="-6" x2="5" y2="-6" stroke="#7A5230" stroke-width="0.3"/>
+          <rect x="-8" y="-30" width="16" height="32" fill="url(#bib-scroll)" stroke="#5E7A94" stroke-width="0.4"/>
+          <ellipse cx="0" cy="-30" rx="8" ry="2.5" fill="#7E9CB8" stroke="#2C415A" stroke-width="0.4"/>
+          <ellipse cx="0" cy="2" rx="8" ry="2.5" fill="#5E7A94"/>
+          <line x1="-5" y1="-22" x2="5" y2="-22" stroke="#5E7A94" stroke-width="0.3"/>
+          <line x1="-5" y1="-18" x2="5" y2="-18" stroke="#5E7A94" stroke-width="0.3"/>
+          <line x1="-5" y1="-14" x2="5" y2="-14" stroke="#5E7A94" stroke-width="0.3"/>
+          <line x1="-5" y1="-10" x2="5" y2="-10" stroke="#5E7A94" stroke-width="0.3"/>
+          <line x1="-5" y1="-6" x2="5" y2="-6" stroke="#5E7A94" stroke-width="0.3"/>
         </g>
         <g transform="translate(-30 -5) rotate(-35)">
-          <path d="M 0 0 Q 2 -20 -2 -55 Q -10 -62 -16 -58 Q -8 -45 -3 -28 Q -1 -15 0 0 Z" fill="#F0E5C8" stroke="#9A8470" stroke-width="0.4"/>
-          <path d="M -2 -55 L 0 -62 L -3 -64 L -5 -60 Z" fill="#3A2818"/>
+          <path d="M 0 0 Q 2 -20 -2 -55 Q -10 -62 -16 -58 Q -8 -45 -3 -28 Q -1 -15 0 0 Z" fill="#E2EAF2" stroke="#7E96AC" stroke-width="0.4"/>
+          <path d="M -2 -55 L 0 -62 L -3 -64 L -5 -60 Z" fill="#22384E"/>
         </g>
       </g>`
     })(),
@@ -546,10 +546,10 @@ const DECORATIONS: Decoration[] = [
       return `<g transform="translate(872 ${bb})">
         <path d="M -36 0 L -28 -8 L 28 -8 L 36 0 Z" fill="url(#bib-walnutFace)" stroke="#0A0503" stroke-width="0.6"/>
         <rect x="-32" y="-10" width="64" height="2" fill="url(#bib-walnutSide)"/>
-        <path d="M -34 -10 L -32 -50 L -2 -54 L 0 -10 Z" fill="#E8D4A8" stroke="#8A5828" stroke-width="0.5"/>
-        <path d="M 0 -10 L 2 -54 L 32 -50 L 34 -10 Z" fill="#E8D4A8" stroke="#8A5828" stroke-width="0.5"/>
-        <path d="M 0 -10 L 0 -54" stroke="#8A5828" stroke-width="0.6"/>
-        <g stroke="#3A2818" stroke-width="0.3" opacity="0.7">
+        <path d="M -34 -10 L -32 -50 L -2 -54 L 0 -10 Z" fill="#DCE6F0" stroke="#5E7A94" stroke-width="0.5"/>
+        <path d="M 0 -10 L 2 -54 L 32 -50 L 34 -10 Z" fill="#DCE6F0" stroke="#5E7A94" stroke-width="0.5"/>
+        <path d="M 0 -10 L 0 -54" stroke="#5E7A94" stroke-width="0.6"/>
+        <g stroke="#22384E" stroke-width="0.3" opacity="0.7">
           <line x1="-30" y1="-46" x2="-6" y2="-48"/>
           <line x1="-30" y1="-42" x2="-7" y2="-44"/>
           <line x1="-30" y1="-38" x2="-5" y2="-40"/>
@@ -561,8 +561,8 @@ const DECORATIONS: Decoration[] = [
           <line x1="-30" y1="-14" x2="-12" y2="-16"/>
         </g>
         <rect x="-30" y="-52" width="6" height="6" fill="#A82828"/>
-        <text x="-27" y="-47" text-anchor="middle" font-family="Cinzel,serif" font-size="5" fill="#E8D4A8">A</text>
-        <g stroke="#3A2818" stroke-width="0.3" opacity="0.7">
+        <text x="-27" y="-47" text-anchor="middle" font-family="Cinzel,serif" font-size="5" fill="#DCE6F0">A</text>
+        <g stroke="#22384E" stroke-width="0.3" opacity="0.7">
           <line x1="6" y1="-50" x2="30" y2="-48"/>
           <line x1="7" y1="-46" x2="30" y2="-44"/>
           <line x1="5" y1="-42" x2="30" y2="-40"/>
@@ -879,13 +879,13 @@ export default function BibliothecaSvg({
           <stop offset="100%" stopColor="rgba(0,0,0,0)" />
         </linearGradient>
         <linearGradient id="bib-marble" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#E8DDC8" />
-          <stop offset="50%" stopColor="#C8B89C" />
-          <stop offset="100%" stopColor="#9A8470" />
+          <stop offset="0%" stopColor="#E2EAF2" />
+          <stop offset="50%" stopColor="#B6C8D8" />
+          <stop offset="100%" stopColor="#7E96AC" />
         </linearGradient>
         <radialGradient id="bib-marbleHi" cx="35%" cy="30%" r="60%">
-          <stop offset="0%" stopColor="rgba(255,250,235,0.6)" />
-          <stop offset="100%" stopColor="rgba(255,250,235,0)" />
+          <stop offset="0%" stopColor="rgba(240,248,255,0.6)" />
+          <stop offset="100%" stopColor="rgba(240,248,255,0)" />
         </radialGradient>
         <linearGradient id="bib-brass" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--bib-brass-1)" />
@@ -903,8 +903,8 @@ export default function BibliothecaSvg({
           <stop offset="100%" stopColor="#0F1F30" />
         </radialGradient>
         <linearGradient id="bib-scroll" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#E8D4A8" />
-          <stop offset="100%" stopColor="#A88058" />
+          <stop offset="0%" stopColor="#D8E4F0" />
+          <stop offset="100%" stopColor="#8CA8C0" />
         </linearGradient>
         <linearGradient id="bib-rareGlint" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="rgba(214,232,246,0)" />
@@ -939,38 +939,38 @@ export default function BibliothecaSvg({
       <rect x="74" y="81" width="1737" height="6" fill="url(#bib-walnutSide)" />
       <rect x="84" y="87" width="1717" height="14" fill="url(#bib-walnutFace)" />
       <rect x="84" y="87" width="1717" height="14" filter="url(#bib-woodGrain)" />
-      <line x1="50" y1="45" x2="1835" y2="45" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.6" opacity="0.7" />
+      <line x1="50" y1="45" x2="1835" y2="45" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.6" opacity="0.7" />
       <line x1="50" y1="59" x2="1835" y2="59" stroke="var(--bib-line-darker, #0A0503)" strokeWidth="1.2" />
       <line x1="74" y1="87" x2="1811" y2="87" stroke="var(--bib-line-darker, #0A0503)" strokeWidth="1" />
       <line x1="84" y1="101" x2="1801" y2="101" stroke="var(--bib-line-darker, #0A0503)" strokeWidth="1.2" />
 
       {/* Médaillon central (M·R) — recentré sur 942.5 (milieu nouveau viewBox) */}
       <g transform="translate(943 65)">
-        <ellipse cx="0" cy="0" rx="32" ry="14" fill="url(#bib-walnutSide)" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.8" />
-        <ellipse cx="0" cy="0" rx="22" ry="9" fill="none" stroke="var(--bib-brass-2, #9A6E20)" strokeWidth="0.5" opacity="0.8" />
-        <text y="3.5" textAnchor="middle" fontFamily="Cinzel,serif" fontSize="9" fill="var(--bib-brass-2, #9A6E20)" letterSpacing="2">M·R</text>
+        <ellipse cx="0" cy="0" rx="32" ry="14" fill="url(#bib-walnutSide)" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.8" />
+        <ellipse cx="0" cy="0" rx="22" ry="9" fill="none" stroke="var(--bib-brass-2, #3E6E96)" strokeWidth="0.5" opacity="0.8" />
+        <text y="3.5" textAnchor="middle" fontFamily="Cinzel,serif" fontSize="9" fill="var(--bib-brass-2, #3E6E96)" letterSpacing="2">M·R</text>
       </g>
 
       {/* Pilastres latéraux — hauteur ajustée à FRAME_BOTTOM 1025 (au lieu de 945) */}
       <rect x="50" y="101" width="60" height="924" fill="url(#bib-walnutFace)" />
       <rect x="50" y="101" width="60" height="924" filter="url(#bib-woodGrain)" />
-      <line x1="50" y1="101" x2="50" y2="1025" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.6" opacity="0.6" />
+      <line x1="50" y1="101" x2="50" y2="1025" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.6" opacity="0.6" />
       <line x1="110" y1="101" x2="110" y2="1025" stroke="var(--bib-line-darker, #0A0503)" strokeWidth="1.4" />
       <rect x="68" y="120" width="22" height="890" fill="url(#bib-walnutSide)" />
-      <rect x="74" y="124" width="10" height="880" fill="none" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.5" opacity="0.75" />
+      <rect x="74" y="124" width="10" height="880" fill="none" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.5" opacity="0.75" />
 
       <rect x="1775" y="101" width="60" height="924" fill="url(#bib-walnutFace)" />
       <rect x="1775" y="101" width="60" height="924" filter="url(#bib-woodGrain)" />
-      <line x1="1835" y1="101" x2="1835" y2="1025" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.6" opacity="0.6" />
+      <line x1="1835" y1="101" x2="1835" y2="1025" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.6" opacity="0.6" />
       <line x1="1775" y1="101" x2="1775" y2="1025" stroke="var(--bib-line-darker, #0A0503)" strokeWidth="1.4" />
       <rect x="1795" y="120" width="22" height="890" fill="url(#bib-walnutSide)" />
-      <rect x="1801" y="124" width="10" height="880" fill="none" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.5" opacity="0.75" />
+      <rect x="1801" y="124" width="10" height="880" fill="none" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.5" opacity="0.75" />
 
       {/* Plinthe (bas) — descendue à y=1025 */}
       <rect x="60" y="1025" width="1765" height="20" fill="url(#bib-walnutFace)" />
       <rect x="60" y="1025" width="1765" height="20" filter="url(#bib-woodGrain)" />
       <rect x="50" y="1045" width="1785" height="18" fill="url(#bib-walnutSide)" />
-      <line x1="50" y1="1025" x2="1835" y2="1025" stroke="var(--bib-line-dark, #5A3520)" strokeWidth="0.5" opacity="0.6" />
+      <line x1="50" y1="1025" x2="1835" y2="1025" stroke="var(--bib-line-dark, #2C415A)" strokeWidth="0.5" opacity="0.6" />
       <line x1="60" y1="1045" x2="1825" y2="1045" stroke="var(--bib-line-darker, #0A0503)" strokeWidth="1.2" />
 
       {/* Intérieur du meuble (mur de fond plus sombre) — élargi à 1665 */}
