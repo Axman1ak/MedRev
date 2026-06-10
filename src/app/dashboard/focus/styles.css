@@ -1726,8 +1726,8 @@
 /* GHOST : livre refermé qui vole du pupitre vers sa place sur l'étagère */
 .lb-ghost {
   position: fixed;
-  left: 36vw;
-  top: 47vh;
+  left: 50vw;
+  top: 42vh;
   width: 26px;
   height: 36px;
   border-radius: 2px 4px 4px 2px;
@@ -1745,7 +1745,7 @@
   }
   70% { opacity: 1; }
   100% {
-    transform: translate(calc(var(--tx) - 36vw), calc(var(--ty) - 47vh)) scale(0.18) rotate(8deg);
+    transform: translate(calc(var(--tx) - 50vw), calc(var(--ty) - 42vh)) scale(0.18) rotate(8deg);
     opacity: 0;
   }
 }
@@ -1902,7 +1902,7 @@
   inset: 0;
   z-index: 1;
   background:
-    radial-gradient(ellipse 70% 60% at 36% 46%, rgba(5, 12, 22, 0.55) 0%, rgba(4, 10, 18, 0.84) 70%, rgba(3, 8, 15, 0.92) 100%);
+    radial-gradient(ellipse 70% 60% at 50% 44%, rgba(5, 12, 22, 0.55) 0%, rgba(4, 10, 18, 0.84) 70%, rgba(3, 8, 15, 0.92) 100%);
 }
 /* Le bureau au premier plan */
 .focus-scene-desk {
@@ -1922,11 +1922,11 @@
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  background: radial-gradient(ellipse 660px 440px at 36% 46%, rgba(180, 214, 240, 0.13) 0%, rgba(180, 214, 240, 0) 68%);
+  background: radial-gradient(ellipse 700px 460px at 50% 44%, rgba(180, 214, 240, 0.13) 0%, rgba(180, 214, 240, 0) 68%);
 }
 .focus-scene-lamp {
   position: absolute;
-  left: max(24px, calc(36% - 31vw));
+  left: max(3vw, calc(50% - 520px));
   bottom: calc(max(16vh, 110px) - 26px);
   width: clamp(140px, 14vw, 210px);
   z-index: 3;
@@ -1935,12 +1935,9 @@
 /* =========== LIVRE-HÉROS v3 (nu dans la scène) =========== */
 .lb-scene { pointer-events: none; }
 .lb-scene.lb-hero {
-  position: absolute;
-  left: 36%;
-  top: 47%;
-  transform: translate(-50%, -50%);
-  width: min(700px, 50vw);
-  z-index: 4;
+  position: static;
+  transform: none;
+  width: 100%;
 }
 .lb-meta {
   display: flex;
@@ -2007,12 +2004,7 @@
 }
 
 @media (max-width: 980px) {
-  .lb-scene.lb-hero {
-    position: static;
-    transform: none;
-    width: calc(100% - 24px);
-    margin: 64px auto 0;
-  }
+  .lb-scene.lb-hero { width: 100%; margin: 0; }
   .focus-scene-lamp { display: none; }
 }
 
@@ -2147,4 +2139,202 @@
 @media (max-width: 720px) {
   .focus-bilan-title { font-size: 26px; }
   .focus-bilan-list { max-height: 34vh; }
+}
+
+/* =========== ZONE DE TRAVAIL CENTRÉE (session sans carte) =========== */
+.focus-deskzone {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  width: min(720px, 58vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Infos fiche en typo flottante au-dessus du livre */
+.focus-fiche-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--font-hanken), sans-serif;
+  text-shadow: 0 1px 10px rgba(2, 8, 16, 0.9);
+}
+.focus-fiche-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(127, 176, 212, 0.4);
+}
+.focus-fiche-sys {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #A9CBE4;
+}
+.focus-fiche-status {
+  font-size: 11.5px;
+  font-style: italic;
+  font-family: var(--font-bricolage), serif;
+  color: rgba(200, 220, 236, 0.75);
+}
+.focus-fiche-status.missed { color: #E5A45C; }
+.focus-fiche-status.fresh { color: #8FB8D8; }
+.focus-fiche-reportee {
+  font-size: 11.5px;
+  font-style: italic;
+  font-family: var(--font-bricolage), serif;
+  color: #E5A45C;
+}
+
+/* =========== LES CIRES DE NOTATION =========== */
+.focus-seals {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  margin-top: 4px;
+}
+.focus-seal {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-hanken), sans-serif;
+  transition: transform .16s ease;
+}
+.focus-seal:hover:not(:disabled) { transform: translateY(-5px); }
+.focus-seal:active:not(:disabled) { transform: translateY(-1px) scale(0.96); }
+.focus-seal:disabled { opacity: .45; cursor: default; }
+
+.focus-seal-wax {
+  width: 56px; height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* bord de cire irrégulier */
+  border-radius: 47% 53% 50% 50% / 53% 47% 53% 47%;
+  box-shadow:
+    inset 0 -5px 9px rgba(0, 0, 0, 0.38),
+    inset 0 4px 7px rgba(255, 255, 255, 0.22),
+    0 7px 16px rgba(0, 0, 0, 0.5);
+  transition: box-shadow .16s ease;
+}
+.focus-seal:hover:not(:disabled) .focus-seal-wax {
+  box-shadow:
+    inset 0 -5px 9px rgba(0, 0, 0, 0.38),
+    inset 0 4px 7px rgba(255, 255, 255, 0.22),
+    0 10px 22px rgba(0, 0, 0, 0.55),
+    0 0 18px rgba(127, 176, 212, 0.35);
+}
+.focus-seal.s1 .focus-seal-wax { background: radial-gradient(circle at 35% 28%, #DA8482, #C75050 52%, #8E3434 100%); }
+.focus-seal.s2 .focus-seal-wax { background: radial-gradient(circle at 35% 28%, #ECAB6E, #E08B3C 52%, #A35E22 100%); }
+.focus-seal.s3 .focus-seal-wax { background: radial-gradient(circle at 35% 28%, #E5C878, #D9B24A 52%, #9E7E2C 100%); }
+.focus-seal.s4 .focus-seal-wax { background: radial-gradient(circle at 35% 28%, #9CBE8E, #7AA56B 52%, #527247 100%); }
+.focus-seal.s5 .focus-seal-wax { background: radial-gradient(circle at 35% 28%, #4A7D63, #1B4332 52%, #0E2A1E 100%); }
+
+.focus-seal-num {
+  font-family: var(--font-bricolage), serif;
+  font-size: 21px;
+  font-weight: 700;
+  color: rgba(8, 14, 24, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.focus-seal.s5 .focus-seal-num { color: rgba(220, 240, 230, 0.8); text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4); }
+.focus-seal-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: #8FB8D8;
+  text-shadow: 0 1px 8px rgba(2, 8, 16, 0.9);
+}
+.focus-seal:hover:not(:disabled) .focus-seal-lbl { color: #D6E8F6; }
+/* Sceau apposé (fiche déjà notée) */
+.focus-seal.sealed .focus-seal-wax {
+  box-shadow:
+    inset 0 -5px 9px rgba(0, 0, 0, 0.38),
+    inset 0 4px 7px rgba(255, 255, 255, 0.22),
+    0 7px 16px rgba(0, 0, 0, 0.5),
+    0 0 0 3px rgba(127, 176, 212, 0.65),
+    0 0 22px rgba(127, 176, 212, 0.45);
+}
+.focus-seal.sealed .focus-seal-lbl { color: #D6E8F6; }
+
+/* Actions secondaires en liens discrets */
+.focus-underbook {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 2px;
+}
+.focus-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12px;
+  color: #8FB8D8;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  text-shadow: 0 1px 8px rgba(2, 8, 16, 0.9);
+  transition: color .15s;
+}
+.focus-link:hover:not(:disabled) { color: #D6E8F6; }
+.focus-link:disabled { opacity: .4; cursor: default; text-decoration: none; }
+.focus-underbook-sep { color: rgba(143, 184, 216, 0.4); font-size: 12px; }
+
+/* =========== JALON DU LOBBY (intégré à la carte) =========== */
+.focus-lobby-goal {
+  margin-top: 16px;
+  text-align: left;
+}
+.focus-lobby-goal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+  color: rgba(200, 220, 236, 0.75);
+}
+.focus-lobby-goal-name strong { color: #D6E8F6; font-weight: 600; }
+.focus-lobby-goal-left {
+  font-weight: 700;
+  color: #A9CBE4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.focus-lobby-goal-bar {
+  margin-top: 7px;
+  height: 4px;
+  background: rgba(200, 220, 236, 0.10);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.focus-lobby-goal-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3E6E96 0%, #7FB0D4 70%, #C8DCEC 100%);
+  box-shadow: 0 0 6px rgba(127, 176, 212, 0.55);
+  transition: width .6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 980px) {
+  .focus-deskzone {
+    position: static;
+    transform: none;
+    width: calc(100% - 28px);
+    margin: 60px auto 0;
+  }
+  .focus-seals { gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .focus-seal-wax { width: 48px; height: 48px; }
 }

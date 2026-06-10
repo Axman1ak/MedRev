@@ -615,6 +615,23 @@ export function bookSpotAt(index: number): { cx: number; top: number } | null {
   return { cx: ALL_BOOKS[index].cx, top: ALL_BOOKS[index].top }
 }
 
+/** Prochain jalon sur l'échelle combinée "rayons complets" + "trésors".
+ *  prevAt = jalon précédent (pour une barre de proximité locale, pas globale). */
+export function nextMilestone(fichesCount: number): { label: string; at: number; prevAt: number } | null {
+  const ms: { at: number; label: string }[] = []
+  for (let s = 0; s < SHELF_COUNT; s++) {
+    const li = SHELF_LAST_BOOK_INDEX[s]
+    if (li >= 0) ms.push({ at: li + 1, label: `Rayon ${ROMAN[s]} complet` })
+  }
+  for (const d of DECORATIONS) ms.push({ at: d.unlockAt, label: d.name })
+  ms.sort((a, b) => a.at - b.at)
+  const next = ms.find(m => m.at > fichesCount)
+  if (!next) return null
+  let prevAt = 0
+  for (const m of ms) { if (m.at <= fichesCount) prevAt = m.at }
+  return { label: next.label, at: next.at, prevAt }
+}
+
 // ============ PROPS ============
 type BibliothecaSvgProps = {
   /** Nombre de fiches notées (cumulé sur l'année). 1 fiche = 1 livre ajouté. */

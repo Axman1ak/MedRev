@@ -13,7 +13,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, nextMilestone } from '@/components/BibliothecaSvg'
 import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -910,10 +910,9 @@ function FocusPageBody() {
             />
           </div>
 
-          {/* Jalons sur la gauche */}
-          <BibliothecaTreasuresPanel fichesCount={dayGarden.fichesCount} />
-
-          {/* Invitation à la session, en bas au centre */}
+          {/* Invitation à la session, en bas au centre. Le prochain jalon est
+              intégré ICI — plus de panneau qui recouvre le meuble, les trésors
+              se découvrent sur les étagères elles-mêmes. */}
           <div className="focus-lobby-card">
             <div className="focus-lobby-kicker">Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors</div>
             <div className="focus-lobby-title">
@@ -922,6 +921,23 @@ function FocusPageBody() {
             <div className="focus-lobby-sub">
               Chaque fiche notée ajoute un livre à ta bibliothèque.
             </div>
+            {(() => {
+              const goal = nextMilestone(dayGarden.fichesCount)
+              if (!goal) return null
+              const pct = Math.min(100, Math.max(0, ((dayGarden.fichesCount - goal.prevAt) / (goal.at - goal.prevAt)) * 100))
+              const left = goal.at - dayGarden.fichesCount
+              return (
+                <div className="focus-lobby-goal">
+                  <div className="focus-lobby-goal-row">
+                    <span className="focus-lobby-goal-name">Prochain jalon : <strong>{goal.label}</strong></span>
+                    <span className="focus-lobby-goal-left">{left} livre{left > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="focus-lobby-goal-bar" aria-hidden="true">
+                    <div className="focus-lobby-goal-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })()}
             <button
               type="button"
               className="focus-lobby-start"
@@ -1039,7 +1055,7 @@ function FocusPageBody() {
   const sec = elapsedSec % 60
   const total = queue.length
   const completedCount = results.filter(r => r !== null).length
-  const progressPct = Math.round((completedCount / total) * 100)
+  // (progression affichée via le chip Fiche x/y de la topbar)
   const sysColor = (currentSystem as { color?: string } | undefined)?.color || '#2D6A4F'
   const allFilled = completedCount === total
 
@@ -1156,13 +1172,73 @@ function FocusPageBody() {
           </defs>
         </svg>
 
-        {/* LE LIVRE : héros de la session, il s'écrit en temps réel.
-            Remonté (key) à chaque fiche → chrono et pages repartent à zéro. */}
-        <LiveBook
-          key={`${current.lesson.id}-${currentIdx}`}
-          lessonName={current.lesson.name}
-          className="lb-hero"
-        />
+        {/* ZONE DE TRAVAIL centrée : infos de la fiche en typo flottante,
+            le livre qui s'écrit, puis les CIRES DE NOTATION posées sur le
+            bureau — noter = apposer son sceau. Plus aucune carte. */}
+        <div className="focus-deskzone">
+
+          <div className="focus-fiche-info">
+            <span className="focus-fiche-dot" style={{ background: sysColor }} aria-hidden="true" />
+            <span className="focus-fiche-sys">{currentSystemName}</span>
+            <span className={`focus-fiche-status ${statusCls}`}>{statusLabel}</span>
+            {current.lastScore !== null && !alreadyRated && !alreadyReported && (
+              <span className={`focus-last-pill s${current.lastScore}`}>dernière : {current.lastScore}/5</span>
+            )}
+            {alreadyRated && ratedScore !== null && (
+              <span className={`focus-last-pill s${ratedScore}`}>notée {ratedScore}/5 · modifiable</span>
+            )}
+            {alreadyReported && (
+              <span className="focus-fiche-reportee">reportée à demain</span>
+            )}
+          </div>
+
+          <LiveBook
+            key={`${current.lesson.id}-${currentIdx}`}
+            lessonName={current.lesson.name}
+            className="lb-hero"
+          />
+
+          {/* LES CIRES : 1 À revoir … 5 Maîtrisé */}
+          <div className="focus-seals" role="group" aria-label="Noter la fiche">
+            {([1, 2, 3, 4, 5] as Score[]).map(n => (
+              <button
+                key={n}
+                type="button"
+                className={`focus-seal s${n}${alreadyRated && ratedScore === n ? ' sealed' : ''}`}
+                onClick={() => rate(n)}
+                disabled={loading}
+                title={`Note ${n}/5 — raccourci ${n}`}
+              >
+                <span className="focus-seal-wax" aria-hidden="true">
+                  <span className="focus-seal-num">{n}</span>
+                </span>
+                <span className="focus-seal-lbl">
+                  {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Actions secondaires : liens discrets sous le bureau */}
+          <div className="focus-underbook">
+            <button
+              type="button"
+              className="focus-link"
+              onClick={report}
+              disabled={loading || alreadyReported}
+              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
+            >
+              {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
+            </button>
+            <span className="focus-underbook-sep" aria-hidden="true">{'·'}</span>
+            <button type="button" className="focus-link" onClick={goPrev} disabled={!canPrev} title="Fiche précédente (←)">
+              {'‹'} précédente
+            </button>
+            <button type="button" className="focus-link" onClick={goNext} disabled={!canNext} title="Fiche suivante (→)">
+              suivante {'›'}
+            </button>
+          </div>
+        </div>
 
         {/* GHOST : livre refermé qui vole du pupitre vers le compteur-
             bibliothèque. Séparé du pupitre pour survivre au changement de fiche. */}
@@ -1178,99 +1254,6 @@ function FocusPageBody() {
             aria-hidden="true"
           />
         )}
-
-        {/* Zone CARD : la card flotte en glass, navigation discrète en pied de card */}
-        <div className="focus-card-zone">
-
-          <div className="focus-card">
-
-            <div className="focus-kicker">
-            <div className="focus-kicker-line">
-              <span className="focus-kicker-dot" style={{ background: sysColor }} />
-              <span className="focus-kicker-sys">{currentSystemName}</span>
-            </div>
-            <span className={'focus-kicker-status ' + statusCls}>{statusLabel}</span>
-          </div>
-
-          <h1 className="focus-name">{current.lesson.name}</h1>
-
-          {current.lastScore !== null && !alreadyRated && !alreadyReported && (
-            <div className="focus-last">
-              Dernière note&nbsp;: <span className={`focus-last-pill s${current.lastScore}`}>{current.lastScore}/5</span>
-            </div>
-          )}
-
-          {/* Badge re-action si déjà notée/reportée dans cette session */}
-          {alreadyRated && ratedScore !== null && (
-            <div className="focus-rated-badge">
-              <span className={`focus-rated-pill s${ratedScore}`}>Notée {ratedScore}/5</span>
-              <span className="focus-rated-hint">Tu peux changer si besoin, ou passer à la suivante.</span>
-            </div>
-          )}
-          {alreadyReported && (
-            <div className="focus-reported-badge">
-              <span className="focus-reported-pill">Reportée à demain</span>
-              <span className="focus-rated-hint">Tu peux la noter maintenant si tu changes d’avis.</span>
-            </div>
-          )}
-
-          {!alreadyRated && !alreadyReported && (
-            <div className="focus-ask">Quelle note&nbsp;?</div>
-          )}
-          <div className="focus-scores">
-            {([1, 2, 3, 4, 5] as Score[]).map(n => (
-              <button
-                key={n}
-                type="button"
-                className={`focus-score s${n}${alreadyRated && ratedScore === n ? ' selected' : ''}`}
-                onClick={() => rate(n)}
-                disabled={loading}
-                title={`Note ${n}/5 — raccourci ${n}`}
-              >
-                <span className="focus-score-num">{n}</span>
-                <span className="focus-score-lbl">
-                  {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
-                </span>
-                <span className="focus-score-key" aria-hidden="true">{n}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="focus-actions">
-            <button
-              type="button"
-              className="focus-report"
-              onClick={report}
-              disabled={loading || alreadyReported}
-              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
-            >
-              {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
-            </button>
-            <div className="focus-nav-inline">
-              <button
-                type="button"
-                className="focus-nav-dot"
-                onClick={goPrev}
-                disabled={!canPrev}
-                aria-label="Fiche précédente"
-                title="Fiche précédente (←)"
-              >
-                {'‹'}
-              </button>
-              <button
-                type="button"
-                className="focus-nav-dot focus-nav-dot-next"
-                onClick={goNext}
-                disabled={!canNext}
-                aria-label="Fiche suivante"
-                title="Fiche suivante (→)"
-              >
-                {'›'}
-              </button>
-            </div>
-          </div>
-          </div>
-        </div>
 
         {/* HINT clavier — flotte sur le ciel, bas-droite, non-intrusif */}
         <div className="focus-hint">
