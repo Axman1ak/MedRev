@@ -223,11 +223,6 @@ function intensityClass(count: number, max: number): string {
   return 'i4'
 }
 
-function fmtMonth(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
-}
-
 function semLabel(s: Semestre): string {
   if (s === 'year') return 'Année complète'
   return `Semestre ${s}`
@@ -335,19 +330,6 @@ export default function StatsPage() {
     activityIndex.forEach(v => { if (v > max) max = v })
     return max
   }, [activityIndex])
-  const monthLabels = useMemo(() => {
-    const out: { weekIdx: number; label: string }[] = []
-    let lastMonth = -1
-    heatmap.forEach((week, wi) => {
-      const m = new Date(week[0].date + 'T12:00:00').getMonth()
-      if (m !== lastMonth) {
-        out.push({ weekIdx: wi, label: fmtMonth(week[0].date) })
-        lastMonth = m
-      }
-    })
-    return out.slice(1) // saute le label collé au bord gauche
-  }, [heatmap])
-
   const totalRevs = useMemo(() => {
     let n = 0
     activityIndex.forEach(v => { n += v })
@@ -461,6 +443,11 @@ export default function StatsPage() {
         </div>
       </div>
 
+      {/* GRILLE UNE-PAGE : 2 colonnes, pas de scroll (desktop).
+          Colonne A : jauge + matières · Colonne B : quoi réviser + plan. */}
+      <div className="st-cols">
+      <div className="st-col">
+
       {/* === 1. LA JAUGE === */}
       <div className="stats-card st-hero2">
         <div className="st-hero2-gauge">
@@ -491,7 +478,7 @@ export default function StatsPage() {
       </div>
 
       {/* === 2. PAR MATIÈRE === */}
-      <div className="stats-card">
+      <div className="stats-card st-fill">
         <div className="stats-card-title">
           Par matière
           <span className="stats-card-sub">de la plus fragile à la plus solide</span>
@@ -518,6 +505,9 @@ export default function StatsPage() {
           )}
         </div>
       </div>
+
+      </div>{/* /st-col A */}
+      <div className="st-col">
 
       {/* === 3. QUOI RÉVISER MAINTENANT === */}
       <div className="stats-card st-next">
@@ -548,7 +538,7 @@ export default function StatsPage() {
 
       {/* === 4. PREMIUM : LE PLAN JUSQU'AU CONCOURS === */}
       {!isPro && (
-        <div className="stats-card st-plan-teaser">
+        <div className="stats-card st-plan-teaser st-fill">
           <div className="st-plan-teaser-kicker">Premium</div>
           <div className="st-plan-teaser-title">Ton plan jusqu&apos;au concours</div>
           <p className="st-plan-teaser-text">
@@ -562,7 +552,7 @@ export default function StatsPage() {
       )}
 
       {isPro && (
-        <div className="stats-card st-plan">
+        <div className="stats-card st-plan st-fill">
           <div className="stats-card-title">
             Le plan jusqu&apos;au concours
             <span className="stats-card-sub">trajectoire au rythme des 30 derniers jours</span>
@@ -597,43 +587,29 @@ export default function StatsPage() {
             )}
           </div>
 
-          {/* Régularité annuelle — la seule visualisation conservée : elle se lit d'un coup d'œil */}
-          <div className="stats-heatmap-wrap">
-            <div className="stats-heatmap-months">
-              {monthLabels.map((m, idx) => (
-                <span key={idx} className="stats-heatmap-month" style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
+          {/* Régularité compacte : 12 dernières semaines — tient dans la
+              colonne sans scroll, et se lit toujours d'un coup d'œil. */}
+          <div className="st-mini-heat">
+            <div className="st-mini-heat-grid">
+              {heatmap.slice(40).map((week, wi) => (
+                <div key={wi} className="stats-heatmap-week">
+                  {week.map((cell, di) => {
+                    const cls = ['stats-heatmap-cell',
+                      cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
+                      cell.isToday ? 'today' : '',
+                    ].filter(Boolean).join(' ')
+                    return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
+                  })}
+                </div>
               ))}
             </div>
-            <div className="stats-heatmap">
-              <div className="stats-heatmap-axis">
-                <span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span>
-              </div>
-              <div className="stats-heatmap-grid">
-                {heatmap.map((week, wi) => (
-                  <div key={wi} className="stats-heatmap-week">
-                    {week.map((cell, di) => {
-                      const cls = ['stats-heatmap-cell',
-                        cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
-                        cell.isToday ? 'today' : '',
-                      ].filter(Boolean).join(' ')
-                      return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="stats-heatmap-legend">
-              <span>Moins</span>
-              <span className="stats-heatmap-cell i0" />
-              <span className="stats-heatmap-cell i1" />
-              <span className="stats-heatmap-cell i2" />
-              <span className="stats-heatmap-cell i3" />
-              <span className="stats-heatmap-cell i4" />
-              <span>Plus</span>
-            </div>
+            <div className="st-mini-heat-lbl">Régularité · 12 dernières semaines</div>
           </div>
         </div>
       )}
+
+      </div>{/* /st-col B */}
+      </div>{/* /st-cols */}
     </div>
   )
 }
