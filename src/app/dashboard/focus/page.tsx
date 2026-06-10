@@ -985,75 +985,48 @@ function FocusPageBody() {
             />
           </div>
 
-          {/* CARD bilan à GAUCHE pour laisser la bibliothèque visible à droite */}
-          <div className="focus-card-zone focus-card-zone-bilan">
-            <div className="focus-card focus-done-card">
-              <div className="focus-done-kicker">Session terminée</div>
-              <h2 className="focus-done-title">
-                {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
-                {reported > 0 && (
-                  <> <span className="focus-done-sep">{'·'}</span> <span className="focus-done-reported">{reported} reportée{reported > 1 ? 's' : ''}</span></>
-                )}
-              </h2>
-              <div className="focus-done-meta">
-                en {min} min {sec.toString().padStart(2, '0')} s
-                {avg !== null && <> {'·'} moyenne <strong>{avg.toFixed(1)}/5</strong></>}
-              </div>
+          {/* Voile central : assoit la lisibilité du bilan SANS pavé opaque,
+              le meuble reste visible tout autour. */}
+          <div className="focus-bilan-veil" aria-hidden="true" />
 
-              {/* Recap : livres ajoutés à la bibliothèque + trésors débloqués */}
-              <div className="focus-done-recap">
-                <div className="focus-done-recap-row">
-                  <span className="focus-done-recap-icon" aria-hidden="true">{'\u{1F4DA}'}</span>
-                  <span className="focus-done-recap-text">
-                    {sessionBooks > 0 ? (
-                      <>Tu as ajouté <strong>{sessionBooks}</strong> {sessionBooks > 1 ? 'ouvrages' : 'ouvrage'} à ta bibliothèque</>
-                    ) : (
-                      <>Aucune fiche notée cette session — la bibliothèque attend</>
-                    )}
-                  </span>
-                </div>
-                {sessionTreasuresUnlocked > 0 ? (
-                  <div className="focus-done-recap-gains">
-                    <div className="focus-done-recap-gains-lbl">Trésors débloqués cette session</div>
-                    <div className="focus-done-recap-gains-row">
-                      <span className="focus-done-recap-pill rare">
-                        <strong>{sessionTreasuresUnlocked}</strong> {sessionTreasuresUnlocked > 1 ? 'nouveaux trésors' : 'nouveau trésor'}
-                      </span>
-                    </div>
-                  </div>
-                ) : upcomingTreasure ? (
-                  <div className="focus-done-recap-empty">
-                    Prochain trésor : <strong>{upcomingTreasure.name}</strong> à <strong>{upcomingTreasure.at} h</strong> ({upcomingTreasure.at - dayGarden.fichesCount} fiches restantes).
-                  </div>
-                ) : (
-                  <div className="focus-done-recap-empty">Tous les trésors sont débloqués — bravo !</div>
-                )}
-              </div>
-
-              <div className="focus-done-list">
-                {filled.map((r, i) => (
-                  <div key={`${r.lessonId}-${i}`} className="focus-done-row">
-                    <div className="focus-done-row-num">{i + 1}</div>
-                    <div className="focus-done-row-main">
-                      <div className="focus-done-row-name">{r.lessonName}</div>
-                      <div className="focus-done-row-sys">{r.systemName}</div>
-                    </div>
-                    {r.outcome.kind === 'rated'
-                      ? <div className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</div>
-                      : <div className="focus-done-chip reported">Reportée</div>}
-                  </div>
-                ))}
-              </div>
-
-              <Link href="/dashboard" className="focus-done-cta">Retour au tableau de bord</Link>
+          {/* BILAN CENTRÉ en typographie flottante (pas de carte qui coupe
+              l'écran, pas de panneau qui recouvre la bibliothèque). */}
+          <div className="focus-bilan">
+            <div className="focus-bilan-kicker">Session terminée</div>
+            <h2 className="focus-bilan-title">
+              {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
+              {reported > 0 && (
+                <span className="focus-bilan-reported"> · {reported} reportée{reported > 1 ? 's' : ''}</span>
+              )}
+            </h2>
+            <div className="focus-bilan-meta">
+              en {min} min {sec.toString().padStart(2, '0')} s
+              {avg !== null && <> · moyenne <strong>{avg.toFixed(1)}/5</strong></>}
+              {sessionBooks > 0 && <> · <strong>+{sessionBooks}</strong> ouvrage{sessionBooks > 1 ? 's' : ''} rangé{sessionBooks > 1 ? 's' : ''}</>}
             </div>
-          </div>
+            <div className="focus-bilan-next">
+              {sessionTreasuresUnlocked > 0
+                ? <>✦ {sessionTreasuresUnlocked > 1 ? `${sessionTreasuresUnlocked} nouveaux trésors débloqués` : 'Nouveau trésor débloqué'} — regarde tes étagères</>
+                : upcomingTreasure
+                  ? <>Prochain trésor : <strong>{upcomingTreasure.name}</strong> — encore {upcomingTreasure.at - dayGarden.fichesCount} fiche{upcomingTreasure.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
+                  : <>Tous les trésors sont débloqués — bravo !</>}
+            </div>
 
-          {/* Panel trésors sur la droite (la card de bilan est à gauche) */}
-          <BibliothecaTreasuresPanel
-            fichesCount={dayGarden.fichesCount}
-            className="bib-treasures-right"
-          />
+            <div className="focus-bilan-list">
+              {filled.map((r, i) => (
+                <div key={`${r.lessonId}-${i}`} className="focus-bilan-row">
+                  <span className="focus-bilan-row-num">{i + 1}</span>
+                  <span className="focus-bilan-row-name">{r.lessonName}</span>
+                  <span className="focus-bilan-row-sys">{r.systemName}</span>
+                  {r.outcome.kind === 'rated'
+                    ? <span className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</span>
+                    : <span className="focus-done-chip reported">Reportée</span>}
+                </div>
+              ))}
+            </div>
+
+            <Link href="/dashboard" className="focus-bilan-cta">Retour au tableau de bord</Link>
+          </div>
         </div>
       </div>
     )
