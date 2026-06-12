@@ -470,14 +470,16 @@ export default function StatsPage() {
 
   // ===== LEVIER MAÎTRISE : fiches aux dernières notes faibles =====
   const weakFiches = useMemo(() => {
-    const out: { lesson: Lesson; sysName: string; last: Score }[] = []
+    const out: { lesson: Lesson; sysName: string; sysColor: string; last: Score }[] = []
     for (const l of semLessons) {
       const last = getLastEffScore(l)
       if (last === null || last > 2) continue
+      const sys = semSystems.find(x => x.id === l.system_id)
       out.push({
         lesson: l,
         last,
-        sysName: semSystems.find(s => s.id === l.system_id)?.name ?? 'Matière',
+        sysName: sys?.name ?? 'Matière',
+        sysColor: (sys as { color?: string } | undefined)?.color || '#22507E',
       })
     }
     return out.sort((a, b) => a.last - b.last).slice(0, 3)
@@ -491,7 +493,15 @@ export default function StatsPage() {
   const uncovered = useMemo(() => {
     const rows = semLessons
       .filter(l => l.learn_date)
-      .map(l => ({ lesson: l, n: officialCount(l), sysName: semSystems.find(s => s.id === l.system_id)?.name ?? '' }))
+      .map(l => {
+        const sys = semSystems.find(x => x.id === l.system_id)
+        return {
+          lesson: l,
+          n: officialCount(l),
+          sysName: sys?.name ?? '',
+          sysColor: (sys as { color?: string } | undefined)?.color || '#22507E',
+        }
+      })
       .filter(r => r.n < COVERED_AT)
       .sort((a, b) => a.n - b.n)
     return { count: rows.length, top: rows.slice(0, 3) }
@@ -642,7 +652,7 @@ export default function StatsPage() {
               {weakFiches.length > 0 ? (
                 weakFiches.map(f => (
                   <div key={f.lesson.id} className="st5-fiche">
-                    <span className="st5-fiche-ic"><SubjectIcon name={f.sysName} /></span>
+                    <span className="st5-fiche-ic" style={{ color: f.sysColor, background: `${f.sysColor}1A` }}><SubjectIcon name={f.sysName} /></span>
                     <span className="st5-fiche-nm">{f.lesson.name}</span>
                     <span className="st5-fiche-sys">{f.sysName}</span>
                     <span className="st5-fiche-badge weak">notée {f.last}/5</span>
@@ -670,7 +680,7 @@ export default function StatsPage() {
             <div className="st5-lever-body">
               {uncovered.top.map(r => (
                 <div key={r.lesson.id} className="st5-fiche">
-                  <span className="st5-fiche-ic"><SubjectIcon name={r.sysName} /></span>
+                  <span className="st5-fiche-ic" style={{ color: r.sysColor, background: `${r.sysColor}1A` }}><SubjectIcon name={r.sysName} /></span>
                   <span className="st5-fiche-nm">{r.lesson.name}</span>
                   <span className="st5-fiche-sys">{r.sysName}</span>
                   <span className="st5-fiche-badge">{r.n} / {COVERED_AT} paliers</span>

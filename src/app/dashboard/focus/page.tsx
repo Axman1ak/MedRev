@@ -13,7 +13,8 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, nextMilestone } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, nextMilestone, bookAtPoint, BIB_VIEWBOX } from '@/components/BibliothecaSvg'
+import { playBookOpen, playBookClose, playStamp, playWhoosh } from '@/lib/sounds'
 import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
 import './styles.css'
@@ -72,6 +73,12 @@ function dateStrFromOffset(base: string, offset: number): string {
   const d = new Date(base + 'T12:00:00')
   d.setDate(d.getDate() + offset)
   return d.toISOString().split('T')[0]
+}
+
+function formatBookDate(d: string): string {
+  try {
+    return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch { return d }
 }
 
 function daysBetween(a: string, b: string): number {
@@ -371,6 +378,34 @@ function FocusPlant({ elapsedMs, timeToFullMs, forceFull = false }: PlantProps) 
 // Persisté en localStorage (clé "medrev-garden-{userId}" — réutilisée pour
 // éviter une migration de schéma. Le champ legacy `elements` est ignoré.)
 
+// Registre des livres : une entrée par livre rangé.
+// n = rang du livre (1-based, = fichesCount au moment du rangement)
+// t = titre de la fiche, s = note (1-5), d = date, m = minutes écoulées
+// dans la session au moment de la notation.
+type BookLogEntry = { n: number; t: string; s: Score; d: string; m: number }
+
+function parseBookLog(raw: unknown): BookLogEntry[] {
+  if (!Array.isArray(raw)) return []
+  const out: BookLogEntry[] = []
+  for (const e of raw) {
+    if (!e || typeof e !== 'object') continue
+    const { n, t, s, d, m } = e as Record<string, unknown>
+    if (typeof n !== 'number' || n < 1) continue
+    if (typeof t !== 'string') continue
+    if (typeof s !== 'number' || s < 1 || s > 5) continue
+    out.push({ n, t, s: s as Score, d: typeof d === 'string' ? d : '', m: typeof m === 'number' ? m : 0 })
+  }
+  return out
+}
+
+// Union par rang (un livre = une entrée), borné à la capacité du meuble.
+function mergeBookLogs(a: BookLogEntry[], b: BookLogEntry[]): BookLogEntry[] {
+  const map = new Map<number, BookLogEntry>()
+  for (const e of a) map.set(e.n, e)
+  for (const e of b) if (!map.has(e.n)) map.set(e.n, e)
+  return [...map.values()].sort((x, y) => x.n - y.n).slice(-BIBLIOTHECA_TOTAL_CAPACITY)
+}
+
 type DayBibliothecaState = {
   startedDate?: string  // date de la première session
   elapsedMs: number     // temps cumulé total (sur l'année), pour stats
@@ -379,6 +414,9 @@ type DayBibliothecaState = {
   // tick de sauvegarde (30 s). Sert à la règle d'assiduité de la page Stats :
   // un jour compte à partir de 10 minutes de révision réelle.
   dayLog: Record<string, number>
+  // Registre des livres (gardens.book_log). Peut être vide pour les livres
+  // rangés avant l'existence du registre.
+  bookLog: BookLogEntry[]
 }
 
 // Garde les ~220 derniers jours du dayLog (le jsonb reste petit).
@@ -407,7 +445,7 @@ function bibKey(userId: string | null): string | null {
 }
 
 function loadDayBibliotheca(today: string, userId: string | null): DayBibliothecaState {
-  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {} }
+  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {}, bookLog: [] }
   if (typeof window === 'undefined') return empty
   const key = bibKey(userId)
   if (!key) return empty
@@ -420,6 +458,7 @@ function loadDayBibliotheca(today: string, userId: string | null): DayBibliothec
         elapsedMs: typeof parsed.elapsedMs === 'number' ? parsed.elapsedMs : 0,
         fichesCount: typeof parsed.fichesCount === 'number' ? parsed.fichesCount : 0,
         dayLog: parseDayLog((parsed as { dayLog?: unknown }).dayLog),
+        bookLog: parseBookLog((parsed as { bookLog?: unknown }).bookLog),
       }
     }
     return empty
@@ -452,7 +491,7 @@ async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<
   try {
     const { data, error } = await supabase
       .from('gardens')
-      .select('started_date, elapsed_ms, fiches_count, day_log')
+      .select('started_date, elapsed_ms, fiches_count, day_log, book_log')
       .eq('user_id', userId)
       .maybeSingle()
     if (error || !data) return null
@@ -461,6 +500,7 @@ async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<
       elapsedMs: Number((data as any).elapsed_ms ?? 0),
       fichesCount: Number((data as any).fiches_count ?? 0),
       dayLog: parseDayLog((data as any).day_log),
+      bookLog: parseBookLog((data as any).book_log),
     }
   } catch {
     return null
@@ -478,6 +518,7 @@ function pushBibToSupabase(supabase: SbClient, userId: string | null, state: Day
         elapsed_ms: state.elapsedMs,
         fiches_count: state.fichesCount,
         day_log: pruneDayLog(state.dayLog),
+        book_log: state.bookLog,
         elements: [],  // legacy, conservé vide pour compat
       },
       { onConflict: 'user_id' }
@@ -499,6 +540,7 @@ function mergeBibStates(a: DayBibliothecaState, b: DayBibliothecaState): DayBibl
     elapsedMs: Math.max(a.elapsedMs, b.elapsedMs),
     fichesCount: Math.max(a.fichesCount, b.fichesCount),
     dayLog,
+    bookLog: mergeBookLogs(a.bookLog, b.bookLog),
   }
 }
 
@@ -602,6 +644,29 @@ function FocusPageBody() {
   // null = pas de cérémonie en cours.
   const [sealStamp, setSealStamp] = useState<{ score: Score; ts: number } | null>(null)
 
+  // Registre : livre ouvert apres clic dans la bibliotheque (lobby/galerie).
+  const [openBook, setOpenBook] = useState<{ index: number; entry: BookLogEntry | null; x: number; y: number } | null>(null)
+
+  const handleGardenClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    // Inverse du mapping preserveAspectRatio="xMidYMid slice" du SVG.
+    const scale = Math.max(rect.width / BIB_VIEWBOX.w, rect.height / BIB_VIEWBOX.h)
+    const offX = (rect.width - BIB_VIEWBOX.w * scale) / 2
+    const offY = (rect.height - BIB_VIEWBOX.h * scale) / 2
+    const vx = (e.clientX - rect.left - offX) / scale + BIB_VIEWBOX.x
+    const vy = (e.clientY - rect.top - offY) / scale + BIB_VIEWBOX.y
+    const hit = bookAtPoint(vx, vy)
+    const count = Math.min(dayGardenRef.current.fichesCount, BIBLIOTHECA_TOTAL_CAPACITY)
+    if (!hit || hit.index >= count) {
+      // Clic dans le vide : referme le livre ouvert le cas echeant.
+      setOpenBook(prev => { if (prev) playBookClose(); return null })
+      return
+    }
+    const entry = dayGardenRef.current.bookLog.find(b => b.n === hit.index + 1) ?? null
+    playBookOpen()
+    setOpenBook({ index: hit.index, entry, x: e.clientX, y: e.clientY })
+  }, [])
+
   // Cascade du bilan : on rejoue l'arrivée des livres de la session un par un
   // (le compteur affiché monte de sessionStart → final, chaque pas déclenche
   // le pop + burst du SVG). null = pas de cascade (affichage direct).
@@ -612,7 +677,7 @@ function FocusPageBody() {
   // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
   // Persisté en localStorage avec clé 'medrev-garden' (sans date). Cultivé toute l'année.
   // elapsedMs cumulé sur l'ensemble de l'année. Jamais reset.
-  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {} })
+  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {}, bookLog: [] })
   const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
   // Stocke le nombre de fiches CUMULÉES au DÉMARRAGE de la session courante.
   // Utilisé pour le recap : permet de calculer combien de livres ont été ajoutés pendant cette session.
@@ -670,7 +735,8 @@ function FocusPageBody() {
         // tout de suite l'état le plus récent.
         if (
           merged.elapsedMs !== cloudGarden.elapsedMs ||
-          merged.fichesCount !== cloudGarden.fichesCount
+          merged.fichesCount !== cloudGarden.fichesCount ||
+          merged.bookLog.length !== cloudGarden.bookLog.length
         ) {
           pushBibToSupabase(supabase, user.id, merged)
         }
@@ -819,10 +885,19 @@ function FocusPageBody() {
     // Le score n'a pas d'incidence visuelle ; seule l'action de noter compte.
     if (wasEmpty) {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
+      const newCount = dayGardenRef.current.fichesCount + 1
       const updatedGarden: DayBibliothecaState = {
         ...dayGardenRef.current,
         elapsedMs: totalElapsed,
-        fichesCount: dayGardenRef.current.fichesCount + 1,
+        fichesCount: newCount,
+        // Registre : on consigne le livre qui vient d'être rangé.
+        bookLog: mergeBookLogs(dayGardenRef.current.bookLog, [{
+          n: newCount,
+          t: current.lesson.name,
+          s: score,
+          d: today,
+          m: Math.floor(atMs / 60000),
+        }]),
       }
       dayGardenRef.current = updatedGarden
       setDayGarden(updatedGarden)
@@ -842,11 +917,14 @@ function FocusPageBody() {
       //   980 ms     fiche suivante (nouveau livre vierge)
       // loading reste true pendant la cérémonie : pas de double clic possible.
       setSealStamp({ score, ts: Date.now() })
+      playStamp()
       const sys = systems.find(s => s.id === current.lesson.system_id)
       const flyColor = (sys as { color?: string } | undefined)?.color || '#2C415A'
       const chip = libChipRef.current
       const target = chip ? chip.getBoundingClientRect() : null
       window.setTimeout(() => {
+        playBookClose()
+        playWhoosh()
         if (target) {
           setBookFly({
             x: target.left + target.width / 2,
@@ -918,7 +996,11 @@ function FocusPageBody() {
   // ============ Raccourcis clavier ============
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { router.push('/dashboard'); return }
+      if (e.key === 'Escape') {
+        if (openBook) { playBookClose(); setOpenBook(null); return }
+        router.push('/dashboard')
+        return
+      }
       if (phase !== 'session') return
       if (e.key === 'ArrowLeft') { goPrev(); return }
       if (e.key === 'ArrowRight') { goNext(); return }
@@ -928,9 +1010,47 @@ function FocusPageBody() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [rate, report, router, phase, goPrev, goNext])
+  }, [rate, report, router, phase, goPrev, goNext, openBook])
 
   // ===================== RENDERS =====================
+  // Popup du registre : carte flottante pres du clic, clampee a l'ecran.
+  const bookPop = (() => {
+    if (!openBook || typeof window === 'undefined') return null
+    const W = 268
+    const left = Math.max(12, Math.min(window.innerWidth - W - 12, openBook.x - W / 2))
+    const top = Math.max(70, Math.min(window.innerHeight - 200, openBook.y + 16))
+    const entry = openBook.entry
+    return (
+      <div className="focus-book-pop" style={{ left, top }} role="dialog" aria-label={`Ouvrage numéro ${openBook.index + 1}`}>
+        <button
+          type="button"
+          className="focus-book-pop-close"
+          aria-label="Fermer"
+          onClick={(ev) => { ev.stopPropagation(); playBookClose(); setOpenBook(null) }}
+        >
+          {'\u00d7'}
+        </button>
+        <div className="focus-book-pop-kicker">Ouvrage n{'\u00b0'} {openBook.index + 1}</div>
+        {entry ? (
+          <>
+            <div className="focus-book-pop-title">{entry.t}</div>
+            <div className="focus-book-pop-meta">
+              {entry.d ? <>{formatBookDate(entry.d)}<br /></> : null}
+              {entry.m < 1 ? "Noté dans la première minute" : `Noté après ${entry.m} min de session`}
+            </div>
+            <div className="focus-book-pop-seal" style={{ background: SCORE_COLORS[entry.s] }} title={`Note : ${entry.s}/5`}>
+              <span>{entry.s}</span>
+            </div>
+          </>
+        ) : (
+          <div className="focus-book-pop-old">
+            Écrit avant la tenue du registre. Son histoire reste entre ses pages.
+          </div>
+        )}
+      </div>
+    )
+  })()
+
   if (!userId || phase === 'loading') {
     return (
       <div className="focus-root">
@@ -985,8 +1105,9 @@ function FocusPageBody() {
         </div>
 
         <div className="focus-stage">
-          {/* La bibliothèque entière, sans rien devant */}
-          <div className="focus-garden">
+          {/* La bibliothèque entière, sans rien devant. Cliquable : chaque
+              livre s'ouvre sur sa fiche (registre). */}
+          <div className="focus-garden focus-garden-clickable" onClick={handleGardenClick}>
             <BibliothecaSvg
               fichesCount={dayGarden.fichesCount}
               className="focus-garden-svg"
@@ -997,6 +1118,11 @@ function FocusPageBody() {
           {/* MODE GALERIE : contemplation pure — une légende flottante, rien d'autre. */}
           {isGallery && (
             <div className="focus-gallery-caption">
+              <div className="focus-gallery-explain">
+                Chaque fiche notée ajoute un livre. Les <strong>trésors</strong> sont
+                des objets rares (buste, globe, sablier…) qui apparaissent sur tes
+                étagères au fil des livres : le premier à 100. Clique un livre pour l&apos;ouvrir.
+              </div>
               <div className="focus-gallery-line">
                 Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors
                 {(() => {
@@ -1051,6 +1177,8 @@ function FocusPageBody() {
             </button>
           </div>
           )}
+
+          {bookPop}
         </div>
       </div>
     )

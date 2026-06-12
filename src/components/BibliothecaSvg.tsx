@@ -211,7 +211,7 @@ const SHELVES_HTML: string = (() => {
 //   récompense variable : "le prochain sera-t-il doré ?".
 // - Chaque livre mémorise sa position (cx, top) pour viser la bouffée de
 //   poussière au pop-in, et son étagère pour les plaques de complétion.
-type Book = { svg: string; shelf: number; cx: number; top: number; rare: boolean }
+type Book = { svg: string; shelf: number; cx: number; top: number; w: number; h: number; rare: boolean }
 
 const ALL_BOOKS: Book[] = (() => {
   const rand = mulberry32(11)
@@ -270,6 +270,8 @@ const ALL_BOOKS: Book[] = (() => {
         shelf: s,
         cx: cursor + w / 2,
         top: yBookTop,
+        w,
+        h: groupHeight,
         rare: groupRare,
       })
 
@@ -618,6 +620,19 @@ export const BIB_VIEWBOX = { x: VIEWBOX_X, y: VIEWBOX_Y, w: VIEWBOX_W, h: VIEWBO
 export function bookSpotAt(index: number): { cx: number; top: number } | null {
   if (index < 0 || index >= ALL_BOOKS.length) return null
   return { cx: ALL_BOOKS[index].cx, top: ALL_BOOKS[index].top }
+}
+
+// Hit-test d'un point (coordonnees viewBox) contre les dos de livres.
+// Retourne l'index du livre touche (= rang d'arrivee, 0-based) ou null.
+// Utilise par le registre : cliquer un livre dans la bibliotheque l'ouvre.
+export function bookAtPoint(vx: number, vy: number): { index: number; cx: number; top: number; w: number; h: number; rare: boolean } | null {
+  for (let i = 0; i < ALL_BOOKS.length; i++) {
+    const b = ALL_BOOKS[i]
+    if (vx >= b.cx - b.w / 2 - 1.5 && vx <= b.cx + b.w / 2 + 1.5 && vy >= b.top - 2 && vy <= b.top + b.h + 2) {
+      return { index: i, cx: b.cx, top: b.top, w: b.w, h: b.h, rare: b.rare }
+    }
+  }
+  return null
 }
 
 /** Prochain jalon sur l'échelle combinée "rayons complets" + "trésors".

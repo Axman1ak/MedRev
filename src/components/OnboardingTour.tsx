@@ -125,10 +125,10 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="nav-fiches"]',
-    title: () => 'Va sur Mes cours',
+    title: () => 'Va sur Fiches',
     body: (
       <>
-        Clique sur <strong>Mes cours</strong> dans la sidebar. C&apos;est
+        Clique sur <strong>Fiches</strong> dans la sidebar. C&apos;est
         l&apos;onglet principal, tout part de là.
       </>
     ),
@@ -352,10 +352,10 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="nav-dashboard"]',
-    title: () => 'Va sur Tableau de bord',
+    title: () => "Va sur Aujourd'hui",
     body: (
       <>
-        Clique sur <strong>Tableau de bord</strong> dans la sidebar.
+        Clique sur <strong>Aujourd&apos;hui</strong> dans la sidebar.
       </>
     ),
     tipPos: 'right',
@@ -363,7 +363,7 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
-    title: () => 'Le Tableau de bord',
+    title: () => "Aujourd'hui, ton tableau de bord",
     body: (
       <>
         Tout ton travail quotidien est <strong>centralisé ici</strong> :
@@ -391,7 +391,9 @@ const STEPS: Step[] = [
         livre vole se ranger dans ta <strong>bibliothèque de nuit</strong>.
         Chaque fiche notée = 1 livre, <strong>6 trésors</strong> à débloquer,
         et un bouton pour <strong>contempler</strong> ta collection depuis le
-        dashboard. Objectif : 2000 livres sur l&apos;année.
+        dashboard. <strong>Clique un livre</strong> de tes étagères pour le
+        rouvrir : titre de la fiche, date, et son sceau de cire. Objectif :
+        2000 livres sur l&apos;année.
       </>
     ),
   },
@@ -470,9 +472,9 @@ const STEPS: Step[] = [
         et regarde ta <strong>bibliothèque se remplir</strong> jour après
         jour.
         <br /><br />
-        Tu peux revoir ce tutoriel à tout moment depuis tes Paramètres.
+        Tu peux revoir ce tutoriel à tout moment depuis tes Réglages.
         <br /><br />
-        <strong>Bonne P1.</strong>
+        <strong>Bonne première année.</strong>
       </>
     ),
   },

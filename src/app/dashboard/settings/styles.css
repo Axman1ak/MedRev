@@ -638,3 +638,294 @@
   .set-anchors { gap: 5px; }
   .set-anchors a { padding: 5px 10px; font-size: 11.5px; }
 }
+
+/* ============================================================
+   RÉGLAGES v2 (2026-06) : abonnement héro + échelle pro.
+   Bloc appendu : il surcharge la refonte précédente.
+   ============================================================ */
+.set-wrap { max-width: 760px; }
+.set-head { margin-bottom: 28px; }
+.set-h1 { font-size: 32px; margin-bottom: 14px; }
+
+.set-card {
+  padding: 28px 32px;
+  border-radius: 16px;
+  margin-bottom: 18px;
+}
+.set-card-h { font-size: 20px; margin-bottom: 4px; }
+.set-card-sub {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 22px;
+}
+.set-card-danger .set-card-h { margin-bottom: 12px; }
+.set-label { font-size: 11px; }
+.set-input { font-size: 14px; padding: 11px 13px; }
+.set-static { font-size: 14px; }
+.set-hint { font-size: 12.5px; }
+.set-btn { font-size: 13.5px; padding: 11px 20px; }
+
+/* Séparateur interne des cards consolidées */
+.set-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 22px 0;
+}
+
+/* Rangée label+texte à gauche, action à droite */
+.set-row-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.set-row-inline > div { flex: 1; min-width: 0; }
+.set-row-inline .set-btn { flex-shrink: 0; }
+
+/* ---- Switch (sons de la bibliothèque) ---- */
+.set-switch {
+  flex-shrink: 0;
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-soft);
+  cursor: pointer;
+  padding: 0;
+  transition: background .18s, border-color .18s;
+}
+.set-switch .set-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform .18s cubic-bezier(.34, 1.3, .64, 1);
+}
+.set-switch.on {
+  background: var(--accent-medium);
+  border-color: var(--accent-medium);
+}
+.set-switch.on .set-switch-knob {
+  transform: translateX(20px);
+  border-color: transparent;
+}
+
+/* ---- ABONNEMENT : carte héro nuit marine ---- */
+.set-abo {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 32px 34px 30px;
+  margin-bottom: 22px;
+  background: linear-gradient(165deg, #16314E 0%, #0D2138 78%);
+  border: 1px solid rgba(127, 176, 212, 0.3);
+  color: #C8DCEC;
+  scroll-margin-top: 20px;
+}
+.set-abo-glow {
+  position: absolute;
+  top: -120px;
+  right: -80px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(127, 176, 212, 0.22) 0%, transparent 65%);
+  pointer-events: none;
+}
+.set-abo-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.set-abo-kicker {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: rgba(127, 176, 212, 0.85);
+  margin-bottom: 6px;
+}
+.set-abo-title {
+  font-family: var(--font-bricolage), serif;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  color: #EAF2F8;
+  margin: 0;
+  line-height: 1.15;
+}
+.set-abo-badge {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  background: rgba(200, 220, 236, 0.12);
+  border: 1px solid rgba(200, 220, 236, 0.3);
+  color: #C8DCEC;
+}
+.set-abo-badge.pro {
+  background: #D9B24A;
+  border-color: #D9B24A;
+  color: #15304E;
+}
+.set-abo-pitch {
+  position: relative;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(200, 220, 236, 0.88);
+  margin: 14px 0 0;
+  max-width: 560px;
+}
+.set-abo-pitch a, .set-abo-note a { color: #7FB0D4; }
+
+.set-abo-perks {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 22px;
+  margin-top: 22px;
+}
+.set-abo-perk {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.set-abo-perk-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #15304E;
+  background: #D9B24A;
+  margin-top: 1px;
+}
+.set-abo-perk strong {
+  display: block;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #EAF2F8;
+  margin-bottom: 2px;
+}
+.set-abo-perk span {
+  display: block;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(200, 220, 236, 0.7);
+}
+
+.set-abo-quotas {
+  position: relative;
+  margin-top: 22px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: rgba(2, 8, 16, 0.32);
+  border: 1px solid rgba(127, 176, 212, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.set-abo-quotas-lbl {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: rgba(127, 176, 212, 0.8);
+}
+.set-abo .set-quota-lbl { color: rgba(200, 220, 236, 0.85); }
+.set-abo .set-quota-num { color: rgba(200, 220, 236, 0.6); }
+.set-abo .set-quota-num strong { color: #EAF2F8; }
+.set-abo .set-quota-bar {
+  background: rgba(200, 220, 236, 0.1);
+  border-color: rgba(200, 220, 236, 0.14);
+}
+.set-abo .set-quota-bar-fill { background: #D9B24A; }
+.set-abo .set-quota.exhausted .set-quota-bar-fill { background: #C75050; }
+.set-abo .set-quota.exhausted .set-quota-num strong { color: #E08B8B; }
+
+.set-abo-cta-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.set-abo-cta {
+  display: inline-block;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  padding: 13px 26px;
+  border-radius: 11px;
+  background: #D9B24A;
+  color: #15304E;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 6px 20px rgba(217, 178, 74, 0.25);
+}
+.set-abo-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 26px rgba(217, 178, 74, 0.35);
+}
+.set-abo-cta.ghost {
+  background: transparent;
+  border: 1px solid rgba(200, 220, 236, 0.4);
+  color: #EAF2F8;
+  box-shadow: none;
+}
+.set-abo-cta.ghost:hover {
+  border-color: #7FB0D4;
+  transform: none;
+  box-shadow: none;
+}
+.set-abo-cta:disabled { opacity: .55; cursor: default; }
+.set-abo-cta-note {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12px;
+  color: rgba(200, 220, 236, 0.65);
+}
+.set-abo-note {
+  position: relative;
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(200, 220, 236, 0.7);
+  margin: 12px 0 0;
+}
+.set-abo .set-msg.err {
+  background: rgba(199, 80, 80, 0.16);
+  border-color: rgba(199, 80, 80, 0.4);
+  color: #E08B8B;
+}
+
+@media (max-width: 700px) {
+  .set-card { padding: 22px 18px; }
+  .set-abo { padding: 24px 20px; }
+  .set-abo-perks { grid-template-columns: 1fr; }
+  .set-row-inline { flex-direction: column; align-items: flex-start; gap: 12px; }
+}

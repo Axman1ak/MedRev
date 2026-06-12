@@ -735,18 +735,19 @@ export default function DashboardPage() {
             ) : (<>{visibleQueue.map((p, idx) => {
               const sys = semSystems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
+              const sysColor = (sys as { color?: string } | undefined)?.color || '#22507E'
               const overdue = p.due.status === 'missed'
               return (
                 <div
                   key={p.lesson.id}
-                  className={`fiche${idx === 0 ? ' hot' : ''}`}
+                  className="fiche"
                   onClick={() => openReview(p.lesson)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(p.lesson) }}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="ftag"><SubjectIcon name={sysName} /></div>
+                  <div className="ftag" style={{ color: sysColor, background: `${sysColor}1A` }}><SubjectIcon name={sysName} /></div>
                   <div className="fmid">
                     <div className="fnm">{p.lesson.name}</div>
                     <div className="fsub">{sysName}
