@@ -403,7 +403,7 @@ function mergeBookLogs(a: BookLogEntry[], b: BookLogEntry[]): BookLogEntry[] {
   const map = new Map<number, BookLogEntry>()
   for (const e of a) map.set(e.n, e)
   for (const e of b) if (!map.has(e.n)) map.set(e.n, e)
-  return [...map.values()].sort((x, y) => x.n - y.n).slice(-BIBLIOTHECA_TOTAL_CAPACITY)
+  return Array.from(map.values()).sort((x, y) => x.n - y.n).slice(-BIBLIOTHECA_TOTAL_CAPACITY)
 }
 
 type DayBibliothecaState = {
