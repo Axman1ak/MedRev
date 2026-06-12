@@ -2425,7 +2425,7 @@
 .focus-gallery-explain strong { color: #EAF2F8; }
 
 /* ============ Registre : popup d'un livre ouvert ============ */
-.focus-garden-clickable { cursor: pointer; }
+.focus-garden-clickable { cursor: pointer; pointer-events: auto; }
 .focus-book-pop {
   position: fixed;
   z-index: 60;
@@ -2512,4 +2512,104 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .focus-book-pop { animation: none; }
+}
+
+/* ============ Galerie : plaque de laiton (remplace la légende texte) ============ */
+.fg-plaque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px 14px;
+  border-radius: 14px;
+  background: linear-gradient(175deg, rgba(10, 24, 42, 0.78) 0%, rgba(5, 14, 26, 0.85) 100%);
+  border: 1px solid rgba(217, 178, 74, 0.28);
+  box-shadow: 0 14px 44px rgba(2, 8, 16, 0.55), inset 0 1px 0 rgba(200, 220, 236, 0.1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.fg-brand {
+  font-family: var(--font-bricolage), serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #D9B24A;
+  text-shadow: 0 1px 8px rgba(217, 178, 74, 0.25);
+}
+.fg-chips {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.fg-sep {
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(to bottom, transparent, rgba(200, 220, 236, 0.25), transparent);
+}
+.fg-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--font-hanken), sans-serif;
+  color: rgba(200, 220, 236, 0.7);
+}
+.fg-chip svg {
+  width: 17px;
+  height: 17px;
+  align-self: center;
+  color: #7FB0D4;
+  flex-shrink: 0;
+}
+.fg-chip.gold svg { color: #D9B24A; }
+.fg-chip strong {
+  font-family: var(--font-bricolage), serif;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #EAF2F8;
+  line-height: 1;
+}
+.fg-chip span { font-size: 11.5px; }
+.fg-goal {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 150px;
+}
+.fg-goal-name {
+  font-size: 12px !important;
+  font-weight: 700;
+  color: #EAF2F8;
+  letter-spacing: 0.02em;
+}
+.fg-goal-bar {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(200, 220, 236, 0.14);
+  overflow: hidden;
+}
+.fg-goal-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #B98F35, #D9B24A);
+  box-shadow: 0 0 8px rgba(217, 178, 74, 0.45);
+}
+.fg-goal-left { font-size: 10.5px !important; color: rgba(200, 220, 236, 0.55); }
+.fg-hint {
+  font-family: var(--font-hanken), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  color: rgba(200, 220, 236, 0.5);
+  text-align: center;
+  max-width: 520px;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .fg-plaque { padding: 13px 16px 12px; }
+  .fg-chips { gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .fg-sep { display: none; }
+  .fg-hint { font-size: 10px; }
 }

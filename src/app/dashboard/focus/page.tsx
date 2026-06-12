@@ -1115,21 +1115,49 @@ function FocusPageBody() {
             />
           </div>
 
-          {/* MODE GALERIE : contemplation pure — une légende flottante, rien d'autre. */}
+          {/* MODE GALERIE : une plaque de laiton en bas, comme dans un vrai
+              cabinet de lecture. Stats en chips, jalon avec barre, indice discret. */}
           {isGallery && (
             <div className="focus-gallery-caption">
-              <div className="focus-gallery-explain">
-                Chaque fiche notée ajoute un livre. Les <strong>trésors</strong> sont
-                des objets rares (buste, globe, sablier…) qui apparaissent sur tes
-                étagères au fil des livres : le premier à 100. Clique un livre pour l&apos;ouvrir.
-              </div>
-              <div className="focus-gallery-line">
-                Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors
-                {(() => {
-                  const goal = nextMilestone(dayGarden.fichesCount)
-                  if (!goal) return null
-                  return <> · prochain jalon : <strong>{goal.label}</strong> dans {goal.at - dayGarden.fichesCount} livre{goal.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
-                })()}
+              <div className="fg-plaque">
+                <div className="fg-brand">Bibliotheca</div>
+                <div className="fg-chips">
+                  <div className="fg-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13ZM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-2.5" />
+                    </svg>
+                    <strong>{dayGarden.fichesCount}</strong>
+                    <span>ouvrage{dayGarden.fichesCount > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="fg-sep" aria-hidden="true" />
+                  <div className="fg-chip gold">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M6 3h12l4 6-10 12L2 9l4-6Z" /><path d="M2 9h20M12 21 8 9l4-6 4 6-4 12" />
+                    </svg>
+                    <strong>{treasures}/6</strong>
+                    <span>trésors</span>
+                  </div>
+                  {(() => {
+                    const goal = nextMilestone(dayGarden.fichesCount)
+                    if (!goal) return null
+                    const pct = Math.min(100, Math.max(0, ((dayGarden.fichesCount - goal.prevAt) / (goal.at - goal.prevAt)) * 100))
+                    const left = goal.at - dayGarden.fichesCount
+                    return (
+                      <>
+                        <div className="fg-sep" aria-hidden="true" />
+                        <div className="fg-chip fg-goal">
+                          <span className="fg-goal-name">{goal.label}</span>
+                          <div className="fg-goal-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
+                          <span className="fg-goal-left">dans {left} livre{left > 1 ? 's' : ''}</span>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+                <div className="fg-hint">
+                  1 fiche notée = 1 livre · clique un livre pour l&apos;ouvrir ·
+                  les trésors se dévoilent sur tes étagères, le premier à 100 livres
+                </div>
               </div>
               <Link href="/dashboard" className="focus-link">{'←'} Retour au tableau de bord</Link>
             </div>
