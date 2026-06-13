@@ -10,9 +10,11 @@ import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson, TdEvent } from '@/types'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
 
 // ======================= TYPES =======================
@@ -93,45 +95,45 @@ function effectiveStepScore(s: StepEntry): Score | null {
   return null
 }
 
-function stepDate(lesson: Lesson, i: number): string {
+function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
-  return dateStrFromOffset(lesson.learn_date, J[i])
+  return dateStrFromOffset(lesson.learn_date, j[i])
 }
 
-function getLastScore(lesson: Lesson): Score | null {
+function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = J.length - 1; i >= 0; i--) {
+  for (let i = j.length - 1; i >= 0; i--) {
     const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
   return null
 }
 
-function getAverageScore(lesson: Lesson): number | null {
+function getAverageScore(lesson: Lesson, j: number[] = DEFAULT_J): number | null {
   const steps = (lesson.steps as StepEntry[]) || []
   let sum = 0, n = 0
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     const sc = effectiveStepScore(steps[i])
     if (sc) { sum += sc; n++ }
   }
   return n > 0 ? sum / n : null
 }
 
-function getLast3Scores(lesson: Lesson): Score[] {
+function getLast3Scores(lesson: Lesson, j: number[] = DEFAULT_J): Score[] {
   const steps = (lesson.steps as StepEntry[]) || []
   const out: Score[] = []
-  for (let i = J.length - 1; i >= 0 && out.length < 3; i--) {
+  for (let i = j.length - 1; i >= 0 && out.length < 3; i--) {
     const sc = effectiveStepScore(steps[i])
     if (sc) out.unshift(sc)
   }
   return out
 }
 
-function getNextRevDate(lesson: Lesson): string | null {
+function getNextRevDate(lesson: Lesson, j: number[] = DEFAULT_J): string | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < J.length; i++) {
-    if (!stepScore(steps[i])) return stepDate(lesson, i)
+  for (let i = 0; i < j.length; i++) {
+    if (!stepScore(steps[i])) return stepDate(lesson, i, j)
   }
   return null
 }
@@ -147,15 +149,15 @@ function lessonPostpones(l: Lesson): Record<string, string> {
   return p && typeof p === 'object' ? (p as Record<string, string>) : {}
 }
 
-function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
+function getDueForToday(lesson: Lesson, today: string, j: number[] = DEFAULT_J): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
   const skips = lessonSkips(lesson)
   const postpones = lessonPostpones(lesson)
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     if (stepScore(steps[i])) continue
     if (skips.includes(i)) continue            // palier annulé → on passe au suivant
-    const dd = postpones[String(i)] ?? stepDate(lesson, i)  // report éventuel
+    const dd = postpones[String(i)] ?? stepDate(lesson, i, j)  // report éventuel
     if (dd <= today) {
       return {
         stepIndex: i,
@@ -170,12 +172,13 @@ function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
 }
 
 // ======================= PRIORITY / QUEUE =======================
-function computeTodayQueue(lessons: Lesson[], today: string): PriorityLesson[] {
+function computeTodayQueue(lessons: Lesson[], today: string, schedOf: (id: string | null | undefined) => number[]): PriorityLesson[] {
   const out: PriorityLesson[] = []
   for (const l of lessons) {
-    const due = getDueForToday(l, today)
+    const j = schedOf(l.system_id)
+    const due = getDueForToday(l, today, j)
     if (!due) continue
-    const lastScore = getLastScore(l)
+    const lastScore = getLastScore(l, j)
     // Priority: lower = more urgent
     // Groupes : missed (0-999) < due with score (1000-5999) < new, no prior score (6000+)
     let priority: number
@@ -286,7 +289,7 @@ function computeHeatmap(activeDays: Set<string>, today: string, weeksBack: numbe
 // ======================= UPCOMING LOAD =======================
 type WeekLoad = { label: string; count: number }
 
-function computeUpcomingLoad(lessons: Lesson[], today: string): WeekLoad[] {
+function computeUpcomingLoad(lessons: Lesson[], today: string, schedOf: (id: string | null | undefined) => number[]): WeekLoad[] {
   const d = new Date(today + 'T12:00:00')
   const dayOfWeek = d.getDay()
   // décalage jusqu'au lundi suivant (exclu la semaine en cours)
@@ -301,9 +304,10 @@ function computeUpcomingLoad(lessons: Lesson[], today: string): WeekLoad[] {
   for (const l of lessons) {
     if (!l.learn_date) continue
     const steps = (l.steps as StepEntry[]) || []
-    for (let i = 0; i < J.length; i++) {
+    const j = schedOf(l.system_id)
+    for (let i = 0; i < j.length; i++) {
       if (stepScore(steps[i])) continue
-      const dd = stepDate(l, i)
+      const dd = stepDate(l, i, j)
       for (let w = 0; w < 4; w++) {
         const end = dateStrFromOffset(weekStarts[w], 6)
         if (dd >= weekStarts[w] && dd <= end) {
@@ -321,18 +325,19 @@ function computeMatiereStats(systems: System[], lessons: Lesson[]): MatiereStat[
   const out: MatiereStat[] = []
   for (const sys of systems) {
     const sysLessons = lessons.filter(l => l.system_id === sys.id)
+    const j = scheduleOf(sys)
     let sum = 0, n = 0
     const fragile: FragileFiche[] = []
     const allScored: FragileFiche[] = []
     for (const l of sysLessons) {
-      const avg = getAverageScore(l)
+      const avg = getAverageScore(l, j)
       if (avg === null) continue
       sum += avg; n++
       const entry: FragileFiche = {
         lesson: l,
         avg,
-        last3: getLast3Scores(l),
-        nextRevDate: getNextRevDate(l),
+        last3: getLast3Scores(l, j),
+        nextRevDate: getNextRevDate(l, j),
       }
       allScored.push(entry)
       if (avg < FRAGILE_THRESHOLD) {
@@ -619,7 +624,12 @@ export default function DashboardPage() {
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
 
-  const todayQueue = useMemo(() => computeTodayQueue(semLessons, today), [semLessons, today])
+  // Planning de révision par matière + couleurs de matière partagées (mêmes
+  // couleurs que la page Fiches).
+  const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
+  const colorOf = useMemo(() => buildSubjectColorMap(semSystems), [semSystems])
+
+  const todayQueue = useMemo(() => computeTodayQueue(semLessons, today, schedOf), [semLessons, today, schedOf])
 
   // (Les suggestions "Et si tu révisais…" vivent désormais sur la page
   // Statistiques — le dashboard reste volontairement épuré.)
@@ -628,7 +638,7 @@ export default function DashboardPage() {
   const recordStreak = useMemo(() => computeRecordStreak(activeDays), [activeDays])
   const weekDays = useMemo(() => computeWeek(activeDays, today), [activeDays, today])
   const heatmap = useMemo(() => computeHeatmap(activeDays, today, 4), [activeDays, today])
-  const upcomingLoad = useMemo(() => computeUpcomingLoad(semLessons, today), [semLessons, today])
+  const upcomingLoad = useMemo(() => computeUpcomingLoad(semLessons, today, schedOf), [semLessons, today, schedOf])
   const matiereStats = useMemo(() => computeMatiereStats(semSystems, semLessons), [semSystems, semLessons])
 
   // Nombre de jours actifs cette semaine jusqu'à aujourd'hui (inclus)
@@ -668,7 +678,7 @@ export default function DashboardPage() {
 
   // Tri par palier J croissant (plus petit J d'abord) — ordre visuel & de révision.
   const sortedQueue = useMemo(
-    () => [...todayQueue].sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex]),
+    () => [...todayQueue].sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex]),
     [todayQueue]
   )
   // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
@@ -735,7 +745,8 @@ export default function DashboardPage() {
             ) : (<>{visibleQueue.map((p, idx) => {
               const sys = semSystems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
-              const sysColor = (sys as { color?: string } | undefined)?.color || '#22507E'
+              const sysColor = colorOf.get(p.lesson.system_id) || '#22507E'
+              const sysJ = schedOf(p.lesson.system_id)
               const overdue = p.due.status === 'missed'
               return (
                 <div
@@ -751,7 +762,7 @@ export default function DashboardPage() {
                   <div className="fmid">
                     <div className="fnm">{p.lesson.name}</div>
                     <div className="fsub">{sysName}
-                      <span className="fj">J+{J[p.due.stepIndex]}</span>
+                      <span className="fj">J+{sysJ[p.due.stepIndex]}</span>
                     </div>
                   </div>
                   {overdue
@@ -782,6 +793,7 @@ export default function DashboardPage() {
         <ReviewModal
           lesson={reviewLesson}
           systemName={reviewSystemName}
+          schedule={scheduleOf(systems.find(s => s.id === reviewLesson.system_id))}
           initialStepIdx={null}
           onClose={() => setReviewLesson(null)}
           onUpdated={handleReviewUpdated}
@@ -815,6 +827,8 @@ function TodayModal({
 }) {
   const [sort, setSort] = useState<TodaySort>('j')
   const [subjectFilter, setSubjectFilter] = useState<string>('all')
+  const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
+  const colorOf = useMemo(() => buildSubjectColorMap(systems), [systems])
 
   const sortedFiltered = useMemo(() => {
     let list = queue.slice()
@@ -828,11 +842,11 @@ function TodayModal({
         return sa.localeCompare(sb)
       })
     } else if (sort === 'j') {
-      list.sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex])
+      list.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
     }
     // 'priority' = déjà trié par le calcul
     return list
-  }, [queue, systems, sort, subjectFilter])
+  }, [queue, systems, sort, subjectFilter, schedOf])
 
   const subjectsInQueue = useMemo(() => {
     const ids = new Set(queue.map(p => p.lesson.system_id))
@@ -904,14 +918,16 @@ function TodayModal({
               const sys = systems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
               const late = p.due.status === 'missed'
+              const rowColor = colorOf.get(p.lesson.system_id) || '#22507E'
+              const rowJ = schedOf(p.lesson.system_id)
               return (
                 <div key={p.lesson.id} className={`full-row${idx === 0 ? ' highlight' : ''}`}>
-                  <span className="full-row-ic"><SubjectIcon name={sysName} /></span>
+                  <span className="full-row-ic" style={{ color: rowColor, background: `${rowColor}1A` }}><SubjectIcon name={sysName} /></span>
                   <div className="full-row-main">
                     <div className="full-row-name">{p.lesson.name}</div>
                     <div className="full-row-sub">{sysName}</div>
                   </div>
-                  <span className={`full-row-j${late ? ' late' : ''}`}>J+{J[p.due.stepIndex]}</span>
+                  <span className={`full-row-j${late ? ' late' : ''}`}>J+{rowJ[p.due.stepIndex]}</span>
                   <span className={`full-row-state${late ? ' late' : ''}`}>
                     {late ? `+${p.due.overdueDays} j` : "aujourd'hui"}
                   </span>

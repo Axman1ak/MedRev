@@ -10,9 +10,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia } from '@/types'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
+import { DEFAULT_J } from '@/lib/schedule'
 import './review-modal.css'
-
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 
 type Score = 1 | 2 | 3 | 4 | 5
 type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
@@ -36,19 +35,19 @@ function stepScore(s: StepEntry): Score | null {
   return null
 }
 
-function stepDate(lesson: Lesson, i: number): string {
+function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
   const d = new Date(lesson.learn_date + 'T12:00:00')
-  d.setDate(d.getDate() + J[i])
+  d.setDate(d.getDate() + j[i])
   return d.toISOString().split('T')[0]
 }
 
-function getStampState(lesson: Lesson, i: number, today: string): StampState {
+function getStampState(lesson: Lesson, i: number, today: string, j: number[] = DEFAULT_J): StampState {
   const steps = (lesson.steps as StepEntry[]) || []
   const sc = stepScore(steps[i])
   if (sc) return { kind: 'score', score: sc }
   if (!lesson.learn_date) return { kind: 'future' }
-  const ds = stepDate(lesson, i)
+  const ds = stepDate(lesson, i, j)
   if (ds === today) return { kind: 'today' }
   if (ds < today) return { kind: 'missed' }
   return { kind: 'future' }
@@ -140,6 +139,8 @@ function getExt(name: string, fallback = 'bin'): string {
 interface ReviewModalProps {
   lesson: Lesson
   systemName?: string
+  /** Planning de révision de la matière (paliers J). Défaut = planning standard. */
+  schedule?: number[]
   /** Ouvre directement en notation sur ce J (pratique depuis le calendrier). null = picker. */
   initialStepIdx?: number | null
   onClose: () => void
@@ -151,10 +152,12 @@ interface ReviewModalProps {
 export default function ReviewModal({
   lesson: initialLesson,
   systemName = '',
+  schedule = DEFAULT_J,
   initialStepIdx = null,
   onClose,
   onUpdated,
 }: ReviewModalProps) {
+  const j = schedule
   const supabase = createClient()
   const router = useRouter()
   const [lesson, setLesson] = useState<Lesson>(initialLesson)
@@ -226,7 +229,7 @@ export default function ReviewModal({
 
   function selectStep(idx: number) {
     if (!lesson.learn_date) return
-    const ds = stepDate(lesson, idx)
+    const ds = stepDate(lesson, idx, j)
     if (ds > today) return
     setStepIdx(idx)
     setJustRated(null)
@@ -236,7 +239,7 @@ export default function ReviewModal({
     if (stepIdx === null) return
     setLoading(true)
     const newSteps = [...((lesson.steps as StepEntry[]) || [])]
-    while (newSteps.length < J.length) newSteps.push(null)
+    while (newSteps.length < j.length) newSteps.push(null)
     newSteps[stepIdx] = { score, date: today }
 
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', lesson.id)
@@ -618,14 +621,14 @@ export default function ReviewModal({
             {justRated && (
               <div className="rmod-toast">
                 <span className={`rmod-toast-dot s${justRated.score}`} />
-                Note {justRated.score}/5 enregistrée pour J+{J[justRated.idx]}
+                Note {justRated.score}/5 enregistrée pour J+{j[justRated.idx]}
               </div>
             )}
 
             <div className="rmod-jpicker" data-tour="picker-j">
-              {J.map((jVal, i) => {
-                const s = getStampState(lesson, i, today)
-                const ds = lesson.learn_date ? stepDate(lesson, i) : ''
+              {j.map((jVal, i) => {
+                const s = getStampState(lesson, i, today, j)
+                const ds = lesson.learn_date ? stepDate(lesson, i, j) : ''
                 const isFuture = s.kind === 'future' && ds !== '' && ds > today
                 const isLocked = isFuture || !lesson.learn_date
 
@@ -944,12 +947,12 @@ export default function ReviewModal({
         {stepIdx !== null && (
           <>
             <div className="rmod-lesson">
-              <div className="rmod-lesson-kicker">Révision J+{J[stepIdx]}</div>
+              <div className="rmod-lesson-kicker">Révision J+{j[stepIdx]}</div>
               <div className="rmod-lesson-name">{lesson.name}</div>
               <div className="rmod-lesson-meta">
                 {systemName}
                 {lesson.learn_date
-                  ? <> · prévue le {frenchDate(stepDate(lesson, stepIdx))}</>
+                  ? <> · prévue le {frenchDate(stepDate(lesson, stepIdx, j))}</>
                   : ' · date non planifiée'}
               </div>
             </div>

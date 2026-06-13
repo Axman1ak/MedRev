@@ -17,9 +17,11 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import SubjectIcon from '@/components/SubjectIcon'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const COVERED_AT = 3 // une fiche est "couverte" à partir de 3 paliers officiels
 
 // ===================== TYPES =====================
@@ -65,9 +67,9 @@ function stepPostedDate(s: StepEntry): string | null {
   return null
 }
 
-function getLastEffScore(lesson: Lesson): Score | null {
+function getLastEffScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = J.length - 1; i >= 0; i--) {
+  for (let i = j.length - 1; i >= 0; i--) {
     const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
@@ -97,16 +99,16 @@ function lessonPostpones(l: Lesson): Record<string, string> {
   return p && typeof p === 'object' ? (p as Record<string, string>) : {}
 }
 
-function isDueToday(l: Lesson, today: string): boolean {
+function isDueToday(l: Lesson, today: string, j: number[] = DEFAULT_J): boolean {
   if (!l.learn_date) return false
   const steps = (l.steps as StepEntry[]) || []
   const skips = lessonSkips(l)
   const postpones = lessonPostpones(l)
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     if (stepScore(steps[i])) continue
     if (skips.includes(i)) continue
     const d = new Date(l.learn_date + 'T12:00:00')
-    d.setDate(d.getDate() + J[i])
+    d.setDate(d.getDate() + j[i])
     const dd = postpones[String(i)] ?? d.toISOString().split('T')[0]
     return dd <= today
   }
@@ -407,6 +409,8 @@ export default function StatsPage() {
   }, [systems, semestre])
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
+  const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
+  const colorOf = useMemo(() => buildSubjectColorMap(semSystems), [semSystems])
 
   const activityIndex = useMemo(() => buildActivityIndex(semLessons), [semLessons])
   const activeDays = useMemo(() => buildActiveDays(activityIndex, dayLog), [activityIndex, dayLog])
@@ -472,18 +476,18 @@ export default function StatsPage() {
   const weakFiches = useMemo(() => {
     const out: { lesson: Lesson; sysName: string; sysColor: string; last: Score }[] = []
     for (const l of semLessons) {
-      const last = getLastEffScore(l)
+      const last = getLastEffScore(l, schedOf(l.system_id))
       if (last === null || last > 2) continue
       const sys = semSystems.find(x => x.id === l.system_id)
       out.push({
         lesson: l,
         last,
         sysName: sys?.name ?? 'Matière',
-        sysColor: (sys as { color?: string } | undefined)?.color || '#22507E',
+        sysColor: colorOf.get(l.system_id) || '#22507E',
       })
     }
     return out.sort((a, b) => a.last - b.last).slice(0, 3)
-  }, [semLessons, semSystems])
+  }, [semLessons, semSystems, schedOf, colorOf])
 
   const weakHref = weakFiches.length > 0
     ? `/dashboard/focus?lessons=${weakFiches.map(f => f.lesson.id).join(',')}`
@@ -499,16 +503,16 @@ export default function StatsPage() {
           lesson: l,
           n: officialCount(l),
           sysName: sys?.name ?? '',
-          sysColor: (sys as { color?: string } | undefined)?.color || '#22507E',
+          sysColor: colorOf.get(l.system_id) || '#22507E',
         }
       })
       .filter(r => r.n < COVERED_AT)
       .sort((a, b) => a.n - b.n)
     return { count: rows.length, top: rows.slice(0, 3) }
-  }, [semLessons, semSystems])
+  }, [semLessons, semSystems, colorOf])
 
   // ===== LEVIER ASSIDUITÉ : journée + 14 jours =====
-  const dueToday = useMemo(() => semLessons.filter(l => isDueToday(l, today)).length, [semLessons, today])
+  const dueToday = useMemo(() => semLessons.filter(l => isDueToday(l, today, schedOf(l.system_id))).length, [semLessons, today, schedOf])
   const doneToday = activityIndex.get(today) ?? 0
   const dayValidated = doneToday > 0 && dueToday === 0
 

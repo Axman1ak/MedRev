@@ -8,9 +8,10 @@ import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson, TdEvent } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const DAY_LABELS_LONG = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 const MONTH_FULL_FR = [
@@ -44,9 +45,9 @@ function stepScore(s: StepEntry): Score | null {
   return null
 }
 
-function getLastScore(lesson: Lesson): Score | null {
+function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = J.length - 1; i >= 0; i--) {
+  for (let i = j.length - 1; i >= 0; i--) {
     const sc = stepScore(steps[i])
     if (sc) return sc
   }
@@ -102,18 +103,19 @@ function lessonPostpones(l: Lesson): Record<string, string> {
   return p && typeof p === 'object' ? (p as Record<string, string>) : {}
 }
 
-function computeOccurrences(lessons: Lesson[]): FicheOccurrence[] {
+function computeOccurrences(lessons: Lesson[], schedOf: (id: string | null | undefined) => number[]): FicheOccurrence[] {
   const out: FicheOccurrence[] = []
   for (const l of lessons) {
     if (!l.learn_date) continue
     const steps = (l.steps as StepEntry[]) || []
-    const lastScore = getLastScore(l)
+    const j = schedOf(l.system_id)
+    const lastScore = getLastScore(l, j)
     const skips = lessonSkips(l)
     const postpones = lessonPostpones(l)
-    for (let i = 0; i < J.length; i++) {
+    for (let i = 0; i < j.length; i++) {
       if (skips.includes(i)) continue          // palier annulé → pas d'occurrence
       const d = new Date(l.learn_date + 'T12:00:00')
-      d.setDate(d.getDate() + J[i])
+      d.setDate(d.getDate() + j[i])
       out.push({
         lesson: l,
         stepIndex: i,
@@ -257,7 +259,8 @@ export default function CalendarPage() {
     return map
   }, [systems])
 
-  const occurrences = useMemo(() => computeOccurrences(semLessons), [semLessons])
+  const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
+  const occurrences = useMemo(() => computeOccurrences(semLessons, schedOf), [semLessons, schedOf])
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences])
 
   // TD groupés par date (non filtrés par semestre : c'est l'emploi du temps réel).
@@ -631,12 +634,12 @@ export default function CalendarPage() {
                             key={`${occ.lesson.id}-${occ.stepIndex}`}
                             className={`cal-fiche${done ? ' cal-done' : ''}`}
                             onClick={() => openReview(occ)}
-                            title={`${sysName ? sysName + ' · ' : ''}${occ.lesson.name} · J+${J[occ.stepIndex]}`}
+                            title={`${sysName ? sysName + ' · ' : ''}${occ.lesson.name} · J+${scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}`}
                           >
                             <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
                             <span className="cal-fiche-body">
                               <span className="cal-fiche-name">{occ.lesson.name}</span>
-                              <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                              <span className="cal-fiche-j">J+{scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}</span>
                             </span>
                           </button>
                         )
@@ -796,7 +799,7 @@ export default function CalendarPage() {
                         {sysName && <span className="cal-of-sub">{sysName}</span>}
                       </span>
                       <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
-                      <span className="cal-fiche-j">J+{J[occ.stepIndex]}</span>
+                      <span className="cal-fiche-j">J+{scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}</span>
                     </button>
                   )
                 })}
@@ -864,7 +867,7 @@ export default function CalendarPage() {
                               <span className="cal-print-box">{done ? '✓' : ''}</span>
                               <span className="cal-print-item-name">
                                 {occ.lesson.name}
-                                <span className="cal-print-item-j"> J+{J[occ.stepIndex]}</span>
+                                <span className="cal-print-item-j"> J+{scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}</span>
                               </span>
                             </div>
                           )
@@ -989,6 +992,7 @@ export default function CalendarPage() {
         <ReviewModal
           lesson={reviewing.lesson}
           systemName={systemsById.get(reviewing.lesson.system_id)?.name ?? ''}
+          schedule={scheduleOf(systemsById.get(reviewing.lesson.system_id))}
           initialStepIdx={reviewing.stepIdx === -1 ? null : reviewing.stepIdx}
           onClose={() => setReviewing(null)}
           onUpdated={handleUpdated}

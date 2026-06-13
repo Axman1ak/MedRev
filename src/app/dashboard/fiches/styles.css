@@ -855,3 +855,30 @@
   height: 1px;
   background: var(--border, var(--border-subtle));
 }
+
+/* ---- Éditeur de paliers de révision (modale matière) ---- */
+.fi-sched { margin-bottom: 14px; }
+.fi-sched-presets { display: flex; gap: 8px; margin: 8px 0 10px; }
+.fi-sched-preset {
+  flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px;
+  background: transparent; color: var(--gray); font-family: inherit; font-size: 12.5px;
+  font-weight: 600; cursor: pointer; transition: .15s;
+}
+.fi-sched-preset:hover { border-color: var(--border-strong); color: var(--dark); }
+.fi-sched-preset.active { background: var(--gm); border-color: var(--gm); color: #fff; }
+.fi-sched-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.fi-sched-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px 3px 9px;
+  background: var(--gm-soft, rgba(22,49,78,.08)); color: var(--dark);
+  border-radius: 999px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.fi-sched-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border: none; border-radius: 50%;
+  background: rgba(0,0,0,.12); color: inherit; font-size: 13px; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.fi-sched-x:hover { background: var(--alert, #c0392b); color: #fff; }
+.fi-sched-add { display: flex; gap: 8px; align-items: center; }
+.fi-sched-input { flex: 1; }
+.fi-sched-hint { margin-top: 8px; font-size: 11.5px; color: var(--gray); }

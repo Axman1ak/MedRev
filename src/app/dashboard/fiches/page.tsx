@@ -7,9 +7,10 @@ import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver, SCHEDULE_PRESETS, normalizeSchedule } from '@/lib/schedule'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
 // Palette de couleurs pour les matières
 const SUBJ_COLORS = [
@@ -45,10 +46,10 @@ function effectiveStepScore(s: StepEntry): Score | null {
   return null
 }
 
-function stepDate(lesson: Lesson, i: number): string {
+function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
   const d = new Date(lesson.learn_date + 'T12:00:00')
-  d.setDate(d.getDate() + J[i])
+  d.setDate(d.getDate() + j[i])
   return d.toISOString().split('T')[0]
 }
 
@@ -67,7 +68,7 @@ function stepTempScore(s: StepEntry | null): Score | null {
   return null
 }
 
-function getStampState(lesson: Lesson, i: number, today: string): StampState {
+function getStampState(lesson: Lesson, i: number, today: string, j: number[] = DEFAULT_J): StampState {
   const steps = (lesson.steps as StepEntry[]) || []
   const sc = stepScore(steps[i])
   if (sc) return { kind: 'score', score: sc }
@@ -75,61 +76,61 @@ function getStampState(lesson: Lesson, i: number, today: string): StampState {
   const tempSc = stepTempScore(steps[i])
   if (tempSc) return { kind: 'temp', score: tempSc }
   if (!lesson.learn_date) return { kind: 'future' }
-  const ds = stepDate(lesson, i)
+  const ds = stepDate(lesson, i, j)
   if (ds === today) return { kind: 'today' }
   if (ds < today) return { kind: 'missed' }
   return { kind: 'future' }
 }
 
-function getDueStepIndex(lesson: Lesson, today: string): number {
+function getDueStepIndex(lesson: Lesson, today: string, j: number[] = DEFAULT_J): number {
   if (!lesson.learn_date) return -1
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     if (stepScore(steps[i])) continue
-    const ds = stepDate(lesson, i)
+    const ds = stepDate(lesson, i, j)
     if (ds <= today) return i
   }
   return -1
 }
 
-function getLastScore(lesson: Lesson): Score | null {
+function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = J.length - 1; i >= 0; i--) {
+  for (let i = j.length - 1; i >= 0; i--) {
     const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
   return null
 }
 
-function getDoneCount(lesson: Lesson): number {
+function getDoneCount(lesson: Lesson, j: number[] = DEFAULT_J): number {
   const steps = (lesson.steps as StepEntry[]) || []
   let n = 0
-  for (let i = 0; i < J.length; i++) if (stepScore(steps[i])) n++
+  for (let i = 0; i < j.length; i++) if (stepScore(steps[i])) n++
   return n
 }
 
 type ProgressKind = 'new' | 'inprogress' | 'done'
-function progressKind(lesson: Lesson): ProgressKind {
-  const n = getDoneCount(lesson)
+function progressKind(lesson: Lesson, j: number[] = DEFAULT_J): ProgressKind {
+  const n = getDoneCount(lesson, j)
   if (n === 0) return 'new'
-  if (n >= J.length) return 'done'
+  if (n >= j.length) return 'done'
   return 'inprogress'
 }
 
-function getNextRevDate(lesson: Lesson): string | null {
+function getNextRevDate(lesson: Lesson, j: number[] = DEFAULT_J): string | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < J.length; i++) {
-    if (!stepScore(steps[i])) return stepDate(lesson, i)
+  for (let i = 0; i < j.length; i++) {
+    if (!stepScore(steps[i])) return stepDate(lesson, i, j)
   }
   return null
 }
 
-function nextRevLabel(lesson: Lesson, today: string): { text: string; html: string; urgent: boolean; calm: boolean; start: boolean } {
+function nextRevLabel(lesson: Lesson, today: string, j: number[] = DEFAULT_J): { text: string; html: string; urgent: boolean; calm: boolean; start: boolean } {
   if (!lesson.learn_date) {
     return { text: 'À planifier', html: 'À planifier', urgent: false, calm: false, start: true }
   }
-  const d = getNextRevDate(lesson)
+  const d = getNextRevDate(lesson, j)
   if (!d) return { text: 'Terminée', html: 'Terminée', urgent: false, calm: true, start: false }
   if (d === today) return { text: "aujourd'hui", html: "Révision <strong>aujourd'hui</strong>", urgent: true, calm: false, start: false }
   if (d < today) return { text: 'en retard', html: '<strong>En retard</strong>', urgent: true, calm: false, start: false }
@@ -138,8 +139,8 @@ function nextRevLabel(lesson: Lesson, today: string): { text: string; html: stri
   return { text: `dans ${diff} j`, html: `Prochaine <strong>dans ${diff} j</strong>`, urgent: false, calm: true, start: false }
 }
 
-function cardStatus(lesson: Lesson): { cls: string; label: string } {
-  const last = getLastScore(lesson)
+function cardStatus(lesson: Lesson, j: number[] = DEFAULT_J): { cls: string; label: string } {
+  const last = getLastScore(lesson, j)
   if (last === null) return { cls: 'new', label: 'Nouvelle' }
   if (last === 1) return { cls: 's1', label: 'À revoir' }
   if (last === 2) return { cls: 's2', label: 'Faible' }
@@ -198,6 +199,10 @@ export default function FichesPage() {
   // Permet à l'user de déplacer une matière entre S1 et S2 si la pré-config
   // au signup ne correspond pas à son vrai cursus.
   const [editSemestre, setEditSemestre] = useState<1 | 2>(2)
+  // Planning de révision (paliers J) en cours d'édition (matière uniquement).
+  const [editSchedule, setEditSchedule] = useState<number[]>(DEFAULT_J)
+  const [editScheduleOrig, setEditScheduleOrig] = useState<number[]>(DEFAULT_J)
+  const [editDayInput, setEditDayInput] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [deleting, setDeleting] = useState<DeleteTarget>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -297,7 +302,7 @@ export default function FichesPage() {
     setLesError(null)
     const { data, error } = await supabase.from('lessons').insert({
       user_id: userId, system_id: newLesSysId, name: newLesName.trim(),
-      learn_date: newLesDate || today, steps: new Array(J.length).fill(null), ai_questions: [],
+      learn_date: newLesDate || today, steps: new Array(scheduleOf(systems.find(s => s.id === newLesSysId)).length).fill(null), ai_questions: [],
       chapter: newLesChapter.trim() || null,
     }).select().single()
     setLesLoading(false)
@@ -351,6 +356,10 @@ export default function FichesPage() {
     setEditName(name)
     setEditChapter(currentChapter)
     setEditSemestre(currentSemestre)
+    const sched = type === 'system' ? scheduleOf(systems.find(s => s.id === id)) : DEFAULT_J
+    setEditSchedule(sched)
+    setEditScheduleOrig(sched)
+    setEditDayInput('')
     setMenuOpenFor(null)
   }
   function openDelete(type: 'system' | 'lesson', id: string, name: string) {
@@ -368,13 +377,14 @@ export default function FichesPage() {
     setEditLoading(true)
     if (editing.type === 'system') {
       // Pour une matière, on met à jour name ET semestre dans la même requête.
+      const newSchedule = normalizeSchedule(editSchedule)
       const { error } = await supabase
         .from('systems')
-        .update({ name: trimmed, semestre: editSemestre })
+        .update({ name: trimmed, semestre: editSemestre, schedule: newSchedule })
         .eq('id', editing.id)
       if (!error) {
         setSystems(prev => prev.map(s => s.id === editing.id
-          ? ({ ...s, name: trimmed, semestre: editSemestre } as System)
+          ? ({ ...s, name: trimmed, semestre: editSemestre, schedule: newSchedule } as System)
           : s))
       } else {
         console.error('[saveEdit] system update failed:', error)
@@ -431,6 +441,7 @@ export default function FichesPage() {
 
   // ---- Dérivées ----
   const selectedSystem = semSystems.find(s => s.id === selectedSystemId) ?? null
+  const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
 
   // Chapitre d'une fiche (champ libre, null/vide = sans chapitre).
   function lessonChapter(l: Lesson): string {
@@ -476,7 +487,8 @@ export default function FichesPage() {
     const counts = new Map<string, { total: number; due: number }>()
     semSystems.forEach(s => {
       const sysLessons = lessons.filter(l => l.system_id === s.id)
-      const due = sysLessons.filter(l => getDueStepIndex(l, today) !== -1).length
+      const sysJ = scheduleOf(s)
+      const due = sysLessons.filter(l => getDueStepIndex(l, today, sysJ) !== -1).length
       counts.set(s.id, { total: sysLessons.length, due })
     })
     return counts
@@ -486,7 +498,7 @@ export default function FichesPage() {
     let pool: Lesson[]
     if (showDueOnly) {
       pool = lessons.filter(l => semSystems.find(s => s.id === l.system_id))
-      pool = pool.filter(l => getDueStepIndex(l, today) !== -1)
+      pool = pool.filter(l => getDueStepIndex(l, today, schedOf(l.system_id)) !== -1)
     } else {
       if (!selectedSystem) return []
       pool = lessons.filter(l => l.system_id === selectedSystem.id)
@@ -496,17 +508,17 @@ export default function FichesPage() {
       pool = pool.filter(l => l.name.toLowerCase().includes(q))
     }
     if (filterNote !== 'all') {
-      pool = pool.filter(l => cardStatus(l).cls === filterNote)
+      pool = pool.filter(l => cardStatus(l, schedOf(l.system_id)).cls === filterNote)
     }
     if (filterProgress !== 'all') {
-      pool = pool.filter(l => progressKind(l) === filterProgress)
+      pool = pool.filter(l => progressKind(l, schedOf(l.system_id)) === filterProgress)
     }
     return pool
-  }, [lessons, selectedSystem, filterNote, filterProgress, showDueOnly, search, semSystems, today])
+  }, [lessons, selectedSystem, filterNote, filterProgress, showDueOnly, search, semSystems, today, schedOf])
 
   const dueTodayCount = useMemo(
-    () => lessons.filter(l => semSystems.find(s => s.id === l.system_id) && getDueStepIndex(l, today) !== -1).length,
-    [lessons, semSystems, today]
+    () => lessons.filter(l => semSystems.find(s => s.id === l.system_id) && getDueStepIndex(l, today, schedOf(l.system_id)) !== -1).length,
+    [lessons, semSystems, today, schedOf]
   )
 
   const totalSemFiches = useMemo(
@@ -517,6 +529,14 @@ export default function FichesPage() {
   const reviewSystemName = reviewLesson
     ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
+
+  const editUnchanged = !editing
+    ? true
+    : editing.type === 'system'
+      ? (editName.trim() === editing.name
+          && editSemestre === editing.semestre
+          && JSON.stringify(normalizeSchedule(editSchedule)) === JSON.stringify(editScheduleOrig))
+      : (editName.trim() === editing.name && editChapter.trim() === (editing.chapter ?? ''))
 
   return (
     <>
@@ -683,8 +703,9 @@ export default function FichesPage() {
         {/* Grille de cartes — groupée par chapitre quand la matière en a */}
         {semSystems.length > 0 && visibleLessons.length > 0 && (() => {
             const renderCard = (lesson: Lesson) => {
-              const st = cardStatus(lesson)
-              const nr = nextRevLabel(lesson, today)
+              const lessonJ = schedOf(lesson.system_id)
+              const st = cardStatus(lesson, lessonJ)
+              const nr = nextRevLabel(lesson, today, lessonJ)
               return (
                 <div
                   key={lesson.id}
@@ -722,25 +743,25 @@ export default function FichesPage() {
                       </div>
                     )}
                     <div className="stamps">
-                      {J.map((_, i) => {
-                        const s = getStampState(lesson, i, today)
+                      {lessonJ.map((_, i) => {
+                        const s = getStampState(lesson, i, today, lessonJ)
                         if (s.kind === 'score') {
                           return (
-                            <span key={i} className={`stamp s${s.score}`} title={`J+${J[i]} · note ${s.score}/5`}>
+                            <span key={i} className={`stamp s${s.score}`} title={`J+${lessonJ[i]} · note ${s.score}/5`}>
                               {s.score === 5 && <span className="stamp-star" aria-hidden="true">★</span>}
                             </span>
                           )
                         }
                         if (s.kind === 'temp') {
                           return (
-                            <span key={i} className={`stamp temp s${s.score}`} title={`J+${J[i]} · retravaillé en avance · note ${s.score}/5 (temporaire jusqu'au vrai J)`}>
+                            <span key={i} className={`stamp temp s${s.score}`} title={`J+${lessonJ[i]} · retravaillé en avance · note ${s.score}/5 (temporaire jusqu'au vrai J)`}>
                               {s.score}
                             </span>
                           )
                         }
-                        if (s.kind === 'today') return <span key={i} className="stamp today" title={`J+${J[i]} · aujourd'hui`} />
-                        if (s.kind === 'missed') return <span key={i} className="stamp missed" title={`J+${J[i]} · manqué`} />
-                        return <span key={i} className="stamp future" title={`J+${J[i]} · à venir`} />
+                        if (s.kind === 'today') return <span key={i} className="stamp today" title={`J+${lessonJ[i]} · aujourd'hui`} />
+                        if (s.kind === 'missed') return <span key={i} className="stamp missed" title={`J+${lessonJ[i]} · manqué`} />
+                        return <span key={i} className="stamp future" title={`J+${lessonJ[i]} · à venir`} />
                       })}
                     </div>
                     <div className="card-foot">
@@ -817,6 +838,7 @@ export default function FichesPage() {
         <ReviewModal
           lesson={reviewLesson}
           systemName={reviewSystemName}
+          schedule={scheduleOf(systems.find(s => s.id === reviewLesson.system_id))}
           initialStepIdx={null}
           onClose={closeReview}
           onUpdated={handleReviewUpdated}
@@ -1028,24 +1050,71 @@ export default function FichesPage() {
                 </div>
               </div>
             )}
+
+            {editing.type === 'system' && (
+              <div className="fi-sched">
+                <label className="fi-label">Paliers de rÃ©vision <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(jours aprÃ¨s l&apos;apprentissage)</span></label>
+                <div className="fi-sched-presets">
+                  {SCHEDULE_PRESETS.map(pr => {
+                    const active = JSON.stringify(normalizeSchedule(editSchedule)) === JSON.stringify(normalizeSchedule(pr.days))
+                    return (
+                      <button
+                        key={pr.id}
+                        type="button"
+                        className={`fi-sched-preset${active ? ' active' : ''}`}
+                        onClick={() => setEditSchedule(pr.days)}
+                      >{pr.label}</button>
+                    )
+                  })}
+                </div>
+                <div className="fi-sched-chips">
+                  {normalizeSchedule(editSchedule).map(day => (
+                    <span key={day} className="fi-sched-chip">
+                      J+{day}
+                      <button
+                        type="button"
+                        className="fi-sched-x"
+                        aria-label={`Retirer J+${day}`}
+                        onClick={() => setEditSchedule(prev => normalizeSchedule(prev).filter(d => d !== day))}
+                      >{'×'}</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="fi-sched-add">
+                  <input
+                    className="fi-input fi-sched-input"
+                    type="number"
+                    min={0}
+                    placeholder="Jour (ex : 10)"
+                    value={editDayInput}
+                    onChange={e => setEditDayInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const n = parseInt(editDayInput, 10)
+                        if (Number.isFinite(n) && n >= 0) { setEditSchedule(prev => normalizeSchedule([...prev, n])); setEditDayInput('') }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="fi-btn-o"
+                    onClick={() => {
+                      const n = parseInt(editDayInput, 10)
+                      if (Number.isFinite(n) && n >= 0) { setEditSchedule(prev => normalizeSchedule([...prev, n])); setEditDayInput('') }
+                    }}
+                  >Ajouter</button>
+                </div>
+                <div className="fi-sched-hint">{normalizeSchedule(editSchedule).length} révisions · modifier reprogramme toutes les fiches de cette matière.</div>
+              </div>
+            )}
             <div className="fi-modal-actions">
               <button className="fi-btn-o" onClick={() => setEditing(null)}>Annuler</button>
               <button
                 className="fi-btn-g"
                 onClick={saveEdit}
-                disabled={
-                  !editName.trim()
-                  || editLoading
-                  || (editing.type === 'system'
-                    ? editName.trim() === editing.name && editSemestre === editing.semestre
-                    : (editName.trim() === editing.name && editChapter.trim() === (editing.chapter ?? '')))
-                }
-                style={{
-                  opacity: (!editName.trim()
-                    || (editing.type === 'system'
-                      ? editName.trim() === editing.name && editSemestre === editing.semestre
-                      : (editName.trim() === editing.name && editChapter.trim() === (editing.chapter ?? '')))) ? .5 : 1,
-                }}
+                disabled={!editName.trim() || editLoading || editUnchanged}
+                style={{ opacity: (!editName.trim() || editUnchanged) ? .5 : 1 }}
               >
                 {editLoading ? 'Enregistrement…' : 'Enregistrer'}
               </button>

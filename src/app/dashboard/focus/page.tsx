@@ -17,9 +17,10 @@ import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nex
 import { playBookOpen, playBookClose, playStamp, playWhoosh } from '@/lib/sounds'
 import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
 const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: '#C75050',
@@ -113,14 +114,14 @@ function effectiveStepScore(s: StepEntry): Score | null {
   return null
 }
 
-function stepDate(lesson: Lesson, i: number): string {
+function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
-  return dateStrFromOffset(lesson.learn_date, J[i])
+  return dateStrFromOffset(lesson.learn_date, j[i])
 }
 
-function getLastScore(lesson: Lesson): Score | null {
+function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = J.length - 1; i >= 0; i--) {
+  for (let i = j.length - 1; i >= 0; i--) {
     const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
@@ -137,15 +138,15 @@ function lessonPostpones(l: Lesson): Record<string, string> {
   return p && typeof p === 'object' ? (p as Record<string, string>) : {}
 }
 
-function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
+function getDueForToday(lesson: Lesson, today: string, j: number[] = DEFAULT_J): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
   const skips = lessonSkips(lesson)
   const postpones = lessonPostpones(lesson)
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     if (stepScore(steps[i])) continue
     if (skips.includes(i)) continue
-    const dd = postpones[String(i)] ?? stepDate(lesson, i)
+    const dd = postpones[String(i)] ?? stepDate(lesson, i, j)
     if (dd <= today) {
       return {
         stepIndex: i,
@@ -159,20 +160,21 @@ function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
   return null
 }
 
-function getNextUndoneJ(lesson: Lesson): number | null {
+function getNextUndoneJ(lesson: Lesson, j: number[] = DEFAULT_J): number | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     if (!stepScore(steps[i])) return i
   }
   return null
 }
 
-function computeTodayQueue(lessons: Lesson[], today: string): QueueItem[] {
+function computeTodayQueue(lessons: Lesson[], today: string, schedOf: (id: string | null | undefined) => number[]): QueueItem[] {
   const out: QueueItem[] = []
   lessons.forEach(l => {
-    const due = getDueForToday(l, today)
+    const j = schedOf(l.system_id)
+    const due = getDueForToday(l, today, j)
     if (!due) return
-    const lastScore = getLastScore(l)
+    const lastScore = getLastScore(l, j)
     let priority: number
     if (due.status === 'missed') {
       priority = -due.overdueDays * 100 + (lastScore ?? 3) * 10
@@ -184,7 +186,7 @@ function computeTodayQueue(lessons: Lesson[], today: string): QueueItem[] {
     out.push({ lesson: l, due, lastScore, priority })
   })
   // Ordre de révision : palier J croissant (plus petit J d'abord).
-  return out.sort((a, b) => J[a.due.stepIndex] - J[b.due.stepIndex])
+  return out.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
 }
 
 function buildQueue(
@@ -195,6 +197,7 @@ function buildQueue(
   lessonsParam: string | null,
   today: string
 ): QueueItem[] {
+  const schedOf = makeScheduleResolver(systems)
   // 0) Mode "retravailler multi" : si ?lessons=id1,id2,id3 fourni, on construit
   //    une queue UNIQUEMENT de ces fiches, chacune sur son prochain J non noté
   //    avec status: 'fresh'. Le focus utilisera cette info pour écrire en
@@ -205,12 +208,12 @@ function buildQueue(
     for (const id of ids) {
       const l = lessons.find(x => x.id === id)
       if (!l) continue
-      let due: DueInfo | null = getDueForToday(l, today)
+      let due: DueInfo | null = getDueForToday(l, today, schedOf(l.system_id))
       if (!due) {
-        const idx = getNextUndoneJ(l)
+        const idx = getNextUndoneJ(l, schedOf(l.system_id))
         if (idx !== null) {
           if (l.learn_date) {
-            const dd = stepDate(l, idx)
+            const dd = stepDate(l, idx, schedOf(l.system_id))
             due = {
               stepIndex: idx,
               dueDate: dd,
@@ -223,7 +226,7 @@ function buildQueue(
         }
       }
       if (due) {
-        queue.push({ lesson: l, due, lastScore: getLastScore(l), priority: -1 })
+        queue.push({ lesson: l, due, lastScore: getLastScore(l, schedOf(l.system_id)), priority: -1 })
       }
     }
     return queue
@@ -234,7 +237,7 @@ function buildQueue(
   let baseQueue: QueueItem[]
   if (systemParam) {
     const sysLessons = lessons.filter(l => l.system_id === systemParam)
-    baseQueue = computeTodayQueue(sysLessons, today)
+    baseQueue = computeTodayQueue(sysLessons, today, schedOf)
   } else {
     const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
     const sem: 1 | 2 | 'year' = semRaw === '1' ? 1 : semRaw === 'year' ? 'year' : 2
@@ -245,7 +248,7 @@ function buildQueue(
           const sys = systems.find(s => s.id === l.system_id)
           return sys?.semestre === sem
         })
-    baseQueue = computeTodayQueue(semLessons, today)
+    baseQueue = computeTodayQueue(semLessons, today, schedOf)
   }
 
   // 2) Si une fiche précise est demandée (?lesson=), on la place en première position
@@ -262,12 +265,12 @@ function buildQueue(
       // on la prepend avec un DueInfo synthétique sur le prochain J non noté.
       const l = lessons.find(x => x.id === lessonParam)
       if (l) {
-        let due: DueInfo | null = getDueForToday(l, today)
+        let due: DueInfo | null = getDueForToday(l, today, schedOf(l.system_id))
         if (!due) {
-          const idx = getNextUndoneJ(l)
+          const idx = getNextUndoneJ(l, schedOf(l.system_id))
           if (idx !== null) {
             if (l.learn_date) {
-              const dd = stepDate(l, idx)
+              const dd = stepDate(l, idx, schedOf(l.system_id))
               due = {
                 stepIndex: idx,
                 dueDate: dd,
@@ -280,7 +283,7 @@ function buildQueue(
           }
         }
         if (due) {
-          baseQueue.unshift({ lesson: l, due, lastScore: getLastScore(l), priority: -1 })
+          baseQueue.unshift({ lesson: l, due, lastScore: getLastScore(l, schedOf(l.system_id)), priority: -1 })
         }
       }
     }
@@ -856,7 +859,8 @@ function FocusPageBody() {
     const atMs = Math.max(0, Date.now() - startedAt)
 
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-    while (J.length > newSteps.length) newSteps.push(null)
+    const rateJ = scheduleOf(systems.find(s => s.id === current.lesson.system_id))
+    while (rateJ.length > newSteps.length) newSteps.push(null)
     // Si le J n'est pas encore dû (status: 'fresh'), on écrit un score TEMPORAIRE
     // qui ne touche ni le calendrier ni les helpers (stepScore ne lit que .score).
     // Sinon (today/missed), c'est le score officiel : il remplace tout temp.
@@ -959,7 +963,8 @@ function FocusPageBody() {
     // Si on bascule rated → reported, on efface la note en DB pour rester cohérent
     if (wasRated) {
       const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-      while (J.length > newSteps.length) newSteps.push(null)
+      const reportJ = scheduleOf(systems.find(s => s.id === current.lesson.system_id))
+      while (reportJ.length > newSteps.length) newSteps.push(null)
       newSteps[current.due.stepIndex] = null
       await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
     }
@@ -980,7 +985,7 @@ function FocusPageBody() {
     }
 
     setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName, startedAt])
+  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName, startedAt, systems])
 
   // ============ Navigation ============
   const goPrev = useCallback(() => {
@@ -1316,20 +1321,21 @@ function FocusPageBody() {
   const completedCount = results.filter(r => r !== null).length
   // (progression affichée via le chip Fiche x/y de la topbar)
   const sysColor = (currentSystem as { color?: string } | undefined)?.color || '#2D6A4F'
+  const sysJ = scheduleOf(currentSystem)
   const allFilled = completedCount === total
 
   let statusLabel = ''
   let statusCls: 'missed' | 'today' | 'fresh' = 'today'
   if (current.due.status === 'missed') {
-    statusLabel = `J+${J[current.due.stepIndex]} manqué depuis ${current.due.overdueDays} j`
+    statusLabel = `J+${sysJ[current.due.stepIndex]} manqué depuis ${current.due.overdueDays} j`
     statusCls = 'missed'
   } else if (current.due.status === 'fresh') {
-    statusLabel = `J+${J[current.due.stepIndex]} · planification libre`
+    statusLabel = `J+${sysJ[current.due.stepIndex]} · planification libre`
     statusCls = 'fresh'
   } else {
     statusLabel = current.lastScore === null && current.due.stepIndex === 0
       ? `J+0 · nouvelle fiche`
-      : `J+${J[current.due.stepIndex]} dû aujourd’hui`
+      : `J+${sysJ[current.due.stepIndex]} dû aujourd’hui`
     statusCls = 'today'
   }
 

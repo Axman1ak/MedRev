@@ -7,6 +7,10 @@ export interface System {
   cal_hidden: boolean
   semestre: number   // ← ajouté : 1 ou 2
   created_at: string
+  color?: string | null            // ← couleur de matière (picker)
+  // ← ajouté 2026-06 : planning de révision personnalisable par matière.
+  // Tableau de décalages en jours depuis learn_date. Null/absent = planning standard.
+  schedule?: number[] | null
 }
 export interface StepEntry {
   score: number  // 1-5 — score officiel posé le jour J
