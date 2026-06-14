@@ -135,6 +135,7 @@ export interface Lesson {
   name: string
   learn_date: string | null
   steps: (StepEntry | null)[]  // length 14
+  model3d?: string | null   // ← URL .glb du modèle 3D associé à la fiche (override manuel)
   ai_questions: AiQuestion[]
   flashcards?: Flashcard[]     // ← ajouté 2026-06 : cartes recto/verso maison
   chapter?: string | null      // ← ajouté 2026-06 : chapitre libre (sous-matière légère)

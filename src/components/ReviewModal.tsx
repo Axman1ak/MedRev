@@ -11,6 +11,8 @@ import type { Lesson, LessonMedia } from '@/types'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import { DEFAULT_J } from '@/lib/schedule'
+import Model3D from '@/components/Model3D'
+import { resolveModel, modelByUrl, MODEL_CATALOG } from '@/lib/anatomyModels'
 import './review-modal.css'
 
 type Score = 1 | 2 | 3 | 4 | 5
@@ -164,6 +166,7 @@ export default function ReviewModal({
   const [stepIdx, setStepIdx] = useState<number | null>(initialStepIdx)
   const [loading, setLoading] = useState(false)
   const [justRated, setJustRated] = useState<{ idx: number; score: Score } | null>(null)
+  const [show3D, setShow3D] = useState(false)
 
   // Upload state
   const [uploadingVideo, setUploadingVideo] = useState(false)
@@ -582,6 +585,15 @@ export default function ReviewModal({
   const flashcardsRaw = (lesson as { flashcards?: unknown }).flashcards
   const cartesCount = Array.isArray(flashcardsRaw) ? flashcardsRaw.length : 0
 
+  const autoModel = resolveModel(`${lesson.name} ${systemName}`)
+  const modelUrl = (lesson.model3d && lesson.model3d.trim()) ? lesson.model3d.trim() : (autoModel ? autoModel.url : '')
+  const modelCredit = modelByUrl(modelUrl)?.credit || (autoModel && autoModel.url === modelUrl ? autoModel.credit : '')
+  async function saveModel(url: string) {
+    const v = url.trim() || null
+    await supabase.from('lessons').update({ model3d: v }).eq('id', lesson.id)
+    setLesson(prev => ({ ...prev, model3d: v } as Lesson))
+  }
+
   return (
     <>
     <div className="rmod-overlay" data-tour="review-modal" onClick={onClose}>
@@ -597,23 +609,50 @@ export default function ReviewModal({
               {systemName}
               {lesson.learn_date && <> · appris le {frenchDate(lesson.learn_date)}</>}
             </div>
-            {/anat|histo|embryo|osteo|arthro|myolog|splanchn|neuro|locomoteur|squelette|cardio|respi|thorax/
-              .test(systemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")) && (
-              <a
-                className="rmod-anat-btn"
-                href={`https://sketchfab.com/search?q=${encodeURIComponent(lesson.name + ' anatomy')}&type=models`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
-                title={`Voir « ${lesson.name} » en 3D sur Sketchfab`}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-                Voir en 3D ↗
-              </a>
-            )}
+                        <button
+              type="button"
+              className="rmod-anat-btn"
+              onClick={() => setShow3D(true)}
+              title="Voir cette fiche en 3D"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2.2" /><path d="M12 7.2V15M12 9 7 11M12 9l5 2M12 15l-2.5 5M12 15l2.5 5" /></svg>
+              Vue 3D
+            </button>
           </div>
           <button data-tour="rmod-close" className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
         </div>
+
+        {show3D && (
+          <div className="rmod-3d">
+            <div className="rmod-3d-bar">
+              <button type="button" className="rmod-3d-back" onClick={() => setShow3D(false)}>{'←'} Retour</button>
+              <span className="rmod-3d-title">Vue 3D · {lesson.name}</span>
+            </div>
+            <div className="rmod-3d-stage">
+              {modelUrl
+                ? <Model3D src={modelUrl} alt={lesson.name} />
+                : <div className="rmod-3d-empty">Aucun modèle 3D associé à cette fiche.<br />Choisis-en un ci-dessous, ou colle l&apos;URL d&apos;un fichier .glb.</div>}
+            </div>
+            <div className="rmod-3d-tools">
+              <select
+                className="rmod-3d-select"
+                value={modelByUrl(modelUrl) ? modelUrl : ''}
+                onChange={e => saveModel(e.target.value)}
+              >
+                <option value="">{modelUrl && !modelByUrl(modelUrl) ? 'Modèle personnalisé' : '— Choisir un modèle —'}</option>
+                {MODEL_CATALOG.map(m => <option key={m.key} value={m.url}>{m.label}</option>)}
+              </select>
+              <input
+                className="rmod-3d-url"
+                type="url"
+                placeholder="…ou coller une URL .glb"
+                defaultValue={modelUrl && !modelByUrl(modelUrl) ? modelUrl : ''}
+                onKeyDown={e => { if (e.key === 'Enter') saveModel((e.target as HTMLInputElement).value) }}
+              />
+              {modelCredit && <span className="rmod-3d-credit">{modelCredit}</span>}
+            </div>
+          </div>
+        )}
 
         {/* ---- ÉTAPE 1 : Picker J + Sources + QCM ---- */}
         {stepIdx === null && (
