@@ -668,9 +668,6 @@ export default function ReviewModal({
               })}
             </div>
 
-            <div className="rmod-hint">
-              Clique sur un J pour le noter. Les J futurs sont verrouillés : ils se débloqueront à la bonne date.
-            </div>
 
             {/* ─────────────────────────────────────────────── */}
             {/*  Bloc Sources (vidéo + PDF)                    */}

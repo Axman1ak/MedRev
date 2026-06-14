@@ -25,6 +25,9 @@ const NAV = [
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
   ) },
+  { href: '/dashboard/atlas', label: 'Atlas 3D', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V15M12 9 7 11M12 9l5 2M12 15l-2.5 5M12 15l2.5 5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ) },
 ]
 
 const FAC_NAMES: Record<string, string> = {
