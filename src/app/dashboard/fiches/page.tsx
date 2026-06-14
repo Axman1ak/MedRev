@@ -162,6 +162,7 @@ export default function FichesPage() {
   const [filterNote, setFilterNote] = useState<FilterNote>('all')
   const [filterProgress, setFilterProgress] = useState<FilterProgress>('all')
   const [showDueOnly, setShowDueOnly] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState('')
   const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
 
@@ -180,7 +181,6 @@ export default function FichesPage() {
   const [newLesName, setNewLesName] = useState('')
   const [newLesDate, setNewLesDate] = useState('')
   const [newLesSysId, setNewLesSysId] = useState('')
-  const [newLesChapter, setNewLesChapter] = useState('')
   const [lesLoading, setLesLoading] = useState(false)
   const [lesError, setLesError] = useState<string | null>(null)
 
@@ -192,6 +192,12 @@ export default function FichesPage() {
   type EditTarget = { type: 'system' | 'lesson'; id: string; name: string; semestre?: 1 | 2; chapter?: string } | null
   type DeleteTarget = { type: 'system' | 'lesson'; id: string; name: string; childCount?: number } | null
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
+  // Organisation en chapitres (clic droit + glisser-déposer, façon Finder).
+  const [chapModal, setChapModal] = useState<{ lessonId: string | null } | null>(null)
+  const [newChapInput, setNewChapInput] = useState('')
+  const [pendingChapters, setPendingChapters] = useState<string[]>([])
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditTarget>(null)
   const [editName, setEditName] = useState('')
   const [editChapter, setEditChapter] = useState('')
@@ -266,6 +272,10 @@ export default function FichesPage() {
     return () => document.removeEventListener('mousedown', onClick)
   }, [menuOpenFor])
 
+  // Les chapitres "en attente" (créés mais encore vides) sont propres à la
+  // matière affichée : on les vide quand on change de matière.
+  useEffect(() => { setPendingChapters([]) }, [selectedSystemId])
+
   // ---- Create functions ----
   async function createSystem() {
     if (!userId || !newSysName.trim()) return
@@ -303,7 +313,7 @@ export default function FichesPage() {
     const { data, error } = await supabase.from('lessons').insert({
       user_id: userId, system_id: newLesSysId, name: newLesName.trim(),
       learn_date: newLesDate || today, steps: new Array(scheduleOf(systems.find(s => s.id === newLesSysId)).length).fill(null), ai_questions: [],
-      chapter: newLesChapter.trim() || null,
+      chapter: null,
     }).select().single()
     setLesLoading(false)
     if (error || !data) {
@@ -315,7 +325,7 @@ export default function FichesPage() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('medrev-lesson-created'))
     }
-    setShowNewLesson(false); setNewLesName(''); setNewLesDate(''); setNewLesChapter('')
+    setShowNewLesson(false); setNewLesName(''); setNewLesDate('')
   }
 
   // ---- Review session : ouverture / mise à jour / fermeture ----
@@ -459,6 +469,44 @@ export default function FichesPage() {
       if (c) set.add(c)
     })
     return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }
+
+  // Déplace une fiche vers un chapitre (null = sans chapitre).
+  async function moveLessonToChapter(lessonId: string, chapter: string | null) {
+    const norm = chapter && chapter.trim() ? chapter.trim() : null
+    const { error } = await supabase.from('lessons').update({ chapter: norm }).eq('id', lessonId)
+    if (!error) {
+      setLessons(prev => prev.map(l => l.id === lessonId ? ({ ...l, chapter: norm } as Lesson) : l))
+    } else {
+      console.error('[moveLessonToChapter] échec:', error)
+    }
+  }
+
+  // Chapitres proposés dans le menu d'une fiche : ceux de sa matière (réels +
+  // en attente), sauf le chapitre courant ; on ajoute "Sans chapitre" si la
+  // fiche est déjà rangée (pour pouvoir l'en sortir).
+  function chapterChoicesFor(lesson: Lesson): string[] {
+    const cur = lessonChapter(lesson)
+    const set = new Set<string>(chaptersOfSystem(lesson.system_id))
+    if (lesson.system_id === selectedSystemId) pendingChapters.forEach(c => set.add(c))
+    const names = Array.from(set).filter(c => c && c !== cur).sort((a, b) => a.localeCompare(b))
+    if (cur) names.push('')
+    return names
+  }
+
+  // Valide le modal "Nouveau chapitre" : crée le chapitre (et y déplace la
+  // fiche si le modal a été ouvert depuis une fiche).
+  function confirmChapModal() {
+    if (!chapModal) return
+    const name = newChapInput.trim()
+    if (!name) return
+    if (chapModal.lessonId) {
+      moveLessonToChapter(chapModal.lessonId, name)
+    } else {
+      setPendingChapters(prev => prev.includes(name) ? prev : [...prev, name])
+    }
+    setChapModal(null)
+    setNewChapInput('')
   }
 
   const colorOfSystem = useMemo(() => {
@@ -645,7 +693,19 @@ export default function FichesPage() {
         {/* Filtres dropdowns + stats */}
         {semSystems.length > 0 && (
           <div className="filter-row">
-            <div className="filter-group">
+            <div className="filter-left">
+              <button
+                type="button"
+                className={`filter-toggle${(filterNote !== 'all' || filterProgress !== 'all') ? ' has-active' : ''}`}
+                onClick={() => setShowFilters(v => !v)}
+                aria-expanded={showFilters}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4" /></svg>
+                Filtres
+                {(filterNote !== 'all' || filterProgress !== 'all') && <span className="filter-toggle-dot" aria-hidden="true" />}
+              </button>
+              {showFilters && (
+              <div className="filter-group">
               <label className="filter-block">
                 <span className="filter-label">Dernière note</span>
                 <div className="filter-select-wrap">
@@ -690,6 +750,8 @@ export default function FichesPage() {
                   Réinitialiser
                 </button>
               )}
+              </div>
+              )}
             </div>
             <div className="filter-stats">
               <strong>{visibleLessons.length}</strong> fiche{visibleLessons.length > 1 ? 's' : ''}
@@ -710,11 +772,15 @@ export default function FichesPage() {
                 <div
                   key={lesson.id}
                   data-tour="lesson-card"
-                  className={`card st-${st.cls} clickable`}
+                  className={`card st-${st.cls} clickable${dragId === lesson.id ? ' dragging' : ''}`}
                   onClick={() => openReview(lesson)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openReview(lesson) }}
+                  draggable
+                  onDragStart={e => { setDragId(lesson.id); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', lesson.id) } catch { /* noop */ } }}
+                  onDragEnd={() => { setDragId(null); setDragOverKey(null) }}
+                  onContextMenu={e => { e.preventDefault(); setMenuOpenFor(`les-${lesson.id}`) }}
                   style={{ position: 'relative' }}
                 >
                   <div className="card-accent" />
@@ -734,6 +800,21 @@ export default function FichesPage() {
                     >{'⋯'}</button>
                     {menuOpenFor === `les-${lesson.id}` && (
                       <div className="fi-menu" onClick={e => e.stopPropagation()}>
+                        <div className="fi-menu-label">Déplacer vers</div>
+                        {chapterChoicesFor(lesson).map(ch => (
+                          <button
+                            key={ch || '__none'}
+                            type="button"
+                            className="fi-menu-item"
+                            onClick={() => { moveLessonToChapter(lesson.id, ch || null); setMenuOpenFor(null) }}
+                          >{ch || 'Sans chapitre'}</button>
+                        ))}
+                        <button
+                          type="button"
+                          className="fi-menu-item"
+                          onClick={() => { setChapModal({ lessonId: lesson.id }); setNewChapInput(''); setMenuOpenFor(null) }}
+                        >Nouveau chapitre…</button>
+                        <div className="fi-menu-sep" />
                         <button type="button" className="fi-menu-item" onClick={() => openEdit('lesson', lesson.id, lesson.name)}>
                           Renommer
                         </button>
@@ -777,36 +858,70 @@ export default function FichesPage() {
 
             // Vue "à réviser" (multi-matières) ou matière sans chapitres :
             // grille à plat, comme avant.
-            const hasChapters = !showDueOnly && visibleLessons.some(l => lessonChapter(l) !== '')
+            // Barre d'organisation (bouton + Chapitre) — visible dès qu'une matière
+            // est sélectionnée (hors vue "à réviser").
+            const chapToolbar = (selectedSystem && !showDueOnly) ? (
+              <div className="fi-chap-toolbar">
+                <button
+                  type="button"
+                  className="fi-btn-o fi-chap-add"
+                  onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
+                >+ Chapitre</button>
+                <span className="fi-chap-hint">Clic droit sur une fiche, ou glisse-la dans un chapitre.</span>
+              </div>
+            ) : null
+
+            const hasChapters = !showDueOnly && (visibleLessons.some(l => lessonChapter(l) !== '') || pendingChapters.length > 0)
             if (!hasChapters) {
-              return <div className="fi-grid">{visibleLessons.map(renderCard)}</div>
+              return (
+                <>
+                  {chapToolbar}
+                  <div className="fi-grid">{visibleLessons.map(renderCard)}</div>
+                </>
+              )
             }
 
-            // Regroupe par chapitre (alphabétique), "Sans chapitre" en dernier.
+            // Regroupe par chapitre. Union des chapitres réels + "en attente"
+            // (créés vides). "Sans chapitre" toujours en dernier (cible de retrait).
             const groups = new Map<string, Lesson[]>()
             visibleLessons.forEach(l => {
               const c = lessonChapter(l)
               const arr = groups.get(c)
               if (arr) arr.push(l); else groups.set(c, [l])
             })
-            const chapNames = Array.from(groups.keys()).filter(c => c !== '').sort((a, b) => a.localeCompare(b))
-            if (groups.has('')) chapNames.push('')
+            const nameSet = new Set<string>()
+            groups.forEach((_, k) => { if (k) nameSet.add(k) })
+            pendingChapters.forEach(c => nameSet.add(c))
+            const chapNames = Array.from(nameSet).sort((a, b) => a.localeCompare(b))
+            chapNames.push('')
             return (
-              <div className="fi-chap-sections">
-                {chapNames.map(c => {
-                  const list = groups.get(c) ?? []
-                  return (
-                    <section key={c || '__none'} className="fi-chap-section">
-                      <h2 className="fi-chap-head">
-                        <span className="fi-chap-name">{c || 'Sans chapitre'}</span>
-                        <span className="fi-chap-count">{list.length}</span>
-                        <span className="fi-chap-rule" aria-hidden="true" />
-                      </h2>
-                      <div className="fi-grid">{list.map(renderCard)}</div>
-                    </section>
-                  )
-                })}
-              </div>
+              <>
+                {chapToolbar}
+                <div className="fi-chap-sections">
+                  {chapNames.map(c => {
+                    const key = c || '__none'
+                    const list = groups.get(c) ?? []
+                    return (
+                      <section
+                        key={key}
+                        className={`fi-chap-section${dragOverKey === key ? ' drag-over' : ''}`}
+                        onDragOver={e => { if (dragId) { e.preventDefault(); setDragOverKey(key) } }}
+                        onDragLeave={() => setDragOverKey(k => (k === key ? null : k))}
+                        onDrop={e => { e.preventDefault(); if (dragId) moveLessonToChapter(dragId, c || null); setDragId(null); setDragOverKey(null) }}
+                      >
+                        <h2 className="fi-chap-head">
+                          <span className="fi-chap-name">{c || 'Sans chapitre'}</span>
+                          <span className="fi-chap-count">{list.length}</span>
+                          <span className="fi-chap-rule" aria-hidden="true" />
+                        </h2>
+                        {list.length > 0
+                          ? <div className="fi-grid">{list.map(renderCard)}</div>
+                          : <div className="fi-chap-empty">Glisse des fiches ici</div>}
+                      </section>
+                    )
+                  })}
+                </div>
+              </>
             )
           })()}
 
@@ -927,23 +1042,6 @@ export default function FichesPage() {
                 </option>)}
               </select>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label className="fi-label">Chapitre <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(optionnel)</span></label>
-              <input
-                className="fi-input"
-                type="text"
-                placeholder="ex : Membre supérieur, UE1 chap. 3…"
-                value={newLesChapter}
-                onChange={e => setNewLesChapter(e.target.value)}
-                list="fi-chapters-create"
-              />
-              <datalist id="fi-chapters-create">
-                {chaptersOfSystem(newLesSysId).map(c => <option key={c} value={c} />)}
-              </datalist>
-              <p style={{ fontSize: 11, color: 'var(--gray)', marginTop: 5 }}>
-                Regroupe tes fiches selon le découpage de ta fac ou de ta prépa.
-              </p>
-            </div>
             <div style={{ marginBottom: 4 }}>
               <label className="fi-label">Date d&apos;apprentissage (J0)</label>
               <input className="fi-input" type="date" value={newLesDate} onChange={e => setNewLesDate(e.target.value)} />
@@ -1053,7 +1151,7 @@ export default function FichesPage() {
 
             {editing.type === 'system' && (
               <div className="fi-sched">
-                <label className="fi-label">Paliers de rÃ©vision <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(jours aprÃ¨s l&apos;apprentissage)</span></label>
+                <label className="fi-label">Paliers de révision <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(jours après l&apos;apprentissage)</span></label>
                 <div className="fi-sched-presets">
                   {SCHEDULE_PRESETS.map(pr => {
                     const active = JSON.stringify(normalizeSchedule(editSchedule)) === JSON.stringify(normalizeSchedule(pr.days))
@@ -1105,7 +1203,6 @@ export default function FichesPage() {
                     }}
                   >Ajouter</button>
                 </div>
-                <div className="fi-sched-hint">{normalizeSchedule(editSchedule).length} révisions · modifier reprogramme toutes les fiches de cette matière.</div>
               </div>
             )}
             <div className="fi-modal-actions">
@@ -1118,6 +1215,36 @@ export default function FichesPage() {
               >
                 {editLoading ? 'Enregistrement…' : 'Enregistrer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- MODAL : Nouveau chapitre ---- */}
+      {chapModal && (
+        <div className="fi-overlay" onClick={() => setChapModal(null)}>
+          <div className="fi-modal" onClick={e => e.stopPropagation()}>
+            <div className="fi-modal-title">Nouveau chapitre</div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="fi-label">Nom du chapitre</label>
+              <input
+                className="fi-input"
+                type="text"
+                placeholder="ex : Membre supérieur, UE1 chap. 3…"
+                value={newChapInput}
+                onChange={e => setNewChapInput(e.target.value)}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter' && newChapInput.trim()) confirmChapModal() }}
+              />
+            </div>
+            <div className="fi-modal-actions">
+              <button className="fi-btn-o" onClick={() => setChapModal(null)}>Annuler</button>
+              <button
+                className="fi-btn-g"
+                onClick={confirmChapModal}
+                disabled={!newChapInput.trim()}
+                style={{ opacity: newChapInput.trim() ? 1 : .5 }}
+              >Créer</button>
             </div>
           </div>
         </div>
