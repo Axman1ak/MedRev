@@ -704,6 +704,13 @@ export default function FichesPage() {
                 Filtres
                 {(filterNote !== 'all' || filterProgress !== 'all') && <span className="filter-toggle-dot" aria-hidden="true" />}
               </button>
+              {selectedSystem && !showDueOnly && (
+                <button
+                  type="button"
+                  className="fi-btn-o fi-chap-add"
+                  onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
+                >+ Chapitre</button>
+              )}
               {showFilters && (
               <div className="filter-group">
               <label className="filter-block">
@@ -858,24 +865,10 @@ export default function FichesPage() {
 
             // Vue "à réviser" (multi-matières) ou matière sans chapitres :
             // grille à plat, comme avant.
-            // Barre d'organisation (bouton + Chapitre) — visible dès qu'une matière
-            // est sélectionnée (hors vue "à réviser").
-            const chapToolbar = (selectedSystem && !showDueOnly) ? (
-              <div className="fi-chap-toolbar">
-                <button
-                  type="button"
-                  className="fi-btn-o fi-chap-add"
-                  onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
-                >+ Chapitre</button>
-                <span className="fi-chap-hint">Clic droit sur une fiche, ou glisse-la dans un chapitre.</span>
-              </div>
-            ) : null
-
             const hasChapters = !showDueOnly && (visibleLessons.some(l => lessonChapter(l) !== '') || pendingChapters.length > 0)
             if (!hasChapters) {
               return (
                 <>
-                  {chapToolbar}
                   <div className="fi-grid">{visibleLessons.map(renderCard)}</div>
                 </>
               )
@@ -896,7 +889,6 @@ export default function FichesPage() {
             chapNames.push('')
             return (
               <>
-                {chapToolbar}
                 <div className="fi-chap-sections">
                   {chapNames.map(c => {
                     const key = c || '__none'

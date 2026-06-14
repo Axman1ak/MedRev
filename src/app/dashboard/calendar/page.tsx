@@ -541,7 +541,6 @@ export default function CalendarPage() {
                 <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" strokeLinecap="round" strokeLinejoin="round"/>
                 <rect x="6" y="14" width="12" height="7" rx="1"/>
               </svg>
-              Imprimer
             </button>
           )}
         </div>
@@ -746,14 +745,12 @@ export default function CalendarPage() {
       {/* LEGEND */}
       {hasAnyLesson && (
         <div className="cal-legend">
-          <span><strong>Point</strong> = note de la révision (ou dernière note de la fiche).</span>
           <span className="cal-legend-item"><span className="cal-legend-dot s1" />1</span>
           <span className="cal-legend-item"><span className="cal-legend-dot s2" />2</span>
           <span className="cal-legend-item"><span className="cal-legend-dot s3" />3</span>
           <span className="cal-legend-item"><span className="cal-legend-dot s4" />4</span>
           <span className="cal-legend-item"><span className="cal-legend-dot s5" />5</span>
           <span className="cal-legend-item"><span className="cal-legend-dot cal-none" />jamais notée</span>
-          <span className="cal-legend-hint">Clic sur une ligne → picker J + notation.</span>
         </div>
       )}
 

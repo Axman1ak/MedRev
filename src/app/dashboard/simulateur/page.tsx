@@ -789,9 +789,6 @@ export default function SimulateurPage() {
         <div className="sim-header">
           <div>
             <h1 className="sim-title">Simulateur d&apos;<em>examen</em></h1>
-            <div className="sim-sub">
-              Multi-matières · chronométré · corrigé. Une décision par étape, puis on lance.
-            </div>
           </div>
         </div>
 
@@ -820,12 +817,6 @@ export default function SimulateurPage() {
               <div className="sim-wiz-q">Quoi réviser ?</div>
 
               <div className="sim-wiz-mat-head">
-                <span className="sim-wiz-mat-count">
-                  {nbMatieres} matière{nbMatieres > 1 ? 's' : ''}
-                  {totalAvailable > 0 ? ` · ${totalAvailable} question${totalAvailable > 1 ? 's' : ''}` : ''}
-                  {' · '}
-                  <em>déplie une matière pour cibler des fiches (sinon : toutes)</em>
-                </span>
                 <button
                   type="button"
                   className="sim-wiz-link"
