@@ -364,11 +364,9 @@ export default function SimulateurPage() {
   }, [lessons, selectedSysIds, selectedLessonIds, systems])
 
   // ---- Annales : dérivées ----
-  // Annales des matières sélectionnées à l'étape 1.
-  const semAnnales = useMemo(
-    () => annales.filter(a => selectedSysIds.has(a.system_id)),
-    [annales, selectedSysIds]
-  )
+  // Un PDF d'annale couvre souvent plusieurs matières : on ne filtre donc PAS
+  // par matière. Toutes les annales de l'élève sont disponibles pour le simulateur.
+  const semAnnales = useMemo(() => annales, [annales])
 
   // Sélection par défaut : toutes les annales prêtes des matières choisies.
   useEffect(() => {
@@ -381,11 +379,10 @@ export default function SimulateurPage() {
 
   // Matière par défaut pour l'upload d'une nouvelle annale.
   useEffect(() => {
-    if (!annaleSysId || !selectedSysIds.has(annaleSysId)) {
-      const first = semSystems.find(s => selectedSysIds.has(s.id))
-      setAnnaleSysId(first?.id ?? '')
+    if (!annaleSysId) {
+      setAnnaleSysId(semSystems[0]?.id ?? systems[0]?.id ?? '')
     }
-  }, [selectedSysIds, semSystems, annaleSysId])
+  }, [semSystems, systems, annaleSysId])
 
   const annalesPool = useMemo<Question[]>(() => {
     const out: Question[] = []
@@ -523,7 +520,7 @@ export default function SimulateurPage() {
         return
       }
     }
-    const sysId = annaleSysId || Array.from(selectedSysIds)[0] || ''
+    const sysId = annaleSysId || semSystems[0]?.id || systems[0]?.id || ''
     if (!sysId) {
       setAnnalesError("Sélectionne au moins une matière avant d'ajouter une annale.")
       return
@@ -1396,8 +1393,8 @@ export default function SimulateurPage() {
                     )}
                   </div>
                   {q.lessonId && (
-                    <a className="sim-ses-explain-link" href={`/dashboard/fiches?lesson=${q.lessonId}`}>
-                      Voir cette fiche →
+                    <a className="sim-ses-explain-link" href={`/dashboard/fiches?lesson=${q.lessonId}`} target="_blank" rel="noopener noreferrer">
+                      Voir cette fiche ↗
                     </a>
                   )}
                 </div>

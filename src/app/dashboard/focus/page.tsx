@@ -1159,10 +1159,6 @@ function FocusPageBody() {
                     )
                   })()}
                 </div>
-                <div className="fg-hint">
-                  1 fiche notée = 1 livre · clique un livre pour l&apos;ouvrir ·
-                  les trésors se dévoilent sur tes étagères, le premier à 100 livres
-                </div>
               </div>
               <Link href="/dashboard" className="focus-link">{'←'} Retour au tableau de bord</Link>
             </div>
