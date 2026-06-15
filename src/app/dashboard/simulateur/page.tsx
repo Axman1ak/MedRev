@@ -1423,8 +1423,8 @@ export default function SimulateurPage() {
                     return (
                       <button type="button" className="sim-ses-explain-link" onClick={() => setShowSource(sr as AiQuestionSourceRef)}>
                         {sr.pdf_page !== undefined && md && md.pdf_path
-                          ? `Voir page ${sr.pdf_page}`
-                          : `Voir la vidéo à ${formatTs(sr.video_ts ?? 0)}`}
+                          ? `Voir page ${sr.pdf_page} ↗`
+                          : `Voir la vidéo à ${formatTs(sr.video_ts ?? 0)} ↗`}
                       </button>
                     )
                   })()}

@@ -594,8 +594,8 @@ export default function QcmSessionPage() {
                   onClick={() => setShowSource(sourceRef)}
                 >
                   {sourceRef.pdf_page !== undefined && media.pdf_path
-                    ? `Voir page ${sourceRef.pdf_page}`
-                    : `Voir la vidéo à ${formatTs(sourceRef.video_ts ?? 0)}`}
+                    ? `Voir page ${sourceRef.pdf_page} ↗`
+                    : `Voir la vidéo à ${formatTs(sourceRef.video_ts ?? 0)} ↗`}
                 </button>
               </div>
             )}
