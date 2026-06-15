@@ -17,16 +17,43 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 const FACS = [
+  // Facs avec configuration détaillée des matières (mineures PASS)
   { id: 'sorbonne', name: 'Sorbonne Université', badge: 'Paris 6', hasOptions: true },
   { id: 'paris-cite', name: 'Université Paris Cité', badge: 'Paris 5', hasOptions: true },
   { id: 'sorbonne-paris-nord', name: 'Sorbonne Paris Nord', badge: 'Paris 13', hasOptions: true },
-  // UPEC : seule fac d'IDF sans PASS, propose uniquement LAS/LSPS.
-  // Du coup pas de choix de "mineure disciplinaire" au sens PASS — on
-  // pré-config un set neutre de matières santé.
-  { id: 'upec', name: 'UPEC Créteil', badge: 'Créteil', hasOptions: false },
   { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: true },
   { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: true },
-  { id: 'autre', name: 'Autre faculté', badge: 'Autre', hasOptions: false },
+  // Île-de-France (matières par défaut)
+  { id: 'upec', name: 'UPEC — Paris-Est Créteil', badge: 'Créteil', hasOptions: false },
+  { id: 'paris-saclay', name: 'Université Paris-Saclay', badge: 'Saclay', hasOptions: false },
+  { id: 'uvsq', name: 'UVSQ — Simone Veil (Paris-Saclay)', badge: 'Versailles', hasOptions: false },
+  // Autres facs (matières par défaut, personnalisables ensuite dans l'app)
+  { id: 'aix-marseille', name: "Aix-Marseille Université", badge: 'Marseille', hasOptions: false },
+  { id: 'amiens', name: "Université de Picardie Jules Verne", badge: 'Amiens', hasOptions: false },
+  { id: 'angers', name: "Université d'Angers", badge: 'Angers', hasOptions: false },
+  { id: 'besancon', name: "Université de Franche-Comté", badge: 'Besançon', hasOptions: false },
+  { id: 'bordeaux', name: "Université de Bordeaux", badge: 'Bordeaux', hasOptions: false },
+  { id: 'brest', name: "Université de Bretagne Occidentale", badge: 'Brest', hasOptions: false },
+  { id: 'caen', name: "Université de Caen Normandie", badge: 'Caen', hasOptions: false },
+  { id: 'clermont', name: "Université Clermont Auvergne", badge: 'Clermont-Fd', hasOptions: false },
+  { id: 'dijon', name: "Université de Bourgogne", badge: 'Dijon', hasOptions: false },
+  { id: 'grenoble', name: "Université Grenoble Alpes", badge: 'Grenoble', hasOptions: false },
+  { id: 'lille', name: "Université de Lille", badge: 'Lille', hasOptions: false },
+  { id: 'limoges', name: "Université de Limoges", badge: 'Limoges', hasOptions: false },
+  { id: 'nancy', name: "Université de Lorraine", badge: 'Nancy', hasOptions: false },
+  { id: 'nantes', name: "Nantes Université", badge: 'Nantes', hasOptions: false },
+  { id: 'nice', name: "Université Côte d'Azur", badge: 'Nice', hasOptions: false },
+  { id: 'poitiers', name: "Université de Poitiers", badge: 'Poitiers', hasOptions: false },
+  { id: 'reims', name: "Université de Reims (URCA)", badge: 'Reims', hasOptions: false },
+  { id: 'rennes', name: "Université de Rennes", badge: 'Rennes', hasOptions: false },
+  { id: 'rouen', name: "Université de Rouen Normandie", badge: 'Rouen', hasOptions: false },
+  { id: 'saint-etienne', name: "Université Jean Monnet", badge: 'St-Étienne', hasOptions: false },
+  { id: 'strasbourg', name: "Université de Strasbourg", badge: 'Strasbourg', hasOptions: false },
+  { id: 'toulouse', name: "Université Toulouse III - Paul Sabatier", badge: 'Toulouse', hasOptions: false },
+  { id: 'tours', name: "Université de Tours", badge: 'Tours', hasOptions: false },
+  { id: 'antilles', name: "Université des Antilles", badge: 'Antilles', hasOptions: false },
+  { id: 'la-reunion', name: "Université de La Réunion", badge: 'La Réunion', hasOptions: false },
+  { id: 'autre', name: "Autre / Je ne sais pas encore", badge: 'Autre', hasOptions: false },
 ]
 
 // =============================================================
