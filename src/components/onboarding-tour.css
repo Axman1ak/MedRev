@@ -12,7 +12,7 @@
   inset: 0;
   z-index: 9000;
   pointer-events: none;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-hanken), system-ui, sans-serif;
   color: var(--text-primary);
 }
 
@@ -26,7 +26,7 @@
   border-radius: 12px;
   box-shadow:
     0 0 0 4px rgba(122, 165, 107, 0.22),
-    0 0 30px 6px rgba(27, 67, 50, 0.35);
+    0 0 30px 6px rgba(27, 58, 91, 0.35);
   pointer-events: none;
   animation: ont-pulse 2.4s ease-in-out infinite;
   transition:
@@ -40,20 +40,20 @@
   box-shadow:
     0 0 0 9999px rgba(17, 19, 16, 0.32),
     0 0 0 4px rgba(122, 165, 107, 0.22),
-    0 0 30px 6px rgba(27, 67, 50, 0.35);
+    0 0 30px 6px rgba(27, 58, 91, 0.35);
 }
 
 @keyframes ont-pulse {
   0%, 100% {
     box-shadow:
       0 0 0 4px rgba(122, 165, 107, 0.22),
-      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 30px 6px rgba(27, 58, 91, 0.35),
       0 0 0 0 rgba(122, 165, 107, 0.45);
   }
   50% {
     box-shadow:
       0 0 0 4px rgba(122, 165, 107, 0.22),
-      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 30px 6px rgba(27, 58, 91, 0.35),
       0 0 0 18px rgba(122, 165, 107, 0);
   }
 }
@@ -67,14 +67,14 @@
     box-shadow:
       0 0 0 9999px rgba(17, 19, 16, 0.32),
       0 0 0 4px rgba(122, 165, 107, 0.22),
-      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 30px 6px rgba(27, 58, 91, 0.35),
       0 0 0 0 rgba(122, 165, 107, 0.45);
   }
   50% {
     box-shadow:
       0 0 0 9999px rgba(17, 19, 16, 0.32),
       0 0 0 4px rgba(122, 165, 107, 0.22),
-      0 0 30px 6px rgba(27, 67, 50, 0.35),
+      0 0 30px 6px rgba(27, 58, 91, 0.35),
       0 0 0 18px rgba(122, 165, 107, 0);
   }
 }
@@ -118,7 +118,7 @@
 }
 
 .ont-tip-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 19px;
   letter-spacing: -0.01em;
@@ -142,7 +142,7 @@
 /* Mention Premium — encart accent ambre */
 .ont-premium-note {
   display: block;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13px;
   color: var(--text-secondary);
@@ -157,7 +157,7 @@
 .ont-premium-note strong {
   color: var(--warning);
   font-weight: 600;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-style: normal;
   font-size: 12px;
   text-transform: uppercase;
@@ -168,7 +168,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13px;
   color: var(--text-secondary);
@@ -217,7 +217,7 @@
   color: var(--bg-card);
   border: 1px solid var(--accent-primary);
   padding: 8px 14px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 12.5px;
   border-radius: 8px;
@@ -240,7 +240,7 @@
   color: var(--text-secondary);
   border: 1px solid transparent;
   padding: 8px 10px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 500;
   font-size: 12px;
   border-radius: 8px;
@@ -322,7 +322,7 @@
 }
 
 .ont-celebration-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-weight: 500;
   font-size: 34px;
   letter-spacing: -0.02em;
@@ -363,18 +363,18 @@
   top: -20px;
   width: 9px;
   height: 14px;
-  background: #1B4332;
+  background: #1B3A5B;
   border-radius: 2px;
   animation: ont-confetti-fall 4s linear infinite;
   opacity: 0.9;
 }
 
-.ont-confetti-piece.c-0 { background: #1B4332; }
+.ont-confetti-piece.c-0 { background: #1B3A5B; }
 .ont-confetti-piece.c-1 { background: #C47B2B; }
 .ont-confetti-piece.c-2 { background: #7AA56B; }
 .ont-confetti-piece.c-3 { background: #D9B24A; }
 .ont-confetti-piece.c-4 { background: #C75050; }
-.ont-confetti-piece.c-5 { background: #2D6A4F; }
+.ont-confetti-piece.c-5 { background: #2C5F8A; }
 
 @keyframes ont-confetti-fall {
   0% {

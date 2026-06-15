@@ -8,9 +8,10 @@ import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Conditions Générales d\'Utilisation — MedRev',
+  title: 'Conditions Générales d\'Utilisation · MedRev',
   description: 'CGU de MedRev : éditeur, objet, inscription, tarifs, résiliation, propriété intellectuelle, responsabilité, droit applicable.',
 }
 
@@ -20,10 +21,10 @@ export default function CguPage() {
       <MarketingNav />
 
       <div className="legal-wrap">
-        <div className="legal-header">
-          <div className="legal-kicker">Conditions générales</div>
-          <h1 className="legal-h1">Conditions Générales d&apos;<em>Utilisation</em></h1>
-          <p className="legal-meta">En vigueur depuis le 8 mai 2026</p>
+        <div className="legal-header ln-subhero">
+          <span className="ln-kicker">Conditions générales</span>
+          <h1 className="ln-subhero-h1">Conditions Générales d&apos;<em>Utilisation</em></h1>
+          <p className="ln-subhero-meta">En vigueur depuis le 8 mai 2026</p>
         </div>
 
         <section className="legal-section">
@@ -34,7 +35,7 @@ export default function CguPage() {
 
         <section className="legal-section">
           <h2 className="legal-h2">2. Objet</h2>
-          <p>MedRev est une application web destinée aux étudiants en première année des études de santé (PASS / LAS) pour organiser leurs révisions, générer des QCM à partir de leurs cours par intelligence artificielle, et suivre leur progression.</p>
+          <p>MedRev est une application web destinée aux étudiants en première année des études de santé (PASS / LAS, puis voie unique à partir de la rentrée 2027) pour organiser leurs révisions, générer des QCM à partir de leurs cours par intelligence artificielle, et suivre leur progression.</p>
           <p>L&apos;utilisation du Service est soumise aux présentes Conditions Générales d&apos;Utilisation. L&apos;inscription vaut acceptation pleine et entière.</p>
         </section>
 

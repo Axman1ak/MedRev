@@ -10,9 +10,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia } from '@/types'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
+import { DEFAULT_J } from '@/lib/schedule'
 import './review-modal.css'
-
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
 
 type Score = 1 | 2 | 3 | 4 | 5
 type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
@@ -36,19 +35,19 @@ function stepScore(s: StepEntry): Score | null {
   return null
 }
 
-function stepDate(lesson: Lesson, i: number): string {
+function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
   const d = new Date(lesson.learn_date + 'T12:00:00')
-  d.setDate(d.getDate() + J[i])
+  d.setDate(d.getDate() + j[i])
   return d.toISOString().split('T')[0]
 }
 
-function getStampState(lesson: Lesson, i: number, today: string): StampState {
+function getStampState(lesson: Lesson, i: number, today: string, j: number[] = DEFAULT_J): StampState {
   const steps = (lesson.steps as StepEntry[]) || []
   const sc = stepScore(steps[i])
   if (sc) return { kind: 'score', score: sc }
   if (!lesson.learn_date) return { kind: 'future' }
-  const ds = stepDate(lesson, i)
+  const ds = stepDate(lesson, i, j)
   if (ds === today) return { kind: 'today' }
   if (ds < today) return { kind: 'missed' }
   return { kind: 'future' }
@@ -56,6 +55,22 @@ function getStampState(lesson: Lesson, i: number, today: string): StampState {
 
 function frenchDate(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
+// Reporter / Annuler un palier (colonnes lessons.skips / lessons.postpones — ne
+// touchent pas steps, donc moyennes/tampons/stats restent intacts).
+function lessonSkips(l: Lesson): number[] {
+  const s = (l as { skips?: unknown }).skips
+  return Array.isArray(s) ? (s as number[]) : []
+}
+function lessonPostpones(l: Lesson): Record<string, string> {
+  const p = (l as { postpones?: unknown }).postpones
+  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
+}
+function tomorrowOf(today: string): string {
+  const t = new Date(today + 'T12:00:00')
+  t.setDate(t.getDate() + 1)
+  return t.toISOString().split('T')[0]
 }
 
 // Durée en hMM ou MM min
@@ -124,6 +139,8 @@ function getExt(name: string, fallback = 'bin'): string {
 interface ReviewModalProps {
   lesson: Lesson
   systemName?: string
+  /** Planning de révision de la matière (paliers J). Défaut = planning standard. */
+  schedule?: number[]
   /** Ouvre directement en notation sur ce J (pratique depuis le calendrier). null = picker. */
   initialStepIdx?: number | null
   onClose: () => void
@@ -135,10 +152,12 @@ interface ReviewModalProps {
 export default function ReviewModal({
   lesson: initialLesson,
   systemName = '',
+  schedule = DEFAULT_J,
   initialStepIdx = null,
   onClose,
   onUpdated,
 }: ReviewModalProps) {
+  const j = schedule
   const supabase = createClient()
   const router = useRouter()
   const [lesson, setLesson] = useState<Lesson>(initialLesson)
@@ -210,7 +229,7 @@ export default function ReviewModal({
 
   function selectStep(idx: number) {
     if (!lesson.learn_date) return
-    const ds = stepDate(lesson, idx)
+    const ds = stepDate(lesson, idx, j)
     if (ds > today) return
     setStepIdx(idx)
     setJustRated(null)
@@ -220,7 +239,7 @@ export default function ReviewModal({
     if (stepIdx === null) return
     setLoading(true)
     const newSteps = [...((lesson.steps as StepEntry[]) || [])]
-    while (newSteps.length < J.length) newSteps.push(null)
+    while (newSteps.length < j.length) newSteps.push(null)
     newSteps[stepIdx] = { score, date: today }
 
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', lesson.id)
@@ -234,6 +253,32 @@ export default function ReviewModal({
     setStepIdx(null)
   }
 
+  // Reporter ce palier à demain (sort de la liste « à faire », réapparaît demain).
+  async function postponeCurrent() {
+    if (stepIdx === null) return
+    setLoading(true)
+    const postpones = { ...lessonPostpones(lesson), [String(stepIdx)]: tomorrowOf(today) }
+    await supabase.from('lessons').update({ postpones }).eq('id', lesson.id)
+    const updated = { ...lesson, postpones } as Lesson
+    setLesson(updated)
+    if (onUpdated) onUpdated(updated)
+    setLoading(false)
+    onClose()
+  }
+
+  // Annuler ce palier (sauté, sans pénaliser la moyenne).
+  async function skipCurrent() {
+    if (stepIdx === null) return
+    setLoading(true)
+    const skips = Array.from(new Set([...lessonSkips(lesson), stepIdx]))
+    await supabase.from('lessons').update({ skips }).eq('id', lesson.id)
+    const updated = { ...lesson, skips } as Lesson
+    setLesson(updated)
+    if (onUpdated) onUpdated(updated)
+    setLoading(false)
+    onClose()
+  }
+
   // ============================================================
   //  Upload / remplacement / suppression de médias
   // ============================================================
@@ -241,7 +286,7 @@ export default function ReviewModal({
     setUploadError(null)
     const userId = lesson.user_id
     if (!userId) {
-      setUploadError("Impossible d'identifier l'utilisateur — recharge la page.")
+      setUploadError("Impossible d'identifier l'utilisateur. Recharge la page.")
       return
     }
 
@@ -437,6 +482,11 @@ export default function ReviewModal({
     router.push(`/dashboard/fiches/${lesson.id}/qcm`)
   }
 
+  function openCartes() {
+    onClose()
+    router.push(`/dashboard/fiches/${lesson.id}/cartes`)
+  }
+
   async function generateQcms(mode: 'replace' | 'append' = 'replace') {
     setGenError(null)
     setGenInfo(null)
@@ -527,6 +577,11 @@ export default function ReviewModal({
   const aiQuestions: unknown[] = Array.isArray(lesson.ai_questions) ? lesson.ai_questions : []
   const qcmCount = aiQuestions.length
 
+  // Flashcards maison (colonne lessons.flashcards, jsonb). Accès défensif :
+  // la colonne peut être absente sur de vieilles rows pas encore re-fetchées.
+  const flashcardsRaw = (lesson as { flashcards?: unknown }).flashcards
+  const cartesCount = Array.isArray(flashcardsRaw) ? flashcardsRaw.length : 0
+
   return (
     <>
     <div className="rmod-overlay" data-tour="review-modal" onClick={onClose}>
@@ -546,20 +601,21 @@ export default function ReviewModal({
           <button data-tour="rmod-close" className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
         </div>
 
+
         {/* ---- ÉTAPE 1 : Picker J + Sources + QCM ---- */}
         {stepIdx === null && (
           <>
             {justRated && (
               <div className="rmod-toast">
                 <span className={`rmod-toast-dot s${justRated.score}`} />
-                Note {justRated.score}/5 enregistrée pour J+{J[justRated.idx]}
+                Note {justRated.score}/5 enregistrée pour J+{j[justRated.idx]}
               </div>
             )}
 
             <div className="rmod-jpicker" data-tour="picker-j">
-              {J.map((jVal, i) => {
-                const s = getStampState(lesson, i, today)
-                const ds = lesson.learn_date ? stepDate(lesson, i) : ''
+              {j.map((jVal, i) => {
+                const s = getStampState(lesson, i, today, j)
+                const ds = lesson.learn_date ? stepDate(lesson, i, j) : ''
                 const isFuture = s.kind === 'future' && ds !== '' && ds > today
                 const isLocked = isFuture || !lesson.learn_date
 
@@ -585,7 +641,7 @@ export default function ReviewModal({
                     className={`rmod-jstep${isLocked ? ' locked' : ''}`}
                     disabled={isLocked}
                     onClick={() => selectStep(i)}
-                    title={isLocked ? 'Révision future — verrouillée' : `Noter J+${jVal}`}
+                    title={isLocked ? 'Révision future (verrouillée)' : `Noter J+${jVal}`}
                   >
                     <span className="rmod-jlbl">J+{jVal}</span>
                     <span className={`rmod-jbig rmod-stamp ${stampCls}`}>
@@ -599,9 +655,6 @@ export default function ReviewModal({
               })}
             </div>
 
-            <div className="rmod-hint">
-              Clique sur un J pour le noter. Les J futurs sont verrouillés — ils se débloqueront à la bonne date.
-            </div>
 
             {/* ─────────────────────────────────────────────── */}
             {/*  Bloc Sources (vidéo + PDF)                    */}
@@ -657,7 +710,7 @@ export default function ReviewModal({
                 padding: '4px 10px',
                 fontSize: 12,
                 color: 'var(--gray)',
-                fontFamily: "'Cormorant Garamond', serif",
+                fontFamily: "var(--font-hanken), serif",
                 fontStyle: 'italic',
                 marginTop: -4,
                 marginBottom: 4,
@@ -674,7 +727,7 @@ export default function ReviewModal({
                       type="button"
                       onClick={() => void transcribeVideo()}
                       style={{
-                        background: 'none', border: 'none', color: '#2D6A4F',
+                        background: 'none', border: 'none', color: '#2C5F8A',
                         cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
                         padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
                       }}
@@ -682,7 +735,7 @@ export default function ReviewModal({
                   </>
                 ) : media.transcript && media.transcript.length > 0 ? (
                   <>
-                    <span style={{ color: '#2D6A4F' }}>{'✓'}</span>
+                    <span style={{ color: '#2C5F8A' }}>{'✓'}</span>
                     Transcript prêt · {media.transcript.length} segments
                     <button
                       type="button"
@@ -702,7 +755,7 @@ export default function ReviewModal({
                       type="button"
                       onClick={() => void transcribeVideo()}
                       style={{
-                        background: 'none', border: 'none', color: '#2D6A4F',
+                        background: 'none', border: 'none', color: '#2C5F8A',
                         cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
                         padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
                       }}
@@ -835,6 +888,42 @@ export default function ReviewModal({
               <div className="rmod-gen-info">{genInfo}</div>
             )}
             </div>{/* /data-tour="qcm-section" */}
+
+            {/* ─────────────────────────────────────────────── */}
+            {/*  Bloc Flashcards maison (recto/verso)          */}
+            {/* ─────────────────────────────────────────────── */}
+            <div className="rmod-divider" />
+            <div className="rmod-block-label">Flashcards (recto/verso)</div>
+            {cartesCount > 0 ? (
+              <div className="rmod-qcm-line">
+                <div className="rmod-qcm-num">{cartesCount}</div>
+                <div className="rmod-qcm-meta">
+                  carte{cartesCount > 1 ? 's' : ''} sur cette fiche
+                </div>
+                <div className="rmod-qcm-actions">
+                  <button
+                    type="button"
+                    className="rmod-qcm-cta"
+                    onClick={openCartes}
+                  >
+                    Réviser les cartes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rmod-qcm-line">
+                <div className="rmod-qcm-meta rmod-qcm-meta-grow">
+                  Crée tes propres cartes question/réponse pour cette fiche.
+                </div>
+                <button
+                  type="button"
+                  className="rmod-qcm-cta"
+                  onClick={openCartes}
+                >
+                  Créer des cartes
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -842,12 +931,12 @@ export default function ReviewModal({
         {stepIdx !== null && (
           <>
             <div className="rmod-lesson">
-              <div className="rmod-lesson-kicker">Révision J+{J[stepIdx]}</div>
+              <div className="rmod-lesson-kicker">Révision J+{j[stepIdx]}</div>
               <div className="rmod-lesson-name">{lesson.name}</div>
               <div className="rmod-lesson-meta">
                 {systemName}
                 {lesson.learn_date
-                  ? <> · prévue le {frenchDate(stepDate(lesson, stepIdx))}</>
+                  ? <> · prévue le {frenchDate(stepDate(lesson, stepIdx, j))}</>
                   : ' · date non planifiée'}
               </div>
             </div>
@@ -867,6 +956,15 @@ export default function ReviewModal({
                   </span>
                 </button>
               ))}
+            </div>
+
+            <div className="rmod-secondary">
+              <button className="rmod-2nd" onClick={postponeCurrent} disabled={loading}>
+                Reporter à demain
+              </button>
+              <button className="rmod-2nd rmod-2nd-skip" onClick={skipCurrent} disabled={loading}>
+                Annuler ce palier
+              </button>
             </div>
 
             <button className="rmod-back" onClick={() => setStepIdx(null)}>

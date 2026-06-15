@@ -1,22 +1,28 @@
 'use client'
 // src/app/dashboard/stats/page.tsx
 //
-// Bilan annuel — page rétrospective.
-// Hero "847 révisions" + 3 secondaires (jours actifs / série / maîtrisées),
-// puis heatmap année, évolution 12 sem, palier J, dumbbell.
-//
-// Le filtre semestre est piloté par la sidebar globale (Sem 1 / Sem 2 / Année)
-// via localStorage 'medrev-sem' et l'event 'medrev-sem-change'. Pas de toggle
-// local — la duplication a été supprimée.
+// v5 — "le score à gauche, les trois moyens de le faire monter à droite".
+// Colonne A : l'indice (anneau + sceau de rang + série) puis le plan jusqu'au
+// concours (Premium). Colonne B : TROIS leviers, un par composante de
+// l'indice, chacun avec son sous-score ET son action :
+//   - MAÎTRISE (40%)  → remonter ses notes faibles
+//   - COUVERTURE (25%) → faire les paliers J de ses fiches (≥3 paliers = couverte)
+//   - ASSIDUITÉ (35%)  → valider sa journée, tenir la série
+// Le rang est explicite ("Rang 3/6 — Scribe I") : pas de jargon gaming.
+// Pas de sous-titres italiques ; une page, pas de scroll (desktop).
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import SubjectIcon from '@/components/SubjectIcon'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
+const COVERED_AT = 3 // une fiche est "couverte" à partir de 3 paliers officiels
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
@@ -61,31 +67,52 @@ function stepPostedDate(s: StepEntry): string | null {
   return null
 }
 
-// ===================== AGRÉGATIONS LESSON =====================
-type LessonAgg = {
-  lesson: Lesson
-  avg: number | null
-  scoredCount: number
-  officialCount: number
-  isMastered: boolean
+function getLastEffScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
+  const steps = (lesson.steps as StepEntry[]) || []
+  for (let i = j.length - 1; i >= 0; i--) {
+    const sc = effectiveStepScore(steps[i])
+    if (sc) return sc
+  }
+  return null
 }
 
-function computeLessonAgg(lesson: Lesson): LessonAgg {
+function officialCount(lesson: Lesson): number {
   const steps = (lesson.steps as StepEntry[]) || []
-  let sum = 0, n = 0, official = 0
-  for (let i = 0; i < J.length; i++) {
-    const eff = effectiveStepScore(steps[i])
-    if (eff) { sum += eff; n++ }
-    if (stepScore(steps[i])) official++
+  let n = 0
+  for (const s of steps) if (stepScore(s)) n++
+  return n
+}
+
+function shiftDate(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
+// ===================== DÛ AUJOURD'HUI =====================
+function lessonSkips(l: Lesson): number[] {
+  const s = (l as { skips?: unknown }).skips
+  return Array.isArray(s) ? (s as number[]) : []
+}
+function lessonPostpones(l: Lesson): Record<string, string> {
+  const p = (l as { postpones?: unknown }).postpones
+  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
+}
+
+function isDueToday(l: Lesson, today: string, j: number[] = DEFAULT_J): boolean {
+  if (!l.learn_date) return false
+  const steps = (l.steps as StepEntry[]) || []
+  const skips = lessonSkips(l)
+  const postpones = lessonPostpones(l)
+  for (let i = 0; i < j.length; i++) {
+    if (stepScore(steps[i])) continue
+    if (skips.includes(i)) continue
+    const d = new Date(l.learn_date + 'T12:00:00')
+    d.setDate(d.getDate() + j[i])
+    const dd = postpones[String(i)] ?? d.toISOString().split('T')[0]
+    return dd <= today
   }
-  const avg = n > 0 ? sum / n : null
-  return {
-    lesson,
-    avg,
-    scoredCount: n,
-    officialCount: official,
-    isMastered: official >= 5 && avg !== null && avg >= 4,
-  }
+  return false
 }
 
 // ===================== ACTIVITÉ =====================
@@ -104,145 +131,26 @@ function buildActivityIndex(lessons: Lesson[]): Map<string, number> {
   return m
 }
 
-function totalRevisions(activityIndex: Map<string, number>): number {
-  let n = 0
-  activityIndex.forEach(v => { n += v })
-  return n
-}
+// ===================== JOURS ACTIFS (règle des 10 minutes) =====================
+// Un jour COMPTE (assiduité, série) à partir de 10 minutes de révision réelle
+// sur l'appli (gardens.day_log, alimenté par la session Focus).
+// Fallback historique : avant l'existence du suivi de temps, un jour avec au
+// moins une révision notée compte — sinon tout l'historique s'éteindrait.
+const TEN_MIN_MS = 10 * 60 * 1000
 
-function activeDaysCount(activityIndex: Map<string, number>): number {
-  return activityIndex.size
-}
-
-type Streak = { length: number; start: string | null; end: string | null }
-
-function computeLongestStreak(activityIndex: Map<string, number>): Streak {
-  if (activityIndex.size === 0) return { length: 0, start: null, end: null }
-  const dates = Array.from(activityIndex.keys()).sort()
-  let maxLen = 1, maxStart = dates[0], maxEnd = dates[0]
-  let curLen = 1, curStart = dates[0]
-  for (let i = 1; i < dates.length; i++) {
-    const prev = new Date(dates[i - 1] + 'T12:00:00')
-    const curr = new Date(dates[i] + 'T12:00:00')
-    const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000)
-    if (diff === 1) {
-      curLen++
-      if (curLen > maxLen) { maxLen = curLen; maxStart = curStart; maxEnd = dates[i] }
-    } else {
-      curLen = 1
-      curStart = dates[i]
-    }
+function buildActiveDays(activityIndex: Map<string, number>, dayLog: Record<string, number>): Set<string> {
+  const firstLog = Object.keys(dayLog).sort()[0] ?? null
+  const set = new Set<string>()
+  for (const [d, ms] of Object.entries(dayLog)) {
+    if (ms >= TEN_MIN_MS) set.add(d)
   }
-  return { length: maxLen, start: maxStart, end: maxEnd }
+  activityIndex.forEach((_, d) => {
+    if (firstLog === null || d < firstLog) set.add(d)
+  })
+  return set
 }
 
-function firstActivityDate(activityIndex: Map<string, number>): string | null {
-  if (activityIndex.size === 0) return null
-  return Array.from(activityIndex.keys()).sort()[0]
-}
-
-// ===================== ÉVOLUTION =====================
-function buildWeeklyAvg(lessons: Lesson[], today: string, weeks: number): { weekStart: string; avg: number | null; count: number }[] {
-  const out: { weekStart: string; avg: number | null; count: number }[] = []
-  const todayD = new Date(today + 'T12:00:00')
-  const dow = todayD.getDay()
-  const mondayOffset = dow === 0 ? -6 : 1 - dow
-  const thisMonday = new Date(todayD)
-  thisMonday.setDate(todayD.getDate() + mondayOffset)
-
-  for (let w = weeks - 1; w >= 0; w--) {
-    const weekStart = new Date(thisMonday)
-    weekStart.setDate(thisMonday.getDate() - w * 7)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-    const weekStartStr = weekStart.toISOString().split('T')[0]
-    const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-    let sum = 0, n = 0
-    for (const l of lessons) {
-      const steps = (l.steps as StepEntry[]) || []
-      for (const s of steps) {
-        if (!s) continue
-        const eff = effectiveStepScore(s)
-        if (!eff) continue
-        const d = stepPostedDate(s)
-        if (!d) continue
-        if (d >= weekStartStr && d <= weekEndStr) { sum += eff; n++ }
-      }
-    }
-    out.push({ weekStart: weekStartStr, avg: n > 0 ? sum / n : null, count: n })
-  }
-  return out
-}
-
-function buildJStats(lessons: Lesson[]): { jLabel: string; avg: number | null; count: number }[] {
-  const out: { jLabel: string; avg: number | null; count: number }[] = []
-  for (let i = 0; i < J.length; i++) {
-    let sum = 0, n = 0
-    for (const l of lessons) {
-      const steps = (l.steps as StepEntry[]) || []
-      const sc = stepScore(steps[i])
-      if (sc) { sum += sc; n++ }
-    }
-    out.push({ jLabel: i === 0 ? 'J+0' : `J+${J[i]}`, avg: n > 0 ? sum / n : null, count: n })
-  }
-  return out
-}
-
-// ===================== COMPARAISON 1 MOIS → MAINTENANT =====================
-type MatiereComparison = {
-  system: System
-  avgThen: number | null
-  avgNow: number | null
-  delta: number | null
-}
-
-function computeMatiereComparison(systems: System[], lessons: Lesson[], today: string): MatiereComparison[] {
-  const todayD = new Date(today + 'T12:00:00')
-  const monthAgo = new Date(todayD)
-  monthAgo.setDate(todayD.getDate() - 30)
-  const monthAgoStr = monthAgo.toISOString().split('T')[0]
-
-  const out: MatiereComparison[] = []
-
-  for (const sys of systems) {
-    const sysLessons = lessons.filter(l => l.system_id === sys.id)
-    let sumThen = 0, nThen = 0
-    let sumNow = 0, nNow = 0
-
-    for (const l of sysLessons) {
-      const steps = (l.steps as StepEntry[]) || []
-      let lThenSum = 0, lThenN = 0
-      let lNowSum = 0, lNowN = 0
-      for (const s of steps) {
-        const eff = effectiveStepScore(s)
-        if (!eff) continue
-        const d = stepPostedDate(s)
-        if (!d) continue
-        lNowSum += eff; lNowN++
-        if (d <= monthAgoStr) { lThenSum += eff; lThenN++ }
-      }
-      if (lNowN > 0) { sumNow += lNowSum / lNowN; nNow++ }
-      if (lThenN > 0) { sumThen += lThenSum / lThenN; nThen++ }
-    }
-
-    const avgNow = nNow > 0 ? sumNow / nNow : null
-    const avgThen = nThen > 0 ? sumThen / nThen : null
-    const delta = avgNow !== null && avgThen !== null ? avgNow - avgThen : null
-    out.push({ system: sys, avgThen, avgNow, delta })
-  }
-
-  return out
-    .filter(m => m.avgNow !== null)
-    .sort((a, b) => {
-      if (a.delta === null && b.delta === null) return (b.avgNow ?? 0) - (a.avgNow ?? 0)
-      if (a.delta === null) return 1
-      if (b.delta === null) return -1
-      return (b.delta ?? 0) - (a.delta ?? 0)
-    })
-}
-
-// ===================== HEATMAP =====================
+// ===================== HEATMAP ANNÉE (façon Anki) =====================
 type HeatmapCell = { date: string; count: number; isToday: boolean; inFuture: boolean }
 
 function buildYearHeatmap(activityIndex: Map<string, number>, today: string): HeatmapCell[][] {
@@ -280,28 +188,149 @@ function intensityClass(count: number, max: number): string {
   return 'i4'
 }
 
-function scoreClass(avg: number | null): string {
-  if (avg === null) return 's3'
-  if (avg < 2) return 's1'
-  if (avg < 3) return 's2'
-  if (avg < 3.7) return 's3'
-  if (avg < 4.5) return 's4'
-  return 's5'
-}
-
 function fmtMonth(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
 }
 
-function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '')
+// ===================== INDICE (40 maîtrise / 25 couverture / 35 assiduité) =====================
+function computeReadiness(
+  lessons: Lesson[],
+  activeDays: Set<string>,
+  asOf: string
+): number {
+  if (lessons.length === 0) return 0
+  let mSum = 0, mN = 0, covered = 0
+  for (const l of lessons) {
+    const steps = (l.steps as StepEntry[]) || []
+    let sSum = 0, sN = 0, official = 0
+    for (const s of steps) {
+      if (!s) continue
+      const d = stepPostedDate(s)
+      if (!d || d > asOf) continue
+      const eff = effectiveStepScore(s)
+      if (eff) { sSum += eff; sN++ }
+      if (stepScore(s)) official++
+    }
+    if (sN > 0) { mSum += sSum / sN; mN++ }
+    if (official >= COVERED_AT) covered++
+  }
+  const mastery = mN > 0 ? (mSum / mN) / 5 : 0
+  const coverage = covered / lessons.length
+  let active14 = 0
+  for (let k = 0; k < 14; k++) {
+    if (activeDays.has(shiftDate(asOf, -k))) active14++
+  }
+  const assiduite = Math.min(1, active14 / 10)
+  return Math.round(100 * (0.4 * mastery + 0.25 * coverage + 0.35 * assiduite))
+}
+
+function computeParts(lessons: Lesson[], activeDays: Set<string>, today: string) {
+  let mSum = 0, mN = 0, covered = 0
+  for (const l of lessons) {
+    const steps = (l.steps as StepEntry[]) || []
+    let sSum = 0, sN = 0, official = 0
+    for (const s of steps) {
+      if (!s) continue
+      const eff = effectiveStepScore(s)
+      if (eff) { sSum += eff; sN++ }
+      if (stepScore(s)) official++
+    }
+    if (sN > 0) { mSum += sSum / sN; mN++ }
+    if (official >= COVERED_AT) covered++
+  }
+  let active14 = 0
+  for (let k = 0; k < 14; k++) {
+    if (activeDays.has(shiftDate(today, -k))) active14++
+  }
+  return {
+    mastery: mN > 0 ? (mSum / mN) / 5 : 0,
+    coverage: lessons.length > 0 ? covered / lessons.length : 0,
+    assiduite: Math.min(1, active14 / 10),
+    coveredCount: covered,
+  }
+}
+
+// ===================== RANGS =====================
+const RANKS = [
+  { at: 0, name: 'Apprenti', color: '#8CA4BC' },
+  { at: 20, name: 'Copiste', color: '#B86448' },
+  { at: 35, name: 'Scribe', color: '#7FB0D4' },
+  { at: 50, name: 'Lettré', color: '#D9B24A' },
+  { at: 65, name: 'Érudit', color: '#7AA56B' },
+  { at: 80, name: 'Maître', color: '#15304E' },
+]
+
+function rankFor(v: number) {
+  let idx = 0
+  for (let i = 0; i < RANKS.length; i++) if (v >= RANKS[i].at) idx = i
+  const rank = RANKS[idx]
+  const next = RANKS[idx + 1] ?? null
+  const span = (next ? next.at : 100) - rank.at
+  const within = v - rank.at
+  const tier = within < span / 3 ? 3 : within < (2 * span) / 3 ? 2 : 1
+  const toNext = next ? next.at - v : null
+  return { ...rank, level: idx + 1, tier, next, toNext, progress: span > 0 ? within / span : 1 }
 }
 
 function semLabel(s: Semestre): string {
   if (s === 'year') return 'Année complète'
   return `Semestre ${s}`
+}
+
+// ===================== EMBLÈME =====================
+function RankSeal({ color, tier }: { color: string; tier: number }) {
+  return (
+    <svg viewBox="0 0 120 120" className="st4-seal" aria-hidden="true">
+      <path d="M 22 48 L 8 60 L 22 72 L 28 66 L 21 60 L 28 54 Z" fill={color} opacity="0.55" />
+      <path d="M 98 48 L 112 60 L 98 72 L 92 66 L 99 60 L 92 54 Z" fill={color} opacity="0.55" />
+      <g transform="rotate(45 60 60)">
+        <rect x="29" y="29" width="62" height="62" rx="7" fill={color} opacity="0.22" />
+        <rect x="37" y="37" width="46" height="46" rx="6" fill={color} opacity="0.5" />
+        <rect x="45" y="45" width="30" height="30" rx="5" fill={color} />
+      </g>
+      <path d="M 60 39 L 75 60 L 60 60 Z" fill="rgba(255,255,255,0.4)" />
+      <path d="M 60 60 L 60 81 L 45 60 Z" fill="rgba(0,0,0,0.18)" />
+      <g>
+        {[0, 1, 2].map(i => (
+          <circle
+            key={i}
+            cx={48 + i * 12}
+            cy="106"
+            r="3.4"
+            fill={i < (4 - tier) ? color : 'none'}
+            stroke={color}
+            strokeWidth="1.2"
+            opacity={i < (4 - tier) ? 1 : 0.45}
+          />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+function RankRing({ value, color, children }: { value: number; color: string; children: React.ReactNode }) {
+  const R = 88
+  const C = 2 * Math.PI * R
+  const filled = (Math.max(0, Math.min(100, value)) / 100) * C
+  return (
+    <div className="st4-ring-wrap">
+      <svg viewBox="0 0 220 220" className="st4-ring">
+        <circle cx="110" cy="110" r={R} fill="none" stroke="var(--soft)" strokeWidth="13" />
+        <circle
+          cx="110" cy="110" r={R}
+          fill="none"
+          stroke={color}
+          strokeWidth="13"
+          strokeLinecap="round"
+          strokeDasharray={`${filled.toFixed(1)} ${C.toFixed(1)}`}
+          transform="rotate(-90 110 110)"
+          style={{ transition: 'stroke-dasharray .9s cubic-bezier(.4,0,.2,1), stroke .4s' }}
+        />
+      </svg>
+      <div className="st4-ring-center">{children}</div>
+    </div>
+  )
 }
 
 // ===================== PAGE =====================
@@ -312,19 +341,19 @@ export default function StatsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [semestre, setSemestre] = useState<Semestre>(2)
-  // Plan user — fetché en parallèle des données. Détermine si on affiche les
-  // visualisations avancées (heatmap, sparkline, j-bar, dumbbell) ou le teaser
-  // Premium qui les remplace pour les comptes Gratuit.
   const [isPro, setIsPro] = useState(false)
+  const [examDate, setExamDate] = useState('')
+  // Temps de révision par jour (gardens.day_log) — règle des 10 minutes.
+  const [dayLog, setDayLog] = useState<Record<string, number>>({})
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
-  // Load initial semester from localStorage + listen to sidebar event
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
     const s: Semestre = raw === '1' ? 1 : raw === 'year' ? 'year' : 2
     setSemestre(s)
+    setExamDate(localStorage.getItem('medrev-exam-date') ?? '')
 
     function onSemChange(e: Event) {
       const ce = e as CustomEvent<Semestre>
@@ -336,62 +365,171 @@ export default function StatsPage() {
     return () => window.removeEventListener('medrev-sem-change', onSemChange)
   }, [])
 
+  function chooseExamDate(d: string) {
+    setExamDate(d)
+    if (typeof window !== 'undefined') {
+      if (d) localStorage.setItem('medrev-exam-date', d)
+      else localStorage.removeItem('medrev-exam-date')
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-      const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
+      const [{ data: sys }, { data: les }, { data: prof }, { data: garden }] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id).order('semestre').order('created_at'),
         supabase.from('lessons').select('*').eq('user_id', user.id).order('created_at'),
         supabase.from('profiles').select('plan').eq('id', user.id).single(),
+        supabase.from('gardens').select('day_log').eq('user_id', user.id).maybeSingle(),
       ])
       if (cancelled) return
       setSystems((sys as System[] | null) ?? [])
       setLessons((les as Lesson[] | null) ?? [])
       setIsPro((prof?.plan as string) === 'pro')
+      {
+        const raw = (garden as { day_log?: unknown } | null)?.day_log
+        const log: Record<string, number> = {}
+        if (raw && typeof raw === 'object') {
+          for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            if (typeof v === 'number' && v > 0) log[k] = v
+          }
+        }
+        setDayLog(log)
+      }
       setLoading(false)
     })()
     return () => { cancelled = true }
   }, [supabase, router])
 
-  // En mode 'year' on prend tous les systèmes ; sinon on filtre par semestre.
   const semSystems = useMemo(() => {
     if (semestre === 'year') return systems
     return systems.filter(s => s.semestre === semestre)
   }, [systems, semestre])
   const semSystemIds = useMemo(() => new Set(semSystems.map(s => s.id)), [semSystems])
   const semLessons = useMemo(() => lessons.filter(l => semSystemIds.has(l.system_id)), [lessons, semSystemIds])
+  const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
+  const colorOf = useMemo(() => buildSubjectColorMap(semSystems), [semSystems])
 
-  const aggs = useMemo(() => semLessons.map(computeLessonAgg), [semLessons])
   const activityIndex = useMemo(() => buildActivityIndex(semLessons), [semLessons])
-  const weeklyAvg = useMemo(() => buildWeeklyAvg(semLessons, today, 12), [semLessons, today])
-  const jStats = useMemo(() => buildJStats(semLessons), [semLessons])
+  const activeDays = useMemo(() => buildActiveDays(activityIndex, dayLog), [activityIndex, dayLog])
   const heatmap = useMemo(() => buildYearHeatmap(activityIndex, today), [activityIndex, today])
-  const comparison = useMemo(() => computeMatiereComparison(semSystems, semLessons, today), [semSystems, semLessons, today])
-
   const heatmapMax = useMemo(() => {
     let max = 1
     activityIndex.forEach(v => { if (v > max) max = v })
     return max
   }, [activityIndex])
+  const monthLabels = useMemo(() => {
+    const out: { weekIdx: number; label: string }[] = []
+    let lastMonth = -1
+    heatmap.forEach((week, wi) => {
+      const m = new Date(week[0].date + 'T12:00:00').getMonth()
+      if (m !== lastMonth) {
+        out.push({ weekIdx: wi, label: fmtMonth(week[0].date) })
+        lastMonth = m
+      }
+    })
+    return out.slice(1)
+  }, [heatmap])
 
-  const totalRevs = useMemo(() => totalRevisions(activityIndex), [activityIndex])
-  const activeDays = useMemo(() => activeDaysCount(activityIndex), [activityIndex])
-  const longestStreak = useMemo(() => computeLongestStreak(activityIndex), [activityIndex])
-  const firstDay = useMemo(() => firstActivityDate(activityIndex), [activityIndex])
-  const masteredCount = aggs.filter(a => a.isMastered).length
-  const totalFiches = semLessons.length
+  const totalRevs = useMemo(() => {
+    let n = 0
+    activityIndex.forEach(v => { n += v })
+    return n
+  }, [activityIndex])
 
-  const daySpan = useMemo(() => {
-    if (!firstDay) return 0
-    const t = new Date(today + 'T12:00:00')
-    const f = new Date(firstDay + 'T12:00:00')
-    return Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1)
-  }, [firstDay, today])
+  // ===== INDICE + RANG =====
+  const index = useMemo(() => computeReadiness(semLessons, activeDays, today), [semLessons, activeDays, today])
+  const index7 = useMemo(() => computeReadiness(semLessons, activeDays, shiftDate(today, -7)), [semLessons, activeDays, today])
+  const index30 = useMemo(() => computeReadiness(semLessons, activeDays, shiftDate(today, -30)), [semLessons, activeDays, today])
+  const delta7 = index - index7
+  const parts = useMemo(() => computeParts(semLessons, activeDays, today), [semLessons, activeDays, today])
+  const rank = useMemo(() => rankFor(index), [index])
 
-  const revsPerDay = activeDays > 0 ? totalRevs / activeDays : 0
-  const activePct = daySpan > 0 ? Math.round((activeDays / daySpan) * 100) : 0
+  // ===== SÉRIE =====
+  const currentStreak = useMemo(() => {
+    let n = 0
+    let cursor = today
+    if (!activeDays.has(cursor)) cursor = shiftDate(cursor, -1)
+    while (activeDays.has(cursor)) {
+      n++
+      cursor = shiftDate(cursor, -1)
+    }
+    return n
+  }, [activeDays, today])
+
+  const recordStreak = useMemo(() => {
+    if (activeDays.size === 0) return 0
+    const dates = Array.from(activeDays).sort()
+    let max = 1, cur = 1
+    for (let i = 1; i < dates.length; i++) {
+      const diff = Math.round(
+        (new Date(dates[i] + 'T12:00:00').getTime() - new Date(dates[i - 1] + 'T12:00:00').getTime()) / 86400000
+      )
+      if (diff === 1) { cur++; if (cur > max) max = cur } else cur = 1
+    }
+    return max
+  }, [activeDays])
+
+  // ===== LEVIER MAÎTRISE : fiches aux dernières notes faibles =====
+  const weakFiches = useMemo(() => {
+    const out: { lesson: Lesson; sysName: string; sysColor: string; last: Score }[] = []
+    for (const l of semLessons) {
+      const last = getLastEffScore(l, schedOf(l.system_id))
+      if (last === null || last > 2) continue
+      const sys = semSystems.find(x => x.id === l.system_id)
+      out.push({
+        lesson: l,
+        last,
+        sysName: sys?.name ?? 'Matière',
+        sysColor: colorOf.get(l.system_id) || '#22507E',
+      })
+    }
+    return out.sort((a, b) => a.last - b.last).slice(0, 3)
+  }, [semLessons, semSystems, schedOf, colorOf])
+
+  const weakHref = weakFiches.length > 0
+    ? `/dashboard/focus?lessons=${weakFiches.map(f => f.lesson.id).join(',')}`
+    : '/dashboard/focus'
+
+  // ===== LEVIER COUVERTURE : fiches les moins avancées dans la courbe J =====
+  const uncovered = useMemo(() => {
+    const rows = semLessons
+      .filter(l => l.learn_date)
+      .map(l => {
+        const sys = semSystems.find(x => x.id === l.system_id)
+        return {
+          lesson: l,
+          n: officialCount(l),
+          sysName: sys?.name ?? '',
+          sysColor: colorOf.get(l.system_id) || '#22507E',
+        }
+      })
+      .filter(r => r.n < COVERED_AT)
+      .sort((a, b) => a.n - b.n)
+    return { count: rows.length, top: rows.slice(0, 3) }
+  }, [semLessons, semSystems, colorOf])
+
+  // ===== LEVIER ASSIDUITÉ : journée + 14 jours =====
+  const dueToday = useMemo(() => semLessons.filter(l => isDueToday(l, today, schedOf(l.system_id))).length, [semLessons, today, schedOf])
+  const doneToday = activityIndex.get(today) ?? 0
+  const dayValidated = doneToday > 0 && dueToday === 0
+
+  // ===== TRAJECTOIRE (Premium) =====
+  const daysToExam = useMemo(() => {
+    if (!examDate || examDate <= today) return null
+    return Math.round((new Date(examDate + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000)
+  }, [examDate, today])
+
+  // Prévision : points gagnés la semaine prochaine au rythme des 30 derniers jours.
+  const perWeek = useMemo(() => Math.round(((index - index30) / 30) * 7), [index, index30])
+
+  const projected = useMemo(() => {
+    if (daysToExam === null) return null
+    const perDay = (index - index30) / 30
+    return Math.max(0, Math.min(100, Math.round(index + perDay * daysToExam)))
+  }, [daysToExam, index, index30])
 
   if (loading) {
     return (
@@ -401,364 +539,205 @@ export default function StatsPage() {
     )
   }
 
-  // Empty state global : aucune révision notée du tout. On évite d'afficher
-  // une heatmap, sparkline et dumbbell tous vides — qui donneraient l'impression
-  // que l'app ne marche pas. On pousse plutôt l'action concrète (créer une
-  // fiche puis la noter au jour J).
   if (totalRevs === 0) {
     return (
       <div className="stats-page">
         <div className="stats-empty-global">
           <div className="stats-empty-global-icon" aria-hidden>◈</div>
           <h1 className="stats-empty-global-title">
-            Tes statistiques se construisent au fil des révisions
+            Ton indice de préparation t&apos;attend
           </h1>
           <p className="stats-empty-global-text">
-            Note ta première fiche au jour J pour activer ta heatmap, ton
-            sparkline 12 semaines et tes dumbbells par matière. Les stats
-            n&apos;ont de sens qu&apos;une fois que tu as 5-10 fiches notées,
-            avant ça, elles sont vides.
+            Note tes premières révisions au jour J : tu démarreras au rang
+            Apprenti, et chaque jour de travail te rapprochera du rang Maître.
           </p>
           <Link href="/dashboard/fiches" className="stats-empty-global-btn">
-            Aller à mes cours →
+            Créer ma première fiche →
           </Link>
         </div>
       </div>
     )
   }
 
-  // mois pour la heatmap
-  const monthLabels: { weekIdx: number; label: string }[] = []
-  let lastMonth = ''
-  heatmap.forEach((week, idx) => {
-    const m = fmtMonth(week[0].date)
-    if (m !== lastMonth) {
-      monthLabels.push({ weekIdx: idx, label: m })
-      lastMonth = m
-    }
-  })
-
   return (
     <div className="stats-page">
-
-      <div className="stats-header">
-        <div>
-          <h1 className="stats-title">
-            Mon <em>année</em> en révisions
-          </h1>
-          <div className="stats-sub">
-            {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}
-            {longestStreak.length >= 2 ? ` · plus longue série : ${longestStreak.length} jours` : ''}
-            {' · '}{masteredCount} fiche{masteredCount > 1 ? 's' : ''} maîtrisée{masteredCount > 1 ? 's' : ''}
-          </div>
-        </div>
+      <div className="stats-header st6-header">
+        <h1 className="stats-title">
+          Suis-je <em>prêt</em> ? <span className="st5-header-sem">· {semLabel(semestre)}</span>
+        </h1>
+        {isPro && (
+          <label className="st6-examdate">
+            <span className="st6-examdate-lbl">Examens</span>
+            <input
+              type="date"
+              className="st-plan-date-input st6-examdate-input"
+              value={examDate}
+              min={today}
+              onChange={e => chooseExamDate(e.target.value)}
+            />
+            {daysToExam !== null && <span className="st6-examdate-jd">J-{daysToExam}</span>}
+          </label>
+        )}
       </div>
 
-      {/* HERO + 3 SECONDAIRES */}
-      <div className="stats-totals-grid">
-        <div className="stats-hero-card">
-          <div className="stats-hero-label">
-            Révisions cumulées · {semLabel(semestre)}
+      <div className="st-cols st5-cols">
+
+        {/* ============ COLONNE A : LE SCORE ============ */}
+        <div className="st-col st5-col">
+          <div className="stats-card st5-hero">
+            <RankRing value={index} color={rank.color}>
+              <RankSeal color={rank.color} tier={rank.tier} />
+            </RankRing>
+
+            <div>
+              <div className="st4-score">
+                <span className="st4-score-num">{index}</span>
+                <span className="st4-score-of">/ 100</span>
+              </div>
+              <div className="st4-rank" style={{ color: rank.color }}>
+                {rank.name} {rank.tier === 3 ? 'III' : rank.tier === 2 ? 'II' : 'I'}
+              </div>
+              <div className="st5-rank-level">Rang {rank.level} / {RANKS.length}</div>
+              <div className={`st4-delta ${delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : ''}`}>
+                {delta7 > 0 ? `▲ +${delta7} pts cette semaine` : delta7 < 0 ? `▼ ${delta7} pts cette semaine` : '= stable cette semaine'}
+              </div>
+              {isPro ? (
+                <div className="st6-forecast">
+                  prévision : <strong>{perWeek >= 0 ? `+${perWeek}` : perWeek} pts</strong> la semaine prochaine
+                  {daysToExam !== null && projected !== null && (
+                    <> · <strong style={{ color: rankFor(projected).color }}>{projected}/100</strong> le jour J</>
+                  )}
+                </div>
+              ) : (
+                <Link href="/dashboard/pricing" className="st6-forecast-teaser">
+                  Projette ton score jusqu&apos;aux examens (Premium) →
+                </Link>
+              )}
+            </div>
+
+            {rank.next && (
+              <div className="st4-nextrank">
+                <div className="st4-nextrank-bar">
+                  <i style={{ width: `${Math.round(rank.progress * 100)}%`, background: rank.color }} />
+                </div>
+                <div className="st4-nextrank-lbl">
+                  Rang suivant : <strong>{rank.next.name}</strong> dans {rank.toNext} pt{(rank.toNext ?? 0) > 1 ? 's' : ''}
+                </div>
+              </div>
+            )}
+
+            <div className={`st4-streak${currentStreak > 0 ? ' lit' : ''}`}>
+              <svg viewBox="0 0 24 24" className="st4-flame" aria-hidden="true">
+                <path d="M12 2 C 13 7 17 8.5 17 13 a 5 5 0 0 1 -10 0 C 7 10 9.5 9 9.5 5.5 11 7 11.5 4.5 12 2 Z" fill={currentStreak > 0 ? '#E08B3C' : 'var(--dim)'} />
+                <path d="M12 9 c .8 2.2 2.4 2.8 2.4 4.8 a 2.4 2.4 0 0 1 -4.8 0 c 0 -1.6 1.6 -2.4 2.4 -4.8 Z" fill={currentStreak > 0 ? '#F5D060' : 'var(--soft)'} />
+              </svg>
+              <span className="st4-streak-num">{currentStreak}</span>
+              <span className="st4-streak-lbl">
+                jour{currentStreak > 1 ? 's' : ''} d&apos;affilée
+                {recordStreak > currentStreak && <> · record {recordStreak}</>}
+              </span>
+            </div>
           </div>
-          <div className="stats-hero-display">
-            <span className="stats-hero-num">{totalRevs}</span>
-            <span className="stats-hero-unit">
-              révision{totalRevs > 1 ? 's' : ''}<br />
-              {firstDay ? <em>depuis le {fmtDate(firstDay)}</em> : <em>aucune révision</em>}
-            </span>
-          </div>
-          <div className="stats-hero-sub">
-            {activeDays > 0 ? (
-              <>Soit <strong>{revsPerDay.toFixed(1)} révisions/jour</strong> en moyenne sur tes {activeDays} jour{activeDays > 1 ? 's' : ''} actif{activeDays > 1 ? 's' : ''}{daySpan > 0 ? ` (${activePct}% des ${daySpan} jours écoulés)` : ''}.</>
-            ) : (
-              <>Pas encore de révisions enregistrées sur cette période.</>
+
+        </div>
+
+        {/* ============ COLONNE B : LES 3 LEVIERS ============ */}
+        <div className="st-col st5-col">
+
+          {/* MAÎTRISE */}
+          <div className="stats-card st5-lever">
+            <div className="st5-lever-head">
+              <span className="st5-lever-name">Maîtrise</span>
+              <span className="st5-lever-how">remonte tes notes faibles</span>
+              <span className="st5-lever-score">{Math.round(parts.mastery * 100)}</span>
+            </div>
+            <div className="st5-lever-bar"><i style={{ width: `${Math.round(parts.mastery * 100)}%`, background: rank.color }} /></div>
+            <div className="st5-lever-body">
+              {weakFiches.length > 0 ? (
+                weakFiches.map(f => (
+                  <div key={f.lesson.id} className="st5-fiche">
+                    <span className="st5-fiche-ic" style={{ color: f.sysColor, background: `${f.sysColor}1A` }}><SubjectIcon name={f.sysName} /></span>
+                    <span className="st5-fiche-nm">{f.lesson.name}</span>
+                    <span className="st5-fiche-sys">{f.sysName}</span>
+                    <span className="st5-fiche-badge weak">notée {f.last}/5</span>
+                  </div>
+                ))
+              ) : (
+                <div className="st-empty">Aucune fiche en dessous de 3/5. Belle maîtrise.</div>
+              )}
+            </div>
+            {weakFiches.length > 0 && (
+              <Link href={weakHref} className="st-act st5-lever-cta">
+                Retravailler ces {weakFiches.length} fiche{weakFiches.length > 1 ? 's' : ''} →
+              </Link>
             )}
           </div>
-        </div>
 
-        <div className="stats-secondary">
-          <div className="stats-sec">
-            <div className="stats-sec-num">{activeDays}</div>
-            <div className="stats-sec-info">
-              <div className="stats-sec-label">Jours actifs</div>
-              <div className="stats-sec-sub">
-                {daySpan > 0 ? `sur ${daySpan} jours · ${activePct}% de présence` : '·'}
-              </div>
+          {/* COUVERTURE */}
+          <div className="stats-card st5-lever">
+            <div className="st5-lever-head">
+              <span className="st5-lever-name">Couverture</span>
+              <span className="st5-lever-how">avance dans les paliers J</span>
+              <span className="st5-lever-score">{Math.round(parts.coverage * 100)}</span>
             </div>
-          </div>
-          <div className="stats-sec">
-            <div className="stats-sec-num">{longestStreak.length}</div>
-            <div className="stats-sec-info">
-              <div className="stats-sec-label">Plus longue série</div>
-              <div className="stats-sec-sub">
-                {longestStreak.length >= 2 && longestStreak.start && longestStreak.end
-                  ? `jours · ${fmtDate(longestStreak.start)} → ${fmtDate(longestStreak.end)}`
-                  : 'jour'}
-              </div>
-            </div>
-          </div>
-          <div className="stats-sec">
-            <div className="stats-sec-num">{masteredCount}</div>
-            <div className="stats-sec-info">
-              <div className="stats-sec-label">Fiches maîtrisées</div>
-              <div className="stats-sec-sub">
-                sur {totalFiches} · avg ≥ 4 sur 5+ J
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-{/* === STATS AVANCÉES (Premium uniquement) === */}
-      {!isPro && <PremiumStatsTeaser />}
-
-      {isPro && <>
-      {/* HEATMAP */}
-      <div className="stats-card">
-        <div className="stats-card-title">
-          Activité de l&apos;année
-          <span className="stats-card-sub">52 dernières semaines · plus la case est verte, plus tu as révisé</span>
-        </div>
-        <div className="stats-heatmap-wrap">
-          <div className="stats-heatmap-months">
-            {monthLabels.map((m, idx) => (
-              <span key={idx} className="stats-heatmap-month" style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
-            ))}
-          </div>
-          <div className="stats-heatmap">
-            <div className="stats-heatmap-axis">
-              <span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span>
-            </div>
-            <div className="stats-heatmap-grid">
-              {heatmap.map((week, wi) => (
-                <div key={wi} className="stats-heatmap-week">
-                  {week.map((cell, di) => {
-                    const cls = ['stats-heatmap-cell',
-                      cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
-                      cell.isToday ? 'today' : '',
-                    ].filter(Boolean).join(' ')
-                    return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
-                  })}
+            <div className="st5-lever-bar"><i style={{ width: `${Math.round(parts.coverage * 100)}%`, background: rank.color }} /></div>
+            <div className="st5-lever-body">
+              {uncovered.top.map(r => (
+                <div key={r.lesson.id} className="st5-fiche">
+                  <span className="st5-fiche-ic" style={{ color: r.sysColor, background: `${r.sysColor}1A` }}><SubjectIcon name={r.sysName} /></span>
+                  <span className="st5-fiche-nm">{r.lesson.name}</span>
+                  <span className="st5-fiche-sys">{r.sysName}</span>
+                  <span className="st5-fiche-badge">{r.n} / {COVERED_AT} paliers</span>
                 </div>
               ))}
+              {uncovered.count === 0 && (
+                <div className="st-empty">Toutes tes fiches sont couvertes. Continue les paliers.</div>
+              )}
             </div>
+            <Link href="/dashboard/focus" className="st-act st5-lever-cta">
+              Faire les révisions du jour →
+            </Link>
           </div>
-          <div className="stats-heatmap-legend">
-            <span>Moins</span>
-            <span className="stats-heatmap-cell i0" />
-            <span className="stats-heatmap-cell i1" />
-            <span className="stats-heatmap-cell i2" />
-            <span className="stats-heatmap-cell i3" />
-            <span className="stats-heatmap-cell i4" />
-            <span>Plus</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="stats-row stats-row-2">
-        <div className="stats-card">
-          <div className="stats-card-title">
-            Évolution de ta moyenne
-            <span className="stats-card-sub">12 dernières semaines</span>
-          </div>
-          <Sparkline data={weeklyAvg} />
-        </div>
-
-        <div className="stats-card">
-          <div className="stats-card-title">
-            Maîtrise par palier J
-            <span className="stats-card-sub">officiel uniquement</span>
-          </div>
-          <div className="stats-jbar">
-            {jStats.map((j, i) => {
-              const pct = j.avg !== null ? (j.avg / 5) * 100 : 0
-              const cls = scoreClass(j.avg)
-              return (
-                <div key={i} className="stats-jbar-col">
-                  <div className="stats-jbar-track">
-                    <div className={`stats-jbar-fill ${cls}`} style={{ height: `${pct}%` }} title={j.avg !== null ? `${j.avg.toFixed(1)}/5 · ${j.count} note${j.count > 1 ? 's' : ''}` : 'aucune note'} />
-                  </div>
-                  <div className="stats-jbar-val">{j.avg !== null ? j.avg.toFixed(1) : '·'}</div>
-                  <div className="stats-jbar-lbl">{j.jLabel}</div>
+          {/* ASSIDUITÉ */}
+          <div className="stats-card st5-lever">
+            <div className="st5-lever-head">
+              <span className="st5-lever-name">Assiduité</span>
+              <span className="st5-lever-how">révise un peu chaque jour</span>
+              <span className="st5-lever-score">{Math.round(parts.assiduite * 100)}</span>
+            </div>
+            <div className="st5-lever-bar"><i style={{ width: `${Math.round(parts.assiduite * 100)}%`, background: rank.color }} /></div>
+            <div className="st5-lever-body">
+              <div className="st5-heat">
+                <div className="st5-heat-months">
+                  {monthLabels.map((m, idx) => (
+                    <span key={idx} style={{ left: `${(m.weekIdx / 52) * 100}%` }}>{m.label}</span>
+                  ))}
                 </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="stats-card">
-        <div className="stats-card-title">
-          Comparaison · il y a 1 mois → aujourd&apos;hui
-          <span className="stats-card-sub">par matière · point gris = il y a 1 mois, point coloré = maintenant</span>
-        </div>
-        <DumbbellChart rows={comparison} />
-      </div>
-      </>}
-
-    </div>
-  )
-}
-
-// ===================== PREMIUM TEASER =====================
-// Remplace les 4 visualisations avancées (heatmap, sparkline, j-bar, dumbbell)
-// pour les comptes Gratuit. Présente ce qu'ils débloqueraient en Premium et
-// renvoie sur la page Pricing.
-function PremiumStatsTeaser() {
-  return (
-    <div className="stats-premium-teaser">
-      <div className="stats-premium-teaser-kicker">Stats avancées · Premium</div>
-      <h2 className="stats-premium-teaser-title">
-        Vois <em>ton année</em> en un coup d&apos;œil
-      </h2>
-      <p className="stats-premium-teaser-sub">
-        Quatre visualisations qui révèlent tes habitudes, tes progrès et
-        tes points faibles.
-      </p>
-
-      <div className="stats-premium-teaser-grid">
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">▦</div>
-          <div className="stats-premium-teaser-item-name">Heatmap année</div>
-          <div className="stats-premium-teaser-item-desc">52 semaines d&apos;activité, jour par jour</div>
-        </div>
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">∿</div>
-          <div className="stats-premium-teaser-item-name">Sparkline 12 sem</div>
-          <div className="stats-premium-teaser-item-desc">Évolution de ta moyenne semaine après semaine</div>
-        </div>
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">▮▮▮</div>
-          <div className="stats-premium-teaser-item-name">Maîtrise par palier J</div>
-          <div className="stats-premium-teaser-item-desc">Vois où tu lâches sur la courbe d&apos;oubli</div>
-        </div>
-        <div className="stats-premium-teaser-item">
-          <div className="stats-premium-teaser-item-icon">●─●</div>
-          <div className="stats-premium-teaser-item-name">Comparaison 1 mois</div>
-          <div className="stats-premium-teaser-item-desc">Quelles matières remontent, lesquelles décrochent</div>
-        </div>
-      </div>
-
-      <Link href="/dashboard/pricing" className="stats-premium-teaser-cta">
-        Débloquer ces stats avec Premium →
-      </Link>
-    </div>
-  )
-}
-
-// ===================== DUMBBELL =====================
-function DumbbellChart({ rows }: { rows: MatiereComparison[] }) {
-  if (rows.length === 0) {
-    return <div className="stats-empty">Pas encore assez de données pour comparer.</div>
-  }
-
-  return (
-    <div className="stats-dumb">
-      {rows.map(r => {
-        if (r.avgNow === null) return null
-        const nowPct = ((r.avgNow - 1) / 4) * 100
-        const thenPct = r.avgThen !== null ? ((r.avgThen - 1) / 4) * 100 : null
-        const delta = r.delta
-        let trendCls: 'up' | 'down' | 'flat' = 'flat'
-        if (delta !== null) {
-          if (delta >= 0.15) trendCls = 'up'
-          else if (delta <= -0.15) trendCls = 'down'
-        }
-        const lineLeft = thenPct !== null ? Math.min(thenPct, nowPct) : nowPct
-        const lineWidth = thenPct !== null ? Math.abs(nowPct - thenPct) : 0
-        const deltaLabel = delta !== null
-          ? (delta > 0 ? `+${delta.toFixed(1)}` : delta < 0 ? delta.toFixed(1).replace('-', '−') : '0.0')
-          : 'nouveau'
-
-        return (
-          <div key={r.system.id} className="stats-dumb-row">
-            <div className="stats-dumb-name">{r.system.name}</div>
-            <div className="stats-dumb-track">
-              <div className="stats-dumb-axis" />
-              <div className="stats-dumb-grid" style={{ left: '0%' }} />
-              <div className="stats-dumb-grid" style={{ left: '25%' }} />
-              <div className="stats-dumb-grid" style={{ left: '50%' }} />
-              <div className="stats-dumb-grid" style={{ left: '75%' }} />
-              <div className="stats-dumb-grid" style={{ left: '100%' }} />
-              {thenPct !== null && lineWidth > 0 && (
-                <div className={`stats-dumb-line ${trendCls}`} style={{ left: `${lineLeft}%`, width: `${lineWidth}%` }} />
-              )}
-              {thenPct !== null && (
-                <div
-                  className="stats-dumb-dot then"
-                  style={{ left: `${thenPct}%` }}
-                  title={`il y a 1 mois : ${r.avgThen!.toFixed(1)}/5`}
-                />
-              )}
-              <div
-                className={`stats-dumb-dot now ${trendCls}`}
-                style={{ left: `${nowPct}%` }}
-                title={`aujourd'hui : ${r.avgNow.toFixed(1)}/5`}
-              />
+                <div className="st5-heat-grid">
+                  {heatmap.map((week, wi) => (
+                    <div key={wi} className="st5-heat-week">
+                      {week.map((cell, di) => {
+                        const cls = ['st5-heat-cell',
+                          cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
+                          cell.isToday ? 'today' : '',
+                        ].filter(Boolean).join(' ')
+                        return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {dayValidated && <div className="st4-day-ok">✓ journée validée</div>}
             </div>
-            <div className={`stats-dumb-delta ${trendCls}`}>{deltaLabel}</div>
+            {!dayValidated && (
+              <Link href="/dashboard/focus" className="st-act st5-lever-cta">
+                {doneToday === 0 ? 'Allumer la flamme du jour →' : 'Valider ta journée →'}
+              </Link>
+            )}
           </div>
-        )
-      })}
-      <div className="stats-dumb-scale">
-        <div />
-        <div className="stats-dumb-ticks">
-          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+
         </div>
-        <div />
-      </div>
-    </div>
-  )
-}
-
-// ===================== SPARKLINE =====================
-function Sparkline({ data }: { data: { weekStart: string; avg: number | null; count: number }[] }) {
-  const w = 320
-  const h = 160
-  const pad = 18
-  const validIndices = data.map((d, i) => d.avg !== null ? i : -1).filter(i => i >= 0)
-  if (validIndices.length < 2) {
-    return <div className="stats-empty">Pas assez de données pour tracer une tendance.</div>
-  }
-
-  const xs = data.map((_, i) => pad + (i / Math.max(1, data.length - 1)) * (w - 2 * pad))
-  const ys = data.map(d => d.avg === null ? null : h - pad - ((d.avg - 1) / 4) * (h - 2 * pad))
-
-  const segments: string[] = []
-  let current: string[] = []
-  for (let i = 0; i < ys.length; i++) {
-    if (ys[i] === null) {
-      if (current.length > 0) { segments.push(current.join(' ')); current = [] }
-    } else {
-      current.push(`${current.length === 0 ? 'M' : 'L'} ${xs[i].toFixed(1)} ${(ys[i] as number).toFixed(1)}`)
-    }
-  }
-  if (current.length > 0) segments.push(current.join(' '))
-
-  return (
-    <div className="stats-sparkline-wrap">
-      <svg viewBox={`0 0 ${w} ${h}`} className="stats-sparkline">
-        {[1, 2, 3, 4, 5].map(v => {
-          const y = h - pad - ((v - 1) / 4) * (h - 2 * pad)
-          return (
-            <g key={v}>
-              <line x1={pad} y1={y} x2={w - pad} y2={y} stroke="#E5E2DA" strokeWidth={0.5} strokeDasharray="2 3" />
-              <text x={pad - 4} y={y + 3} textAnchor="end" fontSize={9} fill="#9CA09A">{v}</text>
-            </g>
-          )
-        })}
-        {segments.map((seg, i) => (
-          <path key={i} d={seg} fill="none" stroke="#1B4332" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        {data.map((d, i) => d.avg === null ? null : (
-          <circle key={i} cx={xs[i]} cy={ys[i] as number} r={3} fill="#1B4332" stroke="white" strokeWidth={1.5}>
-            <title>{d.weekStart} · {d.avg.toFixed(1)}/5 · {d.count} révision{d.count > 1 ? 's' : ''}</title>
-          </circle>
-        ))}
-      </svg>
-      <div className="stats-sparkline-meta">
-        <span>S-12</span>
-        <span>aujourd&apos;hui</span>
       </div>
     </div>
   )

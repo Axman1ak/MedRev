@@ -7,9 +7,10 @@ import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Politique de Confidentialité — MedRev',
+  title: 'Politique de Confidentialité · MedRev',
   description: 'Politique de confidentialité de MedRev, conforme RGPD. Données collectées, finalités, sous-traitants, droits de l\'utilisateur.',
 }
 
@@ -19,10 +20,10 @@ export default function ConfidentialitePage() {
       <MarketingNav />
 
       <div className="legal-wrap">
-        <div className="legal-header">
-          <div className="legal-kicker">Confidentialité</div>
-          <h1 className="legal-h1">Politique de <em>Confidentialité</em></h1>
-          <p className="legal-meta">Conforme RGPD · En vigueur depuis le 8 mai 2026</p>
+        <div className="legal-header ln-subhero">
+          <span className="ln-kicker">Confidentialité</span>
+          <h1 className="ln-subhero-h1">Politique de <em>Confidentialité</em></h1>
+          <p className="ln-subhero-meta">Conforme RGPD · En vigueur depuis le 8 mai 2026</p>
         </div>
 
         <section className="legal-section">

@@ -13,7 +13,7 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = 'MedRev — Tes cours, tes QCM, ton planning.'
+export const alt = 'MedRev · Tes cours, tes QCM, ton planning.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -64,7 +64,7 @@ export default async function Image() {
             right: 0,
             bottom: 0,
             background:
-              'radial-gradient(ellipse 60% 40% at 50% 30%, rgba(45, 106, 79, 0.15) 0%, transparent 65%)',
+              'radial-gradient(ellipse 60% 40% at 50% 30%, rgba(44, 95, 138, 0.15) 0%, transparent 65%)',
           }}
         />
 
@@ -83,7 +83,7 @@ export default async function Image() {
             textTransform: 'uppercase',
           }}
         >
-          MED·<span style={{ color: '#2D6A4F' }}>REV</span>
+          MED·<span style={{ color: '#2C5F8A' }}>REV</span>
         </div>
 
         {/* Badge kicker */}
@@ -93,11 +93,11 @@ export default async function Image() {
             alignItems: 'center',
             padding: '10px 24px',
             background: '#DDECE3',
-            border: '1px solid rgba(45, 106, 79, 0.25)',
+            border: '1px solid rgba(44, 95, 138, 0.25)',
             borderRadius: 999,
             fontSize: 16,
             fontWeight: 500,
-            color: '#1B4332',
+            color: '#1B3A5B',
             letterSpacing: 3,
             textTransform: 'uppercase',
             marginBottom: 36,
@@ -123,7 +123,7 @@ export default async function Image() {
           }}
         >
           <span>Tes cours, tes QCM,</span>
-          <span style={{ fontStyle: 'italic', color: '#1B4332' }}>ton planning.</span>
+          <span style={{ fontStyle: 'italic', color: '#1B3A5B' }}>ton planning.</span>
         </div>
 
         {/* Subtitle italique */}
@@ -155,7 +155,7 @@ export default async function Image() {
             fontFamily: 'serif',
           }}
         >
-          medrev — méthode des prépas, sans le prix
+          medrev · la méthode des prépas, sans le prix
         </div>
       </div>
     ),

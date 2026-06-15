@@ -19,13 +19,13 @@ export default function NotFound() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '40px 20px',
-        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+        fontFamily: "var(--font-hanken), system-ui, sans-serif",
       }}
     >
       <div style={{ maxWidth: 480, textAlign: 'center' }}>
         <div
           style={{
-            fontFamily: "'Cinzel', 'Fraunces', Georgia, serif",
+            fontFamily: "var(--font-bricolage), var(--font-bricolage), Georgia, serif",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: '0.18em',
@@ -34,15 +34,15 @@ export default function NotFound() {
             marginBottom: 32,
           }}
         >
-          Med<span style={{ color: '#2D6A4F' }}>·Rev</span>
+          Med<span style={{ color: '#2C5F8A' }}>·Rev</span>
         </div>
 
         <div
           style={{
-            fontFamily: "'Fraunces', serif",
+            fontFamily: "var(--font-bricolage), serif",
             fontSize: 88,
             fontWeight: 500,
-            color: '#1B4332',
+            color: '#1B3A5B',
             lineHeight: 1,
             marginBottom: 18,
             letterSpacing: '-0.04em',
@@ -53,7 +53,7 @@ export default function NotFound() {
 
         <h1
           style={{
-            fontFamily: "'Fraunces', serif",
+            fontFamily: "var(--font-bricolage), serif",
             fontSize: 28,
             fontWeight: 500,
             color: '#1A1A1A',
@@ -83,7 +83,7 @@ export default function NotFound() {
             style={{
               display: 'inline-block',
               padding: '12px 22px',
-              background: '#1B4332',
+              background: '#1B3A5B',
               color: '#FFFFFF',
               textDecoration: 'none',
               borderRadius: 9,

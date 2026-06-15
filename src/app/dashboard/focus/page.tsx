@@ -13,11 +13,14 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
+import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, nextMilestone, bookAtPoint, BIB_VIEWBOX } from '@/components/BibliothecaSvg'
+import { playBookOpen, playBookClose, playStamp, playWhoosh } from '@/lib/sounds'
+import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
 
-const J = [0, 1, 3, 5, 7, 15, 21, 30, 45, 60, 75, 90, 105, 120]
+const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
 const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: '#C75050',
@@ -61,13 +64,22 @@ type Result = {
     | { kind: 'reported'; atMs: number }
 }
 
-type Phase = 'loading' | 'session' | 'done' | 'empty'
+// 'lobby' = vue contemplative : la bibliothèque entière + bouton "Commencer".
+// La session ne montre QUE le livre qui s'écrit (modèle Forest/Focus Tree :
+// le jardin se contemple avant et après, jamais pendant).
+type Phase = 'loading' | 'lobby' | 'session' | 'done' | 'empty'
 
 // ===================== HELPERS =====================
 function dateStrFromOffset(base: string, offset: number): string {
   const d = new Date(base + 'T12:00:00')
   d.setDate(d.getDate() + offset)
   return d.toISOString().split('T')[0]
+}
+
+function formatBookDate(d: string): string {
+  try {
+    return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch { return d }
 }
 
 function daysBetween(a: string, b: string): number {
@@ -102,26 +114,39 @@ function effectiveStepScore(s: StepEntry): Score | null {
   return null
 }
 
-function stepDate(lesson: Lesson, i: number): string {
+function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
-  return dateStrFromOffset(lesson.learn_date, J[i])
+  return dateStrFromOffset(lesson.learn_date, j[i])
 }
 
-function getLastScore(lesson: Lesson): Score | null {
+function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = J.length - 1; i >= 0; i--) {
+  for (let i = j.length - 1; i >= 0; i--) {
     const sc = effectiveStepScore(steps[i])
     if (sc) return sc
   }
   return null
 }
 
-function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
+// Reporter / Annuler (colonnes lessons.skips / lessons.postpones).
+function lessonSkips(l: Lesson): number[] {
+  const s = (l as { skips?: unknown }).skips
+  return Array.isArray(s) ? (s as number[]) : []
+}
+function lessonPostpones(l: Lesson): Record<string, string> {
+  const p = (l as { postpones?: unknown }).postpones
+  return p && typeof p === 'object' ? (p as Record<string, string>) : {}
+}
+
+function getDueForToday(lesson: Lesson, today: string, j: number[] = DEFAULT_J): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < J.length; i++) {
+  const skips = lessonSkips(lesson)
+  const postpones = lessonPostpones(lesson)
+  for (let i = 0; i < j.length; i++) {
     if (stepScore(steps[i])) continue
-    const dd = stepDate(lesson, i)
+    if (skips.includes(i)) continue
+    const dd = postpones[String(i)] ?? stepDate(lesson, i, j)
     if (dd <= today) {
       return {
         stepIndex: i,
@@ -135,20 +160,21 @@ function getDueForToday(lesson: Lesson, today: string): DueInfo | null {
   return null
 }
 
-function getNextUndoneJ(lesson: Lesson): number | null {
+function getNextUndoneJ(lesson: Lesson, j: number[] = DEFAULT_J): number | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < J.length; i++) {
+  for (let i = 0; i < j.length; i++) {
     if (!stepScore(steps[i])) return i
   }
   return null
 }
 
-function computeTodayQueue(lessons: Lesson[], today: string): QueueItem[] {
+function computeTodayQueue(lessons: Lesson[], today: string, schedOf: (id: string | null | undefined) => number[]): QueueItem[] {
   const out: QueueItem[] = []
   lessons.forEach(l => {
-    const due = getDueForToday(l, today)
+    const j = schedOf(l.system_id)
+    const due = getDueForToday(l, today, j)
     if (!due) return
-    const lastScore = getLastScore(l)
+    const lastScore = getLastScore(l, j)
     let priority: number
     if (due.status === 'missed') {
       priority = -due.overdueDays * 100 + (lastScore ?? 3) * 10
@@ -159,7 +185,8 @@ function computeTodayQueue(lessons: Lesson[], today: string): QueueItem[] {
     }
     out.push({ lesson: l, due, lastScore, priority })
   })
-  return out.sort((a, b) => a.priority - b.priority)
+  // Ordre de révision : palier J croissant (plus petit J d'abord).
+  return out.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
 }
 
 function buildQueue(
@@ -170,6 +197,7 @@ function buildQueue(
   lessonsParam: string | null,
   today: string
 ): QueueItem[] {
+  const schedOf = makeScheduleResolver(systems)
   // 0) Mode "retravailler multi" : si ?lessons=id1,id2,id3 fourni, on construit
   //    une queue UNIQUEMENT de ces fiches, chacune sur son prochain J non noté
   //    avec status: 'fresh'. Le focus utilisera cette info pour écrire en
@@ -180,12 +208,12 @@ function buildQueue(
     for (const id of ids) {
       const l = lessons.find(x => x.id === id)
       if (!l) continue
-      let due: DueInfo | null = getDueForToday(l, today)
+      let due: DueInfo | null = getDueForToday(l, today, schedOf(l.system_id))
       if (!due) {
-        const idx = getNextUndoneJ(l)
+        const idx = getNextUndoneJ(l, schedOf(l.system_id))
         if (idx !== null) {
           if (l.learn_date) {
-            const dd = stepDate(l, idx)
+            const dd = stepDate(l, idx, schedOf(l.system_id))
             due = {
               stepIndex: idx,
               dueDate: dd,
@@ -198,7 +226,7 @@ function buildQueue(
         }
       }
       if (due) {
-        queue.push({ lesson: l, due, lastScore: getLastScore(l), priority: -1 })
+        queue.push({ lesson: l, due, lastScore: getLastScore(l, schedOf(l.system_id)), priority: -1 })
       }
     }
     return queue
@@ -209,7 +237,7 @@ function buildQueue(
   let baseQueue: QueueItem[]
   if (systemParam) {
     const sysLessons = lessons.filter(l => l.system_id === systemParam)
-    baseQueue = computeTodayQueue(sysLessons, today)
+    baseQueue = computeTodayQueue(sysLessons, today, schedOf)
   } else {
     const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
     const sem: 1 | 2 | 'year' = semRaw === '1' ? 1 : semRaw === 'year' ? 'year' : 2
@@ -220,7 +248,7 @@ function buildQueue(
           const sys = systems.find(s => s.id === l.system_id)
           return sys?.semestre === sem
         })
-    baseQueue = computeTodayQueue(semLessons, today)
+    baseQueue = computeTodayQueue(semLessons, today, schedOf)
   }
 
   // 2) Si une fiche précise est demandée (?lesson=), on la place en première position
@@ -237,12 +265,12 @@ function buildQueue(
       // on la prepend avec un DueInfo synthétique sur le prochain J non noté.
       const l = lessons.find(x => x.id === lessonParam)
       if (l) {
-        let due: DueInfo | null = getDueForToday(l, today)
+        let due: DueInfo | null = getDueForToday(l, today, schedOf(l.system_id))
         if (!due) {
-          const idx = getNextUndoneJ(l)
+          const idx = getNextUndoneJ(l, schedOf(l.system_id))
           if (idx !== null) {
             if (l.learn_date) {
-              const dd = stepDate(l, idx)
+              const dd = stepDate(l, idx, schedOf(l.system_id))
               due = {
                 stepIndex: idx,
                 dueDate: dd,
@@ -255,7 +283,7 @@ function buildQueue(
           }
         }
         if (due) {
-          baseQueue.unshift({ lesson: l, due, lastScore: getLastScore(l), priority: -1 })
+          baseQueue.unshift({ lesson: l, due, lastScore: getLastScore(l, schedOf(l.system_id)), priority: -1 })
         }
       }
     }
@@ -353,10 +381,63 @@ function FocusPlant({ elapsedMs, timeToFullMs, forceFull = false }: PlantProps) 
 // Persisté en localStorage (clé "medrev-garden-{userId}" — réutilisée pour
 // éviter une migration de schéma. Le champ legacy `elements` est ignoré.)
 
+// Registre des livres : une entrée par livre rangé.
+// n = rang du livre (1-based, = fichesCount au moment du rangement)
+// t = titre de la fiche, s = note (1-5), d = date, m = minutes écoulées
+// dans la session au moment de la notation.
+type BookLogEntry = { n: number; t: string; s: Score; d: string; m: number }
+
+function parseBookLog(raw: unknown): BookLogEntry[] {
+  if (!Array.isArray(raw)) return []
+  const out: BookLogEntry[] = []
+  for (const e of raw) {
+    if (!e || typeof e !== 'object') continue
+    const { n, t, s, d, m } = e as Record<string, unknown>
+    if (typeof n !== 'number' || n < 1) continue
+    if (typeof t !== 'string') continue
+    if (typeof s !== 'number' || s < 1 || s > 5) continue
+    out.push({ n, t, s: s as Score, d: typeof d === 'string' ? d : '', m: typeof m === 'number' ? m : 0 })
+  }
+  return out
+}
+
+// Union par rang (un livre = une entrée), borné à la capacité du meuble.
+function mergeBookLogs(a: BookLogEntry[], b: BookLogEntry[]): BookLogEntry[] {
+  const map = new Map<number, BookLogEntry>()
+  for (const e of a) map.set(e.n, e)
+  for (const e of b) if (!map.has(e.n)) map.set(e.n, e)
+  return Array.from(map.values()).sort((x, y) => x.n - y.n).slice(-BIBLIOTHECA_TOTAL_CAPACITY)
+}
+
 type DayBibliothecaState = {
   startedDate?: string  // date de la première session
   elapsedMs: number     // temps cumulé total (sur l'année), pour stats
   fichesCount: number   // nombre total de fiches notées (sur l'année)
+  // Temps de révision PAR JOUR (ms) — { "YYYY-MM-DD": ms }. Alimenté par le
+  // tick de sauvegarde (30 s). Sert à la règle d'assiduité de la page Stats :
+  // un jour compte à partir de 10 minutes de révision réelle.
+  dayLog: Record<string, number>
+  // Registre des livres (gardens.book_log). Peut être vide pour les livres
+  // rangés avant l'existence du registre.
+  bookLog: BookLogEntry[]
+}
+
+// Garde les ~220 derniers jours du dayLog (le jsonb reste petit).
+function pruneDayLog(log: Record<string, number>): Record<string, number> {
+  const keys = Object.keys(log).sort()
+  if (keys.length <= 220) return log
+  const out: Record<string, number> = {}
+  for (const k of keys.slice(-220)) out[k] = log[k]
+  return out
+}
+
+function parseDayLog(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'number' && v > 0) out[k] = v
+  }
+  return out
 }
 
 const BIB_KEY_BASE = 'medrev-garden'
@@ -367,7 +448,7 @@ function bibKey(userId: string | null): string | null {
 }
 
 function loadDayBibliotheca(today: string, userId: string | null): DayBibliothecaState {
-  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0 }
+  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {}, bookLog: [] }
   if (typeof window === 'undefined') return empty
   const key = bibKey(userId)
   if (!key) return empty
@@ -379,6 +460,8 @@ function loadDayBibliotheca(today: string, userId: string | null): DayBibliothec
         startedDate: parsed.startedDate ?? today,
         elapsedMs: typeof parsed.elapsedMs === 'number' ? parsed.elapsedMs : 0,
         fichesCount: typeof parsed.fichesCount === 'number' ? parsed.fichesCount : 0,
+        dayLog: parseDayLog((parsed as { dayLog?: unknown }).dayLog),
+        bookLog: parseBookLog((parsed as { bookLog?: unknown }).bookLog),
       }
     }
     return empty
@@ -411,7 +494,7 @@ async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<
   try {
     const { data, error } = await supabase
       .from('gardens')
-      .select('started_date, elapsed_ms, fiches_count')
+      .select('started_date, elapsed_ms, fiches_count, day_log, book_log')
       .eq('user_id', userId)
       .maybeSingle()
     if (error || !data) return null
@@ -419,6 +502,8 @@ async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<
       startedDate: (data as any).started_date ?? undefined,
       elapsedMs: Number((data as any).elapsed_ms ?? 0),
       fichesCount: Number((data as any).fiches_count ?? 0),
+      dayLog: parseDayLog((data as any).day_log),
+      bookLog: parseBookLog((data as any).book_log),
     }
   } catch {
     return null
@@ -435,6 +520,8 @@ function pushBibToSupabase(supabase: SbClient, userId: string | null, state: Day
         started_date: state.startedDate ?? null,
         elapsed_ms: state.elapsedMs,
         fiches_count: state.fichesCount,
+        day_log: pruneDayLog(state.dayLog),
+        book_log: state.bookLog,
         elements: [],  // legacy, conservé vide pour compat
       },
       { onConflict: 'user_id' }
@@ -447,10 +534,16 @@ function mergeBibStates(a: DayBibliothecaState, b: DayBibliothecaState): DayBibl
   let startedDate: string | undefined
   if (a.startedDate && b.startedDate) startedDate = a.startedDate < b.startedDate ? a.startedDate : b.startedDate
   else startedDate = a.startedDate ?? b.startedDate
+  const dayLog: Record<string, number> = { ...a.dayLog }
+  for (const [k, v] of Object.entries(b.dayLog)) {
+    dayLog[k] = Math.max(dayLog[k] ?? 0, v)
+  }
   return {
     startedDate,
     elapsedMs: Math.max(a.elapsedMs, b.elapsedMs),
     fichesCount: Math.max(a.fichesCount, b.fichesCount),
+    dayLog,
+    bookLog: mergeBookLogs(a.bookLog, b.bookLog),
   }
 }
 
@@ -475,6 +568,9 @@ function FocusPageBody() {
   const lessonParam = searchParams.get('lesson')
   const systemParam = searchParams.get('system')
   const lessonsParam = searchParams.get('lessons')
+  // ?vue=biblio : mode GALERIE — contempler la bibliothèque sans session
+  // (accessible depuis la carte Bibliothèque du dashboard).
+  const isGallery = searchParams.get('vue') === 'biblio'
 
   const [userId, setUserId] = useState<string | null>(null)
   const [systems, setSystems] = useState<System[]>([])
@@ -540,12 +636,51 @@ function FocusPageBody() {
   // Position optionnelle (x, y) en coords viewBox jardin.
   const [particleBurst, setParticleBurst] = useState<{ ts: number; x?: number; y?: number } | null>(null)
 
+  // Vol du livre refermé : du pupitre vers le compteur-bibliothèque de la
+  // topbar (la bibliothèque elle-même n'est plus visible pendant la session —
+  // modèle Forest). Ghost séparé du LiveBook : il survit au changement de fiche.
+  const [bookFly, setBookFly] = useState<{ x: number; y: number; ts: number; color: string } | null>(null)
+  const libChipRef = useRef<HTMLDivElement | null>(null)
+
+  // Chorégraphie de notation : l'empreinte de cire s'imprime sur la page,
+  // le livre se referme, PUIS il s'envole et la fiche suivante arrive.
+  // null = pas de cérémonie en cours.
+  const [sealStamp, setSealStamp] = useState<{ score: Score; ts: number } | null>(null)
+
+  // Registre : livre ouvert apres clic dans la bibliotheque (lobby/galerie).
+  const [openBook, setOpenBook] = useState<{ index: number; entry: BookLogEntry | null; x: number; y: number } | null>(null)
+
+  const handleGardenClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    // Inverse du mapping preserveAspectRatio="xMidYMid slice" du SVG.
+    const scale = Math.max(rect.width / BIB_VIEWBOX.w, rect.height / BIB_VIEWBOX.h)
+    const offX = (rect.width - BIB_VIEWBOX.w * scale) / 2
+    const offY = (rect.height - BIB_VIEWBOX.h * scale) / 2
+    const vx = (e.clientX - rect.left - offX) / scale + BIB_VIEWBOX.x
+    const vy = (e.clientY - rect.top - offY) / scale + BIB_VIEWBOX.y
+    const hit = bookAtPoint(vx, vy)
+    const count = Math.min(dayGardenRef.current.fichesCount, BIBLIOTHECA_TOTAL_CAPACITY)
+    if (!hit || hit.index >= count) {
+      // Clic dans le vide : referme le livre ouvert le cas echeant.
+      setOpenBook(prev => { if (prev) playBookClose(); return null })
+      return
+    }
+    const entry = dayGardenRef.current.bookLog.find(b => b.n === hit.index + 1) ?? null
+    playBookOpen()
+    setOpenBook({ index: hit.index, entry, x: e.clientX, y: e.clientY })
+  }, [])
+
+  // Cascade du bilan : on rejoue l'arrivée des livres de la session un par un
+  // (le compteur affiché monte de sessionStart → final, chaque pas déclenche
+  // le pop + burst du SVG). null = pas de cascade (affichage direct).
+  const [bilanReveal, setBilanReveal] = useState<number | null>(null)
+
   const today = new Date().toISOString().split('T')[0]
 
   // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
   // Persisté en localStorage avec clé 'medrev-garden' (sans date). Cultivé toute l'année.
   // elapsedMs cumulé sur l'ensemble de l'année. Jamais reset.
-  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0 })
+  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {}, bookLog: [] })
   const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
   // Stocke le nombre de fiches CUMULÉES au DÉMARRAGE de la session courante.
   // Utilisé pour le recap : permet de calculer combien de livres ont été ajoutés pendant cette session.
@@ -603,7 +738,8 @@ function FocusPageBody() {
         // tout de suite l'état le plus récent.
         if (
           merged.elapsedMs !== cloudGarden.elapsedMs ||
-          merged.fichesCount !== cloudGarden.fichesCount
+          merged.fichesCount !== cloudGarden.fichesCount ||
+          merged.bookLog.length !== cloudGarden.bookLog.length
         ) {
           pushBibToSupabase(supabase, user.id, merged)
         }
@@ -627,13 +763,16 @@ function FocusPageBody() {
       const q = buildQueue(lesList, sysList, lessonParam, systemParam, lessonsParam, today)
       setQueue(q)
       setResults(new Array(q.length).fill(null))
-      setPhase(q.length === 0 ? 'empty' : 'session')
+      // Lobby d'abord : la bibliothèque se contemple, la session se CHOISIT.
+      // startedAt reste à 0 jusqu'au clic "Commencer" (le cleanup de
+      // démontage ignore startedAt === 0, donc pas de temps fantôme).
+      // En mode galerie, on montre la bibliothèque même sans fiche due.
+      setPhase(isGallery ? 'lobby' : (q.length === 0 ? 'empty' : 'lobby'))
       setCurrentIdx(0)
-      setStartedAt(Date.now())
       setNow(Date.now())
     })()
     return () => { cancelled = true }
-  }, [supabase, router, lessonParam, systemParam, lessonsParam, today])
+  }, [supabase, router, lessonParam, systemParam, lessonsParam, today, isGallery])
 
   // Sauvegarde périodique de l'elapsed cumul (toutes les 30s) pour ne pas perdre
   // le temps écoulé si l'utilisateur ferme l'onglet. Push aussi Supabase.
@@ -641,7 +780,14 @@ function FocusPageBody() {
     if (phase !== 'session') return
     const intv = setInterval(() => {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const next: DayBibliothecaState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
+      const cur = dayGardenRef.current
+      const dk = new Date().toISOString().split('T')[0]
+      const next: DayBibliothecaState = {
+        ...cur,
+        elapsedMs: totalElapsed,
+        // +30 s de révision sur la journée courante (règle des 10 min/jour)
+        dayLog: pruneDayLog({ ...cur.dayLog, [dk]: (cur.dayLog[dk] ?? 0) + 30000 }),
+      }
       dayGardenRef.current = next
       saveDayBibliotheca(next, userIdRef.current)
       pushBibToSupabase(supabase, userIdRef.current, next)
@@ -660,6 +806,23 @@ function FocusPageBody() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Cascade du bilan : rejoue l'arrivée des livres de la session, un par un.
+  useEffect(() => {
+    if (phase !== 'done') { setBilanReveal(null); return }
+    const end = dayGardenRef.current.fichesCount
+    const start = Math.min(end, sessionStartFichesCount)
+    if (end <= start) return
+    setBilanReveal(start)
+    let v = start
+    const t = setInterval(() => {
+      v++
+      setBilanReveal(v)
+      if (v >= end) clearInterval(t)
+    }, 170)
+    return () => clearInterval(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
 
   // Tick chrono en mode session
   useEffect(() => {
@@ -696,7 +859,8 @@ function FocusPageBody() {
     const atMs = Math.max(0, Date.now() - startedAt)
 
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-    while (J.length > newSteps.length) newSteps.push(null)
+    const rateJ = scheduleOf(systems.find(s => s.id === current.lesson.system_id))
+    while (rateJ.length > newSteps.length) newSteps.push(null)
     // Si le J n'est pas encore dû (status: 'fresh'), on écrit un score TEMPORAIRE
     // qui ne touche ni le calendrier ni les helpers (stepScore ne lit que .score).
     // Sinon (today/missed), c'est le score officiel : il remplace tout temp.
@@ -725,10 +889,19 @@ function FocusPageBody() {
     // Le score n'a pas d'incidence visuelle ; seule l'action de noter compte.
     if (wasEmpty) {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
+      const newCount = dayGardenRef.current.fichesCount + 1
       const updatedGarden: DayBibliothecaState = {
         ...dayGardenRef.current,
         elapsedMs: totalElapsed,
-        fichesCount: dayGardenRef.current.fichesCount + 1,
+        fichesCount: newCount,
+        // Registre : on consigne le livre qui vient d'être rangé.
+        bookLog: mergeBookLogs(dayGardenRef.current.bookLog, [{
+          n: newCount,
+          t: current.lesson.name,
+          s: score,
+          d: today,
+          m: Math.floor(atMs / 60000),
+        }]),
       }
       dayGardenRef.current = updatedGarden
       setDayGarden(updatedGarden)
@@ -740,16 +913,43 @@ function FocusPageBody() {
 
     setParticleBurst({ ts: Date.now(), x: 800, y: 550 })
 
-    // Avance seulement si la fiche n'avait jamais été actionnée dans cette session
     if (wasEmpty) {
-      const next = findNextEmptyIdx(newResults, currentIdx)
-      if (next === -1) setPhase('done')
-      else setCurrentIdx(next)
+      // CHORÉGRAPHIE (visuel uniquement — la DB est déjà écrite ci-dessus) :
+      //   0-450 ms   l'empreinte de cire s'imprime sur la page
+      //   450-850 ms le livre se referme (page droite se rabat, puis compactage)
+      //   850 ms     le livre fermé s'envole vers le compteur-bibliothèque
+      //   980 ms     fiche suivante (nouveau livre vierge)
+      // loading reste true pendant la cérémonie : pas de double clic possible.
+      setSealStamp({ score, ts: Date.now() })
+      playStamp()
+      const sys = systems.find(s => s.id === current.lesson.system_id)
+      const flyColor = (sys as { color?: string } | undefined)?.color || '#2C415A'
+      const chip = libChipRef.current
+      const target = chip ? chip.getBoundingClientRect() : null
+      window.setTimeout(() => {
+        playBookClose()
+        playWhoosh()
+        if (target) {
+          setBookFly({
+            x: target.left + target.width / 2,
+            y: target.top + target.height / 2,
+            ts: Date.now(),
+            color: flyColor,
+          })
+        }
+      }, 850)
+      window.setTimeout(() => {
+        setSealStamp(null)
+        const next = findNextEmptyIdx(newResults, currentIdx)
+        if (next === -1) setPhase('done')
+        else setCurrentIdx(next)
+        setLoading(false)
+      }, 980)
+    } else {
+      // Re-rating : pas de cérémonie, on reste sur la fiche.
+      setLoading(false)
     }
-    // Si re-rating : on reste sur la fiche, l'utilisateur peut vérifier ou naviguer.
-
-    setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, cumElapsedAtStart])
+  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, cumElapsedAtStart, systems])
 
   // ============ Actions : report ============
   const report = useCallback(async () => {
@@ -763,7 +963,8 @@ function FocusPageBody() {
     // Si on bascule rated → reported, on efface la note en DB pour rester cohérent
     if (wasRated) {
       const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-      while (J.length > newSteps.length) newSteps.push(null)
+      const reportJ = scheduleOf(systems.find(s => s.id === current.lesson.system_id))
+      while (reportJ.length > newSteps.length) newSteps.push(null)
       newSteps[current.due.stepIndex] = null
       await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
     }
@@ -784,7 +985,7 @@ function FocusPageBody() {
     }
 
     setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName, startedAt])
+  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName, startedAt, systems])
 
   // ============ Navigation ============
   const goPrev = useCallback(() => {
@@ -800,7 +1001,11 @@ function FocusPageBody() {
   // ============ Raccourcis clavier ============
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { router.push('/dashboard'); return }
+      if (e.key === 'Escape') {
+        if (openBook) { playBookClose(); setOpenBook(null); return }
+        router.push('/dashboard')
+        return
+      }
       if (phase !== 'session') return
       if (e.key === 'ArrowLeft') { goPrev(); return }
       if (e.key === 'ArrowRight') { goNext(); return }
@@ -810,9 +1015,47 @@ function FocusPageBody() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [rate, report, router, phase, goPrev, goNext])
+  }, [rate, report, router, phase, goPrev, goNext, openBook])
 
   // ===================== RENDERS =====================
+  // Popup du registre : carte flottante pres du clic, clampee a l'ecran.
+  const bookPop = (() => {
+    if (!openBook || typeof window === 'undefined') return null
+    const W = 268
+    const left = Math.max(12, Math.min(window.innerWidth - W - 12, openBook.x - W / 2))
+    const top = Math.max(70, Math.min(window.innerHeight - 200, openBook.y + 16))
+    const entry = openBook.entry
+    return (
+      <div className="focus-book-pop" style={{ left, top }} role="dialog" aria-label={`Ouvrage numéro ${openBook.index + 1}`}>
+        <button
+          type="button"
+          className="focus-book-pop-close"
+          aria-label="Fermer"
+          onClick={(ev) => { ev.stopPropagation(); playBookClose(); setOpenBook(null) }}
+        >
+          {'\u00d7'}
+        </button>
+        <div className="focus-book-pop-kicker">Ouvrage n{'\u00b0'} {openBook.index + 1}</div>
+        {entry ? (
+          <>
+            <div className="focus-book-pop-title">{entry.t}</div>
+            <div className="focus-book-pop-meta">
+              {entry.d ? <>{formatBookDate(entry.d)}<br /></> : null}
+              {entry.m < 1 ? "Noté dans la première minute" : `Noté après ${entry.m} min de session`}
+            </div>
+            <div className="focus-book-pop-seal" style={{ background: SCORE_COLORS[entry.s] }} title={`Note : ${entry.s}/5`}>
+              <span>{entry.s}</span>
+            </div>
+          </>
+        ) : (
+          <div className="focus-book-pop-old">
+            Écrit avant la tenue du registre. Son histoire reste entre ses pages.
+          </div>
+        )}
+      </div>
+    )
+  })()
+
   if (!userId || phase === 'loading') {
     return (
       <div className="focus-root">
@@ -844,6 +1087,127 @@ function FocusPageBody() {
             </p>
             <Link href="/dashboard" className="focus-empty-cta">Retour au tableau de bord</Link>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ============ phase === 'lobby' : la bibliothèque + "Commencer" ============
+  // Modèle Forest : on contemple le jardin, puis on choisit de planter.
+  if (phase === 'lobby') {
+    const treasures = unlockedTreasuresCount(dayGarden.fichesCount)
+    return (
+      <div className="focus-root">
+        <div className="focus-topbar">
+          <div className="focus-brand">
+            <span className="focus-brand-dot" aria-hidden="true" />
+            MedRev <span className="focus-brand-mode">focus</span>
+          </div>
+          <div className="focus-topbar-right">
+            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
+            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+          </div>
+        </div>
+
+        <div className="focus-stage">
+          {/* La bibliothèque entière, sans rien devant. Cliquable : chaque
+              livre s'ouvre sur sa fiche (registre). */}
+          <div className="focus-garden focus-garden-clickable" onClick={handleGardenClick}>
+            <BibliothecaSvg
+              fichesCount={dayGarden.fichesCount}
+              className="focus-garden-svg"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </div>
+
+          {/* MODE GALERIE : une plaque de laiton en bas, comme dans un vrai
+              cabinet de lecture. Stats en chips, jalon avec barre, indice discret. */}
+          {isGallery && (
+            <div className="focus-gallery-caption">
+              <div className="fg-plaque">
+                <div className="fg-brand">Bibliotheca</div>
+                <div className="fg-chips">
+                  <div className="fg-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13ZM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-2.5" />
+                    </svg>
+                    <strong>{dayGarden.fichesCount}</strong>
+                    <span>ouvrage{dayGarden.fichesCount > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="fg-sep" aria-hidden="true" />
+                  <div className="fg-chip gold">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M6 3h12l4 6-10 12L2 9l4-6Z" /><path d="M2 9h20M12 21 8 9l4-6 4 6-4 12" />
+                    </svg>
+                    <strong>{treasures}/6</strong>
+                    <span>trésors</span>
+                  </div>
+                  {(() => {
+                    const goal = nextMilestone(dayGarden.fichesCount)
+                    if (!goal) return null
+                    const pct = Math.min(100, Math.max(0, ((dayGarden.fichesCount - goal.prevAt) / (goal.at - goal.prevAt)) * 100))
+                    const left = goal.at - dayGarden.fichesCount
+                    return (
+                      <>
+                        <div className="fg-sep" aria-hidden="true" />
+                        <div className="fg-chip fg-goal">
+                          <span className="fg-goal-name">{goal.label}</span>
+                          <div className="fg-goal-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
+                          <span className="fg-goal-left">dans {left} livre{left > 1 ? 's' : ''}</span>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+              <Link href="/dashboard" className="focus-link">{'←'} Retour au tableau de bord</Link>
+            </div>
+          )}
+
+          {/* Invitation à la session, en bas au centre. Le prochain jalon est
+              intégré ICI — plus de panneau qui recouvre le meuble, les trésors
+              se découvrent sur les étagères elles-mêmes. */}
+          {!isGallery && (
+          <div className="focus-lobby-card">
+            <div className="focus-lobby-kicker">Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors</div>
+            <div className="focus-lobby-title">
+              {queue.length} fiche{queue.length > 1 ? 's' : ''} à réviser
+            </div>
+            <div className="focus-lobby-sub">
+              Chaque fiche notée ajoute un livre à ta bibliothèque.
+            </div>
+            {(() => {
+              const goal = nextMilestone(dayGarden.fichesCount)
+              if (!goal) return null
+              const pct = Math.min(100, Math.max(0, ((dayGarden.fichesCount - goal.prevAt) / (goal.at - goal.prevAt)) * 100))
+              const left = goal.at - dayGarden.fichesCount
+              return (
+                <div className="focus-lobby-goal">
+                  <div className="focus-lobby-goal-row">
+                    <span className="focus-lobby-goal-name">Prochain jalon : <strong>{goal.label}</strong></span>
+                    <span className="focus-lobby-goal-left">{left} livre{left > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="focus-lobby-goal-bar" aria-hidden="true">
+                    <div className="focus-lobby-goal-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })()}
+            <button
+              type="button"
+              className="focus-lobby-start"
+              onClick={() => {
+                setStartedAt(Date.now())
+                setNow(Date.now())
+                setPhase('session')
+              }}
+            >
+              Commencer la session →
+            </button>
+          </div>
+          )}
+
+          {bookPop}
         </div>
       </div>
     )
@@ -886,84 +1250,59 @@ function FocusPageBody() {
 
         <div className="focus-stage">
 
-          {/* BIBLIOTHÈQUE visible en fond — état cumulé annuel (livres + trésors débloqués) */}
+          {/* BIBLIOTHÈQUE visible en fond — les livres de la session arrivent
+              en CASCADE (bilanReveal monte un par un, chaque pas déclenche le
+              pop + la bouffée de poussière du SVG). */}
           <div className="focus-garden">
             <BibliothecaSvg
-              fichesCount={dayGarden.fichesCount}
+              fichesCount={bilanReveal ?? dayGarden.fichesCount}
               className="focus-garden-svg"
               preserveAspectRatio="xMidYMid slice"
             />
           </div>
 
-          {/* CARD bilan à GAUCHE pour laisser la bibliothèque visible à droite */}
-          <div className="focus-card-zone focus-card-zone-bilan">
-            <div className="focus-card focus-done-card">
-              <div className="focus-done-kicker">Session terminée</div>
-              <h2 className="focus-done-title">
-                {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
-                {reported > 0 && (
-                  <> <span className="focus-done-sep">{'·'}</span> <span className="focus-done-reported">{reported} reportée{reported > 1 ? 's' : ''}</span></>
-                )}
-              </h2>
-              <div className="focus-done-meta">
-                en {min} min {sec.toString().padStart(2, '0')} s
-                {avg !== null && <> {'·'} moyenne <strong>{avg.toFixed(1)}/5</strong></>}
-              </div>
+          {/* Voile central : assoit la lisibilité du bilan SANS pavé opaque,
+              le meuble reste visible tout autour. */}
+          <div className="focus-bilan-veil" aria-hidden="true" />
 
-              {/* Recap : livres ajoutés à la bibliothèque + trésors débloqués */}
-              <div className="focus-done-recap">
-                <div className="focus-done-recap-row">
-                  <span className="focus-done-recap-icon" aria-hidden="true">{'\u{1F4DA}'}</span>
-                  <span className="focus-done-recap-text">
-                    {sessionBooks > 0 ? (
-                      <>Tu as ajouté <strong>{sessionBooks}</strong> {sessionBooks > 1 ? 'ouvrages' : 'ouvrage'} à ta bibliothèque</>
-                    ) : (
-                      <>Aucune fiche notée cette session — la bibliothèque attend</>
-                    )}
-                  </span>
-                </div>
-                {sessionTreasuresUnlocked > 0 ? (
-                  <div className="focus-done-recap-gains">
-                    <div className="focus-done-recap-gains-lbl">Trésors débloqués cette session</div>
-                    <div className="focus-done-recap-gains-row">
-                      <span className="focus-done-recap-pill rare">
-                        <strong>{sessionTreasuresUnlocked}</strong> {sessionTreasuresUnlocked > 1 ? 'nouveaux trésors' : 'nouveau trésor'}
-                      </span>
-                    </div>
-                  </div>
-                ) : upcomingTreasure ? (
-                  <div className="focus-done-recap-empty">
-                    Prochain trésor : <strong>{upcomingTreasure.name}</strong> à <strong>{upcomingTreasure.at} h</strong> ({upcomingTreasure.at - dayGarden.fichesCount} fiches restantes).
-                  </div>
-                ) : (
-                  <div className="focus-done-recap-empty">Tous les trésors sont débloqués — bravo !</div>
-                )}
-              </div>
-
-              <div className="focus-done-list">
-                {filled.map((r, i) => (
-                  <div key={`${r.lessonId}-${i}`} className="focus-done-row">
-                    <div className="focus-done-row-num">{i + 1}</div>
-                    <div className="focus-done-row-main">
-                      <div className="focus-done-row-name">{r.lessonName}</div>
-                      <div className="focus-done-row-sys">{r.systemName}</div>
-                    </div>
-                    {r.outcome.kind === 'rated'
-                      ? <div className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</div>
-                      : <div className="focus-done-chip reported">Reportée</div>}
-                  </div>
-                ))}
-              </div>
-
-              <Link href="/dashboard" className="focus-done-cta">Retour au tableau de bord</Link>
+          {/* BILAN CENTRÉ en typographie flottante (pas de carte qui coupe
+              l'écran, pas de panneau qui recouvre la bibliothèque). */}
+          <div className="focus-bilan">
+            <div className="focus-bilan-kicker">Session terminée</div>
+            <h2 className="focus-bilan-title">
+              {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
+              {reported > 0 && (
+                <span className="focus-bilan-reported"> · {reported} reportée{reported > 1 ? 's' : ''}</span>
+              )}
+            </h2>
+            <div className="focus-bilan-meta">
+              en {min} min {sec.toString().padStart(2, '0')} s
+              {avg !== null && <> · moyenne <strong>{avg.toFixed(1)}/5</strong></>}
+              {sessionBooks > 0 && <> · <strong>+{sessionBooks}</strong> ouvrage{sessionBooks > 1 ? 's' : ''} rangé{sessionBooks > 1 ? 's' : ''}</>}
             </div>
-          </div>
+            <div className="focus-bilan-next">
+              {sessionTreasuresUnlocked > 0
+                ? <>✦ {sessionTreasuresUnlocked > 1 ? `${sessionTreasuresUnlocked} nouveaux trésors débloqués` : 'Nouveau trésor débloqué'}. Regarde tes étagères</>
+                : upcomingTreasure
+                  ? <>Prochain trésor : <strong>{upcomingTreasure.name}</strong>, encore {upcomingTreasure.at - dayGarden.fichesCount} fiche{upcomingTreasure.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
+                  : <>Tous les trésors sont débloqués, bravo !</>}
+            </div>
 
-          {/* Panel trésors sur la droite (la card de bilan est à gauche) */}
-          <BibliothecaTreasuresPanel
-            fichesCount={dayGarden.fichesCount}
-            className="bib-treasures-right"
-          />
+            <div className="focus-bilan-list">
+              {filled.map((r, i) => (
+                <div key={`${r.lessonId}-${i}`} className="focus-bilan-row">
+                  <span className="focus-bilan-row-num">{i + 1}</span>
+                  <span className="focus-bilan-row-name">{r.lessonName}</span>
+                  <span className="focus-bilan-row-sys">{r.systemName}</span>
+                  {r.outcome.kind === 'rated'
+                    ? <span className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</span>
+                    : <span className="focus-done-chip reported">Reportée</span>}
+                </div>
+              ))}
+            </div>
+
+            <Link href="/dashboard" className="focus-bilan-cta">Retour au tableau de bord</Link>
+          </div>
         </div>
       </div>
     )
@@ -976,22 +1315,23 @@ function FocusPageBody() {
   const sec = elapsedSec % 60
   const total = queue.length
   const completedCount = results.filter(r => r !== null).length
-  const progressPct = Math.round((completedCount / total) * 100)
+  // (progression affichée via le chip Fiche x/y de la topbar)
   const sysColor = (currentSystem as { color?: string } | undefined)?.color || '#2D6A4F'
+  const sysJ = scheduleOf(currentSystem)
   const allFilled = completedCount === total
 
   let statusLabel = ''
   let statusCls: 'missed' | 'today' | 'fresh' = 'today'
   if (current.due.status === 'missed') {
-    statusLabel = `J+${J[current.due.stepIndex]} manqué depuis ${current.due.overdueDays} j`
+    statusLabel = `J+${sysJ[current.due.stepIndex]} manqué depuis ${current.due.overdueDays} j`
     statusCls = 'missed'
   } else if (current.due.status === 'fresh') {
-    statusLabel = `J+${J[current.due.stepIndex]} · planification libre`
+    statusLabel = `J+${sysJ[current.due.stepIndex]} · planification libre`
     statusCls = 'fresh'
   } else {
     statusLabel = current.lastScore === null && current.due.stepIndex === 0
       ? `J+0 · nouvelle fiche`
-      : `J+${J[current.due.stepIndex]} dû aujourd’hui`
+      : `J+${sysJ[current.due.stepIndex]} dû aujourd’hui`
     statusCls = 'today'
   }
 
@@ -1015,6 +1355,20 @@ function FocusPageBody() {
           MedRev <span className="focus-brand-mode">focus</span>
         </div>
         <div className="focus-topbar-right">
+          {/* Compteur-bibliothèque : cible du vol du livre refermé.
+              key = re-pop de l'anim à chaque livre rangé. */}
+          <div
+            className="focus-lib-chip"
+            ref={libChipRef}
+            title="Livres rangés dans ta bibliothèque cette session"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13ZM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-2.5" />
+            </svg>
+            <strong key={Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)} className="focus-lib-chip-num">
+              +{Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)}
+            </strong>
+          </div>
           <div className="focus-progress-chip" aria-label={`Fiche ${currentIdx + 1} sur ${total}`}>
             <span className="focus-progress-chip-lbl">Fiche</span>
             <strong className="focus-progress-chip-num">{currentIdx + 1}</strong>
@@ -1037,114 +1391,133 @@ function FocusPageBody() {
         </div>
       </div>
 
-      {/* STAGE : jardin (gauche) + zone card avec flèches (droite) */}
+      {/* STAGE de session : ÉPURÉ. Pas de bibliothèque, pas de panel —
+          seulement le livre qui s'écrit (hero) + la card de notation.
+          La bibliothèque se contemple au lobby et au bilan (modèle Forest). */}
       <div className="focus-stage">
 
-        {/* Zone BIBLIOTHÈQUE — état cumulé annuel, se peuple à chaque fiche notée */}
-        <div className="focus-garden">
+        {/* SCÈNE : on est ASSIS dans la bibliothèque, la nuit. Les étagères
+            en silhouette au fond de la pièce, un bureau au premier plan,
+            la lampe de lecture qui éclaire le livre. */}
+        <div className="focus-garden focus-scene-shelves" aria-hidden="true">
           <BibliothecaSvg
             fichesCount={dayGarden.fichesCount}
             className="focus-garden-svg"
             preserveAspectRatio="xMidYMid slice"
           />
         </div>
+        <div className="focus-scene-veil" aria-hidden="true" />
+        <div className="focus-scene-desk" aria-hidden="true" />
+        <div className="focus-scene-glow" aria-hidden="true" />
 
-        {/* Panel des trésors (left-side, vertical) — montre les 6 trésors avec
-            leur palier en heures. Verrouillés masqués, débloqués révélés. */}
-        <BibliothecaTreasuresPanel fichesCount={dayGarden.fichesCount} />
+        {/* Lampe de lecture (banquier), posée sur le bureau à gauche du livre */}
+        <svg className="focus-scene-lamp" viewBox="0 0 220 260" aria-hidden="true">
+          <ellipse cx="110" cy="248" rx="52" ry="8" fill="#0C1828" />
+          <ellipse cx="110" cy="244" rx="44" ry="7" fill="#22384E" />
+          <rect x="105" y="160" width="10" height="84" rx="4" fill="#2C415A" />
+          <rect x="105" y="160" width="3.5" height="84" rx="1.6" fill="rgba(200,220,236,0.25)" />
+          {/* Bras incliné vers le livre */}
+          <path d="M 110 168 Q 138 130 172 122" stroke="#2C415A" strokeWidth="8" fill="none" strokeLinecap="round" />
+          <path d="M 110 168 Q 138 130 172 122" stroke="rgba(200,220,236,0.2)" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          {/* Abat-jour marine, liseré argent */}
+          <path d="M 132 124 Q 172 96 212 124 L 198 146 Q 172 130 146 146 Z" fill="#1B3450" stroke="#0C1828" strokeWidth="1.2" />
+          <path d="M 132 124 Q 172 96 212 124" stroke="#7FB0D4" strokeWidth="1.6" fill="none" />
+          {/* Ampoule + lumière */}
+          <ellipse cx="172" cy="142" rx="17" ry="7" fill="#DFF0FC" opacity="0.95" />
+          <polygon points="150,146 194,146 236,252 112,252" fill="url(#lampCone)" />
+          <defs>
+            <linearGradient id="lampCone" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(207,230,248,0.30)" />
+              <stop offset="100%" stopColor="rgba(207,230,248,0)" />
+            </linearGradient>
+          </defs>
+        </svg>
 
-        {/* Zone CARD : la card flotte en glass, navigation discrète en pied de card */}
-        <div className="focus-card-zone">
+        {/* ZONE DE TRAVAIL centrée : infos de la fiche en typo flottante,
+            le livre qui s'écrit, puis les CIRES DE NOTATION posées sur le
+            bureau — noter = apposer son sceau. Plus aucune carte. */}
+        <div className="focus-deskzone">
 
-          <div className="focus-card">
-
-            <div className="focus-kicker">
-            <div className="focus-kicker-line">
-              <span className="focus-kicker-dot" style={{ background: sysColor }} />
-              <span className="focus-kicker-sys">{currentSystemName}</span>
-            </div>
-            <span className={'focus-kicker-status ' + statusCls}>{statusLabel}</span>
+          <div className="focus-fiche-info">
+            <span className="focus-fiche-dot" style={{ background: sysColor }} aria-hidden="true" />
+            <span className="focus-fiche-sys">{currentSystemName}</span>
+            <span className={`focus-fiche-status ${statusCls}`}>{statusLabel}</span>
+            {current.lastScore !== null && !alreadyRated && !alreadyReported && (
+              <span className={`focus-last-pill s${current.lastScore}`}>dernière : {current.lastScore}/5</span>
+            )}
+            {alreadyRated && ratedScore !== null && (
+              <span className={`focus-last-pill s${ratedScore}`}>notée {ratedScore}/5 · modifiable</span>
+            )}
+            {alreadyReported && (
+              <span className="focus-fiche-reportee">reportée à demain</span>
+            )}
           </div>
 
-          <h1 className="focus-name">{current.lesson.name}</h1>
+          <LiveBook
+            key={`${current.lesson.id}-${currentIdx}`}
+            lessonName={current.lesson.name}
+            className="lb-hero"
+            coverColor={sysColor}
+            stamp={sealStamp ? { score: sealStamp.score, color: SCORE_COLORS[sealStamp.score] } : null}
+          />
 
-          {current.lastScore !== null && !alreadyRated && !alreadyReported && (
-            <div className="focus-last">
-              Dernière note&nbsp;: <span className={`focus-last-pill s${current.lastScore}`}>{current.lastScore}/5</span>
-            </div>
-          )}
-
-          {/* Badge re-action si déjà notée/reportée dans cette session */}
-          {alreadyRated && ratedScore !== null && (
-            <div className="focus-rated-badge">
-              <span className={`focus-rated-pill s${ratedScore}`}>Notée {ratedScore}/5</span>
-              <span className="focus-rated-hint">Tu peux changer si besoin, ou passer à la suivante.</span>
-            </div>
-          )}
-          {alreadyReported && (
-            <div className="focus-reported-badge">
-              <span className="focus-reported-pill">Reportée à demain</span>
-              <span className="focus-rated-hint">Tu peux la noter maintenant si tu changes d’avis.</span>
-            </div>
-          )}
-
-          {!alreadyRated && !alreadyReported && (
-            <div className="focus-ask">Quelle note&nbsp;?</div>
-          )}
-          <div className="focus-scores">
+          {/* LES CIRES : 1 À revoir … 5 Maîtrisé */}
+          <div className="focus-seals" role="group" aria-label="Noter la fiche">
             {([1, 2, 3, 4, 5] as Score[]).map(n => (
               <button
                 key={n}
                 type="button"
-                className={`focus-score s${n}${alreadyRated && ratedScore === n ? ' selected' : ''}`}
+                className={`focus-seal s${n}${alreadyRated && ratedScore === n ? ' sealed' : ''}`}
                 onClick={() => rate(n)}
                 disabled={loading}
-                title={`Note ${n}/5 — raccourci ${n}`}
+                title={`Note ${n}/5 (raccourci ${n})`}
               >
-                <span className="focus-score-num">{n}</span>
-                <span className="focus-score-lbl">
+                <span className="focus-seal-wax" aria-hidden="true">
+                  <span className="focus-seal-num">{n}</span>
+                </span>
+                <span className="focus-seal-lbl">
                   {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
                 </span>
-                <span className="focus-score-key" aria-hidden="true">{n}</span>
               </button>
             ))}
           </div>
 
-          <div className="focus-actions">
+          {/* Actions secondaires : liens discrets sous le bureau */}
+          <div className="focus-underbook">
             <button
               type="button"
-              className="focus-report"
+              className="focus-link"
               onClick={report}
               disabled={loading || alreadyReported}
-              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain — raccourci R'}
+              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain (raccourci R)'}
             >
               {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
             </button>
-            <div className="focus-nav-inline">
-              <button
-                type="button"
-                className="focus-nav-dot"
-                onClick={goPrev}
-                disabled={!canPrev}
-                aria-label="Fiche précédente"
-                title="Fiche précédente (←)"
-              >
-                {'‹'}
-              </button>
-              <button
-                type="button"
-                className="focus-nav-dot focus-nav-dot-next"
-                onClick={goNext}
-                disabled={!canNext}
-                aria-label="Fiche suivante"
-                title="Fiche suivante (→)"
-              >
-                {'›'}
-              </button>
-            </div>
-          </div>
+            <span className="focus-underbook-sep" aria-hidden="true">{'·'}</span>
+            <button type="button" className="focus-link" onClick={goPrev} disabled={!canPrev} title="Fiche précédente (←)">
+              {'‹'} précédente
+            </button>
+            <button type="button" className="focus-link" onClick={goNext} disabled={!canNext} title="Fiche suivante (→)">
+              suivante {'›'}
+            </button>
           </div>
         </div>
+
+        {/* GHOST : livre refermé qui vole du pupitre vers le compteur-
+            bibliothèque. Séparé du pupitre pour survivre au changement de fiche. */}
+        {bookFly && (
+          <div
+            key={bookFly.ts}
+            className="lb-ghost"
+            style={{
+              ['--tx' as never]: `${bookFly.x.toFixed(0)}px`,
+              ['--ty' as never]: `${bookFly.y.toFixed(0)}px`,
+              background: bookFly.color,
+            }}
+            onAnimationEnd={() => setBookFly(null)}
+            aria-hidden="true"
+          />
+        )}
 
         {/* HINT clavier — flotte sur le ciel, bas-droite, non-intrusif */}
         <div className="focus-hint">

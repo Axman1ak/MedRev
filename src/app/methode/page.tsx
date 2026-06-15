@@ -10,27 +10,26 @@ import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'La méthode — MedRev',
+  title: 'La méthode · MedRev',
   description: 'Courbe d\'Ebbinghaus, 14 paliers J0 → J+120, génération QCM par IA, mode angles morts. La méthode MedRev expliquée en détail.',
 }
 
 export default function MethodePage() {
   return (
-    <div className="lp-page">
+    <div className="lp-page ln-doc">
       <MarketingNav current="methode" />
 
       {/* Hero */}
-      <section className="lp-hero" style={{ paddingBottom: 60 }}>
-        <span className="lp-hero-kicker">La méthode</span>
-        <h1 className="lp-hero-h1" style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}>
-          Une P1, c&apos;est <em>environ 200 fiches à oublier</em>
-          <span className="line2" style={{ fontStyle: 'normal', color: 'var(--lp-text)' }}>
-            quatre fois.
-          </span>
+      <section className="ln-subhero">
+        <span className="ln-kicker">La méthode</span>
+        <h1 className="ln-subhero-h1">
+          Une année de santé, c&apos;est <em>200 fiches à oublier</em>
+          <span className="ln-line2">quatre fois.</span>
         </h1>
-        <p className="lp-hero-sub">
+        <p className="ln-subhero-sub">
           MedRev s&apos;appuie sur 140 ans de psychologie cognitive pour
           décider <strong>quoi te faire réviser, quand, et pourquoi</strong>.
           Voici comment.
@@ -38,7 +37,7 @@ export default function MethodePage() {
       </section>
 
       {/* Section 1 — La courbe d'oubli */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      <section className="lp-section" style={{ paddingTop: 64 }}>
         <div className="lp-method-block">
           <div className="lp-method-text">
             <div className="lp-section-kicker">01 · Le problème</div>
@@ -66,33 +65,30 @@ export default function MethodePage() {
           </div>
           <div className="lp-method-visual">
             <svg viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
-              <rect width="400" height="280" fill="#FAFAF7" rx="12" />
-              <line x1="40" y1="240" x2="370" y2="240" stroke="#9A9A98" strokeWidth="1" />
-              <line x1="40" y1="40" x2="40" y2="240" stroke="#9A9A98" strokeWidth="1" />
-              <text x="40" y="265" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">J0</text>
-              <text x="120" y="265" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">J+1</text>
-              <text x="200" y="265" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">J+7</text>
-              <text x="280" y="265" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">J+30</text>
-              <text x="345" y="265" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">J+120</text>
-              <text x="15" y="50" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">100%</text>
-              <text x="20" y="240" fontFamily="Plus Jakarta Sans" fontSize="10" fill="#9A9A98">0%</text>
+              <rect width="400" height="280" fill="#16314E" rx="14" />
+              <line x1="40" y1="240" x2="370" y2="240" stroke="rgba(143,184,216,0.4)" strokeWidth="1" />
+              <line x1="40" y1="40" x2="40" y2="240" stroke="rgba(143,184,216,0.4)" strokeWidth="1" />
+              <text x="40" y="262" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">J0</text>
+              <text x="120" y="262" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">J+1</text>
+              <text x="200" y="262" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">J+7</text>
+              <text x="280" y="262" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">J+30</text>
+              <text x="343" y="262" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">J+120</text>
+              <text x="12" y="50" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">100%</text>
+              <text x="18" y="240" fontFamily="var(--font-hanken)" fontSize="10" fill="#8FB8D8">0%</text>
 
-              {/* Sans révision (rouge) */}
-              <path d="M 40 50 Q 80 130, 120 180 T 200 215 T 370 235" stroke="#C75050" strokeWidth="2" fill="none" />
-              <text x="285" y="225" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#C75050">Sans révision</text>
+              {/* Sans révision : la chute */}
+              <path d="M 40 50 Q 80 130, 120 180 T 200 215 T 370 235" stroke="#C75050" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+              <text x="278" y="222" fontFamily="var(--font-bricolage),serif" fontStyle="italic" fontSize="12" fill="#E08B8B">sans révision</text>
 
-              {/* Avec MedRev (vert) — points */}
-              <circle cx="40" cy="50" r="4" fill="#1B4332" />
-              <circle cx="80" cy="55" r="4" fill="#1B4332" />
-              <circle cx="120" cy="60" r="4" fill="#1B4332" />
-              <circle cx="160" cy="62" r="4" fill="#1B4332" />
-              <circle cx="200" cy="65" r="4" fill="#1B4332" />
-              <circle cx="240" cy="66" r="4" fill="#1B4332" />
-              <circle cx="280" cy="68" r="4" fill="#1B4332" />
-              <circle cx="320" cy="70" r="4" fill="#1B4332" />
-              <circle cx="360" cy="71" r="4" fill="#1B4332" />
-              <path d="M 40 50 L 80 55 L 120 60 L 160 62 L 200 65 L 240 66 L 280 68 L 320 70 L 360 71" stroke="#1B4332" strokeWidth="2" fill="none" />
-              <text x="240" y="55" fontFamily="Cormorant Garamond,serif" fontStyle="italic" fontSize="11" fill="#1B4332">Avec MedRev</text>
+              {/* Avec MedRev : chaque palier raccroche la courbe */}
+              <path d="M 40 50 L 80 55 L 120 60 L 160 62 L 200 65 L 240 66 L 280 68 L 320 70 L 360 71" stroke="#7FB0D4" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+              {[
+                [40, 50], [80, 55], [120, 60], [160, 62], [200, 65],
+                [240, 66], [280, 68], [320, 70], [360, 71],
+              ].map(([cx, cy], i) => (
+                <circle key={i} cx={cx} cy={cy} r="4.5" fill="#7FB0D4" stroke="#16314E" strokeWidth="2" />
+              ))}
+              <text x="226" y="50" fontFamily="var(--font-bricolage),serif" fontStyle="italic" fontSize="12" fill="#C8DCEC">avec MedRev</text>
             </svg>
           </div>
         </div>
@@ -156,7 +152,7 @@ export default function MethodePage() {
               Tu charges la <strong>vidéo de la rediffusion</strong> du cours
               et le <strong>poly PDF</strong>. MedRev les envoie à Gemini
               (Google), qui transcrit l&apos;audio puis génère 30 QCM type
-              concours.
+              examen.
             </p>
             <p className="lp-method-p">
               Chaque question vient avec un <strong>retour direct vers la
@@ -166,7 +162,7 @@ export default function MethodePage() {
             <p className="lp-method-p">
               Format strict : 5 options A-E, niveau annales EDN. Mix de QCS
               (une seule bonne réponse) et de QCM (plusieurs bonnes), comme
-              au vrai concours. Les options sont mélangées aléatoirement après
+              aux vrais examens. Les options sont mélangées aléatoirement après
               génération pour casser le biais des LLM (qui placent souvent
               la bonne en B/C).
             </p>
@@ -206,19 +202,19 @@ export default function MethodePage() {
         </div>
       </section>
 
-      {/* Section 4 — Mode angles morts */}
+      {/* Section 4 — Ce que j'ai raté */}
       <section className="lp-section" style={{ paddingTop: 40 }}>
         <div className="lp-method-block reverse">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">04 · Le mode angles morts</div>
+            <div className="lp-section-kicker">04 · Le mode « Ce que j&apos;ai raté »</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
               <em>80 % du temps</em> sur 20 % du programme.
             </h2>
             <p className="lp-method-p">
-              Le simulateur peut tourner en deux modes : <strong>aléatoire</strong>
-              (toutes tes fiches au hasard) ou <strong>angles morts</strong>
-              (cible automatiquement les fiches où tu as les notes les plus
-              basses).
+              Le simulateur tire ses questions de <strong>trois sources</strong> :
+              tes QCM générés, tes <strong>annales importées en PDF</strong>, ou
+              le mode <strong>« Ce que j&apos;ai raté »</strong>, qui cible
+              automatiquement les fiches où tes notes sont les plus basses.
             </p>
             <p className="lp-method-p">
               L&apos;algo est simple : on pondère chaque question par
@@ -228,7 +224,7 @@ export default function MethodePage() {
             </p>
             <p className="lp-method-p">
               Résultat : tu passes ton temps sur <strong>les notions où tu
-              perds le concours</strong>, pas sur celles que tu maîtrises
+              perds des points</strong>, pas sur celles que tu maîtrises
               déjà.
             </p>
           </div>
@@ -266,7 +262,7 @@ export default function MethodePage() {
               </div>
             </div>
             <div className="lp-method-stamps-note">
-              Mode angles morts · les fiches faibles tirées 3× plus souvent
+              Mode « Ce que j&apos;ai raté » · les fiches faibles tirées 3× plus souvent
             </div>
           </div>
         </div>
@@ -276,28 +272,28 @@ export default function MethodePage() {
       <section className="lp-section" style={{ paddingTop: 40 }}>
         <div className="lp-method-block">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">05 · La bibliothèque</div>
+            <div className="lp-section-kicker">05 · Le rituel</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
-              Une <em>gamification</em> qui ne te trahit pas.
+              Un livre s&apos;écrit, <em>un sceau le ferme.</em>
             </h2>
             <p className="lp-method-p">
-              À chaque <strong>révision notée</strong> (J0, J1, J3, J7… les
-              14 paliers que chaque fiche traverse), tu ajoutes
-              <strong> un livre</strong> à ta bibliothèque virtuelle. Sur
-              l&apos;année, ça correspond à <strong>2000 livres</strong> et
-              autant d&apos;heures d&apos;études cumulées.
+              En session Focus, un <strong>livre s&apos;écrit en temps
+              réel</strong> pendant que tu révises. Tu notes la fiche en
+              apposant un <strong>sceau de cire</strong> de 1 à 5, et le livre
+              vole se ranger dans ta bibliothèque de nuit : <strong>2000
+              livres</strong> sur l&apos;année, <strong>6 trésors</strong> à
+              débloquer en chemin.
             </p>
             <p className="lp-method-p">
-              <strong>6 trésors</strong> se débloquent à 100, 300, 600, 900,
-              1200 et 1500 livres : un buste d&apos;Hippocrate, un sablier
-              en laiton, un chandelier sur des manuscrits, un globe terrestre,
-              une plume sur des manuscrits, un codex sur lutrin.
+              Ton travail se mesure dans un <strong>indice de préparation</strong>
+              sur 100 et un rang d&apos;érudit, d&apos;<strong>Apprenti</strong> à
+              <strong> Maître</strong>. Trois leviers le font monter : la
+              maîtrise, la couverture des paliers, et l&apos;assiduité.
             </p>
             <p className="lp-method-p">
-              Pas de <em>streaks anxiogènes</em>, pas de XP à farmer, pas
-              de <em>« ne casse pas ta série ! »</em>. Juste une bibliothèque
-              qui s&apos;étoffe, à ton rythme. Tu peux la regarder pendant
-              tes sessions Focus.
+              Un jour compte à partir de <strong>10 minutes de révision
+              réelle</strong> : la série récompense le vrai travail, pas le
+              clic du soir pour sauver une flamme.
             </p>
           </div>
           <div className="lp-method-visual">
@@ -306,14 +302,14 @@ export default function MethodePage() {
                 {[0, 1, 2, 3, 4].map(shelf => (
                   <div key={shelf} className="lp-method-biblio-shelf">
                     {Array.from({ length: 28 }).map((_, i) => {
-                      const palette = ['#5A2424', '#1F2E50', '#2A4030', '#7A4A2A', '#3A2030', '#4A2840', '#3D2A14']
+                      const palette = ['#2E5A8E', '#1E5E48', '#7A2E3E', '#4A3070', '#1E6070', '#8A5A2E', '#934832']
                       const filled = shelf < 3 || (shelf === 3 && i < 12)
                       return (
                         <span
                           key={i}
                           className="lp-method-biblio-book"
                           style={{
-                            background: filled ? palette[(shelf * 28 + i) % palette.length] : '#EBEAE5',
+                            background: filled ? palette[(shelf * 28 + i) % palette.length] : 'rgba(127, 176, 212, 0.12)',
                             opacity: filled ? 1 : 0.5,
                             height: 26 + (i % 4) * 2,
                           }}

@@ -7,6 +7,10 @@ export interface System {
   cal_hidden: boolean
   semestre: number   // ← ajouté : 1 ou 2
   created_at: string
+  color?: string | null            // ← couleur de matière (picker)
+  // ← ajouté 2026-06 : planning de révision personnalisable par matière.
+  // Tableau de décalages en jours depuis learn_date. Null/absent = planning standard.
+  schedule?: number[] | null
 }
 export interface StepEntry {
   score: number  // 1-5 — score officiel posé le jour J
@@ -66,6 +70,52 @@ export function normalizeAnswer(raw: AiQuestion['answer'] | undefined): number[]
 export function isMultiAnswer(q: AiQuestion): boolean {
   return normalizeAnswer(q.answer).length >= 2
 }
+// Flashcard maison (recto/verso) — créée manuellement par l'étudiant.
+// Stockée dans la colonne lessons.flashcards (jsonb default [], migration 2026-06).
+// Les compteurs reviews/known sont cumulés sur les sessions de révision
+// (même esprit que attempts/correct sur AiQuestion).
+export interface Flashcard {
+  id: string            // identifiant local unique (crypto.randomUUID)
+  front: string         // recto : question / terme
+  back: string          // verso : réponse / définition
+  created_at: string    // ISO
+  reviews?: number      // nb de fois vue en session
+  known?: number        // nb de fois marquée "je savais"
+  last_reviewed_at?: string
+}
+
+// Annale d'examen (PDF + questions extraites par IA) — table annales,
+// migration 2026-06. Rattachée à la matière (system_id), pas à une fiche.
+// questions = AiQuestion[] au même format que lessons.ai_questions.
+export interface Annale {
+  id: string
+  user_id: string
+  system_id: string
+  name: string
+  pdf_path: string | null
+  pdf_pages: number | null
+  pdf_size: number | null
+  questions: AiQuestion[]
+  status: 'pending' | 'ready' | 'error'
+  extract_error: string | null
+  created_at: string
+}
+
+// TD / cours de fac dans le calendrier — table td_events, migration 2026-06.
+// Type d'événement à part des révisions. Récurrence par duplication à la
+// création (rows indépendantes), heures au format "HH:MM:SS" (time Postgres).
+export interface TdEvent {
+  id: string
+  user_id: string
+  system_id: string | null
+  title: string
+  date: string                 // YYYY-MM-DD
+  start_time: string | null    // HH:MM:SS
+  end_time: string | null
+  location: string | null
+  created_at: string
+}
+
 // Médias source d'une fiche (vidéo + PDF) — voir migration 2026-05.
 // Stocké dans la colonne lessons.media (jsonb default {}).
 export interface LessonMedia {
@@ -85,7 +135,10 @@ export interface Lesson {
   name: string
   learn_date: string | null
   steps: (StepEntry | null)[]  // length 14
+  model3d?: string | null   // ← URL .glb du modèle 3D associé à la fiche (override manuel)
   ai_questions: AiQuestion[]
+  flashcards?: Flashcard[]     // ← ajouté 2026-06 : cartes recto/verso maison
+  chapter?: string | null      // ← ajouté 2026-06 : chapitre libre (sous-matière légère)
   media?: LessonMedia | null   // ← ajouté 2026-05 : sources du cours
   // ← ajouté 2026-06 : Reporter / Annuler un palier (sans toucher à steps).
   // skips = indices de paliers annulés ; postpones = { "indice": "YYYY-MM-DD" }.

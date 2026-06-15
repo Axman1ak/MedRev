@@ -10,11 +10,21 @@ import OnboardingTour from '@/components/OnboardingTour'
 const MOBILE_BREAKPOINT = 768
 
 const NAV = [
-  { href: '/dashboard', label: 'Tableau de bord', icon: '⌂', exact: true },
-  { href: '/dashboard/calendar', label: 'Calendrier', icon: '▦' },
-  { href: '/dashboard/fiches', label: 'Mes cours', icon: '▤' },
-  { href: '/dashboard/simulateur', label: 'Simulateur', icon: '▶' },
-  { href: '/dashboard/stats', label: 'Statistiques', icon: '◈' },
+  { href: '/dashboard', label: "Aujourd'hui", exact: true, icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11l9-8 9 8M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ) },
+  { href: '/dashboard/fiches', label: 'Fiches', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16" strokeLinecap="round"/></svg>
+  ) },
+  { href: '/dashboard/calendar', label: 'Calendrier', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4" strokeLinecap="round"/></svg>
+  ) },
+  { href: '/dashboard/stats', label: 'Statistiques', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 20V10M12 20V4M19 20v-7" strokeLinecap="round"/></svg>
+  ) },
+  { href: '/dashboard/simulateur', label: 'Simulateur', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+  ) },
 ]
 
 const FAC_NAMES: Record<string, string> = {
@@ -158,7 +168,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           min-height: 100vh;
           background: var(--bg-app);
           color: var(--text-primary);
-          font-family: 'Hanken Grotesk', system-ui, sans-serif;
+          font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
 
           /* Aliases legacy → tokens globaux du design system */
           --bg: var(--bg-app);
@@ -208,7 +218,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         .db-logo {
           display: flex; align-items: center;
-          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
           font-size: 22px; font-weight: 700; letter-spacing: -.01em;
           padding: 0 0 22px 26px; color: #fff; white-space: nowrap;
         }
@@ -240,9 +250,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           border-radius: 0 2px 2px 0;
         }
         .db-nav-item .ic {
-          width: 22px; min-width: 22px; text-align: center;
-          font-style: normal; font-size: 16px; flex-shrink: 0;
+          width: 22px; height: 22px; min-width: 22px;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
+        .db-nav-item .ic svg { width: 21px; height: 21px; stroke-width: 1.7; }
         .db-nav-item .badge {
           margin-left: auto; font-size: 10px; font-weight: 700;
           background: var(--rail-accent); color: var(--rail);
@@ -366,7 +377,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
               data-tour={`nav-${n.href.split('/').pop() || 'dashboard'}`}
             >
-              <i className="ic">{n.icon}</i>
+              <span className="ic">{n.icon}</span>
               <span className="db-lbl">{n.label}</span>
               {n.href === '/dashboard/calendar' && todayCount > 0 && (
                 <span className="badge">{todayCount}</span>
@@ -377,8 +388,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div style={{ flex: 1 }} />
 
-        {/* Aide & tutoriel */}
+        {/* Réglages + Aide & tutoriel */}
         <div className="db-nav-section db-nav-secondary">
+          <Link
+            href="/dashboard/settings"
+            className={`db-nav-item${isActive('/dashboard/settings') ? ' active' : ''}`}
+            data-tour="nav-settings"
+          >
+            <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V20a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 18.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.3 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" strokeLinejoin="round"/></svg></span>
+            <span className="db-lbl">Réglages</span>
+          </Link>
           <button
             type="button"
             className="db-nav-item db-nav-item-btn"

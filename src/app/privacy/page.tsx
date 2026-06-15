@@ -8,12 +8,12 @@ export default function PrivacyPage() {
       <p style={{ color: '#8892aa', marginBottom: 40, fontSize: 14 }}>Dernière mise à jour : Mars 2026</p>
 
       {[
-        { title: '1. Responsable du traitement', content: 'MedRev est responsable du traitement de vos données personnelles conformément au RGPD (Règlement Général sur la Protection des Données — UE 2016/679).' },
+        { title: '1. Responsable du traitement', content: 'MedRev est responsable du traitement de vos données personnelles conformément au RGPD (Règlement Général sur la Protection des Données, UE 2016/679).' },
         { title: '2. Données collectées', content: 'Nous collectons uniquement : votre adresse email, votre prénom, et vos données de révision (fiches, matières, scores, notes). Aucune donnée sensible (santé, finances, données biométriques) n\'est collectée.' },
         { title: '3. Finalité du traitement', content: 'Vos données sont utilisées exclusivement pour le fonctionnement du service MedRev : authentification, synchronisation de vos fiches de révision, génération de statistiques de progression.' },
         { title: '4. Hébergement et sécurité', content: 'Toutes vos données sont hébergées sur des serveurs situés en Europe (Union Européenne), via Supabase (Frankfurt, Allemagne). Les mots de passe sont hashés avec bcrypt. Les connexions sont chiffrées en TLS.' },
         { title: '5. Partage des données', content: 'Vos données ne sont jamais revendues, partagées avec des tiers à des fins publicitaires, ou transmises hors de l\'Union Européenne sans accord de transfert conforme au RGPD.' },
-        { title: '6. Vos droits', content: 'Conformément au RGPD, vous disposez des droits d\'accès, de rectification, d\'effacement, de portabilité et d\'opposition. Pour exercer ces droits, contactez-nous à : privacy@medrev.fr — Nous répondons sous 30 jours.' },
+        { title: '6. Vos droits', content: 'Conformément au RGPD, vous disposez des droits d\'accès, de rectification, d\'effacement, de portabilité et d\'opposition. Pour exercer ces droits, contactez-nous à : privacy@medrev.fr. Nous répondons sous 30 jours.' },
         { title: '7. Durée de conservation', content: 'Vos données sont conservées pendant la durée de votre abonnement. En cas de suppression de compte, l\'intégralité de vos données est supprimée définitivement sous 30 jours.' },
         { title: '8. Cookies', content: 'MedRev utilise uniquement des cookies strictement nécessaires au fonctionnement du service (session d\'authentification). Aucun cookie de tracking ou publicitaire n\'est utilisé.' },
       ].map(s => (

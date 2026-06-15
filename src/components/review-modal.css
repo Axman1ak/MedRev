@@ -24,7 +24,7 @@
   box-shadow: 0 24px 64px rgba(0, 0, 0, .2);
   max-height: 92vh;
   overflow-y: auto;
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: var(--font-hanken), -apple-system, sans-serif;
   animation: rmod-up .22s ease-out;
 }
 @keyframes rmod-up { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -45,7 +45,7 @@
   margin-bottom: 4px;
 }
 .rmod-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 20px;
   font-weight: 500;
   color: var(--text-primary);
@@ -228,7 +228,7 @@
   margin-bottom: 10px;
 }
 .rmod-lesson-name {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 20px;
   font-weight: 500;
   color: var(--text-primary);
@@ -274,7 +274,7 @@
 .rmod-score.s4 { background: #7AA56B; }
 .rmod-score.s5 { background: #1B4332; }
 .rmod-score .rmod-num {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 22px;
   font-weight: 500;
   line-height: 1;
@@ -307,7 +307,7 @@
 
 /* ---------- Label de bloc ---------- */
 .rmod-block-label {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -338,11 +338,35 @@
   flex-shrink: 0;
   font-size: 13px;
 }
+.rmod-anat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 9px 15px;
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+  border: 1px solid color-mix(in srgb, var(--accent-medium) 30%, transparent);
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s, border-color .15s, transform .12s;
+}
+.rmod-anat-btn:hover { background: color-mix(in srgb, var(--accent-medium) 14%, var(--accent-soft)); border-color: var(--accent-medium); transform: translateY(-1px); }
+.rmod-anat-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.rmod-secondary { display: flex; gap: 10px; margin-top: 14px; }
+.rmod-2nd { flex: 1; padding: 11px; border: 1px solid var(--border-subtle); background: transparent; border-radius: 10px; color: var(--text-secondary); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+.rmod-2nd:hover { border-color: var(--accent-medium); color: var(--accent-primary); }
+.rmod-2nd:disabled { opacity: .5; cursor: default; }
+.rmod-2nd-skip:hover { border-color: var(--danger); color: var(--danger); }
+
 .rmod-src-icon.video { color: var(--green); }
 .rmod-src-icon.pdf   { color: var(--amber); }
 
 .rmod-src-name {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 13px;
   color: var(--dark);
@@ -354,7 +378,7 @@
 }
 
 .rmod-src-meta {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 13px;
   color: var(--gray);
@@ -366,7 +390,7 @@
   border: none;
   background: none;
   color: var(--gray);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -385,7 +409,7 @@
 .rmod-src-replace.rmod-src-remove {
   font-size: 14px;
   padding: 4px 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 400;
 }
 .rmod-src-replace.rmod-src-remove:hover {
@@ -406,7 +430,7 @@
   padding: 10px 0;
   color: var(--gray);
   cursor: pointer;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 13px;
   transition: color .15s;
 }
@@ -422,7 +446,7 @@
 }
 
 .rmod-src-plus {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 16px;
   color: var(--gm);
@@ -442,7 +466,7 @@
   background: rgba(199, 80, 80, .07);
   border: 1px solid rgba(199, 80, 80, .25);
   color: var(--rose);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -455,7 +479,7 @@
 }
 
 .rmod-qcm-num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-weight: 500;
   font-size: 30px;
   color: var(--green);
@@ -464,7 +488,7 @@
 }
 
 .rmod-qcm-meta {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 14.5px;
   color: var(--gray);
@@ -477,7 +501,7 @@
   border: none;
   background: var(--green);
   color: #fff;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 12.5px;
   padding: 10px 16px;
@@ -495,7 +519,7 @@
 }
 
 .rmod-qcm-empty {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-hanken), serif;
   font-style: italic;
   font-size: 14.5px;
   color: var(--gray);
@@ -504,7 +528,7 @@
   line-height: 1.5;
 }
 .rmod-qcm-empty em {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: italic;
   color: var(--gm);
   font-weight: 500;
@@ -522,7 +546,7 @@
   border: 1px solid var(--border);
   background: transparent;
   color: var(--gray);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 12px;
   padding: 9px 14px;
@@ -549,7 +573,50 @@
   background: rgba(196, 123, 43, .08);
   border: 1px solid rgba(196, 123, 43, .25);
   color: var(--amber);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-size: 12px;
   line-height: 1.45;
+}
+
+/* ---- Vue 3D par fiche (model-viewer, chargé à la demande) ---- */
+.rmod-card { position: relative; }
+.rmod-3d {
+  position: absolute; inset: 0; z-index: 6;
+  background: #fff; display: flex; flex-direction: column;
+  border-radius: inherit; overflow: hidden;
+}
+.rmod-3d-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 18px; border-bottom: 1px solid #e3e8ef; flex-shrink: 0;
+}
+.rmod-3d-back {
+  background: none; border: 1px solid #e3e8ef; border-radius: 9px;
+  padding: 7px 12px; font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; color: #1b2330;
+}
+.rmod-3d-back:hover { background: #f1f4f9; }
+.rmod-3d-title {
+  font-size: 14px; font-weight: 600; color: #1b2330;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rmod-3d-stage { position: relative; flex: 1; min-height: 0; background: #0b1622; }
+.rmod-3d-empty {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-align: center; color: #cdd8e6; font-size: 14px; padding: 24px; line-height: 1.55;
+}
+.rmod-3d-tools {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 18px; border-top: 1px solid #e3e8ef; flex-shrink: 0;
+}
+.rmod-3d-select, .rmod-3d-url {
+  font-family: inherit; font-size: 13px; padding: 8px 10px;
+  border: 1px solid #e3e8ef; border-radius: 9px; background: #fff; color: #1b2330;
+}
+.rmod-3d-url { flex: 1; min-width: 150px; }
+.rmod-3d-credit { margin-left: auto; font-size: 11px; color: #5b6573; }
+
+.m3d { position: absolute; inset: 0; width: 100%; height: 100%; }
+.m3d-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #cdd8e6; font-size: 14px; z-index: 1; pointer-events: none;
 }

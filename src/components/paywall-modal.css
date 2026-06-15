@@ -35,7 +35,7 @@
   width: 100%;
   max-width: 460px;
   box-shadow: var(--shadow-lg, 0 18px 50px rgba(0, 0, 0, .15));
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: var(--font-hanken), -apple-system, sans-serif;
   color: var(--text-primary);
   animation: pw-modal-in .3s cubic-bezier(.34, 1.2, .64, 1);
 }
@@ -80,7 +80,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cinzel', 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), var(--font-bricolage), Georgia, serif;
   font-size: 24px;
   color: var(--accent-medium);
   margin: 0 auto 16px;
@@ -98,7 +98,7 @@
   margin-bottom: 8px;
 }
 .pw-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: var(--font-bricolage), Georgia, serif;
   font-size: 22px;
   font-weight: 500;
   letter-spacing: -.01em;
@@ -108,7 +108,7 @@
   line-height: 1.25;
 }
 .pw-intro {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
   font-style: italic;
   font-size: 15px;
   line-height: 1.5;
@@ -140,14 +140,14 @@
   color: var(--text-secondary);
 }
 .pw-progress-num {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--font-hanken), Georgia, serif;
   font-style: italic;
   font-size: 13px;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 .pw-progress-num strong {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-bricolage), serif;
   font-style: normal;
   font-weight: 500;
   font-size: 16px;
@@ -225,7 +225,7 @@
 .pw-btn {
   flex: 1;
   appearance: none;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-hanken), sans-serif;
   font-weight: 600;
   font-size: 13px;
   padding: 12px 18px;

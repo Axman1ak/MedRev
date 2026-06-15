@@ -125,10 +125,10 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="nav-fiches"]',
-    title: () => 'Va sur Mes cours',
+    title: () => 'Va sur Fiches',
     body: (
       <>
-        Clique sur <strong>Mes cours</strong> dans la sidebar. C&apos;est
+        Clique sur <strong>Fiches</strong> dans la sidebar. C&apos;est
         l&apos;onglet principal, tout part de là.
       </>
     ),
@@ -199,7 +199,8 @@ const STEPS: Step[] = [
         Saisis un <strong>titre</strong> (ex : « Glycolyse, étapes et
         régulation »), vérifie la <strong>matière</strong>, et garde la{' '}
         <strong>date d&apos;apprentissage</strong> sur aujourd&apos;hui (c&apos;est
-        ton J0).
+        ton J0). Le <strong>chapitre</strong> est optionnel : il regroupe tes
+        fiches selon le découpage de ta fac ou de ta prépa.
         <br /><br />
         Puis clique <strong>Créer la fiche</strong> pour continuer le tour. À
         partir de J0, MedRev programme automatiquement les J1, J3, J5, J7...
@@ -267,7 +268,7 @@ const STEPS: Step[] = [
         d&apos;aujourd&apos;hui</strong> sont notables. Les J{' '}
         <strong>futurs</strong> sont verrouillés. Ils se débloquent à la bonne date.
         <br /><br />
-        (Pendant le tutoriel, ces paliers sont juste pour la démo —
+        (Pendant le tutoriel, ces paliers sont juste pour la démo :
         clique <strong>Suivant</strong> pour continuer.)
       </>
     ),
@@ -306,6 +307,9 @@ const STEPS: Step[] = [
         Important : <strong>ces QCM alimentent aussi le Simulateur</strong>.
         Sans QCM générés, pas d&apos;examen blanc possible.
         <br /><br />
+        Juste en dessous : tes <strong>flashcards recto/verso</strong>, à créer
+        toi-même pour les définitions et valeurs à connaître par cœur.
+        <br /><br />
         <em className="ont-premium-note">
           Plan Gratuit : 10 générations IA totales sur tout le compte.{' '}
           <strong>Premium</strong> : illimité.
@@ -338,19 +342,20 @@ const STEPS: Step[] = [
     body: (
       <>
         Tes fiches sont <strong>programmées automatiquement</strong> à tous les
-        paliers J — J0, J1, J3, J5, J7, J15, J21, J30, J45, J60, J75, J90,
-        J105, J120. Vue semaine groupée par matière, max 10 fiches par jour
-        pour ne pas être noyé.
+        paliers J, de J0 à J+120. Ajoute aussi tes <strong>TD et cours de
+        fac</strong> avec le bouton <strong>+ TD</strong> (répétables chaque
+        semaine), et <strong>imprime ta semaine</strong> d&apos;un clic pour
+        l&apos;avoir sur ton bureau.
       </>
     ),
   },
   {
     kind: 'wait-click',
     selector: '[data-tour="nav-dashboard"]',
-    title: () => 'Va sur Tableau de bord',
+    title: () => "Va sur Aujourd'hui",
     body: (
       <>
-        Clique sur <strong>Tableau de bord</strong> dans la sidebar.
+        Clique sur <strong>Aujourd&apos;hui</strong> dans la sidebar.
       </>
     ),
     tipPos: 'right',
@@ -358,18 +363,16 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
-    title: () => 'Le Tableau de bord',
+    title: () => "Aujourd'hui, ton tableau de bord",
     body: (
       <>
         Tout ton travail quotidien est <strong>centralisé ici</strong> :
         <br />
-        · la queue d&apos;<strong>aujourd&apos;hui</strong> (les fiches dues),
+        · les <strong>fiches du jour</strong> (dues, triées par urgence),
         <br />
-        · ton <strong>point faible</strong> du moment,
+        · tes <strong>TD du jour</strong> (l&apos;emploi du temps réel d&apos;abord),
         <br />
-        · ta <strong>régularité</strong> (streak de jours actifs),
-        <br />
-        · ta <strong>charge à venir</strong> sur 4 semaines.
+        · ta <strong>to-do</strong> et ta <strong>bibliothèque</strong> qui grandit.
       </>
     ),
   },
@@ -382,11 +385,15 @@ const STEPS: Step[] = [
     title: () => 'La bibliothèque : 2000 livres',
     body: (
       <>
-        Sur le dashboard, la <strong>zone Bibliothèque</strong> contient
-        une <strong>session focus</strong> qui enchaîne tes fiches dues.
-        Chaque fiche notée ajoute <strong>1 livre</strong> à ta bibliothèque
-        (1 livre = 1h d&apos;étude). <strong>6 trésors</strong> à débloquer
-        au fil des livres. Objectif : 2000 livres pour boucler la P1.
+        La <strong>session Focus</strong> est ton rituel de révision : un{' '}
+        <strong>livre s&apos;écrit</strong> pendant que tu travailles, tu
+        notes la fiche en apposant un <strong>sceau de cire</strong>, et le
+        livre vole se ranger dans ta <strong>bibliothèque de nuit</strong>.
+        Chaque fiche notée = 1 livre, <strong>6 trésors</strong> à débloquer,
+        et un bouton pour <strong>contempler</strong> ta collection depuis le
+        dashboard. <strong>Clique un livre</strong> de tes étagères pour le
+        rouvrir : titre de la fiche, date, et son sceau de cire. Objectif :
+        2000 livres sur l&apos;année.
       </>
     ),
   },
@@ -407,12 +414,13 @@ const STEPS: Step[] = [
     title: () => 'Le Simulateur',
     body: (
       <>
-        QCM <strong>type concours</strong>, tirés directement des{' '}
-        <strong>QCM générés sur tes fiches</strong>. Pense à en générer
-        plusieurs pour avoir des sessions variées.
+        Trois sources au choix : tes <strong>QCM générés</strong>, «{' '}
+        <strong>Ce que j&apos;ai raté</strong> » (tes points faibles), ou tes{' '}
+        <strong>annales en PDF</strong> : importe un vrai sujet, les questions
+        en sont extraites automatiquement.
         <br /><br />
         Mode <strong>Apprentissage</strong> avec corrections, ou{' '}
-        <strong>Examen blanc</strong> avec timer et grille concours.
+        <strong>Examen blanc</strong> avec timer et grille officielle.
         <br /><br />
         <em className="ont-premium-note">
           Plan Gratuit : 3 sessions totales en Apprentissage.{' '}
@@ -438,12 +446,16 @@ const STEPS: Step[] = [
     title: () => 'Les Statistiques',
     body: (
       <>
-        Bilan annuel : nombre de révisions, jours actifs, fiches maîtrisées,
-        régularité.
+        Ton <strong>Indice de préparation</strong> sur 100 et ton{' '}
+        <strong>rang</strong> (d&apos;Apprenti à Maître), avec les trois
+        leviers pour les faire monter : <strong>Maîtrise</strong>,{' '}
+        <strong>Couverture</strong>, <strong>Assiduité</strong>. Un jour
+        compte à partir de <strong>10 minutes</strong> de révision. Tiens
+        ta série.
         <br /><br />
         <em className="ont-premium-note">
-          <strong>Premium</strong> : heatmap année 52 sem, sparkline 12 sem,
-          dumbbell par matière (comparaison 1 mois vs maintenant).
+          <strong>Premium</strong> : fixe ta date d&apos;examens et vois ton
+          score projeté le jour J.
         </em>
       </>
     ),
@@ -460,9 +472,9 @@ const STEPS: Step[] = [
         et regarde ta <strong>bibliothèque se remplir</strong> jour après
         jour.
         <br /><br />
-        Tu peux revoir ce tutoriel à tout moment depuis tes Paramètres.
+        Tu peux revoir ce tutoriel à tout moment depuis tes Réglages.
         <br /><br />
-        <strong>Bonne P1.</strong>
+        <strong>Bonne première année.</strong>
       </>
     ),
   },
@@ -725,7 +737,7 @@ export default function OnboardingTour({
             <div className="ont-celebration-mark" aria-hidden="true">
               <svg viewBox="0 0 64 64" width="64" height="64">
                 <circle cx="32" cy="32" r="28" fill="#D8EAE0" />
-                <path d="M20 33 L29 42 L46 22" stroke="#1B4332" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M20 33 L29 42 L46 22" stroke="#1B3A5B" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <h3 className="ont-celebration-title">{cur.title(firstName)}</h3>

@@ -1,16 +1,17 @@
 'use client'
 // src/app/dashboard/settings/page.tsx
 //
-// Page Paramètres : édition du profil (nom, username, fac), changement de
-// mot de passe, déconnexion. Plan affiché en lecture seule (le flow d'upgrade
-// vers Pro n'est pas branché pour le moment).
+// Page Réglages v2 : l'abonnement d'abord (carte héro vendeuse), puis des
+// sections consolidées et expliquées : Profil, Compte (email + mot de passe +
+// déconnexion), Apparence (thème + sons), Aide, et la zone de suppression.
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Profile } from '@/types'
-import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP } from '@/types'
+import type { Profile, ScoringSystemId } from '@/types'
+import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP, SCORING_SYSTEMS } from '@/types'
+import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import './styles.css'
 
 const FACS = [
@@ -21,6 +22,14 @@ const FACS = [
   { id: 'lyon', name: 'Université de Lyon' },
   { id: 'montpellier', name: 'Université de Montpellier' },
   { id: 'autre', name: 'Autre faculté' },
+]
+
+// Arguments Premium affichés dans la carte abonnement (free users).
+const PREMIUM_PERKS = [
+  { title: 'Générations IA illimitées', sub: 'QCM, flashcards et extractions sans compteur' },
+  { title: 'Simulateur illimité', sub: "Autant de sessions d'entraînement que tu veux" },
+  { title: 'Vidéos jusqu\'à 250 Mo', sub: 'Tes cours filmés, transcrits et transformés en QCM' },
+  { title: 'PDF sans limite de taille', sub: 'Polys complets, annales, diapos de cours' },
 ]
 
 export default function SettingsPage() {
@@ -55,6 +64,10 @@ export default function SettingsPage() {
 
   // Apparence (mode clair / sombre)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  // Sons de la bibliothèque (Web Audio, localStorage 'medrev-sounds')
+  const [sounds, setSounds] = useState(true)
+  // Barème du simulateur ('' = auto selon la fac, sinon un ScoringSystemId), localStorage 'medrev-scoring'
+  const [scoringPref, setScoringPref] = useState<string>('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -62,6 +75,8 @@ export default function SettingsPage() {
     const t: 'light' | 'dark' = stored === 'dark' ? 'dark' : 'light'
     setTheme(t)
     document.documentElement.setAttribute('data-theme', t)
+    setSounds(soundsEnabled())
+    setScoringPref(localStorage.getItem('medrev-scoring') || '')
   }, [])
 
   function chooseTheme(t: 'light' | 'dark') {
@@ -70,6 +85,19 @@ export default function SettingsPage() {
       localStorage.setItem('medrev-theme', t)
       document.documentElement.setAttribute('data-theme', t)
     }
+  }
+
+  function toggleSounds() {
+    const next = !sounds
+    setSounds(next)
+    setSoundsEnabled(next)
+  }
+
+  function chooseScoring(v: string) {
+    setScoringPref(v)
+    if (typeof window === 'undefined') return
+    if (v) localStorage.setItem('medrev-scoring', v)
+    else localStorage.removeItem('medrev-scoring')
   }
 
   // ------------ LOAD ------------
@@ -219,19 +247,139 @@ export default function SettingsPage() {
     )
   }
 
-  const planLabel = profile.plan === 'pro' ? 'Premium' : 'Gratuit'
+  const isPro = profile.plan === 'pro'
+
+  // Compteur mensuel Premium (reset à la volée si nouveau mois)
+  const monthStartedAt = profile.ai_generations_month_started_at
+    ? new Date(profile.ai_generations_month_started_at)
+    : null
+  const nowDate = new Date()
+  const inSameMonth = !!monthStartedAt
+    && monthStartedAt.getUTCFullYear() === nowDate.getUTCFullYear()
+    && monthStartedAt.getUTCMonth() === nowDate.getUTCMonth()
+  const monthCount = inSameMonth ? (profile.ai_generations_month_count ?? 0) : 0
+  const showMonthlyCap = monthCount > PREMIUM_MONTHLY_AI_CAP * 0.5
+
+  const aiUsed = profile.ai_generations_count ?? 0
+  const simUsed = profile.simulator_sessions_count ?? 0
 
   return (
     <div className="set-page">
       <div className="set-wrap">
         <div className="set-head">
-          <h1 className="set-h1">Paramètres</h1>
-          <p className="set-sub">Gère ton compte, ton profil et ton mot de passe.</p>
+          <h1 className="set-h1">Réglages</h1>
+          <nav className="set-anchors" aria-label="Sections des réglages">
+            <a href="#set-abo">Abonnement</a>
+            <a href="#set-profil">Profil</a>
+            <a href="#set-compte">Compte</a>
+            <a href="#set-apparence">Apparence</a>
+            <a href="#set-bareme">Barème</a>
+            <a href="#set-aide">Aide</a>
+            <a href="#set-danger" className="set-anchor-danger">Supprimer</a>
+          </nav>
         </div>
 
-        {/* PROFIL */}
-        <section className="set-card">
+        {/* ============ ABONNEMENT (carte héro) ============ */}
+        <section className={`set-abo${isPro ? ' pro' : ''}`} id="set-abo">
+          <div className="set-abo-glow" aria-hidden="true" />
+          <div className="set-abo-head">
+            <div>
+              <div className="set-abo-kicker">Ton abonnement</div>
+              <h2 className="set-abo-title">
+                {isPro ? 'Med·Rev Premium' : 'Med·Rev Gratuit'}
+              </h2>
+            </div>
+            <span className={`set-abo-badge${isPro ? ' pro' : ''}`}>
+              {isPro ? 'Premium actif' : 'Gratuit'}
+            </span>
+          </div>
+
+          {!isPro && (
+            <>
+              <p className="set-abo-pitch">
+                Le plan Gratuit te donne accès au cœur de la méthode. Premium
+                enlève toutes les limites pour réviser sans jamais t&apos;arrêter.
+              </p>
+
+              <div className="set-abo-perks">
+                {PREMIUM_PERKS.map(p => (
+                  <div key={p.title} className="set-abo-perk">
+                    <span className="set-abo-perk-check" aria-hidden="true">✓</span>
+                    <div>
+                      <strong>{p.title}</strong>
+                      <span>{p.sub}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="set-abo-quotas">
+                <div className="set-abo-quotas-lbl">Où tu en es sur tes quotas Gratuit</div>
+                <QuotaBar label="Générations QCM IA" used={aiUsed} limit={FREE_AI_GENERATIONS_LIMIT} />
+                <QuotaBar label="Sessions simulateur" used={simUsed} limit={FREE_SIMULATOR_SESSIONS_LIMIT} />
+              </div>
+
+              <div className="set-abo-cta-row">
+                <Link href="/dashboard/pricing" className="set-abo-cta">
+                  Passer à Premium →
+                </Link>
+                <span className="set-abo-cta-note">Sans engagement, résiliable en deux clics.</span>
+              </div>
+            </>
+          )}
+
+          {isPro && (
+            <>
+              <p className="set-abo-pitch">
+                Merci de soutenir Med·Rev. Tout est illimité : générations IA,
+                simulateur, vidéos jusqu&apos;à 250 Mo et PDF sans limite.
+              </p>
+
+              {showMonthlyCap && (
+                <div className="set-abo-quotas">
+                  <div className="set-abo-quotas-lbl">Usage IA ce mois-ci</div>
+                  <QuotaBar label="Générations QCM IA" used={monthCount} limit={PREMIUM_MONTHLY_AI_CAP} />
+                  <p className="set-abo-note">
+                    Le compteur se remet à zéro le 1er du mois. Cette limite haute
+                    protège l&apos;infrastructure, tu ne devrais jamais l&apos;atteindre
+                    en utilisation normale.
+                  </p>
+                </div>
+              )}
+
+              {portalError && (
+                <div className="set-msg err" style={{ marginTop: 10 }}>{portalError}</div>
+              )}
+
+              {profile.stripe_customer_id ? (
+                <div className="set-abo-cta-row">
+                  <button
+                    type="button"
+                    className="set-abo-cta ghost"
+                    onClick={openCustomerPortal}
+                    disabled={portalLoading}
+                  >
+                    {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement →'}
+                  </button>
+                  <span className="set-abo-cta-note">
+                    Factures, carte bancaire et résiliation via le portail sécurisé Stripe.
+                  </span>
+                </div>
+              ) : (
+                <p className="set-abo-note">
+                  Tu bénéficies d&apos;un accès Premium offert : il n&apos;y a pas
+                  d&apos;abonnement à gérer. Pour toute question, écris à{' '}
+                  <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
+                </p>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* ============ PROFIL ============ */}
+        <section className="set-card" id="set-profil">
           <div className="set-card-h">Profil</div>
+          <p className="set-card-sub">Ton identité dans l&apos;application : nom affiché, pseudo et faculté.</p>
 
           <div className="set-row">
             <label className="set-label">Nom</label>
@@ -282,131 +430,21 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* COMPTE */}
-        <section className="set-card">
-          <div className="set-card-h">Compte</div>
+        {/* ============ COMPTE (email + mot de passe + session) ============ */}
+        <section className="set-card" id="set-compte">
+          <div className="set-card-h">Compte et sécurité</div>
+          <p className="set-card-sub">Ton email de connexion, ton mot de passe et ta session.</p>
 
           <div className="set-row">
-            <label className="set-label">Email</label>
+            <label className="set-label">Email de connexion</label>
             <div className="set-static">{email}</div>
             <p className="set-hint">
-              L&apos;email est utilisé pour la connexion. Pour le changer,
-              écris à <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
+              Pour changer d&apos;email, écris à{' '}
+              <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
             </p>
           </div>
 
-          <div className="set-row">
-            <label className="set-label">Plan actuel</label>
-            <div className="set-plan">
-              <span className={`set-plan-badge ${profile.plan === 'pro' ? 'pro' : 'free'}`}>{planLabel}</span>
-              {profile.plan !== 'pro' && (
-                <Link href="/dashboard/pricing" className="set-plan-link">
-                  Voir les formules Premium →
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {profile.plan === 'pro' && (() => {
-            // Calcul du compteur mensuel effectif (reset à la volée si nouveau mois)
-            const startedAt = profile.ai_generations_month_started_at
-              ? new Date(profile.ai_generations_month_started_at)
-              : null
-            const now = new Date()
-            const inSameMonth = !!startedAt
-              && startedAt.getUTCFullYear() === now.getUTCFullYear()
-              && startedAt.getUTCMonth() === now.getUTCMonth()
-            const monthCount = inSameMonth ? (profile.ai_generations_month_count ?? 0) : 0
-            // On affiche la barre seulement si l'user s'approche du cap (>50%)
-            // pour éviter de stresser inutilement les users normaux.
-            const showMonthlyCap = monthCount > PREMIUM_MONTHLY_AI_CAP * 0.5
-            return (
-              <>
-                {showMonthlyCap && (
-                  <div className="set-row">
-                    <label className="set-label">Usage IA ce mois-ci</label>
-                    <div className="set-quotas">
-                      <QuotaBar
-                        label="Générations QCM IA"
-                        used={monthCount}
-                        limit={PREMIUM_MONTHLY_AI_CAP}
-                      />
-                    </div>
-                    <p className="set-hint">
-                      Le compteur se reset le 1er du mois prochain. Cette
-                      limite haute protège l&apos;infrastructure des usages
-                      excessifs, tu ne devrais jamais l&apos;atteindre en
-                      utilisation normale.
-                    </p>
-                  </div>
-                )}
-                {/* Gestion d'abonnement : on ne montre le bouton "Gérer mon
-                    abonnement" QUE si l'user a un stripe_customer_id (= a payé
-                    via Stripe). Sinon (Premium offert manuellement via DB),
-                    le bouton est inutile et le portail Stripe répondrait avec
-                    une erreur. On affiche une note explicative à la place. */}
-                {profile.stripe_customer_id ? (
-                  <div className="set-row">
-                    <label className="set-label">Gestion de l&apos;abonnement</label>
-                    <p className="set-hint">
-                      Mets à jour ta carte, télécharge tes factures ou résilie ton
-                      abonnement. Tu seras redirigé vers le portail sécurisé de Stripe.
-                    </p>
-                    {portalError && (
-                      <div className="set-msg err" style={{ marginTop: 8 }}>{portalError}</div>
-                    )}
-                    <div className="set-actions">
-                      <button
-                        className="set-btn ghost"
-                        onClick={openCustomerPortal}
-                        disabled={portalLoading}
-                      >
-                        {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement →'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="set-row">
-                    <label className="set-label">Accès Premium</label>
-                    <p className="set-hint">
-                      Tu bénéficies d&apos;un accès Premium offert. Il n&apos;y a
-                      pas d&apos;abonnement à gérer côté facturation. Pour toute
-                      question sur ton compte, écris à{' '}
-                      <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
-                    </p>
-                  </div>
-                )}
-              </>
-            )
-          })()}
-
-          {profile.plan !== 'pro' && (
-            <div className="set-row">
-              <label className="set-label">Quotas Gratuit</label>
-              <div className="set-quotas">
-                <QuotaBar
-                  label="Générations QCM IA"
-                  used={profile.ai_generations_count ?? 0}
-                  limit={FREE_AI_GENERATIONS_LIMIT}
-                />
-                <QuotaBar
-                  label="Sessions simulateur"
-                  used={profile.simulator_sessions_count ?? 0}
-                  limit={FREE_SIMULATOR_SESSIONS_LIMIT}
-                />
-              </div>
-              <p className="set-hint">
-                En Premium, tous les quotas sont illimités. Les vidéos
-                jusqu&apos;à 250 Mo et les PDF sans limite de taille seront
-                débloqués. <Link href="/dashboard/pricing" className="set-plan-inline-link">Voir les formules</Link>.
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* MOT DE PASSE */}
-        <section className="set-card">
-          <div className="set-card-h">Mot de passe</div>
+          <div className="set-divider" aria-hidden="true" />
 
           <div className="set-row">
             <label className="set-label">Nouveau mot de passe</label>
@@ -445,18 +483,29 @@ export default function SettingsPage() {
               {savingPassword ? 'Modification…' : 'Modifier le mot de passe'}
             </button>
           </div>
+
+          <div className="set-divider" aria-hidden="true" />
+
+          <div className="set-row set-row-inline">
+            <div>
+              <label className="set-label">Session</label>
+              <p className="set-hint">
+                Tes données restent en place : tu pourras te reconnecter à tout moment.
+              </p>
+            </div>
+            <button className="set-btn" onClick={logout}>
+              Se déconnecter
+            </button>
+          </div>
         </section>
 
-        {/* APPARENCE */}
-        <section className="set-card">
-          <div className="set-card-h">Apparence</div>
+        {/* ============ APPARENCE ============ */}
+        <section className="set-card" id="set-apparence">
+          <div className="set-card-h">Apparence et ambiance</div>
+          <p className="set-card-sub">Le thème de l&apos;interface et les sons de la bibliothèque.</p>
 
           <div className="set-row">
             <label className="set-label">Thème</label>
-            <p className="set-hint">
-              Choisis le mode clair pour le confort en journée, ou le mode
-              sombre pour les sessions de révision tardives.
-            </p>
             <div className="set-theme-grid">
               <button
                 type="button"
@@ -495,21 +544,43 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+
+          <div className="set-divider" aria-hidden="true" />
+
+          <div className="set-row set-row-inline">
+            <div>
+              <label className="set-label">Sons de la bibliothèque</label>
+              <p className="set-hint">
+                Petits bruitages feutrés pendant les sessions : livre qui
+                s&apos;ouvre, tampon de cire, rangement sur l&apos;étagère.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`set-switch${sounds ? ' on' : ''}`}
+              onClick={toggleSounds}
+              role="switch"
+              aria-checked={sounds}
+              aria-label="Activer ou couper les sons de la bibliothèque"
+            >
+              <span className="set-switch-knob" />
+            </button>
+          </div>
         </section>
 
-        {/* AIDE */}
-        <section className="set-card">
+        {/* ============ AIDE ============ */}
+        <section className="set-card" id="set-aide">
           <div className="set-card-h">Aide</div>
+          <p className="set-card-sub">Besoin de te rafraîchir la mémoire sur le fonctionnement du site ?</p>
 
-          <div className="set-row">
-            <label className="set-label">Tutoriel d&apos;introduction</label>
-            <p className="set-hint">
-              Revoir le tour guidé qui présente la courbe J, le système de notation
-              et la création de tes premières fiches.
-            </p>
-          </div>
-
-          <div className="set-actions">
+          <div className="set-row set-row-inline">
+            <div>
+              <label className="set-label">Tutoriel d&apos;introduction</label>
+              <p className="set-hint">
+                Revoir le tour guidé : la courbe J, la notation, les fiches,
+                le simulateur et la bibliothèque.
+              </p>
+            </div>
             <button
               className="set-btn"
               onClick={() => {
@@ -526,19 +597,25 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* DÉCONNEXION */}
-        <section className="set-card set-card-danger">
-          <div className="set-card-h">Session</div>
-          <p className="set-hint">Tu peux te déconnecter sans risque : tes données restent en place et tu pourras te reconnecter à tout moment.</p>
-          <div className="set-actions">
-            <button className="set-btn ghost-rose" onClick={logout}>
-              Se déconnecter
+        {/* ============ SUPPRIMER (RGPD) ============ */}
+        <section className="set-card" id="set-bareme">
+          <div className="set-card-h">Barème du simulateur</div>
+          <p className="set-card-sub">Comment les QCM du simulateur sont notés. Par défaut on applique le barème standard ; change-le si ta fac utilise un autre système.</p>
+          <div className="set-bareme-grid">
+            <button type="button" className={`set-bareme-opt${scoringPref === '' ? ' on' : ''}`} onClick={() => chooseScoring('')}>
+              <strong>Automatique</strong>
+              <span>Barème standard, selon ta faculté</span>
             </button>
+            {(Object.keys(SCORING_SYSTEMS) as ScoringSystemId[]).map(id => (
+              <button key={id} type="button" className={`set-bareme-opt${scoringPref === id ? ' on' : ''}`} onClick={() => chooseScoring(id)}>
+                <strong>{SCORING_SYSTEMS[id].label}</strong>
+                <span>{SCORING_SYSTEMS[id].desc}</span>
+              </button>
+            ))}
           </div>
         </section>
 
-        {/* SUPPRIMER MON COMPTE, droit à l'effacement RGPD */}
-        <section className="set-card set-card-danger">
+        <section className="set-card set-card-danger" id="set-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">
             La suppression est <strong>définitive et immédiate</strong> : toutes

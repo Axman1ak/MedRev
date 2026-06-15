@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-      setMsg({ kind: 'ok', text: 'Mot de passe modifié — redirection…' })
+      setMsg({ kind: 'ok', text: 'Mot de passe modifié, redirection en cours…' })
       setTimeout(() => router.push('/dashboard'), 800)
     } catch (e: unknown) {
       setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Erreur inconnue' })
@@ -88,7 +88,7 @@ export default function ResetPasswordPage() {
           justify-content: center;
           padding: 32px 20px;
           background: var(--bg);
-          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-family: var(--font-hanken), sans-serif;
           color: var(--dark);
         }
 
@@ -103,7 +103,7 @@ export default function ResetPasswordPage() {
         }
 
         .rp-logo {
-          font-family: 'Cinzel', 'Fraunces', serif;
+          font-family: var(--font-bricolage), var(--font-bricolage), serif;
           font-weight: 600;
           font-size: 17px;
           letter-spacing: 0.15em;
@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
         .rp-logo span { color: var(--gm); }
 
         .rp-title {
-          font-family: 'Fraunces', serif;
+          font-family: var(--font-bricolage), serif;
           font-weight: 500;
           font-size: 22px;
           color: var(--dark);
@@ -123,14 +123,14 @@ export default function ResetPasswordPage() {
           text-align: center;
         }
         .rp-title em {
-          font-family: 'Fraunces', serif;
+          font-family: var(--font-bricolage), serif;
           font-style: italic;
           color: var(--gm);
           font-weight: 500;
           font-size: 22px;
         }
         .rp-sub {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: var(--font-hanken), serif;
           font-style: italic;
           color: var(--gray);
           font-size: 14px;
@@ -153,7 +153,7 @@ export default function ResetPasswordPage() {
           padding: 10px 13px;
           border: 1.5px solid var(--border);
           border-radius: 9px;
-          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-family: var(--font-hanken), sans-serif;
           font-size: 14px;
           color: var(--dark);
           background: var(--card);
@@ -186,7 +186,7 @@ export default function ResetPasswordPage() {
           border: none;
           background: var(--green);
           color: white;
-          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-family: var(--font-hanken), sans-serif;
           font-weight: 600;
           font-size: 14px;
           border-radius: 9px;
@@ -211,7 +211,7 @@ export default function ResetPasswordPage() {
         .rp-loading {
           text-align: center;
           padding: 40px 20px;
-          font-family: 'Cormorant Garamond', serif;
+          font-family: var(--font-hanken), serif;
           font-style: italic;
           color: var(--gray);
         }

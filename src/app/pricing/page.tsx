@@ -18,32 +18,33 @@ import {
   FREE_PDF_SIZE_MB,
 } from '@/types'
 import '@/components/landing-styles.css'
+import '@/components/landing-night.css'
 
 export const metadata = {
   title: 'Tarifs · MedRev',
-  description: 'Choisis le plan qui te porte jusqu\'au concours. Gratuit pour démarrer, Premium à 69 €/an.',
+  description: 'Choisis le plan qui te porte jusqu\'aux examens. Gratuit pour démarrer, Premium à 69 €/an.',
 }
 
 export default function PricingPublicPage() {
   return (
-    <div className="lp-page">
+    <div className="lp-page ln-doc">
       <MarketingNav current="pricing" />
 
       {/* Hero pricing */}
-      <section className="lp-hero" style={{ paddingBottom: 40 }}>
-        <span className="lp-hero-kicker">Tarifs · Rentrée 2026</span>
-        <h1 className="lp-hero-h1" style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}>
+      <section className="ln-subhero">
+        <span className="ln-kicker">Tarifs</span>
+        <h1 className="ln-subhero-h1">
           Ton niveau ne devrait pas
-          <span className="line2"><em>dépendre de ton budget.</em></span>
+          <span className="ln-line2"><em>dépendre de ton budget.</em></span>
         </h1>
-        <p className="lp-hero-sub">
+        <p className="ln-subhero-sub">
           Commence gratuit. Passe Premium quand tu en as vraiment besoin,
           ou jamais. <strong>C&apos;est ton choix.</strong>
         </p>
       </section>
 
       {/* Cards */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      <section className="lp-section" style={{ paddingTop: 64 }}>
         <div className="lp-pricing-teaser">
           <div className="lp-pt-card">
             <div className="lp-pt-tag">Pour découvrir</div>
