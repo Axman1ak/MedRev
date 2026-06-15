@@ -9,7 +9,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { System, Lesson, Profile, Annale } from '@/types'
+import type { System, Lesson, Profile, Annale, AiQuestionSourceRef, LessonMedia } from '@/types'
+import SourceLightbox from '@/components/SourceLightbox'
 import { SCORING_SYSTEMS, getScoringForFac, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import SubjectIcon from '@/components/SubjectIcon'
@@ -32,6 +33,18 @@ interface Question {
   lessonName?: string
   systemName?: string
   systemId?: string
+  sourceRef?: AiQuestionSourceRef | null
+  media?: LessonMedia
+}
+
+// Normalise un source_ref (objet {pdf_page?, video_ts?}) — comme dans les QCM de fiche.
+function normalizeSourceRef(raw: unknown): AiQuestionSourceRef | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as { pdf_page?: unknown; video_ts?: unknown }
+  const out: AiQuestionSourceRef = {}
+  if (typeof r.pdf_page === 'number' && r.pdf_page > 0) out.pdf_page = r.pdf_page
+  if (typeof r.video_ts === 'number' && r.video_ts >= 0) out.video_ts = r.video_ts
+  return Object.keys(out).length > 0 ? out : null
 }
 
 // Compare deux ensembles d'index sans dépendre de l'ordre.
@@ -164,6 +177,8 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
       lessonName: lesson.name,
       systemName,
       systemId,
+      sourceRef: normalizeSourceRef(q.source_ref),
+      media: (lesson as { media?: LessonMedia }).media,
     })
   }
   return out
@@ -228,6 +243,8 @@ export default function SimulateurPage() {
   const [nbQuestions, setNbQuestions] = useState(20)
   const [duration, setDuration] = useState<number | null>(30)
   const [selectionMode, setSelectionMode] = useState<Selection>('random')
+  // Vue source inline pendant la session (page PDF / minute vidéo), sans quitter.
+  const [showSource, setShowSource] = useState<AiQuestionSourceRef | null>(null)
   const [mode, setMode] = useState<Mode>('apprentissage')
 
   // source pilote selectionMode (le moteur de lancement lit selectionMode).
@@ -1392,10 +1409,27 @@ export default function SimulateurPage() {
                       </>
                     )}
                   </div>
-                  {q.lessonId && (
-                    <a className="sim-ses-explain-link" href={`/dashboard/fiches?lesson=${q.lessonId}`} target="_blank" rel="noopener noreferrer">
-                      Voir cette fiche ↗
-                    </a>
+                  {(() => {
+                    const sr = q.sourceRef
+                    const md = q.media
+                    const canSrc = !!sr && !!md && (
+                      (sr.video_ts !== undefined && !!md.video_path) ||
+                      (sr.pdf_page !== undefined && !!md.pdf_path)
+                    )
+                    if (!canSrc) return null
+                    return (
+                      <button type="button" className="sim-ses-explain-link" onClick={() => setShowSource(sr as AiQuestionSourceRef)}>
+                        Voir la source ↗
+                      </button>
+                    )
+                  })()}
+                  {showSource && q.media && (
+                    <SourceLightbox
+                      media={q.media}
+                      sourceRef={showSource}
+                      lessonName={q.lessonName ?? ''}
+                      onClose={() => setShowSource(null)}
+                    />
                   )}
                 </div>
 
