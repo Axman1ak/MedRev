@@ -65,7 +65,10 @@ const FACS = [
 // mineure choisie.
 const BASE_S1 = [
   { name: 'Biochimie', icon: '🧪', semestre: 1 as const },
+  { name: 'Chimie générale et organique', icon: '⚗️', semestre: 1 as const },
   { name: 'Biologie cellulaire', icon: '🔬', semestre: 1 as const },
+  { name: 'Biologie moléculaire', icon: '🧬', semestre: 1 as const },
+  { name: 'Histologie-Embryologie', icon: '🧫', semestre: 1 as const },
   { name: 'Anatomie générale', icon: '🦴', semestre: 1 as const },
 ]
 const BASE_S2 = [
