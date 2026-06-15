@@ -904,7 +904,6 @@
 }
 .fi-menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
 
-.card.dragging { opacity: .45; }
 .card[draggable="true"] { cursor: grab; }
 
 .fi-chap-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -913,9 +912,12 @@
 
 .fi-chap-section { border-radius: 12px; transition: background .12s, box-shadow .12s; }
 .fi-chap-section.drag-over {
-  background: var(--gm-soft, rgba(22,49,78,.06));
-  box-shadow: inset 0 0 0 2px var(--gm);
+  background: var(--gm-soft, rgba(22,49,78,.05));
+  outline: 2px dashed var(--gm, #16314E);
+  outline-offset: 3px;
+  border-radius: 12px;
 }
+.card.dragging { opacity: .4; }
 .fi-chap-empty {
   border: 1.5px dashed var(--border-strong, var(--border));
   border-radius: 11px; padding: 22px; text-align: center;
