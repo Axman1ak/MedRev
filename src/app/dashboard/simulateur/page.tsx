@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { System, Lesson, Profile, Annale, AiQuestionSourceRef, LessonMedia } from '@/types'
+import type { System, Lesson, Profile, Annale, AiQuestionSourceRef, LessonMedia, ScoringSystemId } from '@/types'
 import SourceLightbox from '@/components/SourceLightbox'
 import { SCORING_SYSTEMS, getScoringForFac, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
@@ -45,6 +45,12 @@ function normalizeSourceRef(raw: unknown): AiQuestionSourceRef | null {
   if (typeof r.pdf_page === 'number' && r.pdf_page > 0) out.pdf_page = r.pdf_page
   if (typeof r.video_ts === 'number' && r.video_ts >= 0) out.video_ts = r.video_ts
   return Object.keys(out).length > 0 ? out : null
+}
+
+function formatTs(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const sec = Math.floor(seconds % 60)
+  return `${m}:${String(sec).padStart(2, '0')}`
 }
 
 // Compare deux ensembles d'index sans dépendre de l'ordre.
@@ -266,7 +272,14 @@ export default function SimulateurPage() {
   // Système de scoring selon la fac de l'user. Default = discordance progressive
   // (la plus répandue en PASS français). Cf src/types/index.ts pour ajouter
   // un système per-fac plus précis.
-  const scoringId = useMemo(() => getScoringForFac(profile?.fac), [profile?.fac])
+  const [scoringOverride, setScoringOverride] = useState<string>('')
+  useEffect(() => {
+    if (typeof window !== 'undefined') setScoringOverride(localStorage.getItem('medrev-scoring') || '')
+  }, [])
+  const scoringId = useMemo<ScoringSystemId>(() => {
+    if (scoringOverride && scoringOverride in SCORING_SYSTEMS) return scoringOverride as ScoringSystemId
+    return getScoringForFac(profile?.fac)
+  }, [scoringOverride, profile?.fac])
   const scoring = SCORING_SYSTEMS[scoringId]
 
   // Quota Free : vérifié serveur via /api/simulator/start avant lancement.
@@ -1047,16 +1060,6 @@ export default function SimulateurPage() {
                       {annalesPool.length > 0 && <> · {annalesPool.length} question{annalesPool.length > 1 ? 's' : ''} prête{annalesPool.length > 1 ? 's' : ''}</>}
                     </span>
                     <div className="sim-ann-add">
-                      <select
-                        className="sim-ann-select"
-                        value={annaleSysId}
-                        onChange={e => setAnnaleSysId(e.target.value)}
-                        aria-label="Matière de la nouvelle annale"
-                      >
-                        {semSystems.filter(s => selectedSysIds.has(s.id)).map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
                       <button
                         type="button"
                         className="sim-ann-upload"
@@ -1074,7 +1077,7 @@ export default function SimulateurPage() {
 
                   {semAnnales.length === 0 ? (
                     <div className="sim-ann-empty">
-                      Aucune annale sur ces matières. Importe le PDF d&apos;un sujet :
+                      Aucune annale pour l&apos;instant. Importe le PDF d&apos;un sujet :
                       les questions en seront extraites automatiquement
                       (compte comme 1 génération IA, corrigé du PDF utilisé si présent).
                     </div>
@@ -1419,7 +1422,9 @@ export default function SimulateurPage() {
                     if (!canSrc) return null
                     return (
                       <button type="button" className="sim-ses-explain-link" onClick={() => setShowSource(sr as AiQuestionSourceRef)}>
-                        Voir la source ↗
+                        {sr.pdf_page !== undefined && md && md.pdf_path
+                          ? `Voir page ${sr.pdf_page}`
+                          : `Voir la vidéo à ${formatTs(sr.video_ts ?? 0)}`}
                       </button>
                     )
                   })()}

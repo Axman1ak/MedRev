@@ -593,7 +593,9 @@ export default function QcmSessionPage() {
                   className="qcm-source-jump"
                   onClick={() => setShowSource(sourceRef)}
                 >
-                  Voir la source ↗
+                  {sourceRef.pdf_page !== undefined && media.pdf_path
+                    ? `Voir page ${sourceRef.pdf_page}`
+                    : `Voir la vidéo à ${formatTs(sourceRef.video_ts ?? 0)}`}
                 </button>
               </div>
             )}

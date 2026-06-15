@@ -929,3 +929,15 @@
   .set-abo-perks { grid-template-columns: 1fr; }
   .set-row-inline { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
+
+/* ---- Barème du simulateur ---- */
+.set-bareme-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.set-bareme-opt {
+  text-align: left; padding: 12px 14px; border: 1px solid var(--set-line, #e3e8ef);
+  border-radius: 11px; background: transparent; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; gap: 3px; transition: .15s;
+}
+.set-bareme-opt:hover { border-color: var(--set-border-strong, #c7d0dd); }
+.set-bareme-opt.on { border-color: var(--gm, #16314E); box-shadow: inset 0 0 0 1px var(--gm, #16314E); }
+.set-bareme-opt strong { font-size: 14px; color: var(--set-ink, #1b2330); }
+.set-bareme-opt span { font-size: 12.5px; color: var(--set-gray, #5b6573); }

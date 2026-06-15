@@ -9,8 +9,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Profile } from '@/types'
-import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP } from '@/types'
+import type { Profile, ScoringSystemId } from '@/types'
+import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP, SCORING_SYSTEMS } from '@/types'
 import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import './styles.css'
 
@@ -66,6 +66,8 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   // Sons de la bibliothèque (Web Audio, localStorage 'medrev-sounds')
   const [sounds, setSounds] = useState(true)
+  // Barème du simulateur ('' = auto selon la fac, sinon un ScoringSystemId), localStorage 'medrev-scoring'
+  const [scoringPref, setScoringPref] = useState<string>('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -74,6 +76,7 @@ export default function SettingsPage() {
     setTheme(t)
     document.documentElement.setAttribute('data-theme', t)
     setSounds(soundsEnabled())
+    setScoringPref(localStorage.getItem('medrev-scoring') || '')
   }, [])
 
   function chooseTheme(t: 'light' | 'dark') {
@@ -88,6 +91,13 @@ export default function SettingsPage() {
     const next = !sounds
     setSounds(next)
     setSoundsEnabled(next)
+  }
+
+  function chooseScoring(v: string) {
+    setScoringPref(v)
+    if (typeof window === 'undefined') return
+    if (v) localStorage.setItem('medrev-scoring', v)
+    else localStorage.removeItem('medrev-scoring')
   }
 
   // ------------ LOAD ------------
@@ -263,6 +273,7 @@ export default function SettingsPage() {
             <a href="#set-profil">Profil</a>
             <a href="#set-compte">Compte</a>
             <a href="#set-apparence">Apparence</a>
+            <a href="#set-bareme">Barème</a>
             <a href="#set-aide">Aide</a>
             <a href="#set-danger" className="set-anchor-danger">Supprimer</a>
           </nav>
@@ -587,6 +598,23 @@ export default function SettingsPage() {
         </section>
 
         {/* ============ SUPPRIMER (RGPD) ============ */}
+        <section className="set-card" id="set-bareme">
+          <div className="set-card-h">Barème du simulateur</div>
+          <p className="set-card-sub">Comment les QCM du simulateur sont notés. Par défaut on applique le barème standard ; change-le si ta fac utilise un autre système.</p>
+          <div className="set-bareme-grid">
+            <button type="button" className={`set-bareme-opt${scoringPref === '' ? ' on' : ''}`} onClick={() => chooseScoring('')}>
+              <strong>Automatique</strong>
+              <span>Barème standard, selon ta faculté</span>
+            </button>
+            {(Object.keys(SCORING_SYSTEMS) as ScoringSystemId[]).map(id => (
+              <button key={id} type="button" className={`set-bareme-opt${scoringPref === id ? ' on' : ''}`} onClick={() => chooseScoring(id)}>
+                <strong>{SCORING_SYSTEMS[id].label}</strong>
+                <span>{SCORING_SYSTEMS[id].desc}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="set-card set-card-danger" id="set-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">
