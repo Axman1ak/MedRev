@@ -11,7 +11,7 @@
 //   3. Settings → API Keys → Create API Key → copier
 //   4. Vercel → Settings → Environment Variables :
 //      - RESEND_API_KEY = la clé copiée
-//      - WELCOME_EMAIL_FROM = l'adresse d'envoi (ex: "MedRev <hello@medrev.fr>"
+//      - WELCOME_EMAIL_FROM = l'adresse d'envoi (ex: "MedRev <medrev.fr@gmail.com>"
 //        ou "MedRev <onboarding@resend.dev>" en attendant)
 //
 // Si RESEND_API_KEY n'est pas configurée, l'endpoint répond OK mais ne fait

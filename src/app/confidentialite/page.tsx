@@ -28,7 +28,7 @@ export default function ConfidentialitePage() {
 
         <section className="legal-section">
           <h2 className="legal-h2">1. Responsable du traitement</h2>
-          <p>Le responsable du traitement des données collectées via MedRev est Lou Bonnefoy, joignable à <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.</p>
+          <p>Le responsable du traitement des données collectées via MedRev est Lou Bonnefoy, joignable à <a href="mailto:medrev.fr@gmail.com">medrev.fr@gmail.com</a>.</p>
         </section>
 
         <section className="legal-section">
@@ -84,7 +84,7 @@ export default function ConfidentialitePage() {
             <li><strong>Opposition</strong> : t&apos;opposer au traitement pour motif légitime.</li>
             <li><strong>Limitation</strong> : geler temporairement le traitement.</li>
           </ul>
-          <p>Pour exercer un de ces droits, écris à <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>. Une réponse te parvient sous 30 jours maximum.</p>
+          <p>Pour exercer un de ces droits, écris à <a href="mailto:medrev.fr@gmail.com">medrev.fr@gmail.com</a>. Une réponse te parvient sous 30 jours maximum.</p>
           <p>En cas de désaccord, tu peux saisir la <strong>CNIL</strong> sur cnil.fr.</p>
         </section>
 

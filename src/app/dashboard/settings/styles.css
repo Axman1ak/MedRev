@@ -941,3 +941,7 @@
 .set-bareme-opt.on { border-color: var(--gm, #16314E); box-shadow: inset 0 0 0 1px var(--gm, #16314E); }
 .set-bareme-opt strong { font-size: 14px; color: var(--set-ink, #1b2330); }
 .set-bareme-opt span { font-size: 12.5px; color: var(--set-gray, #5b6573); }
+
+/* Bouton de déconnexion — rouge, bien visible */
+.set-btn-logout { background: #fdecea; color: #c0392b; border: 1px solid #e8b9b3; }
+.set-btn-logout:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
