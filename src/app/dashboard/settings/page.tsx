@@ -369,7 +369,7 @@ export default function SettingsPage() {
                 <p className="set-abo-note">
                   Tu bénéficies d&apos;un accès Premium offert : il n&apos;y a pas
                   d&apos;abonnement à gérer. Pour toute question, écris à{' '}
-                  <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
+                  <a href="mailto:medrev.fr@gmail.com">medrev.fr@gmail.com</a>.
                 </p>
               )}
             </>
@@ -440,7 +440,7 @@ export default function SettingsPage() {
             <div className="set-static">{email}</div>
             <p className="set-hint">
               Pour changer d&apos;email, écris à{' '}
-              <a href="mailto:loubonnefoypc@gmail.com">loubonnefoypc@gmail.com</a>.
+              <a href="mailto:medrev.fr@gmail.com">medrev.fr@gmail.com</a>.
             </p>
           </div>
 
@@ -493,7 +493,7 @@ export default function SettingsPage() {
                 Tes données restent en place : tu pourras te reconnecter à tout moment.
               </p>
             </div>
-            <button className="set-btn" onClick={logout}>
+            <button className="set-btn set-btn-logout" onClick={logout}>
               Se déconnecter
             </button>
           </div>

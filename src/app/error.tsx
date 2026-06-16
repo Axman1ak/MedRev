@@ -145,10 +145,10 @@ export default function GlobalError({
         >
           Si le problème persiste, écris à{' '}
           <a
-            href="mailto:loubonnefoypc@gmail.com"
+            href="mailto:medrev.fr@gmail.com"
             style={{ color: '#5C5C5A' }}
           >
-            loubonnefoypc@gmail.com
+            medrev.fr@gmail.com
           </a>
           {error.digest ? ` avec la réf ${error.digest}` : ''}.
         </p>

@@ -413,6 +413,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <i className="ic">?</i>
             <span className="db-lbl">Aide &amp; tutoriel</span>
           </button>
+          <a
+            href="mailto:medrev.fr@gmail.com?subject=Retour%20MedRev&body=Mon%20retour%20(bug%2C%20id%C3%A9e%2C%20question)%20%3A%0A%0A"
+            className="db-nav-item"
+          >
+            <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg></span>
+            <span className="db-lbl">Donner mon avis</span>
+          </a>
         </div>
 
         {/* User card → Settings */}
