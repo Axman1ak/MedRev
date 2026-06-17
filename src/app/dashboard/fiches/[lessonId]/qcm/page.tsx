@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System } from '@/types'
 import { normalizeAnswer, isMultiAnswer } from '@/types'
 import SourceLightbox from '@/components/SourceLightbox'
+import ReportQuestion from '@/components/ReportQuestion'
 import './styles.css'
 
 type Phase = 'loading' | 'question' | 'feedback' | 'end' | 'empty'
@@ -600,6 +601,15 @@ export default function QcmSessionPage() {
               </div>
             )}
           </div>
+        )}
+
+        {isFeedback && (
+          <ReportQuestion
+            lessonId={lesson?.id ?? null}
+            source="qcm_fiche"
+            questionIndex={origIndices[currentIdx]}
+            question={q}
+          />
         )}
 
         <div className="qcm-actions">

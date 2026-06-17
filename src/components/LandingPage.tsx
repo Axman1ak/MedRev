@@ -5,8 +5,8 @@
 // Narration : chaque soir de travail devient un livre dans ta bibliothèque.
 // - Héro immersif : la vraie bibliothèque (BibliothecaSvg) en fond de nuit,
 //   entrée séquencée en CSS pur.
-// - Bandeau réforme 2027 : voie unique + contrôle continu → la régularité
-//   devient LE levier, et MedRev la mesure (indice, rang, série).
+// - Bandeau concours 2026 : volume, courbe de l'oubli, entraînement en
+//   conditions. La réforme 2027 est reléguée à une phrase de rassurance.
 // - La méthode en 3 actes (reveal au scroll, visuels SVG animés).
 // - Les 6 rangs d'érudit (sceaux qui se révèlent en cascade).
 // - Features compactes, pricing teaser, CTA final.
@@ -102,16 +102,16 @@ export default function LandingPage() {
 
         <div className="ln-hero-inner">
           <span className="ln-kicker ln-h1a">
-            1re année santé · prêt pour la réforme 2027
+            PASS · LAS · spécial concours 2026
           </span>
           <h1 className="ln-h1 ln-h1b">
-            Chaque soir de travail
-            <span className="ln-h1-line2">devient <em>un livre</em>.</span>
+            Toute ta P1,
+            <span className="ln-h1-line2">organisée pour le <em>concours</em>.</span>
           </h1>
           <p className="ln-sub ln-h1c">
-            Importe tes cours : MedRev écrit tes <strong>30 QCM</strong>, programme
-            tes <strong>14 paliers de révision</strong> et mesure ta régularité,
-            le levier qui compte avec le contrôle continu.
+            Importe tes cours : MedRev écrit tes <strong>30 QCM</strong> au format
+            concours, programme tes <strong>14 paliers de révision</strong> et
+            t&apos;entraîne sur tes points faibles, jusqu&apos;au jour J.
           </p>
           <div className="ln-ctas ln-h1d">
             <Link href="/auth" className="ln-btn-primary">Commencer gratuit →</Link>
@@ -123,23 +123,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ BANDEAU RÉFORME 2027 ============ */}
+      {/* ============ BANDEAU CONCOURS 2026 ============ */}
       <section className="ln-reform">
         <div className="ln-reform-inner">
           <div className="ln-reform-item rv">
-            <div className="ln-reform-h">Fin du PASS/LAS en 2027</div>
-            <p>Une <strong>voie unique</strong> pour toutes les filières santé,
-            harmonisée au niveau national.</p>
+            <div className="ln-reform-h">Le concours en ligne de mire</div>
+            <p>PASS comme LAS, la sélection se joue sur un <strong>volume
+            énorme</strong> en quelques mois. MedRev t&apos;organise pour ne
+            rien laisser filer.</p>
           </div>
           <div className="ln-reform-item rv rv-d1">
-            <div className="ln-reform-h">Plus de concours unique</div>
-            <p>Le classement se joue sur <strong>tout le parcours</strong> :
-            chaque semaine de travail compte.</p>
+            <div className="ln-reform-h">Révise au bon moment</div>
+            <p>La courbe de l&apos;oubli te fait perdre 80 % de ton cours en une
+            semaine. Les <strong>paliers J</strong> replanifient tes fiches pour
+            l&apos;ancrer jusqu&apos;au concours.</p>
           </div>
           <div className="ln-reform-item rv rv-d2">
-            <div className="ln-reform-h">La régularité devient le levier</div>
-            <p>MedRev la <strong>mesure et la construit</strong> : indice de
-            préparation, série de jours, plan jusqu&apos;aux examens.</p>
+            <div className="ln-reform-h">Entraîne-toi en conditions</div>
+            <p>QCM au format concours, chronométrés, et un simulateur qui cible
+            ce que tu rates. Et le jour où la <strong>réforme 2027</strong>{' '}
+            arrivera, MedRev sera prêt.</p>
           </div>
         </div>
       </section>
