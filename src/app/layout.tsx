@@ -12,6 +12,7 @@
 
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Hanken_Grotesk, Fraunces, Plus_Jakarta_Sans, Cormorant_Garamond, Cinzel, JetBrains_Mono } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 // ============================================================
@@ -75,19 +76,19 @@ export const viewport: Viewport = {
 // METADATA — SEO + cartes de partage
 // ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://med-rev-eight.vercel.app'),
+  metadataBase: new URL('https://medrev.fr'),
 
   title: {
-    default: 'MedRev · Tes cours, tes QCM, ton planning.',
+    default: 'MedRev · Toute ta P1, organisée pour le concours',
     template: '%s · MedRev',
   },
   description:
-    'La méthode des prépas, sans le prix. Importe ta vidéo de cours et ton poly, MedRev génère 30 QCM et programme tes 14 paliers de révision. Pour les P1 françaises.',
+    'La méthode des prépas, sans le prix. QCM générés depuis tes cours, révisions planifiées jusqu\'au concours et simulateur d\'examen. Pour les PASS et LAS.',
 
   keywords: [
-    'P1', 'PASS', 'LAS', '1re année santé', 'voie unique santé',
-    'réforme études de santé 2027', 'médecine', 'révisions', 'QCM',
-    'concours médecine', 'examens médecine', 'contrôle continu santé',
+    'P1', 'PASS', 'LAS', '1re année santé', 'concours médecine 2026',
+    'réviser PASS', 'réviser LAS', 'médecine', 'révisions', 'QCM',
+    'concours médecine', 'examens médecine', 'simulateur examen médecine',
     'prépa médecine', 'Sorbonne', 'Paris Cité', 'Ebbinghaus',
     'spaced repetition', 'fiches de révision', 'planning révision',
   ],
@@ -99,18 +100,18 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: 'https://med-rev-eight.vercel.app',
+    url: 'https://medrev.fr',
     siteName: 'MedRev',
-    title: 'MedRev · Tes cours, tes QCM, ton planning.',
+    title: 'MedRev · Toute ta P1, organisée pour le concours',
     description:
-      'La méthode des prépas, sans le prix. 30 QCM générés sur ta vidéo, planning J0 → J+120, simulateur type examens.',
+      'La méthode des prépas, sans le prix. 30 QCM générés sur tes cours, révisions planifiées jusqu\'au concours, simulateur d\'examen.',
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'MedRev · Tes cours, tes QCM, ton planning.',
+    title: 'MedRev · Toute ta P1, organisée pour le concours',
     description:
-      'La méthode des prépas, sans le prix. 30 QCM sur ta vidéo, 14 paliers de révision, 100 % auto-organisé. Pour les P1.',
+      'La méthode des prépas, sans le prix. QCM générés sur tes cours, 14 paliers de révision, simulateur d\'examen. Pour les PASS/LAS.',
   },
 
   robots: {
@@ -150,7 +151,10 @@ export default function RootLayout({
       lang="fr"
       className={`${bricolage.variable} ${hanken.variable} ${fraunces.variable} ${jakarta.variable} ${cormorant.variable} ${cinzel.variable} ${jetbrains.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   )
 }
