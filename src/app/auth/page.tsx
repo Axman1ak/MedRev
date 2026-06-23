@@ -7,7 +7,7 @@
 // Logique d'auth identique à la version précédente intégrée dans LandingPage,
 // extraite ici dans une page séparée pour matcher le pattern Resend.
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +15,11 @@ import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
+
+// Normalise une chaîne pour la recherche : minuscules + suppression des
+// accents, pour que « universite » matche « Université », « cote » → « Côte ».
+const normalizeText = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
 const FACS = [
   // Facs avec configuration détaillée des matières (mineures PASS)
@@ -24,9 +29,9 @@ const FACS = [
   { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: true },
   { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: true },
   // Île-de-France (matières par défaut)
-  { id: 'upec', name: 'UPEC — Paris-Est Créteil', badge: 'Créteil', hasOptions: false },
+  { id: 'upec', name: 'UPEC · Paris-Est Créteil', badge: 'Créteil', hasOptions: false },
   { id: 'paris-saclay', name: 'Université Paris-Saclay', badge: 'Saclay', hasOptions: false },
-  { id: 'uvsq', name: 'UVSQ — Simone Veil (Paris-Saclay)', badge: 'Versailles', hasOptions: false },
+  { id: 'uvsq', name: 'UVSQ · Simone Veil (Paris-Saclay)', badge: 'Versailles', hasOptions: false },
   // Autres facs (matières par défaut, personnalisables ensuite dans l'app)
   { id: 'aix-marseille', name: "Aix-Marseille Université", badge: 'Marseille', hasOptions: false },
   { id: 'amiens', name: "Université de Picardie Jules Verne", badge: 'Amiens', hasOptions: false },
@@ -55,6 +60,10 @@ const FACS = [
   { id: 'la-reunion', name: "Université de La Réunion", badge: 'La Réunion', hasOptions: false },
   { id: 'autre', name: "Autre / Je ne sais pas encore", badge: 'Autre', hasOptions: false },
 ]
+
+// Facs proposées dans la recherche (toutes sauf « Autre », qui reste un
+// raccourci permanent affiché sous les résultats).
+const FACS_SEARCHABLE = FACS.filter(f => f.id !== 'autre')
 
 // =============================================================
 // BLOCS DE MATIÈRES — composer chaque (fac, mineure) sans dupliquer
@@ -282,12 +291,16 @@ function AuthContent() {
     setStep('form')
     setError(null)
     setForgotMode(false)
+    setFacQuery('')
+    setOptQuery('')
   }, [searchParams])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [fac, setFac] = useState('')
+  const [facQuery, setFacQuery] = useState('')
   const [option, setOption] = useState('')
+  const [optQuery, setOptQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forgotMode, setForgotMode] = useState(false)
@@ -302,6 +315,33 @@ function AuthContent() {
 
   const selectedFac = FACS.find(f => f.id === fac)
   const totalSteps = selectedFac?.hasOptions ? 3 : 2
+
+  // Recherche de fac : on affiche les 3 premières facs correspondantes (toute
+  // la France). Query vide -> 3 suggestions par défaut. On garde toujours la
+  // fac sélectionnée dans la liste, même si elle sort du top 3.
+  const facResults = useMemo(() => {
+    const q = normalizeText(facQuery.trim())
+    const pool = q
+      ? FACS_SEARCHABLE.filter(f => normalizeText(`${f.name} ${f.badge}`).includes(q))
+      : FACS_SEARCHABLE
+    let top = pool.slice(0, 3)
+    if (fac && fac !== 'autre' && !top.some(f => f.id === fac)) {
+      const sel = FACS_SEARCHABLE.find(f => f.id === fac)
+      if (sel) top = [sel, ...top].slice(0, 3)
+    }
+    return top
+  }, [facQuery, fac])
+
+  // Recherche de mineure : même principe, mais la liste est courte (2 à 6),
+  // donc on n'applique pas de cap : on affiche toutes les mineures qui matchent.
+  const optResults = useMemo(() => {
+    const list = FAC_OPTIONS[fac] || []
+    const q = normalizeText(optQuery.trim())
+    if (!q) return list
+    return list.filter(o =>
+      normalizeText(`${o.name} ${o.desc} ${o.tags.join(' ')}`).includes(q)
+    )
+  }, [optQuery, fac])
 
   function handleContinueForm() {
     if (!username.trim() || !email.trim() || !password.trim()) {
@@ -325,7 +365,7 @@ function AuthContent() {
 
   function handleContinueFac() {
     if (!fac) return
-    if (selectedFac?.hasOptions) setStep('option')
+    if (selectedFac?.hasOptions) { setOptQuery(''); setStep('option') }
     else handleRegister(fac, 'default')
   }
 
@@ -412,10 +452,9 @@ function AuthContent() {
         <div className="auth-grid">
           <div>
             <div className="auth-trust">
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit pour démarrer (matières / fiches illimitées)</div>
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Auto-config matières dès l&apos;inscription</div>
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données sur Supabase Paris 🇫🇷</div>
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Aucune publicité, aucun tracking tiers</div>
+              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit pour démarrer · fiches illimitées</div>
+              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données hébergées en France 🇫🇷</div>
+              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Sans publicité ni tracking</div>
             </div>
           </div>
 
@@ -474,15 +513,33 @@ function AuthContent() {
                 </div>
                 <button type="button" className="auth-back-btn" onClick={() => setStep('form')}>← Retour</button>
                 <div className="auth-step-title">Quelle est ta fac ?</div>
-                <div className="auth-step-sub">On pré-configure tes matières S1 et S2 automatiquement.</div>
+                <div className="auth-step-sub">On pré-configure tes matières S1 et S2.</div>
+                <input
+                  type="text"
+                  className="auth-input auth-search"
+                  placeholder="Cherche ta fac (Sorbonne, Lyon, Bordeaux…)"
+                  value={facQuery}
+                  onChange={e => setFacQuery(e.target.value)}
+                  autoFocus
+                />
                 <div className="auth-fac-list">
-                  {FACS.map(f => (
+                  {facResults.map(f => (
                     <button key={f.id} type="button" className={`auth-fac-item${fac === f.id ? ' sel' : ''}`} onClick={() => setFac(f.id)}>
                       <span>{f.name}</span>
                       <span className="auth-fac-badge">{f.badge}</span>
                     </button>
                   ))}
+                  {facResults.length === 0 && (
+                    <div className="auth-search-empty">Aucune fac trouvée pour « {facQuery.trim()} ».</div>
+                  )}
                 </div>
+                <button
+                  type="button"
+                  className={`auth-fac-other${fac === 'autre' ? ' sel' : ''}`}
+                  onClick={() => setFac('autre')}
+                >
+                  Je ne sais pas encore / autre fac
+                </button>
                 <button className="auth-submit" onClick={handleContinueFac} disabled={!fac || loading}>
                   {loading ? 'Création en cours…' : 'Continuer →'}
                 </button>
@@ -497,21 +554,22 @@ function AuthContent() {
                   <span className="auth-dot on" />
                 </div>
                 <button type="button" className="auth-back-btn" onClick={() => setStep('fac')}>← Retour</button>
-                <div className="auth-step-title">Quelle est ta mineure disciplinaire ?</div>
-                <div className="auth-step-sub">
-                  Choisis ta mineure pour pré-configurer tes matières. La
-                  répartition S1/S2 ci-dessous est <em>indicative</em> : elle
-                  est basée sur les programmes officiels mais peut varier
-                  d&apos;une année à l&apos;autre. Tu pourras déplacer une
-                  matière entre S1 et S2 (ou la renommer, la supprimer)
-                  depuis la page Mes cours après inscription.
-                </div>
+                <div className="auth-step-title">Quelle est ta mineure ?</div>
+                <div className="auth-step-sub">Répartition S1/S2 indicative · tu modifies tout après l&apos;inscription.</div>
+                {(FAC_OPTIONS[fac] || []).length > 4 && (
+                  <input
+                    type="text"
+                    className="auth-input auth-search"
+                    placeholder="Cherche ta mineure (droit, éco, sciences…)"
+                    value={optQuery}
+                    onChange={e => setOptQuery(e.target.value)}
+                  />
+                )}
                 <div className="auth-opt-list">
-                  {/* Liste dynamique des mineures de la fac choisie. Si pas de
-                      mineures définies, fallback vide (mais on n'arrive ici
-                      que si hasOptions === true côté fac, donc une liste
-                      devrait toujours exister). */}
-                  {(FAC_OPTIONS[fac] || []).map(opt => (
+                  {/* Liste dynamique des mineures de la fac choisie, filtrée par
+                      la recherche. La liste est courte (2 à 6) donc on n'applique
+                      pas de cap : on montre toutes les mineures qui matchent. */}
+                  {optResults.map(opt => (
                     <button
                       key={opt.id}
                       type="button"
@@ -527,6 +585,9 @@ function AuthContent() {
                       </div>
                     </button>
                   ))}
+                  {optResults.length === 0 && (
+                    <div className="auth-search-empty">Aucune mineure trouvée pour « {optQuery.trim()} ».</div>
+                  )}
                 </div>
                 <button className="auth-submit" onClick={() => handleRegister(fac, option)} disabled={!option || loading}>
                   {loading ? 'Création en cours…' : 'Créer mon compte gratuit →'}

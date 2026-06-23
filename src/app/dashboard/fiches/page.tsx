@@ -667,6 +667,9 @@ export default function FichesPage() {
                       <button type="button" className="fi-menu-item" onClick={() => openEdit('system', sys.id, sys.name)}>
                         Renommer
                       </button>
+                      <button type="button" className="fi-menu-item" onClick={() => { setMenuOpenFor(null); openEdit('system', sys.id, sys.name) }}>
+                        Paliers de révision (J+…)
+                      </button>
                       <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('system', sys.id, sys.name)}>
                         Supprimer
                       </button>
@@ -710,6 +713,14 @@ export default function FichesPage() {
                   className="fi-btn-o fi-chap-add"
                   onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
                 >+ Chapitre</button>
+              )}
+              {selectedSystem && !showDueOnly && (
+                <button
+                  type="button"
+                  className="fi-btn-o fi-chap-add"
+                  title="Choisis les jours de révision (J+…) de cette matière"
+                  onClick={() => openEdit('system', selectedSystem.id, selectedSystem.name)}
+                >Paliers J</button>
               )}
               {showFilters && (
               <div className="filter-group">
