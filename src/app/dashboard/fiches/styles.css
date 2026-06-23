@@ -923,3 +923,32 @@
   border-radius: 11px; padding: 22px; text-align: center;
   color: var(--gray); font-size: 13px;
 }
+
+/* ============ MODAL PALIERS J (interface dédiée) ============ */
+.fi-jhelp { margin: 0 0 12px; font-size: 12.5px; line-height: 1.45; color: var(--gray); }
+.fi-jgrid { display: flex; flex-wrap: wrap; gap: 8px; }
+.fi-jtog {
+  min-width: 52px; padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: 9px; background: var(--card); color: var(--gray);
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, transform .1s;
+}
+.fi-jtog:hover { border-color: var(--border-strong); color: var(--dark); }
+.fi-jtog:active { transform: scale(.96); }
+.fi-jtog.on {
+  background: var(--gm); border-color: var(--gm); color: #fff;
+  box-shadow: 0 2px 8px rgba(22, 49, 78, .18);
+}
+.fi-jwarn {
+  margin: 14px 0 0; padding: 10px 13px; border-radius: 9px;
+  font-size: 12.5px; line-height: 1.4;
+  background: rgba(214, 158, 46, .12); color: #8a6d1f;
+  border: 1px solid rgba(214, 158, 46, .35);
+}
+.fi-jwarn-err {
+  background: rgba(192, 57, 43, .1); color: var(--alert, #c0392b);
+  border-color: rgba(192, 57, 43, .3);
+}
+.fi-sched-note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--gray); }
+.fi-sched-note strong { color: var(--dark); font-weight: 700; }

@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
-import { DEFAULT_J, scheduleOf, makeScheduleResolver, SCHEDULE_PRESETS, normalizeSchedule } from '@/lib/schedule'
+import { DEFAULT_J, scheduleOf, makeScheduleResolver, normalizeSchedule } from '@/lib/schedule'
 import './styles.css'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
@@ -208,10 +208,17 @@ export default function FichesPage() {
   // Planning de révision (paliers J) en cours d'édition (matière uniquement).
   const [editSchedule, setEditSchedule] = useState<number[]>(DEFAULT_J)
   const [editScheduleOrig, setEditScheduleOrig] = useState<number[]>(DEFAULT_J)
-  const [editDayInput, setEditDayInput] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [deleting, setDeleting] = useState<DeleteTarget>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // ---- Modal dédié « Paliers J » (interface épurée, séparée de l'édition
+  // de matière). On choisit une matière, puis on allume/éteint chaque jour J.
+  const [schedOpen, setSchedOpen] = useState(false)
+  const [schedSysId, setSchedSysId] = useState<string>('')
+  const [schedSel, setSchedSel] = useState<number[]>(DEFAULT_J)
+  const [schedDayInput, setSchedDayInput] = useState('')
+  const [schedSaving, setSchedSaving] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -369,7 +376,6 @@ export default function FichesPage() {
     const sched = type === 'system' ? scheduleOf(systems.find(s => s.id === id)) : DEFAULT_J
     setEditSchedule(sched)
     setEditScheduleOrig(sched)
-    setEditDayInput('')
     setMenuOpenFor(null)
   }
   function openDelete(type: 'system' | 'lesson', id: string, name: string) {
@@ -411,6 +417,45 @@ export default function FichesPage() {
     setEditLoading(false)
     setEditing(null)
   }
+
+  // ---- Paliers J (modal dédié) ------------------------------------------
+  function openSchedModal(sysId?: string) {
+    const id = sysId || selectedSystem?.id || semSystems[0]?.id || systems[0]?.id || ''
+    setSchedSysId(id)
+    setSchedSel(scheduleOf(systems.find(s => s.id === id)))
+    setSchedDayInput('')
+    setMenuOpenFor(null)
+    setSchedOpen(true)
+  }
+  function changeSchedSys(id: string) {
+    setSchedSysId(id)
+    setSchedSel(scheduleOf(systems.find(s => s.id === id)))
+    setSchedDayInput('')
+  }
+  function toggleSchedDay(day: number) {
+    setSchedSel(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])
+  }
+  function addSchedDay() {
+    const n = parseInt(schedDayInput, 10)
+    if (Number.isFinite(n) && n >= 0) {
+      setSchedSel(prev => (prev.includes(n) ? prev : [...prev, n]))
+      setSchedDayInput('')
+    }
+  }
+  async function saveSched() {
+    if (!schedSysId) return
+    const newSchedule = normalizeSchedule(schedSel)
+    setSchedSaving(true)
+    const { error } = await supabase.from('systems').update({ schedule: newSchedule }).eq('id', schedSysId)
+    if (!error) {
+      setSystems(prev => prev.map(s => s.id === schedSysId ? ({ ...s, schedule: newSchedule } as System) : s))
+    } else {
+      console.error('[saveSched] update failed:', error)
+    }
+    setSchedSaving(false)
+    setSchedOpen(false)
+  }
+
   async function confirmDelete() {
     if (!deleting) return
     setDeleteLoading(true)
@@ -613,6 +658,25 @@ export default function FichesPage() {
             >
               + Ajouter une matière
             </button>
+            {selectedSystem && !showDueOnly && (
+              <button
+                type="button"
+                className="fi-btn-o"
+                onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
+              >
+                + Chapitre
+              </button>
+            )}
+            {semSystems.length > 0 && (
+              <button
+                type="button"
+                className="fi-btn-o"
+                title="Choisis les jours de révision (J+…) d'une matière"
+                onClick={() => openSchedModal()}
+              >
+                Paliers J
+              </button>
+            )}
             <button
               data-tour="add-lesson"
               className="fi-btn-g"
@@ -667,7 +731,7 @@ export default function FichesPage() {
                       <button type="button" className="fi-menu-item" onClick={() => openEdit('system', sys.id, sys.name)}>
                         Renommer
                       </button>
-                      <button type="button" className="fi-menu-item" onClick={() => { setMenuOpenFor(null); openEdit('system', sys.id, sys.name) }}>
+                      <button type="button" className="fi-menu-item" onClick={() => openSchedModal(sys.id)}>
                         Paliers de révision (J+…)
                       </button>
                       <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('system', sys.id, sys.name)}>
@@ -707,21 +771,6 @@ export default function FichesPage() {
                 Filtres
                 {(filterNote !== 'all' || filterProgress !== 'all') && <span className="filter-toggle-dot" aria-hidden="true" />}
               </button>
-              {selectedSystem && !showDueOnly && (
-                <button
-                  type="button"
-                  className="fi-btn-o fi-chap-add"
-                  onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
-                >+ Chapitre</button>
-              )}
-              {selectedSystem && !showDueOnly && (
-                <button
-                  type="button"
-                  className="fi-btn-o fi-chap-add"
-                  title="Choisis les jours de révision (J+…) de cette matière"
-                  onClick={() => openEdit('system', selectedSystem.id, selectedSystem.name)}
-                >Paliers J</button>
-              )}
               {showFilters && (
               <div className="filter-group">
               <label className="filter-block">
@@ -1153,60 +1202,10 @@ export default function FichesPage() {
             )}
 
             {editing.type === 'system' && (
-              <div className="fi-sched">
-                <label className="fi-label">Paliers de révision <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(jours après l&apos;apprentissage)</span></label>
-                <div className="fi-sched-presets">
-                  {SCHEDULE_PRESETS.map(pr => {
-                    const active = JSON.stringify(normalizeSchedule(editSchedule)) === JSON.stringify(normalizeSchedule(pr.days))
-                    return (
-                      <button
-                        key={pr.id}
-                        type="button"
-                        className={`fi-sched-preset${active ? ' active' : ''}`}
-                        onClick={() => setEditSchedule(pr.days)}
-                      >{pr.label}</button>
-                    )
-                  })}
-                </div>
-                <div className="fi-sched-chips">
-                  {normalizeSchedule(editSchedule).map(day => (
-                    <span key={day} className="fi-sched-chip">
-                      J+{day}
-                      <button
-                        type="button"
-                        className="fi-sched-x"
-                        aria-label={`Retirer J+${day}`}
-                        onClick={() => setEditSchedule(prev => normalizeSchedule(prev).filter(d => d !== day))}
-                      >{'×'}</button>
-                    </span>
-                  ))}
-                </div>
-                <div className="fi-sched-add">
-                  <input
-                    className="fi-input fi-sched-input"
-                    type="number"
-                    min={0}
-                    placeholder="Jour (ex : 10)"
-                    value={editDayInput}
-                    onChange={e => setEditDayInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        const n = parseInt(editDayInput, 10)
-                        if (Number.isFinite(n) && n >= 0) { setEditSchedule(prev => normalizeSchedule([...prev, n])); setEditDayInput('') }
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="fi-btn-o"
-                    onClick={() => {
-                      const n = parseInt(editDayInput, 10)
-                      if (Number.isFinite(n) && n >= 0) { setEditSchedule(prev => normalizeSchedule([...prev, n])); setEditDayInput('') }
-                    }}
-                  >Ajouter</button>
-                </div>
-              </div>
+              <p className="fi-sched-note">
+                Les paliers de révision (J+…) se règlent depuis le bouton
+                <strong> Paliers J</strong> en haut de la page.
+              </p>
             )}
             <div className="fi-modal-actions">
               <button className="fi-btn-o" onClick={() => setEditing(null)}>Annuler</button>
@@ -1222,6 +1221,90 @@ export default function FichesPage() {
           </div>
         </div>
       )}
+
+      {/* ---- MODAL : Paliers J (interface dédiée et épurée) ---- */}
+      {schedOpen && (() => {
+        const sysObj = systems.find(s => s.id === schedSysId)
+        const saved = scheduleOf(sysObj)
+        const selNorm = normalizeSchedule(schedSel)
+        // Jours proposés = paliers standard + d'éventuels jours custom déjà actifs.
+        const candidates = Array.from(new Set([...DEFAULT_J, ...schedSel])).sort((a, b) => a - b)
+        const changed = JSON.stringify(selNorm) !== JSON.stringify(normalizeSchedule(saved))
+        const ficheCount = lessons.filter(l => l.system_id === schedSysId).length
+        const startedCount = lessons.filter(l => l.system_id === schedSysId && (l.steps || []).some(s => s !== null)).length
+        const empty = selNorm.length === 0
+        return (
+          <div className="fi-overlay" onClick={() => setSchedOpen(false)}>
+            <div className="fi-modal" onClick={e => e.stopPropagation()}>
+              <div className="fi-modal-title">Paliers de révision</div>
+
+              <label className="fi-label">Matière</label>
+              <select
+                className="fi-select"
+                value={schedSysId}
+                onChange={e => changeSchedSys(e.target.value)}
+                style={{ marginBottom: 18 }}
+              >
+                {systems.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+
+              <label className="fi-label">Jours de révision</label>
+              <p className="fi-jhelp">Allume les jours où cette matière doit revenir. J+0 = le jour où tu l&apos;apprends.</p>
+              <div className="fi-jgrid">
+                {candidates.map(day => {
+                  const on = schedSel.includes(day)
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      className={`fi-jtog${on ? ' on' : ''}`}
+                      aria-pressed={on}
+                      onClick={() => toggleSchedDay(day)}
+                    >
+                      J+{day}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="fi-sched-add" style={{ marginTop: 12 }}>
+                <input
+                  className="fi-input fi-sched-input"
+                  type="number"
+                  min={0}
+                  placeholder="Ajouter un autre jour (ex : 10)"
+                  value={schedDayInput}
+                  onChange={e => setSchedDayInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSchedDay() } }}
+                />
+                <button type="button" className="fi-btn-o" onClick={addSchedDay}>Ajouter</button>
+              </div>
+
+              {empty && (
+                <p className="fi-jwarn fi-jwarn-err">Garde au moins un jour de révision.</p>
+              )}
+              {!empty && changed && ficheCount > 0 && (
+                <p className="fi-jwarn">
+                  Modifier les paliers va recalculer le calendrier de révision de {ficheCount} fiche{ficheCount > 1 ? 's' : ''}
+                  {startedCount > 0 ? ` (dont ${startedCount} déjà commencée${startedCount > 1 ? 's' : ''})` : ''}.
+                </p>
+              )}
+
+              <div className="fi-modal-actions">
+                <button className="fi-btn-o" onClick={() => setSchedOpen(false)}>Annuler</button>
+                <button
+                  className="fi-btn-g"
+                  onClick={saveSched}
+                  disabled={empty || schedSaving || !changed}
+                  style={{ opacity: (empty || !changed) ? .5 : 1 }}
+                >
+                  {schedSaving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ---- MODAL : Nouveau chapitre ---- */}
       {chapModal && (
