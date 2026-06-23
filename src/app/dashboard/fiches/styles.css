@@ -855,6 +855,20 @@
   height: 1px;
   background: var(--border, var(--border-subtle));
 }
+.fi-chap-del {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0;
+  border: 1px solid var(--border, var(--border-subtle));
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gray, var(--text-secondary));
+  font-size: 16px; line-height: 1; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.fi-chap-del:hover {
+  background: var(--alert, #c0392b); border-color: var(--alert, #c0392b); color: #fff;
+}
 
 /* ---- Éditeur de paliers de révision (modale matière) ---- */
 .fi-sched { margin-bottom: 14px; }
@@ -925,13 +939,16 @@
 }
 
 /* ============ MODAL PALIERS J (interface dédiée) ============ */
-.fi-jhelp { margin: 0 0 12px; font-size: 12.5px; line-height: 1.45; color: var(--gray); }
-.fi-jgrid { display: flex; flex-wrap: wrap; gap: 8px; }
+.fi-jgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: 8px;
+}
 .fi-jtog {
-  min-width: 52px; padding: 8px 12px; border: 1.5px solid var(--border);
+  padding: 9px 6px; border: 1.5px solid var(--border);
   border-radius: 9px; background: var(--card); color: var(--gray);
   font-family: inherit; font-size: 13px; font-weight: 700;
-  font-variant-numeric: tabular-nums; cursor: pointer;
+  font-variant-numeric: tabular-nums; cursor: pointer; text-align: center;
   transition: background .15s, border-color .15s, color .15s, transform .1s;
 }
 .fi-jtog:hover { border-color: var(--border-strong); color: var(--dark); }

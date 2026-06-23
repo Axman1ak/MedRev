@@ -196,6 +196,9 @@ export default function FichesPage() {
   const [chapModal, setChapModal] = useState<{ lessonId: string | null } | null>(null)
   const [newChapInput, setNewChapInput] = useState('')
   const [pendingChapters, setPendingChapters] = useState<string[]>([])
+  // Chapitre en cours de suppression (confirmation). Les fiches ne sont jamais
+  // supprimées : elles retournent dans « Sans chapitre ».
+  const [chapToDelete, setChapToDelete] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditTarget>(null)
@@ -552,6 +555,24 @@ export default function FichesPage() {
     }
     setChapModal(null)
     setNewChapInput('')
+  }
+
+  // Supprime un chapitre : ses fiches retournent dans « Sans chapitre »
+  // (jamais effacées), et on retire le chapitre des chapitres « en attente ».
+  async function deleteChapter(name: string) {
+    if (!name) return
+    const inChap = lessons.filter(l => l.system_id === selectedSystemId && lessonChapter(l) === name)
+    if (inChap.length > 0) {
+      const ids = inChap.map(l => l.id)
+      const { error } = await supabase.from('lessons').update({ chapter: null }).in('id', ids)
+      if (!error) {
+        setLessons(prev => prev.map(l => ids.includes(l.id) ? ({ ...l, chapter: null } as Lesson) : l))
+      } else {
+        console.error('[deleteChapter] échec:', error)
+      }
+    }
+    setPendingChapters(prev => prev.filter(c => c !== name))
+    setChapToDelete(null)
   }
 
   const colorOfSystem = useMemo(() => {
@@ -965,6 +986,15 @@ export default function FichesPage() {
                           <span className="fi-chap-name">{c || 'Sans chapitre'}</span>
                           <span className="fi-chap-count">{list.length}</span>
                           <span className="fi-chap-rule" aria-hidden="true" />
+                          {c && (
+                            <button
+                              type="button"
+                              className="fi-chap-del"
+                              aria-label={`Supprimer le chapitre ${c}`}
+                              title="Supprimer ce chapitre"
+                              onClick={() => setChapToDelete(c)}
+                            >{'×'}</button>
+                          )}
                         </h2>
                         {list.length > 0
                           ? <div className="fi-grid">{list.map(renderCard)}</div>
@@ -1249,7 +1279,6 @@ export default function FichesPage() {
               </select>
 
               <label className="fi-label">Jours de révision</label>
-              <p className="fi-jhelp">Allume les jours où cette matière doit revenir. J+0 = le jour où tu l&apos;apprends.</p>
               <div className="fi-jgrid">
                 {candidates.map(day => {
                   const on = schedSel.includes(day)
@@ -1335,6 +1364,28 @@ export default function FichesPage() {
           </div>
         </div>
       )}
+
+      {/* ---- MODAL : Supprimer un chapitre ---- */}
+      {chapToDelete !== null && (() => {
+        const count = lessons.filter(l => l.system_id === selectedSystemId && lessonChapter(l) === chapToDelete).length
+        return (
+          <div className="fi-overlay" onClick={() => setChapToDelete(null)}>
+            <div className="fi-modal" onClick={e => e.stopPropagation()}>
+              <div className="fi-modal-title">Supprimer le chapitre</div>
+              <p className="fi-sched-note" style={{ marginBottom: 4 }}>
+                Le chapitre <strong>« {chapToDelete} »</strong> sera supprimé.{' '}
+                {count > 0
+                  ? `Ses ${count} fiche${count > 1 ? 's' : ''} ne sont pas supprimées : elles retournent dans « Sans chapitre ».`
+                  : 'Ce chapitre est vide.'}
+              </p>
+              <div className="fi-modal-actions">
+                <button className="fi-btn-o" onClick={() => setChapToDelete(null)}>Annuler</button>
+                <button className="fi-btn-danger" onClick={() => deleteChapter(chapToDelete)}>Supprimer le chapitre</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ---- MODAL : Confirmation de suppression ---- */}
       {deleting && (
