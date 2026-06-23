@@ -672,43 +672,49 @@ export default function FichesPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            <button
-              data-tour="add-system"
-              className="fi-btn-o"
-              onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}
-            >
-              + Ajouter une matière
-            </button>
-            {selectedSystem && !showDueOnly && (
-              <button
-                type="button"
-                className="fi-btn-o"
-                onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
-              >
-                + Chapitre
-              </button>
-            )}
             {semSystems.length > 0 && (
               <button
                 type="button"
-                className="fi-btn-o"
-                title="Choisis les jours de révision (J+…) d'une matière"
+                className="fi-btn-icon"
+                aria-label="Rythme de révision (paliers J)"
+                title="Rythme de révision (paliers J)"
                 onClick={() => openSchedModal()}
               >
-                Paliers J
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
               </button>
             )}
-            <button
-              data-tour="add-lesson"
-              className="fi-btn-g"
-              onClick={() => {
-                setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? ''))
-                setNewLesDate(today)
-                setShowNewLesson(true)
-              }}
-            >
-              + Ajouter une fiche
-            </button>
+            <div className="fi-add-group">
+              <button
+                data-tour="add-system"
+                className="fi-btn-o"
+                onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}
+              >
+                + Matière
+              </button>
+              {selectedSystem && !showDueOnly && (
+                <button
+                  type="button"
+                  className="fi-btn-o"
+                  onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
+                >
+                  + Chapitre
+                </button>
+              )}
+              <button
+                data-tour="add-lesson"
+                className="fi-btn-g"
+                onClick={() => {
+                  setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? ''))
+                  setNewLesDate(today)
+                  setShowNewLesson(true)
+                }}
+              >
+                + Fiche
+              </button>
+            </div>
           </div>
         </div>
 
@@ -967,7 +973,9 @@ export default function FichesPage() {
             groups.forEach((_, k) => { if (k) nameSet.add(k) })
             pendingChapters.forEach(c => nameSet.add(c))
             const chapNames = Array.from(nameSet).sort((a, b) => a.localeCompare(b))
-            chapNames.push('')
+            // « Sans chapitre » n'apparaît que s'il contient des fiches, ou
+            // pendant un glisser-déposer (pour servir de cible de retrait).
+            if ((groups.get('')?.length ?? 0) > 0 || dragId) chapNames.push('')
             return (
               <>
                 <div className="fi-chap-sections">

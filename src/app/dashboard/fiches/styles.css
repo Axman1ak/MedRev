@@ -131,6 +131,22 @@
 
 .fi-btn-o:hover { border-color: var(--border-strong); color: var(--dark); }
 
+/* Bouton icône discret (réglages, paliers J…) */
+.fi-btn-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--gray);
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.fi-btn-icon:hover { border-color: var(--border-strong); color: var(--dark); background: var(--soft, var(--bg-soft)); }
+
+/* Groupe des actions d'ajout : matière · chapitre · fiche */
+.fi-add-group { display: inline-flex; align-items: center; gap: 8px; }
+
 /* ============ MATIÈRE TABS ============ */
 .mtabs {
   display: grid;
