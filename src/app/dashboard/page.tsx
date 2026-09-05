@@ -13,6 +13,7 @@ import type { System, Lesson, TdEvent } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
+import { normalizeYear, scopeToYear } from '@/lib/year'
 
 const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
@@ -538,12 +539,21 @@ export default function DashboardPage() {
   const firstName = profile?.name?.split(' ')[0] ?? ''
 
   const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }] = await Promise.all([
+    const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid).order('created_at'),
+      supabase.from('profiles').select('current_year').eq('id', uid).single(),
     ])
-    setSystems((sys as System[] | null) ?? [])
-    setLessons((les as Lesson[] | null) ?? [])
+    // On ne montre que l'année d'études en cours. Les autres années restent en
+    // base et reviennent dès qu'on rebascule dessus dans les Réglages.
+    const year = normalizeYear((prof as { current_year?: string } | null)?.current_year)
+    const scoped = scopeToYear(
+      (sys as System[] | null) ?? [],
+      (les as Lesson[] | null) ?? [],
+      year,
+    )
+    setSystems(scoped.systems)
+    setLessons(scoped.lessons)
   }, [supabase])
 
   useEffect(() => {

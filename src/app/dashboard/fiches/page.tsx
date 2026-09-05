@@ -9,6 +9,7 @@ import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver, normalizeSchedule } from '@/lib/schedule'
 import './styles.css'
+import { normalizeYear, scopeToYear, DEFAULT_YEAR, YEARS, yearLabel } from '@/lib/year'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
@@ -156,6 +157,13 @@ export default function FichesPage() {
   const supabase = createClient()
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  // Année d'études en cours. Toute matière créée ici lui est rattachée,
+  // sinon elle serait invisible dès le rechargement. Voir src/lib/year.ts.
+  // Tant que yearLoaded est faux, on ignore l'année : créer une matière
+  // reviendrait à la ranger dans une année devinée, et elle disparaîtrait
+  // au rechargement suivant.
+  const [currentYear, setCurrentYear] = useState<string>(DEFAULT_YEAR)
+  const [yearLoaded, setYearLoaded] = useState(false)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
@@ -189,7 +197,7 @@ export default function FichesPage() {
   const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
 
   // Menu contextuel (⋯) + éditer / supprimer
-  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string; semestre?: 1 | 2; chapter?: string } | null
+  type EditTarget = { type: 'system' | 'lesson'; id: string; name: string; semestre?: 1 | 2; chapter?: string; year?: string; learnDate?: string } | null
   type DeleteTarget = { type: 'system' | 'lesson'; id: string; name: string; childCount?: number } | null
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
   // Organisation en chapitres (clic droit + glisser-déposer, façon Finder).
@@ -204,11 +212,23 @@ export default function FichesPage() {
   const [editing, setEditing] = useState<EditTarget>(null)
   const [editName, setEditName] = useState('')
   const [editChapter, setEditChapter] = useState('')
+  // Date du J+0 d'une fiche. Jusqu'ici learn_date n'était écrite qu'à la
+  // création et plus jamais modifiable : une fiche saisie avec la mauvaise
+  // date restait fausse pour toujours, avec tout son calendrier décalé.
+  const [editDate, setEditDate] = useState('')
   // Semestre en cours d'édition (uniquement utilisé quand type === 'system').
   // Permet à l'user de déplacer une matière entre S1 et S2 si la pré-config
   // au signup ne correspond pas à son vrai cursus.
   const [editSemestre, setEditSemestre] = useState<1 | 2>(2)
+  // Année de la matière en cours d'édition. Sert de rattrapage : sans ça, une
+  // matière rangée dans la mauvaise année n'aurait plus que la suppression
+  // comme issue, ce qui emporterait toutes ses fiches.
+  const [editYear, setEditYear] = useState<string>(DEFAULT_YEAR)
   // Planning de révision (paliers J) en cours d'édition (matière uniquement).
+  // Message d'échec de la modale d'édition. Sans lui, un UPDATE refusé
+  // fermait la modale sans rien dire : l'utilisateur croyait avoir déplacé sa
+  // matière en P2 et allait la chercher là où elle n'est jamais arrivée.
+  const [editError, setEditError] = useState<string | null>(null)
   const [editSchedule, setEditSchedule] = useState<number[]>(DEFAULT_J)
   const [editScheduleOrig, setEditScheduleOrig] = useState<number[]>(DEFAULT_J)
   const [editLoading, setEditLoading] = useState(false)
@@ -238,12 +258,19 @@ export default function FichesPage() {
   }, [])
 
   const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }] = await Promise.all([
+    const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid).order('created_at'),
+      supabase.from('profiles').select('current_year').eq('id', uid).single(),
     ])
-    setSystems((sys as System[]) || [])
-    setLessons((les as Lesson[]) || [])
+    // Seules les matières de l'année en cours sont éditables ici. Celles des
+    // années précédentes réapparaissent en rebasculant dessus dans les Réglages.
+    const year = normalizeYear((prof as { current_year?: string } | null)?.current_year)
+    const scoped = scopeToYear((sys as System[]) || [], (les as Lesson[]) || [], year)
+    setCurrentYear(year)
+    setYearLoaded(Boolean(prof))
+    setSystems(scoped.systems)
+    setLessons(scoped.lessons)
   }, [])
 
   useEffect(() => {
@@ -289,6 +316,10 @@ export default function FichesPage() {
   // ---- Create functions ----
   async function createSystem() {
     if (!userId || !newSysName.trim()) return
+    if (!yearLoaded) {
+      setSysError("L'année d'études n'a pas fini de charger. Recharge la page et réessaie.")
+      return
+    }
     setSysLoading(true)
     setSysError(null)
     const payload: any = {
@@ -297,6 +328,7 @@ export default function FichesPage() {
       semestre: newSysSemestre,
       color: newSysColor,
       icon: '',
+      year: currentYear,
     }
     const { data, error } = await supabase.from('systems').insert(payload).select().single()
     setSysLoading(false)
@@ -365,17 +397,25 @@ export default function FichesPage() {
       const sys = systems.find(s => s.id === id)
       if (sys) currentSemestre = (sys.semestre === 1 ? 1 : 2)
     }
-    // Pour une fiche : on charge aussi son chapitre actuel.
+    // Pour une fiche : on charge aussi son chapitre et sa date de J+0.
     let currentChapter = ''
+    let currentLearnDate = ''
     if (type === 'lesson') {
       const les = lessons.find(l => l.id === id)
       const c = les ? (les as { chapter?: string | null }).chapter : null
       currentChapter = c && c.trim() ? c.trim() : ''
+      currentLearnDate = les?.learn_date ? String(les.learn_date).slice(0, 10) : ''
     }
-    setEditing({ type, id, name, semestre: currentSemestre, chapter: currentChapter })
+    const currentSysYear = type === 'system'
+      ? normalizeYear(systems.find(s => s.id === id)?.year)
+      : currentYear
+    setEditError(null)
+    setEditing({ type, id, name, semestre: currentSemestre, chapter: currentChapter, year: currentSysYear, learnDate: currentLearnDate })
     setEditName(name)
     setEditChapter(currentChapter)
+    setEditDate(currentLearnDate)
     setEditSemestre(currentSemestre)
+    setEditYear(currentSysYear)
     const sched = type === 'system' ? scheduleOf(systems.find(s => s.id === id)) : DEFAULT_J
     setEditSchedule(sched)
     setEditScheduleOrig(sched)
@@ -393,28 +433,55 @@ export default function FichesPage() {
     if (!editing) return
     const trimmed = editName.trim()
     if (!trimmed) return
+    setEditError(null)
     setEditLoading(true)
     if (editing.type === 'system') {
       // Pour une matière, on met à jour name ET semestre dans la même requête.
       const newSchedule = normalizeSchedule(editSchedule)
+      const newYear = normalizeYear(editYear)
       const { error } = await supabase
         .from('systems')
-        .update({ name: trimmed, semestre: editSemestre, schedule: newSchedule })
+        .update({ name: trimmed, semestre: editSemestre, schedule: newSchedule, year: newYear })
         .eq('id', editing.id)
       if (!error) {
-        setSystems(prev => prev.map(s => s.id === editing.id
-          ? ({ ...s, name: trimmed, semestre: editSemestre, schedule: newSchedule } as System)
-          : s))
+        if (newYear !== currentYear) {
+          // La matière part dans une autre année : elle et ses fiches quittent
+          // l'écran, sans rien perdre. On les retrouve en rebasculant sur
+          // cette année dans les Réglages.
+          const goneId = editing.id
+          setSystems(prev => prev.filter(s => s.id !== goneId))
+          setLessons(prev => prev.filter(l => l.system_id !== goneId))
+          setSelectedSystemId(prev => (prev === goneId ? null : prev))
+        } else {
+          setSystems(prev => prev.map(s => s.id === editing.id
+            ? ({ ...s, name: trimmed, semestre: editSemestre, schedule: newSchedule, year: newYear } as System)
+            : s))
+        }
       } else {
         console.error('[saveEdit] system update failed:', error)
+        setEditLoading(false)
+        setEditError(error.message || "L'enregistrement a échoué. Rien n'a été modifié.")
+        return
       }
     } else {
       const chapterVal = editChapter.trim() || null
-      const { error } = await supabase.from('lessons').update({ name: trimmed, chapter: chapterVal }).eq('id', editing.id)
+      // Changer le J+0 replanifie toute la fiche : les paliers sont calculés à
+      // partir de learn_date. On ne touche PAS à steps, donc les notes déjà
+      // posées restent attachées à leur palier, seule leur date bouge.
+      const dateVal = editDate ? editDate.slice(0, 10) : null
+      const { error } = await supabase
+        .from('lessons')
+        .update({ name: trimmed, chapter: chapterVal, learn_date: dateVal })
+        .eq('id', editing.id)
       if (!error) {
-        setLessons(prev => prev.map(l => l.id === editing.id ? ({ ...l, name: trimmed, chapter: chapterVal } as Lesson) : l))
+        setLessons(prev => prev.map(l => l.id === editing.id
+          ? ({ ...l, name: trimmed, chapter: chapterVal, learn_date: dateVal } as Lesson)
+          : l))
       } else {
         console.error('[saveEdit] lesson update failed:', error)
+        setEditLoading(false)
+        setEditError(error.message || "L'enregistrement a échoué. Rien n'a été modifié.")
+        return
       }
     }
     setEditLoading(false)
@@ -649,8 +716,11 @@ export default function FichesPage() {
     : editing.type === 'system'
       ? (editName.trim() === editing.name
           && editSemestre === editing.semestre
+          && normalizeYear(editYear) === normalizeYear(editing.year)
           && JSON.stringify(normalizeSchedule(editSchedule)) === JSON.stringify(editScheduleOrig))
-      : (editName.trim() === editing.name && editChapter.trim() === (editing.chapter ?? ''))
+      : (editName.trim() === editing.name
+          && editChapter.trim() === (editing.chapter ?? '')
+          && editDate === (editing.learnDate ?? ''))
 
   return (
     <>
@@ -894,6 +964,17 @@ export default function FichesPage() {
                     >{'⋯'}</button>
                     {menuOpenFor === `les-${lesson.id}` && (
                       <div className="fi-menu" onClick={e => e.stopPropagation()}>
+                        {/* Modifier et Supprimer en PREMIER. La liste des chapitres
+                            peut être longue : quand elle passait devant, ces deux
+                            entrées finissaient tout en bas, hors de vue. Ne pas les
+                            renvoyer après les chapitres. */}
+                        <button type="button" className="fi-menu-item" onClick={() => openEdit('lesson', lesson.id, lesson.name)}>
+                          Modifier · nom, J+0
+                        </button>
+                        <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('lesson', lesson.id, lesson.name)}>
+                          Supprimer la fiche
+                        </button>
+                        <div className="fi-menu-sep" />
                         <div className="fi-menu-label">Déplacer vers</div>
                         {chapterChoicesFor(lesson).map(ch => (
                           <button
@@ -908,13 +989,6 @@ export default function FichesPage() {
                           className="fi-menu-item"
                           onClick={() => { setChapModal({ lessonId: lesson.id }); setNewChapInput(''); setMenuOpenFor(null) }}
                         >Nouveau chapitre…</button>
-                        <div className="fi-menu-sep" />
-                        <button type="button" className="fi-menu-item" onClick={() => openEdit('lesson', lesson.id, lesson.name)}>
-                          Renommer
-                        </button>
-                        <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('lesson', lesson.id, lesson.name)}>
-                          Supprimer
-                        </button>
                       </div>
                     )}
                     <div className="stamps">
@@ -1202,6 +1276,42 @@ export default function FichesPage() {
                 </div>
               )
             })()}
+
+            {/* Date du J+0. Toute la fiche est planifiée à partir d'elle, donc
+                une date saisie de travers rendait le calendrier faux sans
+                aucun moyen de le rattraper. */}
+            {editing.type === 'lesson' && (() => {
+              const les = lessons.find(l => l.id === editing.id)
+              const scored = (les?.steps || []).filter(s => s !== null).length
+              const changed = editDate !== (editing.learnDate ?? '')
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <label className="fi-label">Date du cours · J+0</label>
+                  {/* Pas de borne haute : la création accepte déjà une date future
+                      (fiche planifiée pour un cours à venir), l'édition doit
+                      accepter la même chose sinon on ne peut plus la corriger. */}
+                  <input
+                    className="fi-input"
+                    type="date"
+                    value={editDate}
+                    onChange={e => setEditDate(e.target.value)}
+                  />
+                  {changed && !editDate && (
+                    <p className="fi-sched-note">
+                      Sans date, la fiche repasse en attente de démarrage.
+                    </p>
+                  )}
+                  {changed && editDate && (
+                    <p className="fi-sched-note">
+                      Les paliers J+… seront recomptés depuis cette date.
+                      {scored > 0
+                        ? ` Tes ${scored} note${scored > 1 ? 's' : ''} déjà posée${scored > 1 ? 's' : ''} ${scored > 1 ? 'restent' : 'reste'} en place.`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
             {/* Picker S1/S2 : visible uniquement pour les matières. Permet de
                 corriger la pré-config du signup si l'user a une matière dans
                 le mauvais semestre selon sa fac. */}
@@ -1239,12 +1349,36 @@ export default function FichesPage() {
               </div>
             )}
 
+            {/* Année : rattrapage pour une matière rangée au mauvais endroit.
+                La déplacer la fait sortir de l'écran sans rien supprimer. */}
+            {editing.type === 'system' && (
+              <div style={{ marginTop: 14, marginBottom: 4 }}>
+                <label className="fi-label">Année d&apos;études</label>
+                <select
+                  className="fi-input"
+                  value={editYear}
+                  onChange={e => setEditYear(e.target.value)}
+                >
+                  {YEARS.map(y => (
+                    <option key={y.id} value={y.id}>{y.label} · {y.hint}</option>
+                  ))}
+                </select>
+                {normalizeYear(editYear) !== currentYear && (
+                  <p className="fi-sched-note">
+                    Cette matière et ses fiches partiront en {yearLabel(editYear)}.
+                    Rien n&apos;est supprimé : bascule sur cette année dans les Réglages pour les retrouver.
+                  </p>
+                )}
+              </div>
+            )}
+
             {editing.type === 'system' && (
               <p className="fi-sched-note">
                 Les paliers de révision (J+…) se règlent depuis le bouton
                 <strong> Paliers J</strong> en haut de la page.
               </p>
             )}
+            {editError && <p className="fi-sched-note" style={{ color: 'var(--rose, #C75050)' }}>{editError}</p>}
             <div className="fi-modal-actions">
               <button className="fi-btn-o" onClick={() => setEditing(null)}>Annuler</button>
               <button

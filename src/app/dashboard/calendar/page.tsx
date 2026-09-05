@@ -10,6 +10,8 @@ import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
+import { normalizeYear, scopeToYear } from '@/lib/year'
+import type { TdKind } from '@/types'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -167,6 +169,9 @@ export default function CalendarPage() {
   const [tdModal, setTdModal] = useState<'new' | TdEvent | null>(null)
   const [tdTitle, setTdTitle] = useState('')
   const [tdSysId, setTdSysId] = useState('')
+  // Nature de l'événement. Un examen blanc se prépare et se redoute autrement
+  // qu'un TD, il mérite d'être repérable d'un coup d'œil dans le calendrier.
+  const [tdKind, setTdKind] = useState<TdKind>('td')
   const [tdDate, setTdDate] = useState('')
   const [tdStart, setTdStart] = useState('')
   const [tdEnd, setTdEnd] = useState('')
@@ -183,13 +188,22 @@ export default function CalendarPage() {
 
   // ============= Load =============
   const load = useCallback(async (uid: string) => {
-    const [{ data: sys }, { data: les }, { data: td }] = await Promise.all([
+    const [{ data: sys }, { data: les }, { data: td }, { data: prof }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),
       supabase.from('lessons').select('*').eq('user_id', uid),
       supabase.from('td_events').select('*').eq('user_id', uid).order('date').order('start_time'),
+      supabase.from('profiles').select('current_year').eq('id', uid).single(),
     ])
-    setSystems((sys as System[] | null) ?? [])
-    setLessons((les as Lesson[] | null) ?? [])
+    // Calendrier restreint à l'année en cours : sans ça les paliers non notés
+    // des années passées reviendraient en retard tous les jours.
+    const year = normalizeYear((prof as { current_year?: string } | null)?.current_year)
+    const scoped = scopeToYear(
+      (sys as System[] | null) ?? [],
+      (les as Lesson[] | null) ?? [],
+      year,
+    )
+    setSystems(scoped.systems)
+    setLessons(scoped.lessons)
     setTds((td as TdEvent[] | null) ?? [])
   }, [supabase])
 
@@ -263,17 +277,34 @@ export default function CalendarPage() {
   const occurrences = useMemo(() => computeOccurrences(semLessons, schedOf), [semLessons, schedOf])
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences])
 
-  // TD groupés par date (non filtrés par semestre : c'est l'emploi du temps réel).
+  // TD groupés par date, filtrés par semestre comme les fiches.
+  // Un TD rattaché à une matière appartient au semestre de cette matière : sans
+  // ce filtre il apparaissait en S1 ET en S2, ce qui rendait les deux vues
+  // identiques et donc le sélecteur inutile.
+  // Un TD sans matière (« Aucune ») n'appartient à aucun semestre : on le garde
+  // partout, c'est un événement général du type réunion ou rentrée.
+  const semTds = useMemo(() => {
+    if (semester === 'year') return tds
+    return tds.filter(td => {
+      if (!td.system_id) return true
+      const sys = systems.find(s => s.id === td.system_id)
+      // Matière introuvable (autre année, matière supprimée) : on masque, comme
+      // pour les fiches, plutôt que d'afficher un événement orphelin.
+      if (!sys) return false
+      return sys.semestre === semester
+    })
+  }, [tds, systems, semester])
+
   const tdsByDate = useMemo(() => {
     const map = new Map<string, TdEvent[]>()
-    tds.forEach(td => {
+    semTds.forEach(td => {
       const list = map.get(td.date)
       if (list) list.push(td)
       else map.set(td.date, [td])
     })
     map.forEach(list => list.sort((a, b) => (a.start_time ?? '') < (b.start_time ?? '') ? -1 : 1))
     return map
-  }, [tds])
+  }, [semTds])
 
   // ============= Week computations =============
   const weekMonday = useMemo(() => {
@@ -366,7 +397,7 @@ export default function CalendarPage() {
 
   // ---- TD : création / édition / suppression ----
   function openTdNew(dateStr?: string) {
-    setTdTitle(''); setTdSysId(''); setTdDate(dateStr ?? today)
+    setTdTitle(''); setTdSysId(''); setTdKind('td'); setTdDate(dateStr ?? today)
     setTdStart(''); setTdEnd(''); setTdLocation(''); setTdRepeatUntil('')
     setTdError(null)
     setTdModal('new')
@@ -374,6 +405,7 @@ export default function CalendarPage() {
 
   function openTdEdit(td: TdEvent) {
     setTdTitle(td.title); setTdSysId(td.system_id ?? ''); setTdDate(td.date)
+    setTdKind(td.kind === 'examen_blanc' ? 'examen_blanc' : 'td')
     setTdStart(td.start_time ? td.start_time.slice(0, 5) : '')
     setTdEnd(td.end_time ? td.end_time.slice(0, 5) : '')
     setTdLocation(td.location ?? ''); setTdRepeatUntil('')
@@ -388,6 +420,7 @@ export default function CalendarPage() {
     const base = {
       user_id: userId,
       system_id: tdSysId || null,
+      kind: tdKind,
       title: tdTitle.trim(),
       start_time: tdStart || null,
       end_time: tdEnd || null,
@@ -527,11 +560,11 @@ export default function CalendarPage() {
           <button
             className="cal-td-trigger"
             onClick={() => openTdNew()}
-            title="Ajouter un TD / cours dans le calendrier"
+            title="Ajouter un cours, un TD ou un examen blanc"
           >
-            + TD
+            + Ajouter
           </button>
-          {view === 'week' && (hasAnyLesson || tds.length > 0) && (
+          {view === 'week' && (hasAnyLesson || semTds.length > 0) && (
             <button
               className="cal-print-trigger"
               onClick={() => window.print()}
@@ -547,7 +580,7 @@ export default function CalendarPage() {
       </div>
 
       {/* EMPTY STATE */}
-      {!hasAnyLesson && tds.length === 0 && (
+      {!hasAnyLesson && semTds.length === 0 && (
         <div className="cal-empty-state">
           <div className="cal-empty-icon" aria-hidden>▦</div>
           <div className="cal-empty-title">
@@ -565,7 +598,7 @@ export default function CalendarPage() {
       )}
 
       {/* WEEK VIEW */}
-      {(hasAnyLesson || tds.length > 0) && view === 'week' && (
+      {(hasAnyLesson || semTds.length > 0) && view === 'week' && (
         <div className="cal-week" ref={weekRef}>
           {weekDays.map((day, i) => {
             const dateStr = toDateStr(day)
@@ -602,16 +635,20 @@ export default function CalendarPage() {
                     {dayTds.map(td => {
                       const sys = td.system_id ? systemsById.get(td.system_id) : undefined
                       const c = (sys as unknown as { color?: string } | undefined)?.color
+                      const isEb = td.kind === 'examen_blanc'
                       return (
                         <button
                           key={td.id}
-                          className="cal-td"
-                          style={c ? { borderLeftColor: c } : undefined}
+                          className={`cal-td${isEb ? ' is-eb' : ''}`}
+                          // Un examen blanc garde sa couleur d'alerte : elle prime
+                          // sur la couleur de la matière.
+                          style={c && !isEb ? { borderLeftColor: c } : undefined}
                           onClick={() => openTdEdit(td)}
-                          title={`${td.title}${sys ? ' · ' + sys.name : ''}${td.location ? ' · ' + td.location : ''}`}
+                          title={`${isEb ? 'Examen blanc · ' : ''}${td.title}${sys ? ' · ' + sys.name : ''}${td.location ? ' · ' + td.location : ''}`}
                         >
                           {tdTimeRange(td) && <span className="cal-td-time">{tdTimeRange(td)}</span>}
                           <span className="cal-td-title">{td.title}</span>
+                          {isEb && <span className="cal-td-badge">EB</span>}
                         </button>
                       )
                     })}
@@ -661,7 +698,7 @@ export default function CalendarPage() {
       )}
 
       {/* MONTH VIEW */}
-      {(hasAnyLesson || tds.length > 0) && view === 'month' && (
+      {(hasAnyLesson || semTds.length > 0) && view === 'month' && (
         <div className="cal-month">
           <div className="cal-month-head">
             {DAY_LABELS.map(d => (
@@ -705,9 +742,9 @@ export default function CalendarPage() {
                       {mTds.map(td => (
                         <button
                           key={td.id}
-                          className="cal-month-td"
+                          className={`cal-month-td${td.kind === 'examen_blanc' ? ' is-eb' : ''}`}
                           onClick={(e) => { e.stopPropagation(); openTdEdit(td) }}
-                          title={`${td.title}${td.location ? ' · ' + td.location : ''}`}
+                          title={`${td.kind === 'examen_blanc' ? 'Examen blanc · ' : ''}${td.title}${td.location ? ' · ' + td.location : ''}`}
                         >
                           {tdTimeRange(td) && <strong>{tdTimeRange(td)}</strong>} {td.title}
                         </button>
@@ -807,7 +844,7 @@ export default function CalendarPage() {
       })()}
 
       {/* FEUILLE D'IMPRESSION (cachée à l'écran, seule visible en @media print) */}
-      {(hasAnyLesson || tds.length > 0) && (
+      {(hasAnyLesson || semTds.length > 0) && (
         <div className="cal-print" aria-hidden="true">
           <div className="cal-print-head">
             <span className="cal-print-brand">Med·Rev</span>
@@ -843,6 +880,7 @@ export default function CalendarPage() {
                     <div key={td.id} className="cal-print-tdrow">
                       <span className="cal-print-td-time">{tdTimeRange(td) || '·'}</span>
                       <span className="cal-print-td-title">
+                        {td.kind === 'examen_blanc' ? 'Examen blanc · ' : ''}
                         {td.title}
                         {td.location ? ` · ${td.location}` : ''}
                       </span>
@@ -889,7 +927,9 @@ export default function CalendarPage() {
             <div className="cal-overflow-head">
               <div>
                 <h2 className="cal-overflow-title">
-                  {tdModal === 'new' ? 'Nouveau TD / cours' : 'Modifier le TD'}
+                  {tdModal === 'new'
+                    ? 'Nouvel événement'
+                    : (tdKind === 'examen_blanc' ? "Modifier l'examen blanc" : 'Modifier le cours')}
                 </h2>
                 <div className="cal-overflow-sub">
                   {tdModal === 'new'
@@ -900,12 +940,37 @@ export default function CalendarPage() {
               <button className="cal-overflow-close" onClick={() => setTdModal(null)} aria-label="Fermer">{'×'}</button>
             </div>
             <div className="cal-tdform">
+              {/* Type d'événement. Un examen blanc n'est pas un cours de plus :
+                  il se repère d'un coup d'œil dans le calendrier. */}
+              <div className="cal-tdfield">
+                <span className="cal-tdlabel">Type</span>
+                <div className="cal-tdkind">
+                  <button
+                    type="button"
+                    className={`cal-tdkind-opt${tdKind === 'td' ? ' on' : ''}`}
+                    onClick={() => setTdKind('td')}
+                  >
+                    <strong>Cours ou TD</strong>
+                    <span>CM, TD, TP, colle</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`cal-tdkind-opt eb${tdKind === 'examen_blanc' ? ' on' : ''}`}
+                    onClick={() => setTdKind('examen_blanc')}
+                  >
+                    <strong>Examen blanc</strong>
+                    <span>Concours blanc, partiel</span>
+                  </button>
+                </div>
+              </div>
               <label className="cal-tdfield">
                 <span className="cal-tdlabel">Intitulé</span>
                 <input
                   className="cal-tdinput"
                   type="text"
-                  placeholder="ex : TD Anatomie, CM Biochimie, colle…"
+                  placeholder={tdKind === 'examen_blanc'
+                    ? 'ex : Concours blanc n°2, partiel de biophysique…'
+                    : 'ex : TD Anatomie, CM Biochimie, colle…'}
                   value={tdTitle}
                   onChange={e => setTdTitle(e.target.value)}
                   autoFocus
@@ -916,6 +981,12 @@ export default function CalendarPage() {
                   <span className="cal-tdlabel">Matière (optionnel)</span>
                   <select className="cal-tdinput" value={tdSysId} onChange={e => setTdSysId(e.target.value)}>
                     <option value="">Aucune</option>
+                    {/* Un TD peut viser une matière d'une autre année, absente de
+                        la liste. Sans cette option le select afficherait "Aucune"
+                        et casserait le rattachement au premier enregistrement. */}
+                    {tdSysId && !systems.some(s => s.id === tdSysId) && (
+                      <option value={tdSysId}>Matière d&apos;une autre année</option>
+                    )}
                     {systems.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </label>

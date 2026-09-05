@@ -12,7 +12,20 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile, ScoringSystemId } from '@/types'
 import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP, SCORING_SYSTEMS } from '@/types'
 import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
+import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import './styles.css'
+
+/** Date lisible pour la ligne "tu es passé en P2 le ...". */
+function formatDay(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/** Accord simple. "1 matière" et non "1 matières". */
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n > 1 ? 's' : ''}`
+}
 
 const FACS = [
   { id: 'sorbonne', name: 'Sorbonne Université' },
@@ -69,6 +82,14 @@ export default function SettingsPage() {
   // Barème du simulateur ('' = auto selon la fac, sinon un ScoringSystemId), localStorage 'medrev-scoring'
   const [scoringPref, setScoringPref] = useState<string>('')
 
+  // Année d'études. currentYear est l'année affichée dans toute l'application ;
+  // yearCounts sert à montrer que les autres années sont toujours là, ce qui est
+  // la seule chose qui rend le bouton "changer d'année" rassurant à cliquer.
+  const [currentYear, setCurrentYear] = useState<string>(DEFAULT_YEAR)
+  const [yearCounts, setYearCounts] = useState<Record<string, { systems: number; lessons: number }>>({})
+  const [switchingYear, setSwitchingYear] = useState<string | null>(null)
+  const [yearMsg, setYearMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const stored = localStorage.getItem('medrev-theme')
@@ -107,19 +128,85 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      const [{ data }, { data: sys }, { data: les }] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('systems').select('id, year').eq('user_id', user.id),
+        supabase.from('lessons').select('system_id').eq('user_id', user.id),
+      ])
       if (cancelled) return
       if (data) {
         setProfile(data as Profile)
         setName(data.name || '')
         setUsername(data.username || '')
         setFac(data.fac || '')
+        setCurrentYear(normalizeYear((data as Profile).current_year))
+      }
+      // Combien de matières et de fiches dorment dans chaque année.
+      {
+        const yearOfSystem = new Map<string, string>()
+        const counts: Record<string, { systems: number; lessons: number }> = {}
+        for (const s of (sys as { id: string; year?: string }[] | null) ?? []) {
+          const y = normalizeYear(s.year)
+          yearOfSystem.set(s.id, y)
+          counts[y] = counts[y] || { systems: 0, lessons: 0 }
+          counts[y].systems++
+        }
+        for (const l of (les as { system_id: string }[] | null) ?? []) {
+          const y = yearOfSystem.get(l.system_id)
+          if (!y) continue
+          counts[y] = counts[y] || { systems: 0, lessons: 0 }
+          counts[y].lessons++
+        }
+        setYearCounts(counts)
       }
       setEmail(user.email || '')
     }
     load()
     return () => { cancelled = true }
   }, [supabase, router])
+
+  // ------------ CHANGER D'ANNÉE ------------
+  // Ne touche qu'à profiles.current_year. Aucune matière, aucune fiche, aucun
+  // QCM et aucun palier n'est supprimé ni modifié : on déplace la fenêtre de
+  // lecture, c'est tout. Revenir sur l'année précédente retrouve tout intact.
+  async function switchYear(next: string) {
+    const target = normalizeYear(next)
+    if (!profile || target === currentYear || switchingYear) return
+    setYearMsg(null)
+    setSwitchingYear(target)
+    try {
+      const stamp = new Date().toISOString()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ current_year: target, year_changed_at: stamp })
+        .eq('id', profile.id)
+      if (error) throw error
+      setCurrentYear(target)
+      setProfile({ ...profile, current_year: target, year_changed_at: stamp } as Profile)
+      // Le layout du dashboard ne se démonte pas entre deux pages : sans ce
+      // signal, la sidebar et le badge resteraient sur l'année précédente
+      // jusqu'au prochain rechargement complet.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('medrev-year-change', { detail: target }))
+        // On repasse la vue sur "Année". Sinon un toggle resté sur S2 afficherait
+        // "aucune matière pour le semestre 2" juste après avoir promis que tout
+        // était bien là, ce qui est exactement la frayeur qu'on veut éviter.
+        localStorage.setItem('medrev-sem', 'year')
+        window.dispatchEvent(new CustomEvent('medrev-sem-change', { detail: 'year' }))
+      }
+      const has = yearCounts[target]?.systems || 0
+      setYearMsg({
+        kind: 'ok',
+        text: has > 0
+          ? `Te voilà en ${yearLabel(target)}. ${has === 1 ? 'Ta matière de cette année est de retour' : `Tes ${has} matières de cette année sont de retour`}.`
+          : `Te voilà en ${yearLabel(target)}. Cette année est vide pour l'instant : crée tes matières dans Fiches. Tout le reste est conservé.`,
+      })
+    } catch (e: unknown) {
+      setYearMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Le changement a échoué.' })
+    } finally {
+      setSwitchingYear(null)
+    }
+  }
 
   // ------------ SAVE PROFILE ------------
   async function saveProfile() {
@@ -270,6 +357,7 @@ export default function SettingsPage() {
           <h1 className="set-h1">Réglages</h1>
           <nav className="set-anchors" aria-label="Sections des réglages">
             <a href="#set-abo">Abonnement</a>
+            <a href="#set-annee">Année</a>
             <a href="#set-profil">Profil</a>
             <a href="#set-compte">Compte</a>
             <a href="#set-apparence">Apparence</a>
@@ -374,6 +462,62 @@ export default function SettingsPage() {
               )}
             </>
           )}
+        </section>
+
+        {/* ============ ANNÉE D'ÉTUDES ============ */}
+        <section className="set-card" id="set-annee">
+          <div className="set-card-h">Année d&apos;études</div>
+          <p className="set-card-sub">
+            MedRev n&apos;affiche que l&apos;année que tu suis en ce moment. Quand tu montes d&apos;année,
+            tes matières précédentes sortent du tableau de bord, du calendrier et du simulateur,
+            mais elles ne sont pas supprimées : reviens sur l&apos;année ici et tout réapparaît,
+            fiches, QCM, paliers et statistiques compris.
+          </p>
+
+          <div className="set-year-current">
+            <span className="set-year-current-badge">{yearLabel(currentYear)}</span>
+            <span className="set-year-current-txt">
+              Année en cours
+              {yearCounts[currentYear]?.systems
+                ? ` · ${plural(yearCounts[currentYear].systems, 'matière')}, ${plural(yearCounts[currentYear].lessons, 'fiche')}`
+                : ' · aucune matière pour l\'instant'}
+              {profile?.year_changed_at && (
+                <><br />Tu es passé en {yearLabel(currentYear)} le {formatDay(profile.year_changed_at)}.</>
+              )}
+            </span>
+          </div>
+
+          {yearMsg && <div className={`set-msg ${yearMsg.kind}`}>{yearMsg.text}</div>}
+
+          <div className="set-year-grid">
+            {YEARS.map(y => {
+              const c = yearCounts[y.id]
+              const on = y.id === currentYear
+              return (
+                <button
+                  key={y.id}
+                  type="button"
+                  className={`set-year-opt${on ? ' on' : ''}`}
+                  onClick={() => switchYear(y.id)}
+                  disabled={on || switchingYear !== null}
+                  aria-current={on ? 'true' : undefined}
+                >
+                  <span className="set-year-opt-top">
+                    <strong>{y.label}</strong>
+                    {on && <em className="set-year-tag">en cours</em>}
+                    {!on && c?.systems ? <em className="set-year-tag saved">{plural(c.systems, 'matière')} gardée{c.systems > 1 ? 's' : ''}</em> : null}
+                  </span>
+                  <span>{y.hint}</span>
+                  {switchingYear === y.id && <span className="set-year-loading">Changement…</span>}
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="set-hint">
+            Ton temps de travail et ta bibliothèque ne sont pas remis à zéro : ils comptent
+            l&apos;ensemble de ton parcours, toutes années confondues.
+          </p>
         </section>
 
         {/* ============ PROFIL ============ */}

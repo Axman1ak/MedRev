@@ -19,6 +19,7 @@ import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
+import { normalizeYear, scopeToYear } from '@/lib/year'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
@@ -752,13 +753,21 @@ function FocusPageBody() {
       }
 
       // 3) Données fiches/matières
-      const [{ data: sys }, { data: les }] = await Promise.all([
+      const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id),
         supabase.from('lessons').select('*').eq('user_id', user.id),
+        supabase.from('profiles').select('current_year').eq('id', user.id).single(),
       ])
       if (cancelled) return
-      const sysList = (sys as System[] | null) ?? []
-      const lesList = (les as Lesson[] | null) ?? []
+      // La file de révision ne pioche que dans l'année d'études en cours.
+      const year = normalizeYear((prof as { current_year?: string } | null)?.current_year)
+      const scopedFocus = scopeToYear(
+        (sys as System[] | null) ?? [],
+        (les as Lesson[] | null) ?? [],
+        year,
+      )
+      const sysList = scopedFocus.systems
+      const lesList = scopedFocus.lessons
       setSystems(sysList)
       const q = buildQueue(lesList, sysList, lessonParam, systemParam, lessonsParam, today)
       setQueue(q)

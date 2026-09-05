@@ -1067,3 +1067,53 @@
     font-family: var(--font-bricolage), serif;
   }
 }
+
+
+/* =========== EXAMEN BLANC =========== */
+/* Un examen blanc se prépare et se redoute autrement qu'un TD : il doit se
+   repérer dans le calendrier sans avoir à lire le titre. Rouge de la même
+   famille que le score 1, la couleur que l'étudiant associe déjà à l'urgence. */
+.cal-tdkind { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cal-tdkind-opt {
+  text-align: left; padding: 9px 11px; border-radius: 9px;
+  border: 1px solid var(--cal-border); background: transparent;
+  cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; gap: 2px; transition: .15s;
+}
+.cal-tdkind-opt:hover { border-color: var(--cal-gm); }
+.cal-tdkind-opt strong { font-size: 12.5px; font-weight: 700; color: var(--cal-dark); }
+.cal-tdkind-opt span { font-size: 10.5px; color: var(--cal-gray); }
+.cal-tdkind-opt.on {
+  border-color: var(--cal-gm);
+  box-shadow: inset 0 0 0 1px var(--cal-gm);
+  background: var(--cal-gl);
+}
+.cal-tdkind-opt.eb.on {
+  border-color: var(--cal-s1);
+  box-shadow: inset 0 0 0 1px var(--cal-s1);
+  background: rgba(199, 80, 80, .08);
+}
+
+.cal-td.is-eb {
+  background: rgba(199, 80, 80, .09);
+  border-color: rgba(199, 80, 80, .28);
+  border-left-color: var(--cal-s1);
+}
+.cal-td.is-eb .cal-td-time { color: var(--cal-s1); }
+.cal-td-badge {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .06em;
+  color: #fff; background: var(--cal-s1);
+  border-radius: 20px; padding: 2px 6px; line-height: 1.3;
+}
+
+.cal-month-td.is-eb {
+  background: rgba(199, 80, 80, .10);
+  border-color: rgba(199, 80, 80, .30);
+  color: var(--cal-s1);
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .cal-tdkind { grid-template-columns: 1fr; }
+}

@@ -11,6 +11,10 @@ export interface System {
   // ← ajouté 2026-06 : planning de révision personnalisable par matière.
   // Tableau de décalages en jours depuis learn_date. Null/absent = planning standard.
   schedule?: number[] | null
+  // ← ajouté 2026-08 : année d'études à laquelle la matière appartient
+  // ('P1', 'P2', ...). Voir src/lib/year.ts. Optionnel ici pour rétro-compat
+  // avec les SELECT partiels ; toujours présent en base (NOT NULL, défaut 'P1').
+  year?: string
 }
 export interface StepEntry {
   score: number  // 1-5 — score officiel posé le jour J
@@ -104,10 +108,16 @@ export interface Annale {
 // TD / cours de fac dans le calendrier — table td_events, migration 2026-06.
 // Type d'événement à part des révisions. Récurrence par duplication à la
 // création (rows indépendantes), heures au format "HH:MM:SS" (time Postgres).
+/** Nature d'un événement de calendrier. Colonne td_events.kind, migration 2026-09. */
+export type TdKind = 'td' | 'examen_blanc'
+
 export interface TdEvent {
   id: string
   user_id: string
   system_id: string | null
+  // Optionnel ici pour rétro-compat : les lignes créées avant la migration
+  // n'ont pas la valeur en mémoire, mais la base met 'td' par défaut.
+  kind?: TdKind
   title: string
   date: string                 // YYYY-MM-DD
   start_time: string | null    // HH:MM:SS
@@ -166,6 +176,12 @@ export interface Profile {
   ai_generations_month_started_at?: string    // ISO timestamp du début de la période
   // Stripe (existant dans le schéma)
   stripe_customer_id?: string | null
+  // ← ajouté 2026-08 : année d'études consultée en ce moment ('P1', 'P2', ...).
+  // Filtre les matières affichées sur tous les écrans. Changer d'année ne
+  // supprime rien, on revient en arrière quand on veut. Voir src/lib/year.ts.
+  current_year?: string
+  // Horodatage du dernier changement d'année, pour l'afficher dans les Réglages.
+  year_changed_at?: string | null
 }
 
 // Quotas Free centralisés — partagés entre l'API (route.ts) et l'UI (Settings).

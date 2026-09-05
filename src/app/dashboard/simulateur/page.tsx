@@ -15,6 +15,7 @@ import { SCORING_SYSTEMS, getScoringForFac, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
+import { normalizeYear, scopeToYear } from '@/lib/year'
 
 type Semestre = 1 | 2 | 'year'
 type Mode = 'apprentissage' | 'examen'
@@ -296,10 +297,23 @@ export default function SimulateurPage() {
       supabase.from('profiles').select('*').eq('id', uid).single(),
       supabase.from('annales').select('*').eq('user_id', uid).order('created_at'),
     ])
-    setSystems((sys as System[] | null) ?? [])
-    setLessons((les as Lesson[] | null) ?? [])
+    // Le simulateur ne pioche que dans les matières de l'année en cours.
+    const year = normalizeYear((pro as Profile | null)?.current_year)
+    const scoped = scopeToYear(
+      (sys as System[] | null) ?? [],
+      (les as Lesson[] | null) ?? [],
+      year,
+    )
+    setSystems(scoped.systems)
+    setLessons(scoped.lessons)
     if (pro) setProfile(pro as Profile)
-    setAnnales((ann as Annale[] | null) ?? [])
+    // Les annales sont rattachées à une matière, donc à une année. Sans ce
+    // filtre elles seraient cochées d'office et un étudiant passé en P2
+    // tomberait sur ses annales de P1 en plein examen blanc.
+    {
+      const yearSystemIds = new Set(scoped.systems.map(s => s.id))
+      setAnnales(((ann as Annale[] | null) ?? []).filter(a => yearSystemIds.has(a.system_id)))
+    }
     setLoading(false)
   }, [supabase])
 
@@ -395,7 +409,8 @@ export default function SimulateurPage() {
 
   // ---- Annales : dérivées ----
   // Un PDF d'annale couvre souvent plusieurs matières : on ne filtre donc PAS
-  // par matière. Toutes les annales de l'élève sont disponibles pour le simulateur.
+  // par matière ni par semestre ici. En revanche `annales` est déjà restreint à
+  // l'année d'études en cours au chargement (voir load()).
   const semAnnales = useMemo(() => annales, [annales])
 
   // Sélection par défaut : toutes les annales prêtes des matières choisies.

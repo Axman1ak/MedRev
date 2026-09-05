@@ -15,6 +15,7 @@ import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
+import { DEFAULT_YEAR } from '@/lib/year'
 
 // Normalise une chaîne pour la recherche : minuscules + suppression des
 // accents, pour que « universite » matche « Université », « cote » → « Côte ».
@@ -383,12 +384,19 @@ function AuthContent() {
 
       const matieres = FAC_SYSTEMS[facId]?.[opt] || FAC_SYSTEMS[facId]?.['default'] || FAC_SYSTEMS['autre']['default']
       if (matieres?.length) {
-        await supabase.from('systems').insert(
+        const { error: sysErr } = await supabase.from('systems').insert(
           matieres.map(m => ({
             user_id: data.user!.id, name: m.name, icon: m.icon,
             semestre: m.semestre, cal_hidden: false,
+            // L'inscription pré-remplit la maquette PASS, donc première année.
+            // Un étudiant déjà en 2e année bascule ensuite dans les Réglages.
+            year: DEFAULT_YEAR,
           }))
         )
+        // Un compte sans matière pré-remplie est un compte inutilisable, et
+        // l'utilisateur ne le voit qu'une fois arrivé sur un dashboard vide.
+        // On le trace pour pouvoir diagnostiquer au lieu d'échouer en silence.
+        if (sysErr) console.error('[signup] Création des matières échouée:', sysErr)
       }
 
       // Welcome email : on attend avec un timeout court pour ne pas bloquer

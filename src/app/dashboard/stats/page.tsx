@@ -20,6 +20,7 @@ import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
+import { normalizeYear, scopeToYear } from '@/lib/year'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const COVERED_AT = 3 // une fiche est "couverte" à partir de 3 paliers officiels
@@ -381,12 +382,20 @@ export default function StatsPage() {
       const [{ data: sys }, { data: les }, { data: prof }, { data: garden }] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id).order('semestre').order('created_at'),
         supabase.from('lessons').select('*').eq('user_id', user.id).order('created_at'),
-        supabase.from('profiles').select('plan').eq('id', user.id).single(),
+        supabase.from('profiles').select('plan, current_year').eq('id', user.id).single(),
         supabase.from('gardens').select('day_log').eq('user_id', user.id).maybeSingle(),
       ])
       if (cancelled) return
-      setSystems((sys as System[] | null) ?? [])
-      setLessons((les as Lesson[] | null) ?? [])
+      // Statistiques de l'année en cours seulement : mélanger P1 et P2 dans les
+      // mêmes moyennes ne voudrait rien dire.
+      const year = normalizeYear((prof as { current_year?: string } | null)?.current_year)
+      const scoped = scopeToYear(
+        (sys as System[] | null) ?? [],
+        (les as Lesson[] | null) ?? [],
+        year,
+      )
+      setSystems(scoped.systems)
+      setLessons(scoped.lessons)
       setIsPro((prof?.plan as string) === 'pro')
       {
         const raw = (garden as { day_log?: unknown } | null)?.day_log

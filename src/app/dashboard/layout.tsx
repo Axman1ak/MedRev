@@ -4,10 +4,23 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import { normalizeYear, yearLabel } from '@/lib/year'
+import { makeScheduleResolver } from '@/lib/schedule'
 import OnboardingTour from '@/components/OnboardingTour'
 
 // Breakpoint mobile (en dessous : sidebar slide-in avec burger).
 const MOBILE_BREAKPOINT = 768
+
+type SystemRow = { id: string; year?: string; semestre?: number; schedule?: number[] | null }
+
+// "Déjà noté" au sens du calendrier : seul un score officiel compte. Un
+// temp_score posé via "retravailler plus tard" laisse le palier à faire.
+function hasOfficialScore(step: unknown): boolean {
+  if (!step || typeof step !== 'object') return false
+  const sc = (step as { score?: number }).score
+  if (typeof sc === 'number' && sc >= 1 && sc <= 5) return true
+  return typeof (step as { ok?: boolean }).ok === 'boolean'
+}
 
 const NAV = [
   { href: '/dashboard', label: "Aujourd'hui", exact: true, icon: (
@@ -132,26 +145,69 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setTourOpen(false)
   }
 
+  // Changement d'année depuis les Réglages : on met à jour le profil en mémoire,
+  // ce qui rafraîchit le libellé de la carte utilisateur et relance le calcul du
+  // badge, sans attendre un rechargement de page.
+  useEffect(() => {
+    function onYearChange(e: Event) {
+      const next = (e as CustomEvent<string>).detail
+      if (typeof next !== 'string') return
+      setProfile(p => (p ? ({ ...p, current_year: next } as Profile) : p))
+    }
+    window.addEventListener('medrev-year-change', onYearChange)
+    return () => window.removeEventListener('medrev-year-change', onYearChange)
+  }, [])
+
   useEffect(() => {
     if (!profile) return
+    let cancelled = false
     const today = new Date().toISOString().split('T')[0]
-    supabase.from('lessons').select('learn_date, steps').eq('user_id', profile.id)
-      .then(({ data }) => {
-        if (!data) return
-        let cnt = 0
-        const J = [0,1,3,5,7,15,21,30,45,60,75,90,105,120]
-        data.forEach(l => {
-          if (!l.learn_date) return
-          const steps = l.steps as (null|object)[]
-          J.forEach((off, i) => {
-            const d = new Date(l.learn_date + 'T12:00:00')
-            d.setDate(d.getDate() + off)
-            if (d.toISOString().split('T')[0] === today && !steps[i]) cnt++
-          })
+    // Le badge ne compte que l'année d'études en cours. Sinon une fiche de P1
+    // dont un palier tombe aujourd'hui viendrait gonfler le compteur d'un
+    // étudiant passé en P2.
+    const year = normalizeYear(profile.current_year)
+    ;(async () => {
+      const [{ data: sys }, { data }] = await Promise.all([
+        supabase.from('systems').select('id, year, semestre, schedule').eq('user_id', profile.id),
+        supabase.from('lessons')
+          .select('learn_date, steps, skips, postpones, system_id')
+          .eq('user_id', profile.id),
+      ])
+      if (cancelled || !data) return
+      // Ce badge est posé sur l'onglet Calendrier : il doit compter exactement
+      // ce que le calendrier affiche. Mêmes paliers par matière, mêmes paliers
+      // annulés, mêmes reports, même définition de "déjà noté", même semestre.
+      // Un badge qui annonce 3 quand la page en montre 0 use la confiance plus
+      // vite que n'importe quel bug visible.
+      const yearSystems = ((sys as SystemRow[] | null) ?? [])
+        .filter(s => normalizeYear(s.year) === year)
+        .filter(s => semester === 'year' || s.semestre === semester)
+      const ids = new Set(yearSystems.map(s => s.id))
+      const scheduleFor = makeScheduleResolver(yearSystems)
+      let cnt = 0
+      data.forEach(l => {
+        if (!l.learn_date) return
+        const sid = l.system_id as string
+        if (!ids.has(sid)) return
+        const steps = (l.steps as unknown[]) || []
+        const skips = Array.isArray(l.skips) ? (l.skips as number[]) : []
+        const postpones = (l.postpones && typeof l.postpones === 'object')
+          ? (l.postpones as Record<string, string>)
+          : {}
+        scheduleFor(sid).forEach((off, i) => {
+          if (skips.includes(i)) return              // palier annulé
+          if (hasOfficialScore(steps[i])) return     // déjà noté ce jour J
+          const d = new Date(l.learn_date + 'T12:00:00')
+          d.setDate(d.getDate() + off)
+          // Un palier reporté est dû à sa nouvelle date, pas à la date théorique.
+          const due = postpones[String(i)] ?? d.toISOString().split('T')[0]
+          if (due === today) cnt++
         })
-        setTodayCount(cnt)
       })
-  }, [profile])
+      setTodayCount(cnt)
+    })()
+    return () => { cancelled = true }
+  }, [profile, semester, supabase])
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href
@@ -429,7 +485,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="db-lbl" style={{ minWidth: 0, flex: 1 }}>
               <div className="db-user-name">{profile?.name || '...'}</div>
               <div className="db-user-meta">
-                {profile?.plan === 'pro' ? 'Premium' : 'Gratuit'}
+                {profile?.current_year ? `${yearLabel(profile.current_year)} · ` : ''}
+                {profile ? (profile.plan === 'pro' ? 'Premium' : 'Gratuit') : ''}
                 {profile?.fac ? ` · ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
               </div>
             </div>

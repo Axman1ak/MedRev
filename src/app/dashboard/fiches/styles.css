@@ -400,9 +400,16 @@
   border-radius: 12px;
   padding: 0;
   display: flex;
-  overflow: hidden;
+  /* Surtout PAS overflow:hidden ici : ça coupait le menu ⋯ de la fiche et
+     rendait "Supprimer" inatteignable. Le filet de couleur arrondit ses
+     propres coins (.card-accent), la carte n'a donc rien à rogner. */
   transition: box-shadow .15s, border-color .15s, transform .1s;
 }
+/* Carte ou onglet matière dont le menu est ouvert : il passe au-dessus de ses
+   voisins, sinon le menu qui déborde glisserait sous l'élément suivant de la
+   grille. L'onglet matière est concerné autant que la carte. */
+.card:has(.fi-menu),
+.mtab:has(.fi-menu) { position: relative; z-index: 40; }
 
 .card:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, .07); }
 
@@ -421,6 +428,8 @@
   width: 4px;
   flex-shrink: 0;
   background: var(--border);
+  /* Reprend l'arrondi de la carte, moins l'épaisseur de la bordure. */
+  border-radius: 11px 0 0 11px;
 }
 
 .card.st-s1 .card-accent { background: var(--s1); }
@@ -624,6 +633,14 @@
   width: 100%;
   max-width: 440px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, .18);
+  /* Le modal ne dépasse jamais l'écran : sans ça, sur un téléphone, le bas du
+     formulaire (dont le bouton Enregistrer) sortait du cadre sans aucun moyen
+     d'y accéder, puisque l'overlay est centré et ne défile pas.
+     dvh en second pour tenir compte de la barre d'adresse mobile. */
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .fi-modal-title {
@@ -774,12 +791,21 @@
   animation: fi-menu-in .12s ease-out;
 }
 
-/* Cas spécial : menu dans une fiche card (qui a overflow:hidden pour son accent).
-   On repositionne le menu à l'intérieur, juste sous le bouton ⋯. */
+/* Menu d'une fiche : il s'ouvre juste sous le bouton ⋯ et déborde de la carte
+   sans être rogné. Avant, il était coincé à l'intérieur et les derniers items
+   (dont Supprimer) tombaient hors du cadre. */
 .fi-menu-btn-card + .fi-menu {
-  top: 38px;
-  right: 10px;
+  top: 34px;
+  right: 8px;
   margin-top: 0;
+}
+
+/* Beaucoup de chapitres = menu très haut. On plafonne et on fait défiler
+   plutôt que de laisser le bas sortir de l'écran. */
+.fi-menu {
+  max-height: min(320px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 @keyframes fi-menu-in {
   from { opacity: 0; transform: translateY(-4px); }
