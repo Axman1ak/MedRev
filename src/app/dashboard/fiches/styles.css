@@ -1011,3 +1011,22 @@
 }
 .fi-sched-note { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--gray); }
 .fi-sched-note strong { color: var(--dark); font-weight: 700; }
+
+
+/* ================== TELEPHONE ==================
+   La barre d'actions comprimait le champ de recherche jusqu'a n'afficher que
+   deux lettres. Il prend maintenant sa propre ligne, en premier. */
+@media (max-width: 560px) {
+  .fi-main { padding: 14px 12px 32px; }
+  .fi-actions { flex-wrap: wrap; gap: 8px; }
+  .fi-search { flex: 1 1 100%; order: -1; min-width: 0; min-height: 42px; }
+  .fi-actions > button, .fi-actions > a { min-height: 42px; }
+
+  /* Cibles tactiles du menu et des chapitres */
+  .fi-menu-btn { width: 36px; height: 36px; }
+  .fi-menu-btn-card { top: 6px; right: 6px; }
+  .card .card-head { padding-right: 44px; }
+  .mtab { padding-right: 44px; }
+  .fi-chap-del { width: 34px; height: 34px; }
+  .fi-menu-item { padding-top: 11px; padding-bottom: 11px; }
+}

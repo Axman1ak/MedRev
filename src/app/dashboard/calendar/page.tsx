@@ -12,6 +12,7 @@ import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import type { TdKind } from '@/types'
+import { useIsNarrow } from '@/lib/useNarrow'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -180,6 +181,7 @@ export default function CalendarPage() {
   const [tdSaving, setTdSaving] = useState(false)
   const [tdError, setTdError] = useState<string | null>(null)
   const weekRef = useRef<HTMLDivElement>(null)
+  const isNarrow = useIsNarrow(900)
   const [weekPx, setWeekPx] = useState(0)
   const monthRef = useRef<HTMLDivElement>(null)
   const [monthPx, setMonthPx] = useState(0)
@@ -491,6 +493,10 @@ export default function CalendarPage() {
   // tdCount : les TD du jour occupent leurs propres lignes en haut de la
   // colonne — on les retranche de la place disponible pour les fiches.
   function daySlots(count: number, tdCount: number): { visible: number; overflow: number } {
+    // Téléphone : les jours sont empilés et la page défile, donc weekPx ne
+    // mesure plus rien d'utile. On affiche la journée entière plutôt que de
+    // rogner des révisions au milieu d'une ligne.
+    if (isNarrow) return { visible: count, overflow: 0 }
     if (!weekPx) {
       const v = Math.min(count, Math.max(1, 8 - tdCount))
       return { visible: v, overflow: count - v }

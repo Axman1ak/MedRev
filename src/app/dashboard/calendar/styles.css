@@ -1117,3 +1117,27 @@
 @media (max-width: 560px) {
   .cal-tdkind { grid-template-columns: 1fr; }
 }
+
+
+/* ================== TELEPHONE ==================
+   Les jours sont empiles. Une hauteur minimale avec overflow:hidden coupait
+   les revisions en plein milieu d'une ligne : la case doit suivre son contenu. */
+@media (max-width: 900px) {
+  /* .cal-week garde overflow:hidden pour la grille 7 colonnes du bureau ;
+     empile sur telephone, il faut le relacher sinon la colonne est rognee. */
+  .cal-week { overflow: visible; flex: none; }
+  .cal-day { min-height: 0; overflow: visible; }
+  .cal-day-head { height: auto; padding: 11px 14px 9px; }
+  /* Sans ca la liste, en flex:1 dans un parent devenu auto, se replie a zero
+     et les revisions disparaissent completement de la journee. */
+  .cal-day-list { flex: none; min-height: 0; overflow: visible; }
+}
+@media (max-width: 560px) {
+  .cal-page { padding: 14px 12px 32px; }
+  /* La barre d'outils passe a la ligne au lieu de comprimer ses boutons */
+  .cal-toolbar, .cal-head-actions { flex-wrap: wrap; gap: 8px; }
+  .cal-today-btn, .cal-td-trigger { min-height: 40px; }
+  .cal-nav button { min-width: 40px; min-height: 40px; }
+  .cal-td { height: auto; min-height: 38px; padding: 7px 9px; }
+  .cal-td-title { white-space: normal; }
+}

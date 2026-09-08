@@ -2613,3 +2613,12 @@
   .fg-sep { display: none; }
   .fg-hint { font-size: 10px; }
 }
+
+
+/* ================== TELEPHONE ==================
+   Le SVG du jardin depassait de quelques pixels et faisait glisser toute la
+   page lateralement. Cibles tactiles remontees a 40 px. */
+@media (max-width: 560px) {
+  .focus-stage { overflow-x: hidden; }
+  .focus-immersive, .focus-quit { width: 40px; height: 40px; }
+}

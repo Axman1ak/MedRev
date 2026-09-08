@@ -15,6 +15,18 @@ import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import './styles.css'
 
+type TabId = 'etudes' | 'compte' | 'apparence' | 'abonnement'
+
+// Regroupement : on range par intention, pas par ordre historique.
+// « Mes etudes » d'abord parce que c'est ce qu'on vient changer en cours
+// d'annee ; l'abonnement en dernier pour ne pas ouvrir sur un argumentaire.
+const TABS: { id: TabId; label: string; hint: string }[] = [
+  { id: 'etudes',     label: 'Mes études',  hint: 'année, barème' },
+  { id: 'compte',     label: 'Mon compte',  hint: 'profil, mot de passe' },
+  { id: 'apparence',  label: 'Apparence',   hint: 'thème, sons' },
+  { id: 'abonnement', label: 'Abonnement',  hint: 'formule, quotas' },
+]
+
 /** Date lisible pour la ligne "tu es passé en P2 le ...". */
 function formatDay(iso: string): string {
   const d = new Date(iso)
@@ -48,6 +60,10 @@ const PREMIUM_PERKS = [
 export default function SettingsPage() {
   const router = useRouter()
   const supabase = createClient()
+
+  // Rubrique affichee. La page montrait huit sections d'affilee dans un seul
+  // defilement, ce qui noyait tout. On n'en affiche plus qu'une.
+  const [tab, setTab] = useState<TabId>('etudes')
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [email, setEmail] = useState('')
@@ -355,19 +371,24 @@ export default function SettingsPage() {
       <div className="set-wrap">
         <div className="set-head">
           <h1 className="set-h1">Réglages</h1>
-          <nav className="set-anchors" aria-label="Sections des réglages">
-            <a href="#set-abo">Abonnement</a>
-            <a href="#set-annee">Année</a>
-            <a href="#set-profil">Profil</a>
-            <a href="#set-compte">Compte</a>
-            <a href="#set-apparence">Apparence</a>
-            <a href="#set-bareme">Barème</a>
-            <a href="#set-aide">Aide</a>
-            <a href="#set-danger" className="set-anchor-danger">Supprimer</a>
+          <nav className="set-tabs" aria-label="Rubriques des réglages">
+            {TABS.map(x => (
+              <button
+                key={x.id}
+                type="button"
+                className={`set-tab${tab === x.id ? ' on' : ''}`}
+                onClick={() => setTab(x.id)}
+                aria-current={tab === x.id ? 'page' : undefined}
+              >
+                {x.label}
+                <span className="set-tab-hint">{x.hint}</span>
+              </button>
+            ))}
           </nav>
         </div>
 
         {/* ============ ABONNEMENT (carte héro) ============ */}
+        {tab === 'abonnement' && (
         <section className={`set-abo${isPro ? ' pro' : ''}`} id="set-abo">
           <div className="set-abo-glow" aria-hidden="true" />
           <div className="set-abo-head">
@@ -463,8 +484,10 @@ export default function SettingsPage() {
             </>
           )}
         </section>
+        )}
 
         {/* ============ ANNÉE D'ÉTUDES ============ */}
+        {tab === 'etudes' && (
         <section className="set-card" id="set-annee">
           <div className="set-card-h">Année d&apos;études</div>
           <p className="set-card-sub">
@@ -519,8 +542,10 @@ export default function SettingsPage() {
             l&apos;ensemble de ton parcours, toutes années confondues.
           </p>
         </section>
+        )}
 
         {/* ============ PROFIL ============ */}
+        {tab === 'compte' && (
         <section className="set-card" id="set-profil">
           <div className="set-card-h">Profil</div>
           <p className="set-card-sub">Ton identité dans l&apos;application : nom affiché, pseudo et faculté.</p>
@@ -573,8 +598,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        )}
 
         {/* ============ COMPTE (email + mot de passe + session) ============ */}
+        {tab === 'compte' && (
         <section className="set-card" id="set-compte">
           <div className="set-card-h">Compte et sécurité</div>
           <p className="set-card-sub">Ton email de connexion, ton mot de passe et ta session.</p>
@@ -642,8 +669,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        )}
 
         {/* ============ APPARENCE ============ */}
+        {tab === 'apparence' && (
         <section className="set-card" id="set-apparence">
           <div className="set-card-h">Apparence et ambiance</div>
           <p className="set-card-sub">Le thème de l&apos;interface et les sons de la bibliothèque.</p>
@@ -711,8 +740,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        )}
 
         {/* ============ AIDE ============ */}
+        {tab === 'compte' && (
         <section className="set-card" id="set-aide">
           <div className="set-card-h">Aide</div>
           <p className="set-card-sub">Besoin de te rafraîchir la mémoire sur le fonctionnement du site ?</p>
@@ -740,8 +771,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        )}
 
         {/* ============ SUPPRIMER (RGPD) ============ */}
+        {tab === 'etudes' && (
         <section className="set-card" id="set-bareme">
           <div className="set-card-h">Barème du simulateur</div>
           <p className="set-card-sub">Comment les QCM du simulateur sont notés. Par défaut on applique le barème standard ; change-le si ta fac utilise un autre système.</p>
@@ -758,7 +791,9 @@ export default function SettingsPage() {
             ))}
           </div>
         </section>
+        )}
 
+        {tab === 'compte' && (
         <section className="set-card set-card-danger" id="set-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">
@@ -776,6 +811,7 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        )}
 
       </div>
 

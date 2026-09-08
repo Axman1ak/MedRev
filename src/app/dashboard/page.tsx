@@ -14,6 +14,7 @@ import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
+import { useIsNarrow } from '@/lib/useNarrow'
 
 const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
@@ -532,7 +533,14 @@ export default function DashboardPage() {
   }, [userId])
   const [showWeakModal, setShowWeakModal] = useState(false)
   const flistRef = useRef<HTMLDivElement>(null)
-  const [flistM, setFlistM] = useState<{ h: number; stride: number }>({ h: 0, stride: 74 })
+  // h = hauteur dispo, stride = hauteur d'une ligne + gap, btnCost = ce que
+  // coûte réellement le bouton « voir plus » dans le flux (sa marge + sa
+  // hauteur). Tout est mesuré : une valeur devinée faisait perdre une ligne
+  // entière dans certaines hauteurs d'écran.
+  const [flistM, setFlistM] = useState<{ h: number; stride: number; gap: number; btnCost: number }>({ h: 0, stride: 74, gap: 9, btnCost: 39 })
+  // Sur téléphone la page défile : tronquer la liste pour tenir dans un cadre
+  // cacherait douze fiches derrière un bouton alors qu'un coup de pouce suffit.
+  const isNarrow = useIsNarrow(900)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -616,8 +624,15 @@ export default function DashboardPage() {
     if (!el) return
     const compute = () => {
       const row = el.querySelector('.fiche') as HTMLElement | null
-      const stride = (row ? row.offsetHeight : 64) + 9
-      setFlistM({ h: el.clientHeight, stride })
+      const gap = parseFloat(getComputedStyle(el).rowGap) || 9
+      const stride = (row ? row.offsetHeight : 64) + gap
+      const btn = el.querySelector('.flist-more') as HTMLElement | null
+      // Le gap qui précède le bouton est déjà compté dans le stride de la
+      // dernière ligne : il ne reste que sa marge et sa hauteur propre.
+      const btnCost = btn
+        ? (parseFloat(getComputedStyle(btn).marginTop) || 0) + btn.offsetHeight
+        : 39
+      setFlistM({ h: el.clientHeight, stride, gap, btnCost })
     }
     compute()
     const ro = new ResizeObserver(compute)
@@ -694,9 +709,12 @@ export default function DashboardPage() {
   // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
   // bouton, sinon on ne réserve que la hauteur du bouton « voir plus » (~44px),
   // pas une ligne entière → moins de vide en bas.
-  const fitAll = Math.max(1, Math.floor((flistM.h + 9) / flistM.stride))
-  const moreThanFit = sortedQueue.length > fitAll
-  const fitWithBtn = Math.max(1, Math.floor((flistM.h - 44) / flistM.stride))
+  // Sans bouton, la dernière ligne n'a pas de gap après elle, d'où le + gap.
+  const fitAll = Math.max(1, Math.floor((flistM.h + flistM.gap) / flistM.stride))
+  // Téléphone : jamais de troncature, la liste entière défile avec la page.
+  const moreThanFit = !isNarrow && sortedQueue.length > fitAll
+  // Avec bouton : n lignes + n gaps + le coût mesuré du bouton.
+  const fitWithBtn = Math.max(1, Math.floor((flistM.h - flistM.btnCost) / flistM.stride))
   const visibleQueue = moreThanFit ? sortedQueue.slice(0, fitWithBtn) : sortedQueue
   const hiddenCount = sortedQueue.length - visibleQueue.length
 

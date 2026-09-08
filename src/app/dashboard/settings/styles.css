@@ -16,6 +16,17 @@
   --gm: var(--accent-medium);
   --rose: var(--danger);
 
+  /* Ces quatre-la etaient utilisees partout dans le fichier mais definies
+     NULLE PART : chaque var(--set-ink, #1b2330) retombait sur son repli, une
+     couleur claire figee. En mode sombre les titres en gras des cartes
+     (« Automatique », « P1 », « Tout ou rien »...) sortaient presque noirs sur
+     fond marine, donc illisibles. Elles pointent maintenant vers les tokens du
+     theme, qui basculent tout seuls. */
+  --set-ink: var(--text-primary);
+  --set-gray: var(--text-secondary);
+  --set-line: var(--border-subtle);
+  --set-border-strong: var(--border-strong);
+
   min-height: 100vh;
   background: var(--bg, #EDEAE3);
   font-family: var(--font-hanken), -apple-system, sans-serif;
@@ -568,6 +579,9 @@
 }
 .set-card-danger { border-color: rgba(199, 80, 80, 0.35); }
 .set-card-danger .set-card-h { color: var(--danger); }
+/* En sombre le rouge de danger tombe a 2,94:1 sur la carte marine. On eclaircit
+   uniquement ce titre, sans toucher au token partage. */
+[data-theme="dark"] .set-card-danger .set-card-h { color: #F0918E; }
 
 .set-row { margin-bottom: 16px; }
 .set-row:last-of-type { margin-bottom: 0; }
@@ -604,7 +618,9 @@
 .set-hint {
   font-size: 11.5px;
   line-height: 1.55;
-  color: var(--text-tertiary);
+  /* --text-tertiary tombait a 2,82:1 en mode clair, illisible pour du 11,5 px.
+     Ces phrases expliquent ce que font les reglages, elles doivent se lire. */
+  color: var(--text-secondary);
   margin: 6px 0 0;
 }
 .set-hint a { color: var(--accent-medium); }
@@ -1004,3 +1020,69 @@
   .set-year-grid { grid-template-columns: 1fr; }
   .set-year-current { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+
+/* ================== RUBRIQUES ==================
+   La page empilait huit sections dans un seul defilement. On n'en montre plus
+   qu'une a la fois. */
+.set-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 18px 0 26px;
+  padding: 5px;
+  background: var(--soft);
+  border: 1px solid var(--set-line);
+  border-radius: 13px;
+}
+.set-tab {
+  flex: 1 1 auto;
+  min-width: 118px;
+  min-height: 42px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--set-gray);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.set-tab:hover { color: var(--set-ink); background: var(--card); }
+.set-tab.on {
+  background: var(--card);
+  color: var(--set-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .10);
+}
+.set-tab-hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--set-gray);
+  margin-top: 1px;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .set-page { padding: 20px 14px 60px; }
+  .set-tabs { gap: 4px; }
+  .set-tab { flex: 1 1 46%; min-width: 0; white-space: normal; }
+  .set-tab-hint { display: none; }
+}
+
+
+/* Bouton primaire en mode sombre : l'accent devient un bleu clair, sur lequel
+   du blanc ne tient pas (3,39:1). Texte sombre, comme les autres boutons
+   primaires du projet (voir la liste dans globals.css). */
+[data-theme="dark"] .set-btn.primary { color: #0E1726; }
+
+/* Pastilles bleues (badge de l'annee en cours, etiquette « en cours ») : en
+   sombre l'accent est un bleu clair, le blanc dessus tombe a 3,39:1. */
+[data-theme="dark"] .set-year-current-badge,
+[data-theme="dark"] .set-year-tag { color: #0E1726; }
+[data-theme="dark"] .set-year-tag.saved { color: var(--text-secondary); }
+
+/* Bouton « Supprimer mon compte » : rouge sur marine = 2,94:1 en sombre. */
+[data-theme="dark"] .set-btn.ghost-rose { color: #F0918E; border-color: rgba(240, 145, 142, .45); }
