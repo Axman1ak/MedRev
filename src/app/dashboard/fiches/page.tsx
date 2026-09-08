@@ -10,6 +10,7 @@ import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver, normalizeSchedule } from '@/lib/schedule'
 import './styles.css'
 import { normalizeYear, scopeToYear, DEFAULT_YEAR, YEARS, yearLabel } from '@/lib/year'
+import PageLoader from '@/components/PageLoader'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
@@ -721,6 +722,12 @@ export default function FichesPage() {
       : (editName.trim() === editing.name
           && editChapter.trim() === (editing.chapter ?? '')
           && editDate === (editing.learnDate ?? ''))
+
+  // Avant : la page se dessinait vide (aucune matière, aucune fiche) le temps
+  // du chargement, ce qui ressemblait à un compte vide plutôt qu'à une attente.
+  if (!userId) {
+    return <div className="fi-main"><PageLoader label="Chargement de tes matières…" /></div>
+  }
 
   return (
     <>

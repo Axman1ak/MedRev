@@ -14,6 +14,7 @@ import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTH
 import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import './styles.css'
+import PageLoader from '@/components/PageLoader'
 
 type TabId = 'etudes' | 'compte' | 'apparence' | 'abonnement'
 
@@ -345,7 +346,7 @@ export default function SettingsPage() {
   if (!profile) {
     return (
       <div className="set-page">
-        <div className="set-loading">Chargement…</div>
+        <PageLoader label="Chargement de tes réglages…" />
       </div>
     )
   }

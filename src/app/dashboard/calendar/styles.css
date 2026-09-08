@@ -719,7 +719,17 @@
 
 /* =========== RESPONSIVE =========== */
 @media (max-width: 900px) {
-  .cal-page { height: auto; overflow: auto; padding: 18px; }
+  /* height:auto ne suffit PAS : la regle de base pose aussi max-height:100dvh,
+     overflow:hidden et contain:layout. Sans les lever, la page reste plafonnee
+     a un ecran, le contenu est enferme dans un defilement interne et le doigt
+     ne fait plus rien. C'est ce qui bloquait le calendrier sur telephone. */
+  .cal-page {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    contain: none;
+    padding: 18px;
+  }
   .cal-week { grid-template-columns: 1fr; gap: 10px; }
   .cal-day { min-height: 120px; }
   .cal-head { flex-direction: column; align-items: stretch; }

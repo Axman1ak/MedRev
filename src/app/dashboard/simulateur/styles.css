@@ -2081,3 +2081,18 @@
   .sim-ann-add { flex-wrap: wrap; }
   .sim-ann-select { max-width: none; flex: 1; }
 }
+
+
+/* ================== TELEPHONE ==================
+   Meme piege que le calendrier : la regle de base pose height:100dvh ET
+   max-height:100dvh ET overflow:hidden. Lever la hauteur sans lever le plafond
+   laisse la page enfermee dans un ecran. */
+@media (max-width: 900px) {
+  .sim-page {
+    height: auto;
+    min-height: 100vh;
+    max-height: none;
+    overflow: visible;
+    padding: 16px 12px 40px;
+  }
+}

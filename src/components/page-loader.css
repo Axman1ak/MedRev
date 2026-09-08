@@ -1,0 +1,85 @@
+/* src/components/page-loader.css
+   Écran de chargement partagé. Voir PageLoader.tsx pour le pourquoi. */
+
+.pld {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-family: var(--font-hanken), -apple-system, sans-serif;
+}
+
+/* Variante insérée dans un bloc déjà dessiné : pas de pleine hauteur. */
+.pld-inline {
+  min-height: 140px;
+  padding: 24px 16px;
+}
+
+.pld-ring {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.pld-ring-a,
+.pld-ring-b {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+}
+
+/* Anneau extérieur : un arc dans l'accent de la marque. */
+.pld-ring-a {
+  border-top-color: var(--accent-medium);
+  border-right-color: var(--accent-medium);
+  animation: pld-spin 900ms cubic-bezier(.55, .15, .45, .85) infinite;
+}
+
+/* Anneau intérieur, plus petit, tournant en sens inverse et plus lentement :
+   ça évite l'effet « roue qui patine » d'un spinner unique. */
+.pld-ring-b {
+  inset: 8px;
+  border-bottom-color: var(--border-strong);
+  border-left-color: var(--border-strong);
+  animation: pld-spin 1400ms linear infinite reverse;
+}
+
+@keyframes pld-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pld-label {
+  font-size: 13.5px;
+  letter-spacing: .01em;
+  animation: pld-breathe 1800ms ease-in-out infinite;
+}
+
+@keyframes pld-breathe {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+
+/* Certaines personnes règlent leur téléphone pour réduire les animations, et
+   pour elles un mouvement continu peut déclencher un malaise. On garde alors
+   un repère fixe plutôt que rien du tout. */
+@media (prefers-reduced-motion: reduce) {
+  .pld-ring-a,
+  .pld-ring-b,
+  .pld-label {
+    animation: none;
+  }
+  .pld-ring-a { border-color: var(--accent-medium); opacity: .55; }
+  .pld-ring-b { border-color: var(--border-strong); opacity: .55; }
+  .pld-label { opacity: 1; }
+}
+
+@media (max-width: 560px) {
+  .pld { min-height: 48vh; }
+  .pld-ring { width: 34px; height: 34px; }
+}

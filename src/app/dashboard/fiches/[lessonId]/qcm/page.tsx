@@ -13,6 +13,7 @@ import { normalizeAnswer, isMultiAnswer } from '@/types'
 import SourceLightbox from '@/components/SourceLightbox'
 import ReportQuestion from '@/components/ReportQuestion'
 import './styles.css'
+import PageLoader from '@/components/PageLoader'
 
 type Phase = 'loading' | 'question' | 'feedback' | 'end' | 'empty'
 
@@ -302,7 +303,7 @@ export default function QcmSessionPage() {
   if (phase === 'loading') {
     return (
       <div className="qcm-page">
-        <div className="qcm-loading">Chargement de la session…</div>
+        <PageLoader label="Préparation de la session…" />
       </div>
     )
   }

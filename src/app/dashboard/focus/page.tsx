@@ -20,6 +20,7 @@ import type { System, Lesson } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
+import PageLoader from '@/components/PageLoader'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
@@ -553,7 +554,7 @@ export default function FocusPage() {
   return (
     <Suspense fallback={
       <div className="focus-root">
-        <div className="focus-loading">Chargement…</div>
+        <PageLoader label="Préparation de ta session…" />
       </div>
     }>
       <FocusPageBody />
@@ -1068,7 +1069,7 @@ function FocusPageBody() {
   if (!userId || phase === 'loading') {
     return (
       <div className="focus-root">
-        <div className="focus-loading">Chargement…</div>
+        <PageLoader label="Préparation de ta session…" />
       </div>
     )
   }

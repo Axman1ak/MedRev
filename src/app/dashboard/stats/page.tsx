@@ -21,6 +21,7 @@ import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
+import PageLoader from '@/components/PageLoader'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const COVERED_AT = 3 // une fiche est "couverte" à partir de 3 paliers officiels
@@ -543,7 +544,7 @@ export default function StatsPage() {
   if (loading) {
     return (
       <div className="stats-page">
-        <div className="stats-loading">Chargement…</div>
+        <PageLoader label="Calcul de tes statistiques…" />
       </div>
     )
   }

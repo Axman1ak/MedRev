@@ -15,6 +15,7 @@ import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import { useIsNarrow } from '@/lib/useNarrow'
+import PageLoader from '@/components/PageLoader'
 
 const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
@@ -718,7 +719,8 @@ export default function DashboardPage() {
   const visibleQueue = moreThanFit ? sortedQueue.slice(0, fitWithBtn) : sortedQueue
   const hiddenCount = sortedQueue.length - visibleQueue.length
 
-  if (!userId) return null
+  // Avant : `return null`, donc un écran blanc jusqu'à l'arrivée des données.
+  if (!userId) return <div className="dvx"><PageLoader label="Chargement de ta journée…" /></div>
 
   // "14:00:00" → "14h" · "14:30:00" → "14h30"
   const fmtTd = (t: string | null) => {

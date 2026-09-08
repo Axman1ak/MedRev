@@ -16,6 +16,7 @@ import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
+import PageLoader from '@/components/PageLoader'
 
 type Semestre = 1 | 2 | 'year'
 type Mode = 'apprentissage' | 'examen'
@@ -791,7 +792,7 @@ export default function SimulateurPage() {
   if (loading) {
     return (
       <div className="sim-page">
-        <div className="sim-loading">Chargement…</div>
+        <PageLoader label="Chargement du simulateur…" />
       </div>
     )
   }
@@ -1310,7 +1311,7 @@ export default function SimulateurPage() {
 
   function renderSession() {
     const q = sessionQuestions[currentIdx]
-    if (!q) return <div className="sim-page"><div className="sim-loading">…</div></div>
+    if (!q) return <div className="sim-page"><PageLoader label="Question suivante…" /></div>
     const selectedAnswer = answers[currentIdx] ?? []
     const isRevealed = mode === 'apprentissage' && revealed[currentIdx]
     const correctIdxs = q.answer

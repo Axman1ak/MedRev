@@ -67,7 +67,17 @@ const jetbrains = JetBrains_Mono({
 // VIEWPORT (séparé de metadata depuis Next.js 14)
 // ============================================================
 export const viewport: Viewport = {
-  themeColor: '#FAFAF7',
+  // Safari sur iPhone teinte ses barres du haut et du bas avec cette couleur.
+  // Une valeur unique en clair laissait les barres claires en mode sombre, d'ou
+  // les bandes qui ne collent pas au reste de l'ecran. Les deux valeurs
+  // reprennent exactement --bg-app de chaque theme (globals.css).
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAF7' },
+    { media: '(prefers-color-scheme: dark)', color: '#0A111E' },
+  ],
+  // Indique au navigateur que la page gere les deux themes : sans ca, les
+  // controles natifs (barres de defilement, champs) restent en clair.
+  colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
 }

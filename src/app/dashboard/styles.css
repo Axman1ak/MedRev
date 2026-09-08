@@ -177,6 +177,25 @@
 @media (max-width: 720px) {
   .dvx { height: auto; min-height: 100vh; overflow: visible; padding: 14px 14px 32px; }
 
+  /* .grid est en `flex: 1; min-height: 0` pour remplir la hauteur de l'ecran sur
+     ordinateur. Sur telephone ce meme reglage autorise la grille a etre PLUS
+     COURTE que son contenu : .dvx se calait sur la taille flex et pas sur le
+     contenu reel, donc body/html s'arretaient avant la fin de la liste et les
+     dernieres fiches devenaient inatteignables au doigt. `flex: none` fait
+     reprendre a la grille sa hauteur naturelle. */
+  .dvx .grid { flex: none; min-height: 0; }
+  .dvx .col-r { min-height: 0; }
+  .dvx .panel { min-height: 0; }
+
+  /* Les panneaux de la colonne de droite (A faire, Bibliotheque) sont en
+     `flex: 2 1 0` et `flex: 3 1 0` : sur ordinateur ils se partagent la hauteur
+     restante. Sans hauteur imposee, une base de 0 les fait s'effondrer a 38 px
+     pendant que leur contenu deborde de plus de 200 px hors de la page, donc
+     hors d'atteinte au doigt. Sur telephone chacun reprend sa hauteur reelle. */
+  .dvx .col-r > .panel,
+  .dvx .bib { flex: none; }
+  .dvx .todo-scroll { flex: none; min-height: 0; overflow-y: visible; }
+
   /* En-tete : la salutation puis la recherche, chacune sur toute la largeur */
   .dvx .topbar { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 18px; }
   .dvx .hi { font-size: 27px; line-height: 1.1; }

@@ -13,6 +13,7 @@ import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import type { TdKind } from '@/types'
 import { useIsNarrow } from '@/lib/useNarrow'
+import PageLoader from '@/components/PageLoader'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -523,7 +524,8 @@ export default function CalendarPage() {
     return { visible: v, overflow: count - v }
   }
 
-  if (!userId) return null
+  // Avant : `return null`, donc un écran blanc jusqu'à l'arrivée des données.
+  if (!userId) return <div className="cal-page"><PageLoader label="Chargement de ton calendrier…" /></div>
 
   // ============= Render =============
   const totalFiches = semLessons.length
