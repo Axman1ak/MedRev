@@ -135,8 +135,14 @@ html, body {
  
 body {
   font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--t1);
+  /* Ni background ni color ici. Cette regle est plus bas dans le fichier que
+     le « html, body » theme au-dessus, donc elle gagnait : le fond de la page
+     restait fige sur --bg (#fafaf8) et le texte sur --t1 (presque noir), dans
+     les DEUX themes. En mode sombre, ca laissait une couche claire sous toute
+     l'application, visible partout ou le contenu ne peint pas son propre fond,
+     en particulier sur les bords et au rebond du defilement sur iPhone.
+     Le fond et la couleur du texte viennent maintenant de --bg-app et
+     --text-primary, qui suivent le theme. */
   min-height: 100vh;
   overflow-x: hidden;
 }

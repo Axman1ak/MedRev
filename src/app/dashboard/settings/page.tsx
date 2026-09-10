@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile, ScoringSystemId } from '@/types'
 import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP, SCORING_SYSTEMS } from '@/types'
 import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
+import { getStoredTheme, setTheme as setStoredTheme } from '@/lib/theme'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import './styles.css'
 import PageLoader from '@/components/PageLoader'
@@ -109,20 +110,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const stored = localStorage.getItem('medrev-theme')
-    const t: 'light' | 'dark' = stored === 'dark' ? 'dark' : 'light'
-    setTheme(t)
-    document.documentElement.setAttribute('data-theme', t)
+    // Le thème est déjà posé sur la page par le script d'amorçage du layout.
+    // Ici on ne fait que refléter le choix enregistré dans les boutons.
+    setTheme(getStoredTheme())
     setSounds(soundsEnabled())
     setScoringPref(localStorage.getItem('medrev-scoring') || '')
   }, [])
 
   function chooseTheme(t: 'light' | 'dark') {
     setTheme(t)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('medrev-theme', t)
-      document.documentElement.setAttribute('data-theme', t)
-    }
+    // Enregistre ET applique : data-theme, les contrôles natifs et la couleur
+    // des barres de Safari, tout en un (voir src/lib/theme.ts).
+    setStoredTheme(t)
   }
 
   function toggleSounds() {

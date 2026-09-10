@@ -68,19 +68,48 @@ const jetbrains = JetBrains_Mono({
 // ============================================================
 export const viewport: Viewport = {
   // Safari sur iPhone teinte ses barres du haut et du bas avec cette couleur.
-  // Une valeur unique en clair laissait les barres claires en mode sombre, d'ou
-  // les bandes qui ne collent pas au reste de l'ecran. Les deux valeurs
-  // reprennent exactement --bg-app de chaque theme (globals.css).
+  // Ces deux valeurs ne sont qu'un point de depart pour la toute premiere
+  // image : le script d'amorcage ci-dessous les remplace ensuite par la couleur
+  // du theme reellement choisi dans MedRev. Le reglage du telephone est le
+  // meilleur pari en attendant.
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#FAFAF7' },
     { media: '(prefers-color-scheme: dark)', color: '#0A111E' },
   ],
-  // Indique au navigateur que la page gere les deux themes : sans ca, les
-  // controles natifs (barres de defilement, champs) restent en clair.
   colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
 }
+
+// ============================================================
+// AMORCAGE DU THEME
+// ============================================================
+// Ce script s'execute avant le premier affichage, sur toutes les pages.
+//
+// Avant, seule la page Reglages posait data-theme. Partout ailleurs l'attribut
+// n'existait pas : le site s'affichait en clair meme pour quelqu'un qui avait
+// choisi le sombre, puis basculait tout seul des qu'on ouvrait Reglages, et le
+// restait jusqu'au rechargement suivant.
+//
+// Il doit etre ici et bloquant : le faire depuis un useEffect afficherait
+// d'abord un ecran blanc, ce qui est pire que le bug d'origine.
+//
+// Il double src/lib/theme.ts, qu'un script en ligne ne peut pas importer. Si tu
+// changes la cle de stockage ou les couleurs, change les deux.
+const THEME_BOOTSTRAP = `(function(){try{
+var t=localStorage.getItem('medrev-theme')==='dark'?'dark':'light';
+var d=document.documentElement;
+d.setAttribute('data-theme',t);
+d.style.colorScheme=t;
+var c=t==='dark'?'#0A111E':'#FAFAF7';
+var apply=function(){
+var m=document.querySelectorAll('meta[name="theme-color"]');
+if(!m.length){var n=document.createElement('meta');n.setAttribute('name','theme-color');n.setAttribute('content',c);document.head.appendChild(n);return}
+for(var i=0;i<m.length;i++){m[i].setAttribute('content',c)}
+};
+apply();
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',apply)}
+}catch(e){}})()`
 
 // ============================================================
 // METADATA — SEO + cartes de partage
@@ -160,7 +189,15 @@ export default function RootLayout({
     <html
       lang="fr"
       className={`${bricolage.variable} ${hanken.variable} ${fraunces.variable} ${jakarta.variable} ${cormorant.variable} ${cinzel.variable} ${jetbrains.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Avant tout le reste : le theme choisi, pose sur <html> avant le
+            premier pixel. suppressHydrationWarning sur <html> parce que le
+            serveur ne peut pas connaitre ce choix, donc l'attribut differe
+            forcement entre le HTML envoye et celui du navigateur. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+      </head>
       <body>
         {children}
         <Analytics />
