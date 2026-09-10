@@ -1179,12 +1179,8 @@ function FocusPageBody() {
               se découvrent sur les étagères elles-mêmes. */}
           {!isGallery && (
           <div className="focus-lobby-card">
-            <div className="focus-lobby-kicker">Bibliotheca · {dayGarden.fichesCount} ouvrage{dayGarden.fichesCount > 1 ? 's' : ''} · {treasures}/6 trésors</div>
             <div className="focus-lobby-title">
               {queue.length} fiche{queue.length > 1 ? 's' : ''} à réviser
-            </div>
-            <div className="focus-lobby-sub">
-              Chaque fiche notée ajoute un livre à ta bibliothèque.
             </div>
             {(() => {
               const goal = nextMilestone(dayGarden.fichesCount)

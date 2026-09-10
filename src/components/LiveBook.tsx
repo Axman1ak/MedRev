@@ -211,13 +211,6 @@ export default function LiveBook({ lessonName, className, coverColor, stamp }: L
           )}
         </g>
       </svg>
-
-      <div className="lb-under">
-        <span className="lb-under-pages">
-          double page {spread + 1} · {totalLines} ligne{totalLines > 1 ? 's' : ''} écrite{totalLines > 1 ? 's' : ''}
-        </span>
-        <span className="lb-under-hint">Appose un sceau pour ranger ce livre dans ta bibliothèque</span>
-      </div>
     </div>
   )
 }

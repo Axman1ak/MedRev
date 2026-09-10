@@ -17,6 +17,7 @@ import SubjectIcon from '@/components/SubjectIcon'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
+import { cleanExplanation, whyFor } from '@/lib/qcmText'
 
 type Semestre = 1 | 2 | 'year'
 type Mode = 'apprentissage' | 'examen'
@@ -31,6 +32,9 @@ interface Question {
   answer: number[]  // 1+ index, jamais vide ni null
   source?: string
   explanation?: string
+  // Une justification par option, dans l'ordre des options (voir AiQuestion).
+  // Absente des questions générées avant 2026-09.
+  why?: string[]
   lessonId?: string
   lessonName?: string
   systemName?: string
@@ -172,6 +176,12 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
 
     const source = (q.source as string) || (q.src as string) || undefined
     const explanation = (q.explanation as string) || (q.explication as string) || undefined
+    // On n'accepte le tableau que s'il couvre TOUTES les options : partiel, il
+    // se décalerait, et un décalage est exactement ce qu'on répare ici.
+    const rawWhy = q.why
+    const why = Array.isArray(rawWhy) && rawWhy.length === options.length
+      ? (rawWhy as unknown[]).map(v => String(v ?? '').trim())
+      : undefined
     // Standard PASS médecine : EXACTEMENT 5 options A-E + au moins 1 bonne réponse.
     if (!question || !Array.isArray(options) || options.length !== 5) continue
     if (answerArr.length === 0) continue
@@ -181,6 +191,7 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
       answer: answerArr,
       source,
       explanation,
+      why,
       lessonId: lesson.id,
       lessonName: lesson.name,
       systemName,
@@ -1385,11 +1396,23 @@ export default function SimulateurPage() {
                   cls += ' sel'
                 }
                 // Affichage seul : on répond UNIQUEMENT via la grille de droite.
+                // Même règle que sur les QCM de fiche : un seul verdict, qui
+                // dit à la fois si la proposition est vraie et ce que
+                // l'étudiante en a fait.
+                let mark = ''
+                if (isRevealed) {
+                  if (isCorrect && isSelected) mark = 'vrai · cochée'
+                  else if (isCorrect) mark = 'vrai · non cochée'
+                  else if (isSelected) mark = 'faux · cochée'
+                  else mark = 'faux'
+                }
+                const why = isRevealed ? whyFor(q, i, q.options.length) : ''
                 return (
                   <div key={i} className={`${cls} readonly`}>
                     <span className="sim-ses-q-opt-letter">{letterFor(i)}.</span>
                     {opt}
-                    {isRevealed && isCorrect && !isSelected && <span className="sim-ses-q-opt-mark">manquée</span>}
+                    {mark && <span className="sim-ses-q-opt-mark">{mark}</span>}
+                    {why && <span className="sim-ses-q-opt-why">{why}</span>}
                   </div>
                 )
               })}
@@ -1417,9 +1440,12 @@ export default function SimulateurPage() {
                     </span>
                   </div>
                   <div className="sim-ses-explain-text">
-                    {q.explanation ? (
-                      q.explanation
-                    ) : (
+                    {/* On écarte les phrases qui désignent une proposition par
+                        sa lettre : depuis le mélange des options, ces lettres
+                        ne pointent plus sur la bonne (voir src/lib/qcmText.ts).
+                        S'il ne reste rien, le récapitulatif reconstruit à
+                        partir des index prend le relais. */}
+                    {cleanExplanation(q.explanation) || (
                       <>
                         Bonne{correctIdxs.length > 1 ? 's' : ''} réponse{correctIdxs.length > 1 ? 's' : ''} :{' '}
                         <strong>

@@ -10,6 +10,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System } from '@/types'
 import { normalizeAnswer, isMultiAnswer } from '@/types'
+import { cleanExplanation, whyFor, correctAnswersRecap } from '@/lib/qcmText'
 import SourceLightbox from '@/components/SourceLightbox'
 import ReportQuestion from '@/components/ReportQuestion'
 import './styles.css'
@@ -514,6 +515,15 @@ export default function QcmSessionPage() {
     (sourceRef.pdf_page !== undefined && !!media.pdf_path)
   )
 
+  // L'explication débarrassée des phrases qui désignent une proposition par sa
+  // lettre : ces lettres-là ne correspondent plus à rien depuis le mélange des
+  // options (voir src/lib/qcmText.ts). S'il ne reste plus rien à dire, on
+  // affiche le récapitulatif des bonnes réponses, reconstruit à partir des
+  // index et du texte des propositions, donc juste par construction.
+  const explText = isFeedback ? cleanExplanation(q.explanation) : ''
+  const recap = isFeedback && !explText ? correctAnswersRecap(q.options, correctIdxs) : ''
+  const hasFeedbackBox = isFeedback && (!!explText || !!recap || (canShowSource && !!sourceRef))
+
   return (
     <div className="qcm-page">
 
@@ -553,6 +563,21 @@ export default function QcmSessionPage() {
             } else if (isSelected) {
               cls += ' selected'
             }
+
+            // Un seul libellé par proposition, et il dit les deux choses d'un
+            // coup : si elle est vraie, et ce que l'étudiante en a fait.
+            // Avant, trois conditions indépendantes s'affichaient à la suite ;
+            // une proposition vraie non cochée déclenchait la première ET la
+            // troisième, d'où « BONNE RÉPONSE » et « MANQUÉE » côte à côte sur
+            // la même ligne.
+            let mark = ''
+            if (isFeedback) {
+              if (isCorrect && isSelected) mark = 'Vrai · tu l\'as cochée'
+              else if (isCorrect && !isSelected) mark = 'Vrai · tu ne l\'as pas cochée'
+              else if (isSelected) mark = 'Faux · tu l\'as cochée'
+              else mark = 'Faux'
+            }
+            const why = isFeedback ? whyFor(q, i, q.options.length) : ''
             return (
               <button
                 key={i}
@@ -569,19 +594,18 @@ export default function QcmSessionPage() {
                 <span className="qcm-text">
                   {multi && <span className="qcm-text-letter">{letterFor(i)}.</span>}
                   {stripLetterPrefix(opt)}
+                  {mark && <span className="qcm-mark">{mark}</span>}
+                  {why && <span className="qcm-why">{why}</span>}
                 </span>
-                {isFeedback && isCorrect && <span className="qcm-mark">Bonne réponse</span>}
-                {isFeedback && isSelected && !isCorrect && <span className="qcm-mark">Ta réponse</span>}
-                {isFeedback && !isSelected && isCorrect && <span className="qcm-mark">Manquée</span>}
               </button>
             )
           })}
         </div>
 
-        {isFeedback && q.explanation && (
+        {hasFeedbackBox && (
           <div className={`qcm-feedback ${ans?.isCorrect ? 'right' : 'wrong'}`}>
-            <div className="qcm-feedback-label">{ans?.isCorrect ? 'Bonne réponse' : 'Explication'}</div>
-            <p className="qcm-feedback-text">{q.explanation}</p>
+            <div className="qcm-feedback-label">{ans?.isCorrect ? 'Bonne réponse' : 'À retenir'}</div>
+            {(explText || recap) && <p className="qcm-feedback-text">{explText || recap}</p>}
             {canShowSource && sourceRef && (
               <div className="qcm-source-row">
                 {sourceRef.video_ts !== undefined && media.video_path && (

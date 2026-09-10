@@ -806,7 +806,41 @@
   color: var(--rose);
 }
 .sim-ses-q-opt.wrong .sim-ses-q-opt-letter { color: var(--rose); }
-.sim-ses-q-opt.dim { opacity: .45; }
+/* .45 effaçait à moitié une proposition qui porte désormais sa justification,
+   celle qu'on vient justement lire quand on a hésité. */
+.sim-ses-q-opt.dim { opacity: .75; }
+
+/* La justification propre à la proposition passe sur sa propre ligne, sous le
+   texte. La rangée est en flex : on l'autorise à passer à la ligne et on donne
+   à la justification toute la largeur, alignée sur le texte plutôt que sur la
+   lettre. `order` garde la coche de validation sur la première ligne, sinon
+   elle serait reléguée en dessous. */
+/* row-gap: 0 parce que le `gap: 14px` de la rangée s'applique aussi ENTRE les
+   lignes une fois le retour à la ligne autorisé : 14 px de gouttière plus mes
+   6 px de marge creusaient une bande vide de 20 px entre la proposition et sa
+   justification. La marge seule suffit. */
+.sim-ses-q-opt { flex-wrap: wrap; row-gap: 0; }
+.sim-ses-q-opt.correct::after { order: 2; }
+
+/* Le verdict prend la couleur de son état : bleu quand c'est vrai, rouge quand
+   c'est faux et coché, gris quand la proposition est fausse et n'a pas été
+   cochée. Il était bleu dans les trois cas, c'est-à-dire de la couleur qui
+   veut dire « bonne réponse ». Le rouge est assombri pour rester lisible à
+   10,5 px sur le fond rosé. */
+.sim-ses-q-opt.wrong .sim-ses-q-opt-mark { color: #8E3434; }
+[data-theme="dark"] .sim-ses-q-opt.wrong .sim-ses-q-opt-mark { color: #E39B9B; }
+.sim-ses-q-opt.dim .sim-ses-q-opt-mark { color: var(--gray); }
+.sim-ses-q-opt-why {
+  order: 3;
+  flex: 0 0 100%;
+  margin: 6px 0 0 36px;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--gray);
+}
 
 /* Explication (Apprentissage) */
 .sim-ses-explain {

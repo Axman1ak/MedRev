@@ -45,6 +45,12 @@ export interface AiQuestion {
   options: string[]
   answer: number[] | number  // number = legacy, [number] ou plus = nouveau format
   explanation: string
+  // Une justification par proposition, dans le MÊME ordre que `options`.
+  // Mélangée avec elles à la génération, donc impossible à désynchroniser.
+  // Absente des questions générées avant 2026-09 : celles-là n'ont qu'une
+  // explication globale, dont les renvois par lettre ne valent plus rien
+  // (voir src/lib/qcmText.ts).
+  why?: string[]
   // Forme objet (post-2026-05) ou string (legacy data) ou absent.
   source_ref?: AiQuestionSourceRef | string | null
   // Compteurs cumulés sur les sessions QCM par fiche (incrémentés à chaque

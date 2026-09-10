@@ -247,6 +247,9 @@ type SanitizedQuestion = {
   options: string[]
   answer: number[]
   explanation: string
+  // Une justification par option, alignée sur `options`. Absente si l'IA ne
+  // l'a pas fournie ou l'a fournie mal formée.
+  why?: string[]
   source_ref: { pdf_page?: number; video_ts?: number } | null
 }
 
@@ -255,6 +258,14 @@ type SanitizedQuestion = {
 // Strip le préfixe "A. ", "B. " etc., shuffle, puis ré-applique A-E dans
 // l'ordre nouveau. Le tableau `answer` est remappé pour pointer sur les
 // nouvelles positions des bonnes réponses.
+//
+// ATTENTION · tout ce qui désigne une option par sa POSITION doit être remappé
+// ici, sinon ça pointe à côté après le mélange. C'est exactement ce qui est
+// arrivé au champ "explanation" : écrit par l'IA avant le mélange, il citait
+// « A est faux » en parlant d'une proposition qui n'était plus la A, et le
+// mélange n'était mémorisé nulle part. D'où `why`, aligné sur les options et
+// permuté avec elles, et une consigne qui interdit désormais les lettres dans
+// le texte libre.
 function reletterAndShuffleOptions(q: SanitizedQuestion): SanitizedQuestion {
   // Strip le préfixe lettré au début de chaque option
   const stripped = q.options.map(opt => opt.replace(/^\s*[A-E][.)]\s*/, '').trim())
@@ -278,7 +289,12 @@ function reletterAndShuffleOptions(q: SanitizedQuestion): SanitizedQuestion {
   // ascendants (plus propre côté UI).
   const newAnswer = q.answer.map(origPos => idx.indexOf(origPos)).filter(i => i >= 0).sort((a, b) => a - b)
 
-  return { ...q, options: newOptions, answer: newAnswer }
+  // Les justifications suivent leur option, à la même place qu'elle.
+  const newWhy = q.why && q.why.length === stripped.length
+    ? idx.map(origPos => q.why![origPos])
+    : undefined
+
+  return { ...q, options: newOptions, answer: newAnswer, why: newWhy }
 }
 
 function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
@@ -307,6 +323,18 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
     answerArr = Array.from(new Set(answerArr)).sort((a, b) => a - b)
 
     const explanation = String(r.explanation || '').trim()
+
+    // `why` : une justification par option, dans l'ordre des options. On
+    // n'accepte le tableau que s'il est COMPLET et de la bonne longueur : un
+    // tableau partiel se décalerait au mélange, ce qui est précisément le bug
+    // qu'on répare. Incomplet = on préfère rien.
+    let why: string[] | undefined
+    const rawWhy = r.why ?? r.justifications
+    if (Array.isArray(rawWhy) && rawWhy.length === options.length) {
+      const cleaned = (rawWhy as unknown[]).map(v => String(v ?? '').trim())
+      if (cleaned.every(s => s.length > 0)) why = cleaned
+    }
+
     if (!question) continue
     // RÈGLE STRICTE : exactement 5 options par question (standard PASS médecine).
     if (options.length !== 5) continue
@@ -333,7 +361,7 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
 
     // Shuffle des options pour neutraliser le biais positionnel de Gemini.
     const shuffled = reletterAndShuffleOptions({
-      question, options, answer: answerArr, explanation, source_ref: sourceRef,
+      question, options, answer: answerArr, explanation, why, source_ref: sourceRef,
     })
 
     out.push(shuffled)
@@ -590,20 +618,40 @@ ${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déj�
 - Pas de questions évidentes ou triviales.
 - Langue : français médical rigoureux.
 
+CORRECTION · RÈGLE ABSOLUE, NE JAMAIS CITER DE LETTRE :
+Les propositions sont RÉORDONNÉES AU HASARD après ta réponse, avant d'être montrées à l'étudiante. Une lettre que tu écris ne désignera donc plus la même proposition. « A est faux », « la réponse B », « A, C et E sont exactes » : tout cela sera faux à l'écran et induira l'étudiante en erreur.
+- "why" : un TABLEAU de EXACTEMENT 5 justifications, une par proposition, dans le MÊME ORDRE que "options". Chaque justification commence par « Vrai · » ou « Faux · » suivi de la raison, en une phrase. Elle doit se suffire à elle-même, sans jamais renvoyer à une autre proposition.
+- "explanation" : la synthèse à retenir de la question, 1 à 2 phrases, SANS AUCUNE lettre de proposition. Tu peux citer la page ou le moment de la source.
+- Les lettres des noms médicaux restent normales : vitamine D, hépatite B, immunoglobuline E.
+
 RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks), exactement ce format :
 [
   {
     "question": "Parmi les propositions suivantes concernant la glycolyse, lesquelles sont exactes ?",
     "options": ["A. Elle se déroule dans la mitochondrie", "B. Elle produit 2 ATP nets par molécule de glucose", "C. La phosphofructokinase en est l'enzyme régulatrice", "D. Elle nécessite de l'oxygène", "E. Le pyruvate en est le produit final"],
     "answer": [1, 2, 4],
-    "explanation": "B (2 ATP nets), C (PFK régulatrice), E (pyruvate produit). A faux : cytosol. D faux : anaérobie.",
+    "why": [
+      "Faux · la glycolyse se déroule entièrement dans le cytosol, pas dans la mitochondrie.",
+      "Vrai · 4 ATP produits moins 2 ATP consommés à l'étape d'amorçage, soit 2 ATP nets.",
+      "Vrai · la phosphofructokinase-1 catalyse l'étape irréversible et limitante de la voie.",
+      "Faux · la glycolyse fonctionne sans oxygène, c'est une voie anaérobie.",
+      "Vrai · chaque glucose donne deux molécules de pyruvate en fin de voie."
+    ],
+    "explanation": "La glycolyse est une voie cytosolique anaérobie qui produit 2 ATP nets et 2 pyruvates par glucose, régulée par la phosphofructokinase-1. Cf cours p.4.",
     "source_ref": { "pdf_page": 4, "video_ts": 528 }
   },
   {
     "question": "Quel est le ratio insuline/glucagon à jeun chez un sujet sain ?",
     "options": ["A. 10/1", "B. 1/1", "C. 0,4/1", "D. 0,1/1", "E. 4/1"],
     "answer": [2],
-    "explanation": "À jeun, le ratio descend autour de 0,4/1 pour favoriser la libération de glucose. Cf cours p.12.",
+    "why": [
+      "Faux · un ratio de 10/1 correspond à la période postprandiale, pas au jeûne.",
+      "Faux · un ratio de 1/1 traduit un état d'équilibre qui ne correspond à aucune des deux situations.",
+      "Vrai · à jeun le ratio descend autour de 0,4/1 pour favoriser la libération de glucose.",
+      "Faux · 0,1/1 est un effondrement qu'on n'observe pas chez le sujet sain.",
+      "Faux · 4/1 reste un profil de sécrétion insulinique élevée, incompatible avec le jeûne."
+    ],
+    "explanation": "À jeun, la balance bascule vers le glucagon pour maintenir la glycémie, avec un ratio autour de 0,4/1. Cf cours p.12.",
     "source_ref": { "pdf_page": 12 }
   }
 ]
@@ -617,7 +665,11 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
     const genBody = JSON.stringify({
       contents: [{ parts }],
       generationConfig: {
-        maxOutputTokens: 16000,  // 30 QCM détaillés ≈ 7-9k tokens, marge confortable
+        // Chaque question porte maintenant 5 justifications en plus de son
+        // explication, soit à peu près le double de texte qu'avant. À 16000 un
+        // lot de 30 questions se faisait couper en plein milieu, et une réponse
+        // tronquée n'est plus du JSON valide : toute la génération échouait.
+        maxOutputTokens: 40000,
         temperature: 0.3,
         responseMimeType: 'application/json',
       },

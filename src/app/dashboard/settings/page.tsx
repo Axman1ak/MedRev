@@ -491,12 +491,6 @@ export default function SettingsPage() {
         {tab === 'etudes' && (
         <section className="set-card" id="set-annee">
           <div className="set-card-h">Année d&apos;études</div>
-          <p className="set-card-sub">
-            MedRev n&apos;affiche que l&apos;année que tu suis en ce moment. Quand tu montes d&apos;année,
-            tes matières précédentes sortent du tableau de bord, du calendrier et du simulateur,
-            mais elles ne sont pas supprimées : reviens sur l&apos;année ici et tout réapparaît,
-            fiches, QCM, paliers et statistiques compris.
-          </p>
 
           <div className="set-year-current">
             <span className="set-year-current-badge">{yearLabel(currentYear)}</span>
@@ -538,10 +532,6 @@ export default function SettingsPage() {
             })}
           </div>
 
-          <p className="set-hint">
-            Ton temps de travail et ta bibliothèque ne sont pas remis à zéro : ils comptent
-            l&apos;ensemble de ton parcours, toutes années confondues.
-          </p>
         </section>
         )}
 
@@ -549,7 +539,6 @@ export default function SettingsPage() {
         {tab === 'compte' && (
         <section className="set-card" id="set-profil">
           <div className="set-card-h">Profil</div>
-          <p className="set-card-sub">Ton identité dans l&apos;application : nom affiché, pseudo et faculté.</p>
 
           <div className="set-row">
             <label className="set-label">Nom</label>
@@ -605,7 +594,6 @@ export default function SettingsPage() {
         {tab === 'compte' && (
         <section className="set-card" id="set-compte">
           <div className="set-card-h">Compte et sécurité</div>
-          <p className="set-card-sub">Ton email de connexion, ton mot de passe et ta session.</p>
 
           <div className="set-row">
             <label className="set-label">Email de connexion</label>
@@ -676,7 +664,6 @@ export default function SettingsPage() {
         {tab === 'apparence' && (
         <section className="set-card" id="set-apparence">
           <div className="set-card-h">Apparence et ambiance</div>
-          <p className="set-card-sub">Le thème de l&apos;interface et les sons de la bibliothèque.</p>
 
           <div className="set-row">
             <label className="set-label">Thème</label>
@@ -747,7 +734,6 @@ export default function SettingsPage() {
         {tab === 'compte' && (
         <section className="set-card" id="set-aide">
           <div className="set-card-h">Aide</div>
-          <p className="set-card-sub">Besoin de te rafraîchir la mémoire sur le fonctionnement du site ?</p>
 
           <div className="set-row set-row-inline">
             <div>
@@ -778,7 +764,7 @@ export default function SettingsPage() {
         {tab === 'etudes' && (
         <section className="set-card" id="set-bareme">
           <div className="set-card-h">Barème du simulateur</div>
-          <p className="set-card-sub">Comment les QCM du simulateur sont notés. Par défaut on applique le barème standard ; change-le si ta fac utilise un autre système.</p>
+          <p className="set-card-sub">Par défaut, le barème standard. Change-le si ta fac en utilise un autre.</p>
           <div className="set-bareme-grid">
             <button type="button" className={`set-bareme-opt${scoringPref === '' ? ' on' : ''}`} onClick={() => chooseScoring('')}>
               <strong>Automatique</strong>
