@@ -23,15 +23,28 @@ export interface YearOption {
 }
 
 // Cursus médecine français après la réforme : PASS/LAS puis DFGSM puis DFASM.
-// On garde les libellés courts que les étudiants emploient réellement (P2, D1)
-// et on rappelle le nom officiel à côté.
+// On garde les libellés courts que les étudiants emploient réellement et on
+// rappelle le nom officiel à côté.
+//
+// ATTENTION AU DÉCOMPTE. Le « P » ne va que jusqu'à 2 : il n'existe pas de P3.
+// La troisième année, DFGSM3, s'appelle D1 chez les étudiants, et le D continue
+// ensuite jusqu'à D4. La liste contenait donc une année qui n'existe pas, et
+// décalait toute la série D d'un cran : D1 était donné pour la quatrième année
+// alors que c'est la troisième.
+//
+//   P1   PASS ou LAS   1re année
+//   P2   DFGSM2        2e année
+//   D1   DFGSM3        3e année   ← le passage du P au D se fait ici
+//   D2   DFASM1        4e année
+//   D3   DFASM2        5e année
+//   D4   DFASM3        6e année
 export const YEARS: YearOption[] = [
   { id: 'P1', label: 'P1', hint: 'PASS ou LAS · première année' },
   { id: 'P2', label: 'P2', hint: 'DFGSM2 · deuxième année' },
-  { id: 'P3', label: 'P3', hint: 'DFGSM3 · troisième année' },
-  { id: 'D1', label: 'D1', hint: 'DFASM1 · quatrième année' },
-  { id: 'D2', label: 'D2', hint: 'DFASM2 · cinquième année' },
-  { id: 'D3', label: 'D3', hint: 'DFASM3 · sixième année' },
+  { id: 'D1', label: 'D1', hint: 'DFGSM3 · troisième année' },
+  { id: 'D2', label: 'D2', hint: 'DFASM1 · quatrième année' },
+  { id: 'D3', label: 'D3', hint: 'DFASM2 · cinquième année' },
+  { id: 'D4', label: 'D4', hint: 'DFASM3 · sixième année' },
 ]
 
 /** Année par défaut. Doit rester alignée sur le DEFAULT de la migration SQL. */
@@ -41,6 +54,14 @@ export const DEFAULT_YEAR = 'P1'
  * Ramène n'importe quelle valeur à une année connue.
  * Couvre les colonnes absentes d'un SELECT partiel, les comptes créés avant la
  * migration, et toute valeur inattendue venant de la base.
+ *
+ * AVANT DE RETIRER UNE ANNÉE DE LA LISTE : une valeur inconnue est ramenée
+ * silencieusement sur P1. Les matières d'une étudiante restées sur l'ancienne
+ * valeur réapparaîtraient donc mélangées à sa P1, sans qu'elle comprenne
+ * pourquoi, ce qui trahit la promesse « on ne supprime jamais rien ». Le retrait
+ * de P3 était sans risque parce que la base ne contenait que des P1, vérifié le
+ * 10 septembre 2026. Ce ne sera pas forcément vrai la prochaine fois : compte
+ * d'abord les valeurs en base, et prévois une migration si besoin.
  */
 export function normalizeYear(value: unknown): string {
   const v = typeof value === 'string' ? value.trim().toUpperCase() : ''
