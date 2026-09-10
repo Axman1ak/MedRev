@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import { toDateStr, todayStr } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver, normalizeSchedule } from '@/lib/schedule'
@@ -52,7 +53,7 @@ function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
   const d = new Date(lesson.learn_date + 'T12:00:00')
   d.setDate(d.getDate() + j[i])
-  return d.toISOString().split('T')[0]
+  return toDateStr(d)
 }
 
 type StampState =
@@ -244,7 +245,7 @@ export default function FichesPage() {
   const [schedDayInput, setSchedDayInput] = useState('')
   const [schedSaving, setSchedSaving] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayStr()
 
   useEffect(() => {
     if (typeof window === 'undefined') return

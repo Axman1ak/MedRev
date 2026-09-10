@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson, TdEvent } from '@/types'
+import { toDateStr } from '@/types'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
@@ -78,9 +79,11 @@ function addDaysToDate(date: Date, days: number): Date {
   return d
 }
 
-function toDateStr(d: Date): string {
-  return d.toISOString().split('T')[0]
-}
+// toDateStr vient maintenant de @/types : c'est la date LOCALE, pas la date
+// UTC. La version locale de ce fichier rendait la date UTC, si bien que chaque
+// colonne de la semaine, posée à minuit heure française, était rattachée à la
+// veille du numéro qu'elle affichait. D'où « Aujourd'hui » et les révisions
+// dans la mauvaise case, et un jour d'écart avec le tableau de bord.
 
 // "14:00:00" → "14h" · "14:30:00" → "14h30" · null → ''
 function fmtTdTime(t: string | null): string {
@@ -437,7 +440,7 @@ export default function CalendarPage() {
         if (tdRepeatUntil && tdRepeatUntil > tdDate) {
           let d = tdDate
           while (dates.length < 30) {
-            d = addDaysToDate(new Date(d + 'T12:00:00'), 7).toISOString().split('T')[0]
+            d = toDateStr(addDaysToDate(new Date(d + 'T12:00:00'), 7))
             if (d > tdRepeatUntil) break
             dates.push(d)
           }

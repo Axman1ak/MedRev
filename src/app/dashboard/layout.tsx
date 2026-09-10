@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import { toDateStr, todayStr } from '@/types'
 import { normalizeYear, yearLabel } from '@/lib/year'
 import { makeScheduleResolver } from '@/lib/schedule'
 import OnboardingTour from '@/components/OnboardingTour'
@@ -161,7 +162,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!profile) return
     let cancelled = false
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayStr()
     // Le badge ne compte que l'année d'études en cours. Sinon une fiche de P1
     // dont un palier tombe aujourd'hui viendrait gonfler le compteur d'un
     // étudiant passé en P2.
@@ -200,7 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const d = new Date(l.learn_date + 'T12:00:00')
           d.setDate(d.getDate() + off)
           // Un palier reporté est dû à sa nouvelle date, pas à la date théorique.
-          const due = postpones[String(i)] ?? d.toISOString().split('T')[0]
+          const due = postpones[String(i)] ?? toDateStr(d)
           if (due === today) cnt++
         })
       })

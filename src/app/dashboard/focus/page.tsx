@@ -17,6 +17,7 @@ import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nex
 import { playBookOpen, playBookClose, playStamp, playWhoosh } from '@/lib/sounds'
 import LiveBook from '@/components/LiveBook'
 import type { System, Lesson } from '@/types'
+import { toDateStr, todayStr } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
@@ -75,7 +76,7 @@ type Phase = 'loading' | 'lobby' | 'session' | 'done' | 'empty'
 function dateStrFromOffset(base: string, offset: number): string {
   const d = new Date(base + 'T12:00:00')
   d.setDate(d.getDate() + offset)
-  return d.toISOString().split('T')[0]
+  return toDateStr(d)
 }
 
 function formatBookDate(d: string): string {
@@ -677,7 +678,7 @@ function FocusPageBody() {
   // le pop + burst du SVG). null = pas de cascade (affichage direct).
   const [bilanReveal, setBilanReveal] = useState<number | null>(null)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayStr()
 
   // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
   // Persisté en localStorage avec clé 'medrev-garden' (sans date). Cultivé toute l'année.
@@ -791,7 +792,7 @@ function FocusPageBody() {
     const intv = setInterval(() => {
       const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
       const cur = dayGardenRef.current
-      const dk = new Date().toISOString().split('T')[0]
+      const dk = todayStr()
       const next: DayBibliothecaState = {
         ...cur,
         elapsedMs: totalElapsed,

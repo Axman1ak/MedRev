@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
+import { toDateStr, todayStr } from '@/types'
 import SubjectIcon from '@/components/SubjectIcon'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
@@ -88,7 +89,7 @@ function officialCount(lesson: Lesson): number {
 function shiftDate(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T12:00:00')
   d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
+  return toDateStr(d)
 }
 
 // ===================== DÛ AUJOURD'HUI =====================
@@ -111,7 +112,7 @@ function isDueToday(l: Lesson, today: string, j: number[] = DEFAULT_J): boolean 
     if (skips.includes(i)) continue
     const d = new Date(l.learn_date + 'T12:00:00')
     d.setDate(d.getDate() + j[i])
-    const dd = postpones[String(i)] ?? d.toISOString().split('T')[0]
+    const dd = postpones[String(i)] ?? toDateStr(d)
     return dd <= today
   }
   return false
@@ -168,7 +169,7 @@ function buildYearHeatmap(activityIndex: Map<string, number>, today: string): He
     for (let d = 0; d < 7; d++) {
       const date = new Date(thisMonday)
       date.setDate(thisMonday.getDate() - w * 7 + d)
-      const ds = date.toISOString().split('T')[0]
+      const ds = toDateStr(date)
       week.push({
         date: ds,
         count: activityIndex.get(ds) ?? 0,
@@ -348,7 +349,7 @@ export default function StatsPage() {
   // Temps de révision par jour (gardens.day_log) — règle des 10 minutes.
   const [dayLog, setDayLog] = useState<Record<string, number>>({})
 
-  const today = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const today = useMemo(() => todayStr(), [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

@@ -10,6 +10,7 @@ import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
 import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson, TdEvent } from '@/types'
+import { toDateStr, todayStr } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
@@ -62,7 +63,7 @@ type WeekDay = { label: string; date: string; active: boolean; isToday: boolean;
 function dateStrFromOffset(base: string, offset: number): string {
   const d = new Date(base + 'T12:00:00')
   d.setDate(d.getDate() + offset)
-  return d.toISOString().split('T')[0]
+  return toDateStr(d)
 }
 
 function daysBetween(a: string, b: string): number {
@@ -248,7 +249,7 @@ function computeWeek(activeDays: Set<string>, today: string): WeekDay[] {
   for (let i = 0; i < 7; i++) {
     const t = new Date(d)
     t.setDate(d.getDate() + mondayOffset + i)
-    const dateStr = t.toISOString().split('T')[0]
+    const dateStr = toDateStr(t)
     out.push({
       label: labels[i],
       date: dateStr,
@@ -276,7 +277,7 @@ function computeHeatmap(activeDays: Set<string>, today: string, weeksBack: numbe
     for (let i = 0; i < 7; i++) {
       const t = new Date(d)
       t.setDate(d.getDate() + mondayOffset + i - w * 7)
-      const dateStr = t.toISOString().split('T')[0]
+      const dateStr = toDateStr(t)
       week.push({
         date: dateStr,
         active: activeDays.has(dateStr),
@@ -301,7 +302,7 @@ function computeUpcomingLoad(lessons: Lesson[], today: string, schedOf: (id: str
   for (let w = 0; w < 4; w++) {
     const s = new Date(d)
     s.setDate(d.getDate() + nextMondayOffset + w * 7)
-    weekStarts.push(s.toISOString().split('T')[0])
+    weekStarts.push(toDateStr(s))
   }
   const counts = [0, 0, 0, 0]
   for (const l of lessons) {
@@ -522,7 +523,7 @@ export default function DashboardPage() {
   const [todayTds, setTodayTds] = useState<TdEvent[]>([])
   useEffect(() => {
     if (!userId) return
-    const dateStr = new Date().toISOString().split('T')[0]
+    const dateStr = todayStr()
     supabase
       .from('td_events')
       .select('*')
@@ -543,7 +544,7 @@ export default function DashboardPage() {
   // cacherait douze fiches derrière un bouton alors qu'un coup de pouce suffit.
   const isNarrow = useIsNarrow(900)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayStr()
 
   const firstName = profile?.name?.split(' ')[0] ?? ''
 
@@ -1063,7 +1064,7 @@ function WeakModal({
                       {m.fragile.map(f => {
                         const fCls = scoreClass(f.avg)
                         const nextLabel = f.nextRevDate
-                          ? (f.nextRevDate === new Date().toISOString().split('T')[0]
+                          ? (f.nextRevDate === todayStr()
                               ? "aujourd'hui"
                               : `prochaine ${formatDateFR(f.nextRevDate)}`)
                           : ''

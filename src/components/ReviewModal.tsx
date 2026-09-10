@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia } from '@/types'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
+import { toDateStr, todayStr } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import { DEFAULT_J } from '@/lib/schedule'
 import './review-modal.css'
@@ -39,7 +40,7 @@ function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
   const d = new Date(lesson.learn_date + 'T12:00:00')
   d.setDate(d.getDate() + j[i])
-  return d.toISOString().split('T')[0]
+  return toDateStr(d)
 }
 
 function getStampState(lesson: Lesson, i: number, today: string, j: number[] = DEFAULT_J): StampState {
@@ -70,7 +71,7 @@ function lessonPostpones(l: Lesson): Record<string, string> {
 function tomorrowOf(today: string): string {
   const t = new Date(today + 'T12:00:00')
   t.setDate(t.getDate() + 1)
-  return t.toISOString().split('T')[0]
+  return toDateStr(t)
 }
 
 // Durée en hMM ou MM min
@@ -191,7 +192,7 @@ export default function ReviewModal({
   // dernier mot pour la transcription vidéo).
   const [userPlan, setUserPlan] = useState<'free' | 'pro' | null>(null)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayStr()
 
   // Synchronise uniquement si on ouvre sur une AUTRE fiche (id différent) ou un autre J.
   useEffect(() => {

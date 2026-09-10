@@ -313,13 +313,35 @@ export const FREE_LIMIT = 15
 export function jLabel(i: number): string {
   return i === 0 ? 'J0' : `J+${J_STEPS[i]}`
 }
+/**
+ * La date du calendrier telle que l'étudiante la lit sur son téléphone,
+ * au format AAAA-MM-JJ.
+ *
+ * NE JAMAIS revenir à `toISOString().split('T')[0]` pour ça. toISOString rend
+ * la date en UTC, pas celle de la personne. En France l'été il y a deux heures
+ * d'écart, donc :
+ *   · une date posée à minuit local (le début d'une journée du calendrier)
+ *     ressortait à 22 h la VEILLE, et toute la grille se retrouvait décalée
+ *     d'un jour par rapport aux numéros affichés ;
+ *   · entre minuit et 2 h du matin, « aujourd'hui » renvoyait hier, ce qui
+ *     n'est pas anodin pour quelqu'un qui révise tard.
+ *
+ * Les dates ancrées à midi ne changent pas de valeur en passant par ici : la
+ * fonction est donc sûre partout, y compris là où l'ancien calcul marchait.
+ */
+export function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 export function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T12:00:00')
   d.setDate(d.getDate() + n)
-  return d.toISOString().split('T')[0]
+  return toDateStr(d)
 }
 export function todayStr(): string {
-  return new Date().toISOString().split('T')[0]
+  return toDateStr(new Date())
 }
 export function fmtDate(s: string | null): string {
   if (!s) return '—'
