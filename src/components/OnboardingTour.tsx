@@ -686,9 +686,12 @@ export default function OnboardingTour({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        if (window.confirm('Quitter le tutoriel ? Tu pourras le revoir depuis Paramètres.')) {
-          handleSkip()
-        }
+        // Avant : window.confirm(). Une boîte de dialogue native au milieu
+        // d'une interface soignée fait bricolage, et elle demandait une
+        // confirmation pour une action sans conséquence (le tutoriel se
+        // relance depuis les Réglages). Échap ferme, comme le bouton
+        // « Passer le tutoriel » juste à côté.
+        handleSkip()
       } else if (e.key === 'ArrowRight' && !isWaitClick && !shouldForceCreate) {
         next()
       } else if (e.key === 'ArrowLeft' && stepIdx > 0) {

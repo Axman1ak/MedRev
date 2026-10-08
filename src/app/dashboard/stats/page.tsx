@@ -23,6 +23,7 @@ import { buildSubjectColorMap } from '@/lib/subjectColors'
 import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
+import { currentSemestre } from '@/lib/semestre'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const COVERED_AT = 3 // une fiche est "couverte" à partir de 3 paliers officiels
@@ -343,7 +344,7 @@ export default function StatsPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
-  const [semestre, setSemestre] = useState<Semestre>(2)
+  const [semestre, setSemestre] = useState<Semestre>(currentSemestre)
   const [isPro, setIsPro] = useState(false)
   const [examDate, setExamDate] = useState('')
   // Temps de révision par jour (gardens.day_log) — règle des 10 minutes.
@@ -354,7 +355,7 @@ export default function StatsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    const s: Semestre = raw === '1' ? 1 : raw === 'year' ? 'year' : 2
+    const s: Semestre = raw === '1' ? 1 : raw === '2' ? 2 : raw === 'year' ? 'year' : currentSemestre()
     setSemestre(s)
     setExamDate(localStorage.getItem('medrev-exam-date') ?? '')
 

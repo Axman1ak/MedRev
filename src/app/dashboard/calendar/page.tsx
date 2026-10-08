@@ -15,6 +15,7 @@ import { normalizeYear, scopeToYear } from '@/lib/year'
 import type { TdKind } from '@/types'
 import { useIsNarrow } from '@/lib/useNarrow'
 import PageLoader from '@/components/PageLoader'
+import { currentSemestre } from '@/lib/semestre'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -161,7 +162,7 @@ export default function CalendarPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
   const [weekOffset, setWeekOffset] = useState(0)
   const [monthOffset, setMonthOffset] = useState(0)
   const [view, setView] = useState<'week' | 'month'>('week')
@@ -225,7 +226,7 @@ export default function CalendarPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
+    setSemester(raw === '1' ? 1 : raw === '2' ? 2 : raw === 'year' ? 'year' : currentSemestre())
     function handler(e: Event) {
       const detail = (e as CustomEvent<1 | 2 | 'year'>).detail
       if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)

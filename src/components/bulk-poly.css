@@ -1,0 +1,127 @@
+/* src/components/bulk-poly.css
+   Dépôt groupé de polys. Classes préfixées .bulk- : en App Router toutes les
+   feuilles importées finissent dans le même document, et un nom générique
+   (.row, .modal) entre en collision avec une autre page tôt ou tard.
+   Couleurs via les tokens du thème, donc le mode sombre suit tout seul. */
+
+.bulk-overlay {
+  /* Au-dessus de 200 : le bouton burger du dashboard est en position fixed à
+     z-index 200 et passait par-dessus le titre de la modale sur téléphone. */
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(10, 16, 26, .55);
+  backdrop-filter: blur(2px);
+}
+
+.bulk-modal {
+  width: min(760px, 100%);
+  max-height: min(82vh, 760px);
+  display: flex; flex-direction: column;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-subtle, #E8E6E0);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(10, 16, 26, .22);
+  overflow: hidden;
+}
+
+.bulk-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border-subtle, #E8E6E0);
+}
+.bulk-title { font-size: 17px; font-weight: 600; color: var(--text-primary, #1A1A1A); }
+.bulk-sub { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--text-secondary, #5C5C5A); }
+.bulk-close {
+  flex: none; width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--border-subtle, #E8E6E0); background: none;
+  font-size: 19px; line-height: 1; color: var(--text-secondary, #5C5C5A); cursor: pointer;
+}
+.bulk-close:hover { background: var(--bg-app, #FAFAF7); }
+
+/* ---- Zone de dépôt ---- */
+.bulk-drop {
+  margin: 22px; padding: 44px 24px;
+  border: 1.5px dashed var(--border-strong, #D2CFC7);
+  border-radius: 14px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.bulk-drop:hover, .bulk-drop.on {
+  border-color: var(--accent-primary, #1B3A5B);
+  background: color-mix(in srgb, var(--accent-primary, #1B3A5B) 5%, transparent);
+}
+.bulk-drop-main { font-size: 15px; font-weight: 600; color: var(--text-primary, #1A1A1A); }
+.bulk-drop-sub { margin-top: 5px; font-size: 13px; color: var(--text-secondary, #5C5C5A); }
+.bulk-drop-note { margin-top: 14px; font-size: 12px; color: var(--text-secondary, #5C5C5A); }
+
+/* ---- Liste de revue ---- */
+.bulk-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 22px; }
+
+.bulk-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle, #E8E6E0);
+}
+.bulk-row:last-child { border-bottom: none; }
+.bulk-row.ok { opacity: .62; }
+
+.bulk-file { flex: 1 1 auto; min-width: 0; }
+.bulk-file-name {
+  font-size: 14px; color: var(--text-primary, #1A1A1A);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bulk-file-meta {
+  margin-top: 3px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-secondary, #5C5C5A);
+}
+
+.bulk-tag {
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--bg-app, #FAFAF7);
+  border: 1px solid var(--border-subtle, #E8E6E0);
+  font-size: 11px;
+}
+.bulk-tag.warn {
+  border-color: color-mix(in srgb, var(--danger, #B85B5B) 45%, transparent);
+  color: var(--danger, #B85B5B);
+}
+
+.bulk-target { flex: 0 0 272px; display: flex; justify-content: flex-end; }
+.bulk-select {
+  width: 100%; padding: 7px 9px;
+  border: 1px solid var(--border-subtle, #E8E6E0); border-radius: 9px;
+  background: var(--bg-card, #FFFFFF); color: var(--text-primary, #1A1A1A);
+  font-size: 13px;
+}
+.bulk-select:disabled { opacity: .5; }
+.bulk-ok { font-size: 13px; color: var(--success, #2D6A4F); }
+.bulk-err { font-size: 12px; color: var(--danger, #B85B5B); text-align: right; }
+
+/* ---- Pied ---- */
+.bulk-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 22px; border-top: 1px solid var(--border-subtle, #E8E6E0);
+}
+.bulk-foot:empty { display: none; }
+.bulk-count { font-size: 13px; color: var(--text-secondary, #5C5C5A); }
+.bulk-btn {
+  padding: 9px 18px; border: none; border-radius: 10px;
+  background: var(--accent-primary, #1B3A5B); color: #fff;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.bulk-btn:disabled { opacity: .45; cursor: default; }
+
+/* En sombre, --accent-primary devient un bleu clair (#5AA9E6) : du texte blanc
+   dessus passe sous le seuil de contraste. globals.css applique déjà
+   color:#0E1726 aux boutons pleins accentués (.fi-btn-g, .qcm-next…) ; on suit
+   la même règle plutôt que d'inventer une exception. */
+[data-theme="dark"] .bulk-btn { color: #0E1726; }
+
+/* ---- Téléphone ---- */
+@media (max-width: 720px) {
+  .bulk-overlay { padding: 0; }
+  .bulk-modal { max-height: 100vh; height: 100vh; border-radius: 0; border: none; }
+  .bulk-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .bulk-target { flex: none; }
+  .bulk-err { text-align: left; }
+}

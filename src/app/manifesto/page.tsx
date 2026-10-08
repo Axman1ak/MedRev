@@ -130,12 +130,18 @@ export default function ManifestoPage() {
         </section>
 
         <div className="manifesto-sign">
-          <div className="manifesto-sign-avatar">M</div>
+          {/* Signé par une personne, plus par « L'équipe MedRev ».
+              Les CGU nomment déjà l'éditeur : un collectif anonyme d'un côté
+              et un nom de l'autre, ça se remarque. Et face à une association
+              étudiante, un étudiant qui construit un outil est une bien
+              meilleure histoire qu'une équipe qu'on ne peut pas nommer. */}
+          <div className="manifesto-sign-avatar">L</div>
           <div>
-            <div className="manifesto-sign-name">L&apos;équipe MedRev</div>
+            <div className="manifesto-sign-name">Lou Bonnefoy</div>
             <div className="manifesto-sign-role">
-              On a construit MedRev parce que personne ne construisait
-              l&apos;outil qu&apos;on aurait voulu pour la P1.
+              Étudiant, et seul développeur de MedRev. J&apos;ai construit cet
+              outil parce que personne ne construisait celui que j&apos;aurais
+              voulu avoir.
             </div>
           </div>
         </div>

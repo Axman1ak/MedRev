@@ -11,6 +11,7 @@
 import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
+import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 import {
   FREE_AI_GENERATIONS_LIMIT,
   FREE_SIMULATOR_SESSIONS_LIMIT,
@@ -26,6 +27,12 @@ export const metadata = {
 }
 
 export default function PricingPublicPage() {
+  // Offres payantes coupées (voir src/lib/offres.ts) : on sert une page
+  // courte et honnête plutôt que de laisser des prix affichés qu'on ne peut
+  // pas encaisser. La version complète est conservée intacte en dessous et
+  // revient dès que la constante repasse à true.
+  if (!OFFRES_PAYANTES_OUVERTES) return <PricingGratuit />
+
   return (
     <div className="lp-page ln-doc">
       <MarketingNav current="pricing" />
@@ -235,6 +242,107 @@ function CompareRow({ feat, free, pro }: { feat: string; free: string; pro: stri
       <div className="lp-compare-feat">{feat}</div>
       <div className={`lp-compare-cell${dash ? ' dash' : ''}`}>{free}</div>
       <div className="lp-compare-cell pro">{pro}</div>
+    </div>
+  )
+}
+
+// =============================================================
+// VERSION GRATUITE — affichée tant que les offres payantes sont coupées
+// =============================================================
+function PricingGratuit() {
+  return (
+    <div className="lp-page ln-doc">
+      <MarketingNav current="pricing" />
+
+      <section className="ln-subhero">
+        <span className="ln-kicker">Tarifs</span>
+        <h1 className="ln-subhero-h1">
+          Pour l&apos;instant,
+          <span className="ln-line2"><em>tout est gratuit.</em></span>
+        </h1>
+        <p className="ln-subhero-sub">
+          MedRev est développé par un étudiant, seul. Tant que c&apos;est le cas,
+          l&apos;app reste gratuite et sans publicité.
+        </p>
+      </section>
+
+      <section className="lp-section" style={{ paddingTop: 56 }}>
+        {/* La grille est en 3 colonnes par défaut : avec une seule carte, elle
+            resterait collée à gauche. On la ramène à une colonne centrée. */}
+        <div className="lp-pricing-teaser" style={{ gridTemplateColumns: 'minmax(0, 380px)', justifyContent: 'center' }}>
+          <div className="lp-pt-card featured">
+            <div className="lp-pt-tag">Tout le monde</div>
+            <h3 className="lp-pt-name">Gratuit</h3>
+            <div className="lp-pt-price">0<em>€</em></div>
+            <div className="lp-pt-period">sans carte bancaire</div>
+            <p className="lp-pt-desc">
+              Tes matières, tes fiches, ton planning de révisions et tes QCM
+              générés depuis tes cours.
+            </p>
+            <ul className="lp-pt-list">
+              <li>Matières et fiches illimitées</li>
+              <li>Courbe J + notation 1-5</li>
+              <li>Calendrier et TD de fac</li>
+              <li>Bibliothèque + Focus illimités</li>
+              <li>QCM générés depuis tes cours</li>
+              <li>Simulateur d&apos;examen</li>
+            </ul>
+            <Link href="/auth" className="lp-btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+              Créer mon compte →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="lp-section" style={{ paddingTop: 8 }}>
+        <div className="lp-faq" style={{ maxWidth: 680, margin: '0 auto' }}>
+          <details className="lp-faq-item" open>
+            <summary>Ça restera gratuit ?</summary>
+            <p>
+              Une formule payante arrivera, probablement autour des
+              fonctionnalités qui comptent à l&apos;approche du concours. Ce qui
+              sert tous les jours, les fiches et le planning, restera gratuit.
+              Rien ne sera retiré à qui que ce soit sans prévenir.
+            </p>
+          </details>
+          <details className="lp-faq-item">
+            <summary>Où est le piège ?</summary>
+            <p>
+              Il n&apos;y en a pas. Pas de publicité, pas de revente de données,
+              pas de carte bancaire demandée. MedRev a besoin d&apos;étudiants
+              qui l&apos;utilisent vraiment et qui disent ce qui ne va pas, bien
+              plus que d&apos;un abonnement de plus.
+            </p>
+          </details>
+          <details className="lp-faq-item">
+            <summary>Et mes données si j&apos;arrête ?</summary>
+            <p>
+              Tu peux supprimer ton compte depuis les Réglages, et tout part
+              avec. Rien n&apos;est conservé, rien n&apos;est revendu. Le détail
+              est dans la politique de confidentialité.
+            </p>
+          </details>
+          <details className="lp-faq-item">
+            <summary>Je suis au bureau d&apos;un tutorat, comment on en parle ?</summary>
+            <p>
+              Écris à <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+              MedRev ne produit aucun contenu de cours et ne remplace ni vos
+              polys, ni vos khôlles.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section className="lp-cta">
+        <h2 className="lp-cta-h2">Commence maintenant.</h2>
+        <p className="lp-cta-sub">Deux minutes pour créer ton compte et poser tes premières fiches.</p>
+        <div className="lp-cta-buttons">
+          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
+          <Link href="/methode" className="lp-btn-secondary">Voir la méthode</Link>
+        </div>
+      </section>
+
+      <MarketingFooter />
     </div>
   )
 }

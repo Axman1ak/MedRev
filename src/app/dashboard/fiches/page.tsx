@@ -12,6 +12,8 @@ import { DEFAULT_J, scheduleOf, makeScheduleResolver, normalizeSchedule } from '
 import './styles.css'
 import { normalizeYear, scopeToYear, DEFAULT_YEAR, YEARS, yearLabel } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
+import { currentSemestre } from '@/lib/semestre'
+import BulkPolyUpload from '@/components/BulkPolyUpload'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
@@ -166,6 +168,9 @@ export default function FichesPage() {
   // au rechargement suivant.
   const [currentYear, setCurrentYear] = useState<string>(DEFAULT_YEAR)
   const [yearLoaded, setYearLoaded] = useState(false)
+  // Dépôt groupé de polys : le vrai goulot du produit est que le cours
+  // n'arrive jamais sur la fiche (330 fiches sur 380 sans cours en prod).
+  const [showBulk, setShowBulk] = useState(false)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
@@ -174,7 +179,7 @@ export default function FichesPage() {
   const [showDueOnly, setShowDueOnly] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState('')
-  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
 
   // Create modals
   const [showNewSystem, setShowNewSystem] = useState(false)
@@ -250,7 +255,7 @@ export default function FichesPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
+    setSemester(raw === '1' ? 1 : raw === '2' ? 2 : raw === 'year' ? 'year' : currentSemestre())
     const onSem = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)
@@ -765,6 +770,14 @@ export default function FichesPage() {
               </button>
             )}
             <div className="fi-add-group">
+              <button
+                type="button"
+                className="fi-btn-o"
+                onClick={() => setShowBulk(true)}
+                title="Déposer plusieurs polys d'un coup"
+              >
+                Déposer mes polys
+              </button>
               <button
                 data-tour="add-system"
                 className="fi-btn-o"
@@ -1568,6 +1581,19 @@ export default function FichesPage() {
             </div>
           </div>
         </div>
+      )}
+      {showBulk && userId && (
+        <BulkPolyUpload
+          userId={userId}
+          systems={semSystems}
+          lessons={lessons.filter(l => semSystems.some(sy => sy.id === l.system_id))}
+          onClose={() => setShowBulk(false)}
+          onUpdated={majs => {
+            // Mise à jour en place : recharger toute la page ferait perdre la
+            // matière sélectionnée et la position de défilement.
+            setLessons(ls => ls.map(l => majs.find(m => m.id === l.id) ?? l))
+          }}
+        />
       )}
     </>
   )

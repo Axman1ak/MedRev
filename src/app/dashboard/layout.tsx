@@ -8,6 +8,7 @@ import { toDateStr, todayStr } from '@/types'
 import { normalizeYear, yearLabel } from '@/lib/year'
 import { makeScheduleResolver } from '@/lib/schedule'
 import OnboardingTour from '@/components/OnboardingTour'
+import { currentSemestre } from '@/lib/semestre'
 
 // Breakpoint mobile (en dessous : sidebar slide-in avec burger).
 const MOBILE_BREAKPOINT = 768
@@ -57,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [todayCount, setTodayCount] = useState(0)
-  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
 
   const [tourOpen, setTourOpen] = useState(false)
   const [replayKey, setReplayKey] = useState(0)
@@ -70,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    const s: 1 | 2 | 'year' = raw === '1' ? 1 : raw === 'year' ? 'year' : 2
+    const s: 1 | 2 | 'year' = raw === '1' ? 1 : raw === '2' ? 2 : raw === 'year' ? 'year' : currentSemestre()
     setSemester(s)
   }, [])
 

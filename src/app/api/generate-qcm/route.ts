@@ -662,17 +662,29 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
     parts.push({ text: prompt })
 
     // 6. Generate — avec réessais sur surcharge temporaire de l'IA (503/429/500).
-    const genBody = JSON.stringify({
+    // Plafond de « réflexion » du modèle. Sans ce réglage, gemini-2.5-flash
+    // part en thinking dynamique et CHAQUE token de réflexion est facturé au
+    // tarif de sortie (le plus cher). C'est le premier poste de coût d'une
+    // génération. 2048 laisse de la marge pour un lot de 30 questions tout en
+    // bornant la facture ; 0 désactiverait la réflexion (moins cher, mais on
+    // n'y touche pas sans avoir comparé la qualité des QCM produits).
+    const THINKING_BUDGET = 2048
+    const genConfig: Record<string, unknown> = {
+      // Chaque question porte maintenant 5 justifications en plus de son
+      // explication, soit à peu près le double de texte qu'avant. À 16000 un
+      // lot de 30 questions se faisait couper en plein milieu, et une réponse
+      // tronquée n'est plus du JSON valide : toute la génération échouait.
+      maxOutputTokens: 40000,
+      temperature: 0.3,
+      responseMimeType: 'application/json',
+    }
+    // thinkingConfig n'existe que sur la famille 2.5. L'envoyer au modèle de
+    // repli 2.0 ferait échouer la requête, donc on compose le corps par modèle.
+    const bodyFor = (model: string) => JSON.stringify({
       contents: [{ parts }],
-      generationConfig: {
-        // Chaque question porte maintenant 5 justifications en plus de son
-        // explication, soit à peu près le double de texte qu'avant. À 16000 un
-        // lot de 30 questions se faisait couper en plein milieu, et une réponse
-        // tronquée n'est plus du JSON valide : toute la génération échouait.
-        maxOutputTokens: 40000,
-        temperature: 0.3,
-        responseMimeType: 'application/json',
-      },
+      generationConfig: model.startsWith('gemini-2.5')
+        ? { ...genConfig, thinkingConfig: { thinkingBudget: THINKING_BUDGET } }
+        : genConfig,
     })
     // Un 503 = capacité serveur de Google saturée (indépendant du tier payant).
     // Parade : réessai court PUIS bascule sur un modèle de repli si le principal
@@ -688,7 +700,7 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
         const r = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: genBody,
+          body: bodyFor(model),
         })
         if (r.ok) { genResp = r; break }
         lastStatus = r.status

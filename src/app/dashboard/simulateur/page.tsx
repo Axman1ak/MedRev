@@ -18,6 +18,8 @@ import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
 import { cleanExplanation, whyFor } from '@/lib/qcmText'
+import ReportQuestion from '@/components/ReportQuestion'
+import { currentSemestre } from '@/lib/semestre'
 
 type Semestre = 1 | 2 | 'year'
 type Mode = 'apprentissage' | 'examen'
@@ -36,6 +38,9 @@ interface Question {
   // Absente des questions générées avant 2026-09.
   why?: string[]
   lessonId?: string
+  // Index de la question dans le tableau ai_questions de sa fiche. Sert au
+  // signalement : sans lui, un rapport ne désigne aucune question précise.
+  qIndex?: number
   lessonName?: string
   systemName?: string
   systemId?: string
@@ -151,7 +156,8 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
   const raw = lesson.ai_questions as unknown[]
   if (!Array.isArray(raw) || raw.length === 0) return []
   const out: Question[] = []
-  for (const r of raw) {
+  for (let rIdx = 0; rIdx < raw.length; rIdx++) {
+    const r = raw[rIdx]
     if (!r || typeof r !== 'object') continue
     const q = r as Record<string, unknown>
     const question = (q.question as string) || (q.q as string) || ''
@@ -193,6 +199,7 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
       explanation,
       why,
       lessonId: lesson.id,
+      qIndex: rIdx,
       lessonName: lesson.name,
       systemName,
       systemId,
@@ -232,7 +239,7 @@ export default function SimulateurPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [semester, setSemester] = useState<Semestre>(2)
+  const [semester, setSemester] = useState<Semestre>(currentSemestre)
   const [userId, setUserId] = useState<string | null>(null)
 
   // Annales (source 3 de l'étape 2) : rows de la table annales.
@@ -340,7 +347,7 @@ export default function SimulateurPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
+    setSemester(raw === '1' ? 1 : raw === '2' ? 2 : raw === 'year' ? 'year' : currentSemestre())
     const onSem = (e: Event) => {
       const detail = (e as CustomEvent<Semestre>).detail
       if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)
@@ -1417,6 +1424,24 @@ export default function SimulateurPage() {
                 )
               })}
             </div>
+
+            {/* Signalement : disponible dès que la correction est visible, dans
+                les DEUX modes. Le composant existait mais n'était branché que
+                sur les QCM de fiche, alors qu'une question fausse se croise
+                tout autant en simulateur. */}
+            {isRevealed && (
+              <ReportQuestion
+                lessonId={q.lessonId ?? null}
+                source="simulateur"
+                questionIndex={q.qIndex ?? -1}
+                question={{
+                  question: q.question,
+                  options: q.options,
+                  answer: q.answer,
+                  explanation: q.explanation ?? '',
+                }}
+              />
+            )}
 
             {mode === 'apprentissage' && !isRevealed && (
               <div className="sim-ses-nav" style={{ marginTop: 18 }}>

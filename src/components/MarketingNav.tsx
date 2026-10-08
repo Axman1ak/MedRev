@@ -12,8 +12,11 @@ export default function MarketingNav({ current = null }: { current?: Current }) 
   return (
     <>
       <div className="lp-banner">
-        <strong>Disponible</strong> pour la rentrée 2026 ·
-        <Link href="/pricing">Voir les formules →</Link>
+        {/* Pas de date dans ce bandeau : « rentrée 2026 » y est resté
+            affiché jusqu'en septembre 2026, où il donnait l'impression d'un
+            produit pas encore sorti. Un bandeau permanent ne se périme pas. */}
+        <strong>Gratuit</strong> pour commencer ·
+        <Link href="/pricing">Voir ce qui est inclus →</Link>
       </div>
       <nav className="lp-nav">
         <Link href="/" className="lp-logo">Med<span>·Rev</span></Link>

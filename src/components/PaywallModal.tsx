@@ -25,6 +25,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 import './paywall-modal.css'
 
 export type PaywallQuota = 'ai_generations' | 'simulator_sessions' | 'video_size' | 'pdf_size'
@@ -131,34 +132,54 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
           </div>
         )}
 
-        <div className="pw-benefits">
-          <div className="pw-benefits-h">Avec Premium tu débloques</div>
-          <ul className="pw-benefits-list">
-            {PREMIUM_BENEFITS.map((b) => (
-              <li key={b}>
-                <span className="pw-benefits-mark" aria-hidden="true">✓</span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Tant que les offres payantes sont coupées (src/lib/offres.ts), on ne
+            vante pas un Premium qu'on ne vend pas et on n'envoie pas vers une
+            page de tarifs vide. On dit la vérité et on ouvre une porte : écrire. */}
+        {OFFRES_PAYANTES_OUVERTES ? (
+          <>
+            <div className="pw-benefits">
+              <div className="pw-benefits-h">Avec Premium tu débloques</div>
+              <ul className="pw-benefits-list">
+                {PREMIUM_BENEFITS.map((b) => (
+                  <li key={b}>
+                    <span className="pw-benefits-mark" aria-hidden="true">✓</span>
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-        <div className="pw-actions">
-          <button
-            type="button"
-            className="pw-btn pw-btn-ghost"
-            onClick={onClose}
-          >
-            Plus tard
-          </button>
-          <Link
-            href="/dashboard/pricing"
-            className="pw-btn pw-btn-primary"
-            onClick={onClose}
-          >
-            Découvrir Premium →
-          </Link>
-        </div>
+            <div className="pw-actions">
+              <button type="button" className="pw-btn pw-btn-ghost" onClick={onClose}>
+                Plus tard
+              </button>
+              <Link href="/dashboard/pricing" className="pw-btn pw-btn-primary" onClick={onClose}>
+                Découvrir Premium →
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="pw-intro">
+              Il n&apos;y a pas d&apos;abonnement en vente pour le moment : MedRev
+              est gratuit. Si cette limite te bloque vraiment dans tes révisions,
+              écris-moi et on la lève sur ton compte.
+            </p>
+
+            <div className="pw-actions">
+              <button type="button" className="pw-btn pw-btn-ghost" onClick={onClose}>
+                Fermer
+              </button>
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('MedRev · limite atteinte')}`}
+                className="pw-btn pw-btn-primary"
+                onClick={onClose}
+              >
+                Écrire →
+              </a>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

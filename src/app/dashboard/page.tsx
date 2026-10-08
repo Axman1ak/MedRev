@@ -17,6 +17,7 @@ import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import { useIsNarrow } from '@/lib/useNarrow'
 import PageLoader from '@/components/PageLoader'
+import { currentSemestre } from '@/lib/semestre'
 
 const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
@@ -517,7 +518,7 @@ export default function DashboardPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [reviewLesson, setReviewLesson] = useState<Lesson | null>(null)
-  const [semester, setSemester] = useState<1 | 2 | 'year'>(2)
+  const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
   const [showTodayModal, setShowTodayModal] = useState(false)
   // TD du jour (table td_events) — affichés en tête du panneau Fiches du jour.
   const [todayTds, setTodayTds] = useState<TdEvent[]>([])
@@ -589,7 +590,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = localStorage.getItem('medrev-sem')
-    setSemester(raw === '1' ? 1 : raw === 'year' ? 'year' : 2)
+    setSemester(raw === '1' ? 1 : raw === '2' ? 2 : raw === 'year' ? 'year' : currentSemestre())
     function handler(e: Event) {
       const detail = (e as CustomEvent<1 | 2 | 'year'>).detail
       if (detail === 1 || detail === 2 || detail === 'year') setSemester(detail)

@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
+import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 import {
   FREE_AI_GENERATIONS_LIMIT,
   FREE_SIMULATOR_SESSIONS_LIMIT,
@@ -94,6 +95,36 @@ function PricingContent() {
   }
 
   const isPro = profile?.plan === 'pro'
+
+  // Offres payantes coupées (src/lib/offres.ts) : on n'affiche pas de plans
+  // qu'on ne peut pas encaisser. Les comptes déjà Premium gardent leur plan,
+  // on le leur dit simplement ici.
+  if (!OFFRES_PAYANTES_OUVERTES && !loading) {
+    return (
+      <div className="pri-page">
+        <div className="pri-wrap">
+          <header className="pri-head">
+            <div className="pri-kicker">Ton plan</div>
+            <h1 className="pri-h1">
+              {isPro ? <>Ton accès <em>Premium</em> est actif</> : <>Tout est <em>gratuit</em> pour l&apos;instant</>}
+            </h1>
+            <p className="pri-sub">
+              {isPro
+                ? "Tu gardes l'accès complet, sans rien à faire et sans rien à payer."
+                : "Aucun abonnement n'est en vente aujourd'hui. Tes fiches, ton planning, tes QCM et le simulateur sont accessibles sans carte bancaire."}
+            </p>
+          </header>
+
+          <div className="pri-banner pri-banner-info" role="status">
+            Une formule payante arrivera, autour des fonctionnalités qui comptent
+            à l&apos;approche du concours. Ce qui sert tous les jours restera
+            gratuit. Une question ?{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

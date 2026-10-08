@@ -16,6 +16,7 @@ import { getStoredTheme, setTheme as setStoredTheme } from '@/lib/theme'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import './styles.css'
 import PageLoader from '@/components/PageLoader'
+import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 
 type TabId = 'etudes' | 'compte' | 'apparence' | 'abonnement'
 
@@ -405,34 +406,50 @@ export default function SettingsPage() {
 
           {!isPro && (
             <>
+              {/* Tant que les offres payantes sont coupées (src/lib/offres.ts),
+                  Réglages ne doit pas rester le dernier endroit du site qui
+                  vend un Premium qu'on ne vend pas. Les jauges de quota, elles,
+                  restent utiles : elles disent où on en est. */}
               <p className="set-abo-pitch">
-                Le plan Gratuit te donne accès au cœur de la méthode. Premium
-                enlève toutes les limites pour réviser sans jamais t&apos;arrêter.
+                {OFFRES_PAYANTES_OUVERTES
+                  ? "Le plan Gratuit te donne accès au cœur de la méthode. Premium enlève toutes les limites pour réviser sans jamais t'arrêter."
+                  : "MedRev est gratuit, sans abonnement en vente et sans publicité. Tu as accès à tout : tes fiches, ton planning, tes QCM et le simulateur."}
               </p>
 
-              <div className="set-abo-perks">
-                {PREMIUM_PERKS.map(p => (
-                  <div key={p.title} className="set-abo-perk">
-                    <span className="set-abo-perk-check" aria-hidden="true">✓</span>
-                    <div>
-                      <strong>{p.title}</strong>
-                      <span>{p.sub}</span>
+              {OFFRES_PAYANTES_OUVERTES && (
+                <div className="set-abo-perks">
+                  {PREMIUM_PERKS.map(p => (
+                    <div key={p.title} className="set-abo-perk">
+                      <span className="set-abo-perk-check" aria-hidden="true">✓</span>
+                      <div>
+                        <strong>{p.title}</strong>
+                        <span>{p.sub}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div className="set-abo-quotas">
-                <div className="set-abo-quotas-lbl">Où tu en es sur tes quotas Gratuit</div>
+                <div className="set-abo-quotas-lbl">Où tu en es sur tes quotas</div>
                 <QuotaBar label="Générations QCM IA" used={aiUsed} limit={FREE_AI_GENERATIONS_LIMIT} />
                 <QuotaBar label="Sessions simulateur" used={simUsed} limit={FREE_SIMULATOR_SESSIONS_LIMIT} />
               </div>
 
               <div className="set-abo-cta-row">
-                <Link href="/dashboard/pricing" className="set-abo-cta">
-                  Passer à Premium →
-                </Link>
-                <span className="set-abo-cta-note">Sans engagement, résiliable en deux clics.</span>
+                {OFFRES_PAYANTES_OUVERTES ? (
+                  <>
+                    <Link href="/dashboard/pricing" className="set-abo-cta">
+                      Passer à Premium →
+                    </Link>
+                    <span className="set-abo-cta-note">Sans engagement, résiliable en deux clics.</span>
+                  </>
+                ) : (
+                  <span className="set-abo-cta-note">
+                    Si l&apos;une de ces limites te bloque dans tes révisions, écris à{' '}
+                    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> et on la lève sur ton compte.
+                  </span>
+                )}
               </div>
             </>
           )}

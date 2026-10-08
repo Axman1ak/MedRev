@@ -20,6 +20,7 @@ import Link from 'next/link'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
 import BibliothecaSvg from '@/components/BibliothecaSvg'
+import { OFFRES_PAYANTES_OUVERTES } from '@/lib/offres'
 import './landing-styles.css'
 import './landing-night.css'
 
@@ -277,20 +278,42 @@ export default function LandingPage() {
       </section>
 
       {/* ============ PRICING TEASER ============ */}
+      {/* Les offres payantes sont coupées (src/lib/offres.ts) : afficher 69 €/an
+          sur la page d'accueil alors que rien n'est en vente serait la première
+          chose qu'un visiteur essaierait, et la première qui échouerait. */}
       <section className="ln-pricing">
         <div className="ln-pricing-card rv">
-          <div className="ln-pricing-col">
-            <div className="ln-pricing-name">Gratuit</div>
-            <div className="ln-pricing-price">0 €</div>
-            <p>Fiches et planning illimités · 10 générations IA · 3 sessions simulateur</p>
-          </div>
-          <div className="ln-pricing-sep" aria-hidden="true" />
-          <div className="ln-pricing-col">
-            <div className="ln-pricing-name">Premium</div>
-            <div className="ln-pricing-price">69 €<small>/an</small></div>
-            <p>IA illimitée · examens blancs · plan jusqu&apos;aux examens · vidéos longues</p>
-          </div>
-          <Link href="/pricing" className="ln-btn-ghost ln-pricing-cta">Comparer →</Link>
+          {OFFRES_PAYANTES_OUVERTES ? (
+            <>
+              <div className="ln-pricing-col">
+                <div className="ln-pricing-name">Gratuit</div>
+                <div className="ln-pricing-price">0 €</div>
+                <p>Fiches et planning illimités · 10 générations IA · 3 sessions simulateur</p>
+              </div>
+              <div className="ln-pricing-sep" aria-hidden="true" />
+              <div className="ln-pricing-col">
+                <div className="ln-pricing-name">Premium</div>
+                <div className="ln-pricing-price">69 €<small>/an</small></div>
+                <p>IA illimitée · examens blancs · plan jusqu&apos;aux examens · vidéos longues</p>
+              </div>
+              <Link href="/pricing" className="ln-btn-ghost ln-pricing-cta">Comparer →</Link>
+            </>
+          ) : (
+            <>
+              <div className="ln-pricing-col">
+                <div className="ln-pricing-name">Gratuit</div>
+                <div className="ln-pricing-price">0 €</div>
+                <p>Tout MedRev, sans carte bancaire et sans publicité</p>
+              </div>
+              <div className="ln-pricing-sep" aria-hidden="true" />
+              <div className="ln-pricing-col">
+                <div className="ln-pricing-name">Pourquoi</div>
+                <div className="ln-pricing-price">·</div>
+                <p>Développé par un étudiant, seul. Ce qui sert tous les jours restera gratuit.</p>
+              </div>
+              <Link href="/pricing" className="ln-btn-ghost ln-pricing-cta">En savoir plus →</Link>
+            </>
+          )}
         </div>
       </section>
 

@@ -12,6 +12,7 @@ import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import { toDateStr, todayStr } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import { DEFAULT_J } from '@/lib/schedule'
+import { countPdfPages } from '@/lib/pdf'
 import './review-modal.css'
 
 type Score = 1 | 2 | 3 | 4 | 5
@@ -111,25 +112,6 @@ function getVideoDuration(file: File): Promise<number> {
 
 // Compte approximatif des pages d'un PDF en regex sur le binaire (latin1).
 // Suffisant pour des PDF générés normalement. Renvoie null si échec.
-async function countPdfPages(file: File): Promise<number | null> {
-  try {
-    const buf = await file.arrayBuffer()
-    const arr = new Uint8Array(buf)
-    let str = ''
-    const chunk = 65536
-    for (let i = 0; i < arr.length; i += chunk) {
-      const end = Math.min(i + chunk, arr.length)
-      // String.fromCharCode est limité en taille de stack — on chunke
-      let part = ''
-      for (let j = i; j < end; j++) part += String.fromCharCode(arr[j])
-      str += part
-    }
-    const matches = str.match(/\/Type\s*\/Page[^s]/g)
-    return matches ? matches.length : null
-  } catch {
-    return null
-  }
-}
 
 function getExt(name: string, fallback = 'bin'): string {
   const m = name.match(/\.([^.]+)$/)

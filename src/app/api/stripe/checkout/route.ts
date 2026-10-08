@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import { OFFRES_PAYANTES_OUVERTES } from '@/lib/offres'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
 
@@ -28,6 +29,18 @@ const VALID_PLANS = ['monthly', 'yearly'] as const
 type StripePlan = typeof VALID_PLANS[number]
 
 export async function POST(req: NextRequest) {
+  // Garde-fou serveur : tant que les offres payantes sont coupées
+  // (src/lib/offres.ts), aucune session de paiement ne doit pouvoir s'ouvrir,
+  // même si quelqu'un appelle la route directement. L'interface ne propose
+  // plus rien, mais une route de paiement joignable reste une route de
+  // paiement.
+  if (!OFFRES_PAYANTES_OUVERTES) {
+    return NextResponse.json(
+      { error: "Les abonnements ne sont pas ouverts pour le moment. MedRev est gratuit." },
+      { status: 403 },
+    )
+  }
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })

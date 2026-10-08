@@ -29,7 +29,7 @@ export default function CguPage() {
 
         <section className="legal-section">
           <h2 className="legal-h2">1. Éditeur</h2>
-          <p>Le service MedRev (ci-après « le Service ») est édité par Lou Bonnefoy, étudiant, contact : <a href="mailto:medrev.fr@gmail.com">medrev.fr@gmail.com</a>.</p>
+          <p>Le service MedRev (ci-après « le Service ») est édité par Lou Bonnefoy, étudiant, contact : <a href="mailto:medrev.fr@gmail.com">medrev.fr@gmail.com</a>. Les informations complètes figurent dans les <Link href="/mentions-legales">mentions légales</Link>.</p>
           <p>L&apos;hébergement est assuré par Vercel Inc. (États-Unis) pour l&apos;application web et Supabase (Europe, Paris) pour la base de données et les fichiers.</p>
         </section>
 
@@ -46,15 +46,16 @@ export default function CguPage() {
         </section>
 
         <section className="legal-section">
-          <h2 className="legal-h2">4. Plans et tarification</h2>
-          <p>Le Service propose un plan Gratuit aux fonctionnalités principales accessibles sans paiement. Des plans Premium payants (mensuel à 9,99 € TTC, annuel à 69 € TTC) débloquent l&apos;usage illimité de l&apos;IA, du simulateur, et l&apos;accès aux statistiques avancées.</p>
-          <p>Les paiements sont traités par Stripe Inc. MedRev ne stocke aucune donnée bancaire. Les abonnements sont renouvelés automatiquement à échéance, sauf résiliation par l&apos;utilisateur depuis son espace Stripe.</p>
+          <h2 className="legal-h2">4. Tarification</h2>
+          <p>Le Service est actuellement <strong>gratuit dans son intégralité</strong>. Aucun abonnement payant n&apos;est proposé à la souscription, aucune donnée bancaire n&apos;est demandée, et le Service n&apos;affiche aucune publicité.</p>
+          <p>Des formules payantes pourront être introduites ultérieurement. Elles feront l&apos;objet d&apos;une information préalable des utilisateurs et d&apos;une mise à jour des présentes conditions, y compris des informations qu&apos;un service payant doit publier (identification complète de l&apos;éditeur, médiateur de la consommation, modalités de rétractation et de résiliation).</p>
+          <p>Les comptes disposant d&apos;un accès complet accordé avant cette date le conservent, sans contrepartie financière.</p>
         </section>
 
         <section className="legal-section">
-          <h2 className="legal-h2">5. Résiliation et droit de rétractation</h2>
-          <p>Conformément aux articles L221-18 et suivants du Code de la consommation, l&apos;utilisateur dispose d&apos;un délai de 14 jours pour exercer son droit de rétractation à compter de la souscription d&apos;un plan payant.</p>
-          <p>L&apos;utilisateur peut résilier son abonnement à tout moment depuis son espace client Stripe. La résiliation prend effet à la fin de la période payée. Aucun remboursement prorata n&apos;est effectué pour les abonnements en cours, hors cas de rétractation légale.</p>
+          <h2 className="legal-h2">5. Fin d&apos;utilisation</h2>
+          <p>Le Service étant gratuit, aucun engagement ni aucune résiliation d&apos;abonnement ne sont en jeu. L&apos;utilisateur peut cesser d&apos;utiliser MedRev à tout moment.</p>
+          <p>La suppression définitive du compte et de l&apos;ensemble des données associées est disponible directement dans les Réglages. Elle est immédiate et sans condition.</p>
         </section>
 
         <section className="legal-section">
