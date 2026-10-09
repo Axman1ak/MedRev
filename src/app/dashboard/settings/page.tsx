@@ -464,23 +464,22 @@ export default function SettingsPage() {
   // allers-retours.
   const GROUPES: {
     titre: string
-    lignes: { id: Vue; sous: string; valeur?: string; teinte: string }[]
+    lignes: { id: Vue; valeur?: string; teinte: string }[]
   }[] = [
     {
       titre: 'Compte',
       lignes: [
-        { id: 'profil', sous: 'Prénom, nom d’utilisateur, faculté', teinte: 'bleu' },
-        { id: 'securite', sous: 'Email, mot de passe, suppression', teinte: 'gris' },
-        { id: 'abonnement', sous: 'Formule et quotas', valeur: isPro ? 'Premium' : 'Gratuit', teinte: 'or' },
+        { id: 'profil', teinte: 'bleu' },
+        { id: 'securite', teinte: 'gris' },
+        { id: 'abonnement', valeur: isPro ? 'Premium' : 'Gratuit', teinte: 'or' },
       ],
     },
     {
       titre: 'Mes études',
       lignes: [
-        { id: 'annee', sous: 'Celle que tu révises en ce moment', valeur: yearLabel(currentYear), teinte: 'bleu' },
+        { id: 'annee', valeur: yearLabel(currentYear), teinte: 'bleu' },
         {
           id: 'bareme',
-          sous: 'Comment le simulateur compte les points',
           valeur: scoringPref ? SCORING_SYSTEMS[scoringPref as ScoringSystemId].label : 'Automatique',
           teinte: 'bleu',
         },
@@ -489,9 +488,9 @@ export default function SettingsPage() {
     {
       titre: 'Application',
       lignes: [
-        { id: 'apparence', sous: 'Thème et sons', valeur: theme === 'dark' ? 'Sombre' : 'Clair', teinte: 'violet' },
-        { id: 'aide', sous: 'Revoir la prise en main', teinte: 'gris' },
-        { id: 'contact', sous: 'Une question, un bug, un QCM à signaler', teinte: 'gris' },
+        { id: 'apparence', valeur: theme === 'dark' ? 'Sombre' : 'Clair', teinte: 'violet' },
+        { id: 'aide', teinte: 'gris' },
+        { id: 'contact', teinte: 'gris' },
       ],
     },
   ]
@@ -522,10 +521,7 @@ export default function SettingsPage() {
                       <span className={`set-ligne-ico ${ligne.teinte}`} aria-hidden="true">
                         {ICONES[ligne.id]}
                       </span>
-                      <span className="set-ligne-txt">
-                        <strong>{TITRES[ligne.id]}</strong>
-                        <em>{ligne.sous}</em>
-                      </span>
+                      <span className="set-ligne-txt">{TITRES[ligne.id]}</span>
                       {ligne.valeur ? <span className="set-ligne-val">{ligne.valeur}</span> : null}
                       <span className="set-ligne-chev" aria-hidden="true">›</span>
                     </button>

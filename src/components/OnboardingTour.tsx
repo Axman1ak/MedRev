@@ -74,11 +74,6 @@ interface Step {
   // côté = max(width, height) + 2*spotPad et applique border-radius: 50%.
   spotShape?: 'rect' | 'circle'
   dimmed?: boolean // par défaut true pour walkthrough/wait-click, false pour tooltip-only
-  blockTargetClicks?: boolean // si true, bloque les clics à l'intérieur du target pendant cette étape
-  blockSelectors?: string[] // sélecteurs additionnels à bloquer pendant cette étape (ex: bouton Créer pendant l'explication du form)
-  // Sélecteurs à bloquer dans la version "alt" (= user avec fiches existantes
-  // sur un step waitForCreate). Permet de bloquer DIFFÉREMMENT selon le profil.
-  blockSelectorsAlt?: string[]
   // Si true, le tour avance automatiquement quand le selector disparaît du DOM
   // (ex: le user crée OU annule la matière → le form se ferme → on avance)
   autoAdvanceOnUnmount?: boolean
@@ -161,18 +156,12 @@ const STEPS: Step[] = [
         <br />
         <strong>Semestre</strong> : pour t&apos;organiser entre S1 et S2.
         <br /><br />
-        Pendant le tutoriel, le bouton <strong>Créer la matière</strong> est
-        désactivé. Clique sur <strong>Annuler</strong> pour continuer le tour.
+        Tu peux la créer maintenant si tu veux, ou passer : le tour continue
+        dans les deux cas.
       </>
     ),
     tipPos: 'right',
     spotPad: 8,
-    // Bloque les DEUX boutons : Créer (pas de matière à créer dans le tour)
-    // et Annuler (l'user doit cliquer Suivant dans le tour pour avancer).
-    blockSelectors: [
-      '[data-tour="matiere-create"]',
-      '[data-tour="matiere-cancel"]',
-    ],
   },
   // Note 2026-05-15 : l'ancien step "Ferme le formulaire matière" a été retiré
   // pour raccourcir le tour. Le formulaire matière se ferme via autoAdvance
@@ -230,11 +219,6 @@ const STEPS: Step[] = [
     tipPos: 'right',
     spotPad: 8,
     waitForCreate: 'lesson',
-    // New user (force creation) : bloque Annuler, laisse Créer.
-    blockSelectors: ['[data-tour="fiche-cancel"]'],
-    // Returning user (alt content) : bloque Créer ET Annuler, l'user
-    // doit cliquer Suivant dans le tour pour avancer.
-    blockSelectorsAlt: ['[data-tour="fiche-create"]', '[data-tour="fiche-cancel"]'],
   },
   // Note 2026-05-15 : l'ancien step "Ferme le formulaire fiche" a été retiré
   // pour raccourcir le tour. Le formulaire se ferme via Créer (new user) ou
@@ -268,13 +252,11 @@ const STEPS: Step[] = [
         d&apos;aujourd&apos;hui</strong> sont notables. Les J{' '}
         <strong>futurs</strong> sont verrouillés. Ils se débloquent à la bonne date.
         <br /><br />
-        (Pendant le tutoriel, ces paliers sont juste pour la démo :
-        clique <strong>Suivant</strong> pour continuer.)
+        Essaie d'en noter un si tu veux, ou passe à la suite.
       </>
     ),
     tipPos: 'right',
     spotPad: 6,
-    blockTargetClicks: true,
   },
   {
     kind: 'walkthrough',
@@ -521,7 +503,6 @@ export default function OnboardingTour({
 
   const isWaitClick = cur.kind === 'wait-click'
   const isTooltipOnly = cur.kind === 'tooltip-only'
-  const isWalkthrough = cur.kind === 'walkthrough'
   const isCelebration = cur.kind === 'celebration'
   const isWaitingForCreate = !!cur.waitForCreate
   // shouldForceCreate : on force la création UNIQUEMENT si l'user n'a pas
@@ -592,50 +573,27 @@ export default function OnboardingTour({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx])
 
-  // ---------- Click blocker pour les walkthrough avec interactions sensibles ----------
-  // Deux mécanismes :
-  //   - blockTargetClicks=true : bloque tout clic à l'intérieur du target principal
-  //   - blockSelectors=[...] : bloque les clics matchant ces sélecteurs spécifiques
-  //
-  // Pour les steps waitForCreate, on n'applique blockSelectors QUE si on force
-  // la création (shouldForceCreate). Sinon (user a des fiches), on laisse tout
-  // cliquable — le user peut Annuler librement.
+  // ---------- La barre reste dépliée quand le tour la désigne ----------
+  // Le rail fait 76 px et ne s'ouvre qu'au survol. Dès qu'on éloignait la
+  // souris pour cliquer « Suivant », il se repliait : la cible changeait de
+  // taille, donc le projecteur et la bulle sautaient. On le force ouvert
+  // pendant les étapes qui parlent de la barre.
+  // Volontairement SANS `rect` dans les dépendances : le projecteur se
+  // recalcule toutes les 800 ms avec un nouvel objet, donc l'effet se
+  // rejouerait aussi souvent, et son nettoyage retirerait la classe une image
+  // sur deux — le rail clignoterait. On relit la cible à intervalle court à la
+  // place, et classList.toggle avec la même valeur ne fait rien.
   useEffect(() => {
-    const targetBlocked = cur.blockTargetClicks && cur.selector
-    // Pour waitForCreate avec user qui a déjà des fiches (alt content),
-    // on utilise blockSelectorsAlt (bloque Créer ET Annuler).
-    // Pour waitForCreate avec new user (force creation), blockSelectors
-    // (bloque Annuler, laisse Créer cliquable).
-    const effectiveBlockSelectors =
-      cur.waitForCreate && !shouldForceCreate
-        ? cur.blockSelectorsAlt
-        : cur.blockSelectors
-    const selectorsBlocked =
-      effectiveBlockSelectors && effectiveBlockSelectors.length > 0
-    if (!targetBlocked && !selectorsBlocked) return
-
-    function blockClick(e: MouseEvent) {
-      const target = e.target as HTMLElement | null
-      if (!target) return
-      if (targetBlocked && target.closest(cur.selector!)) {
-        e.stopPropagation()
-        e.preventDefault()
-        return
-      }
-      if (selectorsBlocked) {
-        for (const sel of effectiveBlockSelectors!) {
-          if (target.closest(sel)) {
-            e.stopPropagation()
-            e.preventDefault()
-            return
-          }
-        }
-      }
+    const rail = document.querySelector('.db-sidebar')
+    if (!rail) return
+    const appliquer = () => {
+      const cible = cur.selector ? document.querySelector(cur.selector) : null
+      rail.classList.toggle('tour-open', !!cible && rail.contains(cible))
     }
-    document.addEventListener('click', blockClick, true)
-    return () => document.removeEventListener('click', blockClick, true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIdx, shouldForceCreate])
+    appliquer()
+    const id = setInterval(appliquer, 400)
+    return () => { clearInterval(id); rail.classList.remove('tour-open') }
+  }, [stepIdx, cur.selector])
 
   // ---------- Compute spotlight rect ----------
   const computeRect = useCallback(() => {
@@ -822,10 +780,9 @@ export default function OnboardingTour({
               Tu as fermé le formulaire sans créer de {itemLabel}.
               {shouldForceCreate ? (
                 <>
-                  {' '}Pour continuer le tutoriel, tu dois créer une {itemLabel}.
-                  <br /><br />
-                  Clique à nouveau sur <strong>{buttonLabel}</strong> en haut à
-                  droite pour rouvrir le formulaire.
+                  {' '}Tu peux le rouvrir avec <strong>{buttonLabel}</strong> en
+                  haut à droite, ou passer cette étape : le tour continue dans
+                  les deux cas.
                 </>
               ) : (
                 <>
@@ -837,7 +794,7 @@ export default function OnboardingTour({
             </div>
             {shouldForceCreate && (
               <div className="ont-tip-hint">
-                <span className="ont-tip-pulse" /> En attente de la création…
+                <span className="ont-tip-pulse" /> Le tour reprend tout seul si tu la crées.
               </div>
             )}
             <ProgressBars count={total} active={stepIdx} />
@@ -1048,39 +1005,45 @@ export default function OnboardingTour({
         <h4 className="ont-tip-title">{stepTitle}</h4>
         <div className="ont-tip-body">{stepBody}</div>
 
+        {/* Une proposition, plus une attente. Le tour avance tout seul si tu
+            cliques l'élément, et « Suivant » marche quand même. */}
         {(isWaitClick || shouldForceCreate) && (
           <div className="ont-tip-hint">
             <span className="ont-tip-pulse" />{' '}
-            {shouldForceCreate ? 'En attente de la création…' : 'En attente de ton clic…'}
+            {shouldForceCreate
+              ? 'Crée-la si tu veux, ou passe avec Suivant.'
+              : 'Clique dessus, ou passe avec Suivant.'}
           </div>
         )}
 
         <ProgressBars count={total} active={stepIdx} />
 
+        {/* LE PIED DE BULLE EST LE MÊME À TOUTES LES ÉTAPES.
+            Avant, une étape « wait-click » n'affichait NI « Plus tard », NI
+            « Ne plus me le montrer », NI « Suivant » : le seul chemin était de
+            cliquer précisément l'élément désigné. C'était ça, le tutoriel
+            rigide — pas le bouton de sortie, qui existait déjà ailleurs.
+            Cliquer l'élément reste la bonne façon de faire, et le petit point
+            qui clignote au-dessus le propose toujours. Mais ce n'est plus la
+            seule : « Suivant » marche partout. */}
         <div className="ont-tip-actions">
-          {isWalkthrough ? (
-            <span className="ont-tip-exit">
-              <button className="ont-btn-ghost" onClick={pauseTour}>
-                Plus tard
-              </button>
-              <button className="ont-btn-quit" onClick={handleSkip}>
-                Ne plus me le montrer
-              </button>
-            </span>
-          ) : (
-            <span />
-          )}
+          <span className="ont-tip-exit">
+            <button className="ont-btn-ghost" onClick={pauseTour}>
+              Plus tard
+            </button>
+            <button className="ont-btn-quit" onClick={handleSkip}>
+              Ne plus me le montrer
+            </button>
+          </span>
           <div className="ont-tip-actions-right">
             {!isFirst && (
               <button className="ont-btn-ghost" onClick={prev}>
                 ← Préc.
               </button>
             )}
-            {isWalkthrough && (
-              <button className="ont-btn-primary" onClick={next}>
-                {isLast ? 'Terminer' : shouldForceCreate ? 'Plus tard, continuer →' : 'Suivant →'}
-              </button>
-            )}
+            <button className="ont-btn-primary" onClick={next}>
+              {isLast ? 'Terminer' : 'Suivant →'}
+            </button>
           </div>
         </div>
       </div>

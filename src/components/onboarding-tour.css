@@ -193,11 +193,17 @@
   50% { opacity: 1; transform: scale(1.1); }
 }
 
+/* Pied de bulle sur deux rangées.
+   Depuis que les quatre boutons sont présents à TOUTES les étapes, les tenir
+   sur une seule ligne de 340 px coupait « ← Préc. » et « Suivant → » en deux.
+   La navigation occupe donc sa propre rangée, et les deux sorties se rangent
+   en dessous, en plus petit : l'abandon ne doit pas être le geste le plus
+   évident. */
 .ont-tip-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 9px;
   border-top: 1px solid var(--border-subtle);
   padding-top: 11px;
   margin-top: 4px;
@@ -205,14 +211,16 @@
 
 .ont-tip-actions-right {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
-  margin-left: auto;
 }
 
 /* ============================================================
  * BOUTONS
  * ============================================================ */
 .ont-btn-primary {
+  white-space: nowrap;
   background: var(--accent-primary);
   color: var(--bg-card);
   border: 1px solid var(--accent-primary);
@@ -236,6 +244,7 @@
 }
 
 .ont-btn-ghost {
+  white-space: nowrap;
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid transparent;
@@ -415,4 +424,6 @@
 .ont-btn-quit:hover { color: var(--text-secondary, #5C5C5A); }
 
 /* Les deux sorties, groupées à gauche de la barre d'actions. */
-.ont-tip-exit { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ont-tip-exit { display: flex; align-items: center; gap: 12px; }
+.ont-tip-exit .ont-btn-ghost { padding: 2px 0; font-size: 12px; }
+.ont-tip-exit .ont-btn-ghost:hover { background: none; text-decoration: underline; text-underline-offset: 2px; }
