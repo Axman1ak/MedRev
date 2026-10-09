@@ -1,0 +1,257 @@
+@charset "UTF-8";
+/* src/app/dashboard/layout.css
+   La coquille du tableau de bord : rail de navigation, zone principale, burger
+   mobile, menu de compte.
+
+   POURQUOI CE FICHIER EXISTE
+   --------------------------
+   Tout ceci vivait dans une balise <style> ecrite directement dans le JSX. Au
+   rendu serveur, React echappe le contenu texte d'une balise <style> : les
+   apostrophes de font-family: ... 'Hanken Grotesk' et de content: '' partaient
+   dans le HTML sous la forme &#x27;. Le navigateur lit une balise <style> comme
+   du texte brut, donc ces &#x27; restaient tels quels et cassaient les
+   declarations concernees.
+
+   Consequence visible : au premier rendu, la police tombait sur system-ui et
+   React constatait que le texte du DOM ne correspondait pas au sien
+   (« Text content does not match server-rendered HTML »). L'hydratation
+   echouait, React jetait tout le HTML du serveur et refaisait le rendu cote
+   client. C'est une partie du clignotement a la navigation.
+
+   Dans un vrai fichier CSS, rien n'est echappe. Le point de rupture mobile,
+   qui etait interpole depuis la constante MOBILE_BREAKPOINT, est ecrit en dur
+   a 768px ici : un fichier CSS ne peut pas lire une constante TypeScript, et
+   la constante n'etait utilisee nulle part ailleurs. */
+
+.db-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+
+  /* Aliases legacy → tokens globaux du design system */
+  --bg: var(--bg-app);
+  --card: var(--bg-card);
+  --soft: var(--bg-soft);
+  --dark: var(--text-primary);
+  --gray: var(--text-secondary);
+  --dim: var(--text-tertiary);
+  --border: var(--border-subtle);
+  --green: var(--accent-primary);
+  --gm: var(--accent-medium);
+  --gl: var(--accent-soft);
+  --amber: var(--warning);
+  --amber-soft: var(--warning-soft);
+  --rose: var(--danger);
+  --rose-soft: var(--danger-soft);
+  --cream: var(--bg-soft);
+  --al: var(--warning-soft);
+
+  /* Couleurs propres à la sidebar marine (indépendantes du thème) */
+  --rail: #15304E;
+  --rail-2: #22507E;
+  --rail-accent: #7FB0D4;
+  /* Un cran au-dessus du rail, pour poser le menu de compte sans
+     casser la continuité de la barre. */
+  --rail-elev: #1B3B5E;
+}
+
+/* ===================== SIDEBAR MARINE RÉTRACTABLE ===================== */
+.db-sidebar {
+  position: fixed;
+  left: 0; top: 0;
+  height: 100vh;
+  width: 76px;
+  flex-shrink: 0;
+  background: var(--rail);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  overflow: hidden;
+  z-index: 40;
+  transition: width .24s cubic-bezier(.4,0,.2,1), box-shadow .24s ease;
+}
+.db-sidebar:hover { width: 248px; box-shadow: 22px 0 60px rgba(0,0,0,.30); }
+
+/* Menu de compte ouvert : la barre reste dépliée, exactement comme au survol.
+   Sans ça, il suffisait d'éloigner la souris pour que le rail se replie à
+   76 px en laissant le menu rogné à la largeur d'une icône — c'est le
+   « la pop-up ne disparaît pas quand la barre de gauche disparaît ».
+   Ces trois règles étaient tombées DANS la media query mobile : elles ne
+   s'appliquaient donc jamais sur un écran d'ordinateur. */
+.db-sidebar.menu-open { width: 248px; box-shadow: 22px 0 60px rgba(0,0,0,.30); }
+.db-sidebar.menu-open .db-lbl { opacity: 1; }
+.db-sidebar.menu-open .db-sem { opacity: 1; max-height: 60px; }
+
+/* libellés qui apparaissent au survol */
+.db-lbl { opacity: 0; transition: opacity .15s ease; white-space: nowrap; }
+.db-sidebar:hover .db-lbl { opacity: 1; }
+
+.db-logo {
+  display: flex; align-items: center;
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 22px; font-weight: 700; letter-spacing: -.01em;
+  padding: 0 0 22px 26px; color: #fff; white-space: nowrap;
+}
+.db-logo .db-logo-r { color: var(--rail-accent); }
+
+.db-sep { border-bottom: 1px solid rgba(255,255,255,.10); margin: 0 14px 14px; }
+
+.db-nav-section { padding: 0; margin-bottom: 16px; }
+.db-nav-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .12em; color: rgba(255,255,255,.42);
+  padding: 0 26px; margin-bottom: 6px;
+}
+
+.db-nav-item {
+  position: relative;
+  display: flex; align-items: center; gap: 16px;
+  height: 46px; padding: 0 18px 0 26px;
+  color: rgba(255,255,255,.64); cursor: pointer;
+  font-size: 14.5px; font-weight: 500;
+  text-decoration: none; white-space: nowrap;
+  transition: color .15s, background .15s;
+}
+.db-nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.db-nav-item.active { color: #fff; }
+.db-nav-item.active::before {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 3px; height: 46px; background: var(--rail-accent);
+  border-radius: 0 2px 2px 0;
+}
+.db-nav-item .ic {
+  width: 22px; height: 22px; min-width: 22px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.db-nav-item .ic svg { width: 21px; height: 21px; stroke-width: 1.7; }
+.db-nav-item .badge {
+  margin-left: auto; font-size: 10px; font-weight: 700;
+  background: var(--rail-accent); color: var(--rail);
+  border-radius: 20px; padding: 1px 7px;
+}
+
+/* SEMESTER TOGGLE — masqué quand la sidebar est repliée */
+.db-sem {
+  margin: 0 14px 16px;
+  background: rgba(255,255,255,.08);
+  border-radius: 8px; padding: 3px;
+  display: flex; gap: 2px;
+  opacity: 0; max-height: 0; overflow: hidden;
+  transition: opacity .18s ease, max-height .22s ease, margin .22s ease;
+}
+.db-sidebar:hover .db-sem { opacity: 1; max-height: 60px; }
+.db-sem button {
+  flex: 1; padding: 6px 8px; border: none; background: transparent;
+  color: rgba(255,255,255,.70); font-size: 11.5px; font-weight: 600;
+  border-radius: 6px; cursor: pointer; font-family: inherit;
+  letter-spacing: .02em; transition: all .15s; white-space: nowrap;
+}
+.db-sem button:hover { color: #fff; }
+.db-sem button.active { background: var(--rail-2); color: #fff; }
+
+.db-nav-secondary { margin-bottom: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.10); }
+.db-nav-item-btn { width: 100%; border: none; background: transparent; font-family: inherit; cursor: pointer; text-align: left; }
+
+/* USER CARD */
+.db-user-wrap { margin-top: auto; padding: 12px 14px 0; border-top: 1px solid rgba(255,255,255,.10); }
+.db-user-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px; border-radius: 10px; background: rgba(255,255,255,.06);
+  cursor: pointer; text-decoration: none; color: inherit; transition: background .15s;
+}
+.db-user-card:hover { background: rgba(255,255,255,.10); }
+.db-user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--rail-2); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; min-width: 32px;
+}
+.db-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+.db-user-meta { font-size: 11px; color: rgba(255,255,255,.55); }
+.db-user-chev { margin-left: auto; color: rgba(255,255,255,.45); font-size: 16px; }
+
+.db-user-wrap { position: relative; }
+
+/* ---- Menu de compte (ouvert depuis l'avatar) ----
+   Le menu vit DANS la barre, pas par-dessus l'application : il reprend
+   son fond sombre, ses icônes au trait et sa typographie, au lieu d'une
+   carte blanche posée dessus qui semblait appartenir à un autre site.
+   Et tant qu'il est ouvert, la barre reste dépliée (.menu-open) : avant,
+   elle se repliait dès que la souris la quittait et le menu restait
+   suspendu dans le vide. */
+.db-usermenu {
+  position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px);
+  z-index: 60;
+  background: var(--rail-elev);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .42);
+  padding: 6px; overflow: hidden;
+  animation: db-menu-in .13s ease-out;
+}
+@keyframes db-menu-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.db-usermenu-item {
+  width: 100%; display: flex; align-items: center; gap: 13px;
+  padding: 9px 11px; border: none; border-radius: 8px;
+  background: none; text-align: left; cursor: pointer;
+  color: rgba(255,255,255,.72); font: inherit;
+  transition: background .13s, color .13s;
+}
+.db-usermenu-item:hover { background: rgba(255,255,255,.09); color: #fff; }
+.db-usermenu-item > span { display: block; min-width: 0; }
+.db-usermenu-item strong { display: block; font-size: 14px; font-weight: 500; }
+.db-usermenu-item em {
+  display: block; font-style: normal; font-size: 11.5px;
+  color: rgba(255,255,255,.45); margin-top: 2px;
+}
+.db-usermenu-ico {
+  flex: none; width: 20px; height: 20px; display: grid; place-items: center;
+  color: currentColor;
+}
+.db-usermenu-ico svg {
+  width: 17px; height: 17px; stroke-width: 1.7;
+}
+.db-usermenu-item.danger { color: #E99; }
+.db-usermenu-item.danger:hover { background: rgba(230,120,120,.14); color: #FBB; }
+.db-usermenu-sep { height: 1px; margin: 5px 10px; background: rgba(255,255,255,.12); }
+
+/* MAIN */
+.db-main {
+  flex: 1;
+  margin-left: 76px;
+  min-height: 100vh;
+  overflow-y: auto;
+  background: var(--bg-app);
+}
+
+/* ================ MOBILE BURGER + OVERLAY ================ */
+.db-burger {
+  display: none; position: fixed; top: 14px; left: 14px; z-index: 200;
+  width: 40px; height: 40px; background: var(--bg-card);
+  border: 1px solid var(--border-subtle); border-radius: 8px; cursor: pointer;
+  padding: 0; font-size: 18px; color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+}
+.db-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(10,16,26,.5); z-index: 90; }
+
+@media (max-width: 768px) {
+  .db-sidebar {
+    position: fixed; top: 0; left: 0; width: 264px; max-width: 82vw; height: 100vh;
+    transform: translateX(-100%); transition: transform .25s ease;
+    z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,.18);
+  }
+.db-sidebar:hover { width: 264px; box-shadow: 4px 0 20px rgba(0,0,0,.18); }
+  .db-sidebar.open { transform: translateX(0); }
+  /* en mobile la sidebar est pleine : on montre tout */
+  .db-sidebar .db-lbl, .db-sidebar .db-nav-label { opacity: 1; }
+  .db-sidebar .db-sem { opacity: 1; max-height: 60px; }
+
+  .db-main { margin-left: 0; width: 100%; padding-top: 50px; }
+  .db-burger { display: flex; align-items: center; justify-content: center; }
+  .db-sidebar-overlay.open { display: block; }
+}

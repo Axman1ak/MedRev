@@ -14,6 +14,7 @@ import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import { DEFAULT_J } from '@/lib/schedule'
 import { countPdfPages } from '@/lib/pdf'
 import BulkPolyUpload from '@/components/BulkPolyUpload'
+import QcmPitchModal, { peutProposerPitch, type PitchKind } from '@/components/QcmPitchModal'
 import './review-modal.css'
 
 type Score = 1 | 2 | 3 | 4 | 5
@@ -149,6 +150,11 @@ export default function ReviewModal({
   const [loading, setLoading] = useState(false)
   const [justRated, setJustRated] = useState<{ idx: number; score: Score } | null>(null)
 
+  // Incitation aux QCM après une note basse. Ouverte au plus une fois par
+  // jour (voir peutProposerPitch) : un argument répété à chaque note basse
+  // cesse d'être un argument.
+  const [pitch, setPitch] = useState<{ kind: PitchKind; note: number } | null>(null)
+
   // Plusieurs PDF choisis d'un coup : on ne devine pas lequel va sur cette
   // fiche, on ouvre l'écran de rattachement. Un seul fichier reste un upload
   // direct, sans écran intermédiaire.
@@ -240,6 +246,19 @@ export default function ReviewModal({
     setLoading(false)
     setJustRated({ idx: stepIdx, score })
     setStepIdx(null)
+
+    // Note basse : c'est le seul moment où « entraîne-toi au lieu de relire »
+    // ne tombe pas à côté, puisque l'étudiante vient elle-même de constater
+    // qu'elle ne maîtrise pas.
+    if (score <= 3 && peutProposerPitch()) {
+      const m = (updated.media ?? {}) as LessonMedia
+      const aDesQcm = Array.isArray(updated.ai_questions) && updated.ai_questions.length > 0
+      const aUnCours = !!m.pdf_path || !!m.video_path
+      setPitch({
+        kind: aDesQcm ? 'avec-qcm' : aUnCours ? 'cours-sans-qcm' : 'sans-cours',
+        note: score,
+      })
+    }
   }
 
   // Reporter ce palier à demain (sort de la liste « à faire », réapparaît demain).
@@ -601,58 +620,6 @@ export default function ReviewModal({
               </div>
             )}
 
-            {/* COUP DE POUCE APRÈS UNE NOTE BASSE
-                Une note de 1 à 3 est le moment où l'étudiant sait qu'il n'a pas
-                le cours. On lui propose l'action utile à cet instant, et elle
-                dépend de ce que la fiche contient déjà :
-                  · des QCM        → s'entraîner tout de suite
-                  · un cours seul  → les générer
-                  · rien           → attacher le cours (le cas 9 fois sur 10)
-                On ne vend rien et on n'affiche aucune statistique : la mesure
-                dont on disposerait (2,94 contre 2,76 d'auto-évaluation, sur
-                cinq personnes) ne permet d'affirmer rien du tout. */}
-            {justRated && justRated.score <= 3 && (
-              <div className="rmod-nudge">
-                {qcmCount > 0 ? (
-                  <>
-                    <p className="rmod-nudge-txt">
-                      Pas encore au point ? Tu as {qcmCount} question{qcmCount > 1 ? 's' : ''} sur cette fiche.
-                    </p>
-                    <button type="button" className="rmod-nudge-btn" onClick={startQcmSession}>
-                      M&apos;entraîner dessus →
-                    </button>
-                  </>
-                ) : hasPdf || hasVideo ? (
-                  <>
-                    <p className="rmod-nudge-txt">
-                      Ton cours est là. Des QCM dessus t&apos;aideraient à voir ce qui ne rentre pas.
-                    </p>
-                    <button
-                      type="button"
-                      className="rmod-nudge-btn"
-                      onClick={() => generateQcms('replace')}
-                      disabled={generating}
-                    >
-                      {generating ? 'Génération… (30-60s)' : 'Générer des QCM →'}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="rmod-nudge-txt">
-                      Ajoute ton cours à cette fiche et tu pourras t&apos;entraîner dessus avec des QCM.
-                    </p>
-                    <button
-                      type="button"
-                      className="rmod-nudge-btn"
-                      onClick={() => pdfInputRef.current?.click()}
-                      disabled={uploadingPdf}
-                    >
-                      {uploadingPdf ? 'Upload…' : 'Ajouter mon cours →'}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
 
             <div className="rmod-jpicker" data-tour="picker-j">
               {j.map((jVal, i) => {
@@ -1028,6 +995,22 @@ export default function ReviewModal({
         onClose={() => setPaywall(null)}
       />
     )}
+      {pitch && (
+        <QcmPitchModal
+          kind={pitch.kind}
+          ficheNom={lesson.name}
+          note={pitch.note}
+          nbQcm={qcmCount}
+          enCours={generating}
+          onClose={() => setPitch(null)}
+          onAction={() => {
+            if (pitch.kind === 'avec-qcm') { setPitch(null); startQcmSession() }
+            else if (pitch.kind === 'cours-sans-qcm') { void generateQcms('replace').then(() => setPitch(null)) }
+            else { setPitch(null); pdfInputRef.current?.click() }
+          }}
+        />
+      )}
+
       {polysEnVrac && lesson.user_id && (
         <BulkPolyUpload
           userId={lesson.user_id}

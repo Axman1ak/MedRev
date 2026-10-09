@@ -1022,54 +1022,130 @@
 }
 
 
-/* ================== RUBRIQUES ==================
-   La page empilait huit sections dans un seul defilement. On n'en montre plus
-   qu'une a la fois. */
-.set-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin: 18px 0 26px;
-  padding: 5px;
-  background: var(--soft);
-  border: 1px solid var(--set-line);
-  border-radius: 13px;
+@media (max-width: 640px) { .set-page { padding: 20px 14px 60px; } }
+
+/* =================================================================
+   ACCUEIL DES RÉGLAGES — l'identité en haut, puis des listes groupées
+   =================================================================
+   Les onglets et sous-onglets ont disparu. À la place : la photo (ici les
+   initiales), le nom, l'email, puis des groupes de lignes cliquables qui
+   ouvrent chacun un écran. Chaque ligne affiche sa valeur courante à droite,
+   donc on lit son réglage sans entrer dedans.
+
+   Note de nommage : .set-sub existait déjà dans ce fichier pour le
+   sous-titre de la page. Tout ce qui suit est préfixé .set-id-, .set-groupe-
+   ou .set-ligne- pour qu'aucune de ces classes ne retombe sur une autre.
+   ----------------------------------------------------------------- */
+
+.set-id { text-align: center; padding: 10px 0 34px; }
+.set-id-avatar {
+  width: 92px; height: 92px; margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent-primary);
+  color: #fff;
+  font-family: var(--font-bricolage), sans-serif;
+  font-size: 30px; font-weight: 500; letter-spacing: .01em;
+  box-shadow: 0 8px 22px rgba(27, 58, 91, .22);
+  user-select: none;
 }
-.set-tab {
-  flex: 1 1 auto;
-  min-width: 118px;
-  min-height: 42px;
-  padding: 9px 16px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
+[data-theme="dark"] .set-id-avatar { color: #0E1726; box-shadow: none; }
+.set-id-nom {
+  font-family: var(--font-bricolage), serif;
+  font-size: 25px; font-weight: 500; letter-spacing: -.015em;
+  color: var(--set-ink); margin: 0 0 4px; line-height: 1.2;
+}
+.set-id-mail { margin: 0; font-size: 14px; color: var(--set-gray); }
+
+.set-groupe { margin-bottom: 26px; }
+.set-groupe-h {
+  margin: 0 0 8px 4px;
+  font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .12em;
   color: var(--set-gray);
-  cursor: pointer;
-  transition: background .15s, color .15s;
-  white-space: nowrap;
 }
-.set-tab:hover { color: var(--set-ink); background: var(--card); }
-.set-tab.on {
+.set-liste {
   background: var(--card);
-  color: var(--set-ink);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .10);
+  border: 1px solid var(--set-line);
+  border-radius: 14px;
+  overflow: hidden;
 }
-.set-tab-hint {
+
+.set-ligne {
+  width: 100%;
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 16px;
+  border: none; border-top: 1px solid var(--set-line);
+  background: none; font-family: inherit; text-align: left;
+  cursor: pointer;
+  transition: background .13s;
+}
+.set-ligne:first-child { border-top: none; }
+.set-ligne:hover { background: var(--soft); }
+.set-ligne-ico {
+  flex: none; width: 30px; height: 30px; border-radius: 8px;
+  display: grid; place-items: center;
+  color: #fff;
+}
+.set-ligne-ico svg { width: 18px; height: 18px; }
+.set-ligne-ico.bleu   { background: #2E6FA8; }
+.set-ligne-ico.gris   { background: #5E6B7A; }
+.set-ligne-ico.or     { background: #B2893C; }
+.set-ligne-ico.violet { background: #6B5CA8; }
+
+.set-ligne-txt { flex: 1 1 auto; min-width: 0; }
+.set-ligne-txt strong {
   display: block;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--set-gray);
-  margin-top: 1px;
-  white-space: nowrap;
+  font-size: 15px; font-weight: 500; line-height: 1.3;
+  color: var(--set-ink);
 }
+.set-ligne-txt em {
+  display: block; font-style: normal;
+  font-size: 12.5px; line-height: 1.35; margin-top: 2px;
+  color: var(--set-gray);
+}
+.set-ligne-val {
+  flex: none; font-size: 13.5px; color: var(--set-gray);
+  white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis;
+}
+.set-ligne-chev {
+  flex: none; font-size: 20px; line-height: 1;
+  color: var(--text-tertiary, #95A0B0);
+}
+
+/* Déconnexion : isolée tout en bas, comme chez Apple. Elle n'appartient à
+   aucun groupe, et surtout pas à côté d'une ligne qu'on clique souvent. */
+.set-deco {
+  width: 100%; margin: 6px 0 10px;
+  padding: 13px 16px;
+  border: 1px solid var(--set-line); border-radius: 14px;
+  background: var(--card);
+  font-family: inherit; font-size: 15px; color: var(--rose, #B4453F);
+  cursor: pointer;
+  transition: background .13s;
+}
+.set-deco:hover { background: var(--soft); }
+/* Le rouge de --rose tombe à 2,94:1 sur le marine du mode sombre, comme pour
+   le bouton « Supprimer mon compte » plus bas dans ce fichier. */
+[data-theme="dark"] .set-deco { color: #F0918E; }
+
+/* Retour vers l'accueil, au-dessus du titre de l'écran ouvert. */
+.set-retour {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-bottom: 10px; padding: 4px 8px 4px 2px;
+  border: none; background: none;
+  font-family: inherit; font-size: 14px; color: var(--accent-primary);
+  cursor: pointer;
+}
+.set-retour span { font-size: 19px; line-height: 1; }
+.set-retour:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 @media (max-width: 640px) {
-  .set-page { padding: 20px 14px 60px; }
-  .set-tabs { gap: 4px; }
-  .set-tab { flex: 1 1 46%; min-width: 0; white-space: normal; }
-  .set-tab-hint { display: none; }
+  .set-id { padding: 4px 0 26px; }
+  .set-id-avatar { width: 78px; height: 78px; font-size: 26px; }
+  .set-ligne { padding: 12px 14px; gap: 12px; }
+  .set-ligne-txt em { display: none; }
+  .set-ligne-val { max-width: 45%; }
 }
 
 

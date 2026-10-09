@@ -5,7 +5,7 @@
 // sections consolidées et expliquées : Profil, Compte (email + mot de passe +
 // déconnexion), Apparence (thème + sons), Aide, et la zone de suppression.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -18,23 +18,82 @@ import './styles.css'
 import PageLoader from '@/components/PageLoader'
 import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 
-type TabId = 'reglages' | 'aide' | 'securite' | 'contact' | 'abonnement'
+// Une seule page d'accueil, puis un écran par sujet, comme un réglage Apple :
+// la photo en haut, puis des listes groupées de lignes cliquables. On y entre,
+// on en ressort par « Réglages » en haut à gauche. Plus d'onglets, plus de
+// sous-onglets, plus de carte posée sous une autre.
+type Vue =
+  | 'profil' | 'securite' | 'abonnement'
+  | 'annee' | 'bareme'
+  | 'apparence' | 'aide' | 'contact'
 
-// Les rubriques reprennent EXACTEMENT les entrées du menu de compte ouvert
-// depuis l'avatar, dans la barre latérale. Un étudiant qui clique sur
-// « Sécurité » dans le menu doit retrouver « Sécurité » ici, au même nom et
-// au même endroit : c'est la seule façon de ne pas se perdre.
-//
-// Avant, quatre onglets mélangeaient les intentions : le mot de passe et le
-// tutoriel cohabitaient dans « Mon compte », la suppression de compte était
-// rangée avec les matières. D'où l'impression de fouillis.
-const TABS: { id: TabId; label: string; hint: string }[] = [
-  { id: 'reglages',   label: 'Réglages',   hint: 'études, profil, apparence' },
-  { id: 'aide',       label: 'Aide',       hint: 'tutoriel, prise en main' },
-  { id: 'securite',   label: 'Sécurité',   hint: 'email, mot de passe, compte' },
-  { id: 'contact',    label: 'Contact',    hint: 'écrire, signaler' },
-  { id: 'abonnement', label: 'Abonnement', hint: 'formule, quotas' },
-]
+// Le titre affiché en haut d'un écran, une fois qu'on y est entré.
+const TITRES: Record<Vue, string> = {
+  profil: 'Informations personnelles',
+  securite: 'Connexion et sécurité',
+  abonnement: 'Abonnement',
+  annee: "Année d'études",
+  bareme: 'Barème du simulateur',
+  apparence: 'Apparence',
+  aide: 'Aide et tutoriel',
+  contact: 'Nous contacter',
+}
+
+// Ce que le menu de compte de la barre latérale peut demander (?s=... ou
+// l'évènement medrev-settings-tab). « reglages » veut dire la page d'accueil.
+const DEPUIS_MENU: Record<string, Vue | null> = {
+  reglages: null,
+  aide: 'aide',
+  securite: 'securite',
+  contact: 'contact',
+  abonnement: 'abonnement',
+  profil: 'profil',
+}
+
+// Icônes au trait, dessinées au même gabarit (24, trait 1.7) pour que la
+// colonne de gauche soit régulière. Une pastille de couleur par famille.
+const ICONES: Record<Vue, ReactNode> = {
+  profil: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  securite: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+  abonnement: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" />
+    </svg>
+  ),
+  annee: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" /><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
+    </svg>
+  ),
+  bareme: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18" /><path d="M5 7h14" /><path d="m5 7-3 7h6Z" /><path d="m19 7-3 7h6Z" />
+    </svg>
+  ),
+  apparence: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  ),
+  aide: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" /><path d="M9.2 9.2a2.8 2.8 0 1 1 3.8 2.6c-.6.3-1 .9-1 1.6v.3" /><path d="M12 17.2h.01" />
+    </svg>
+  ),
+  contact: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="4.5" width="19" height="15" rx="2" /><path d="m3 7 9 6 9-6" />
+    </svg>
+  ),
+}
 
 /** Date lisible pour la ligne "tu es passé en P2 le ...". */
 function formatDay(iso: string): string {
@@ -70,27 +129,30 @@ export default function SettingsPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Rubrique affichee. La page montrait huit sections d'affilee dans un seul
-  // defilement, ce qui noyait tout. On n'en affiche plus qu'une.
-  // L'onglet ouvert vient de l'URL (?s=securite), posée par le menu de compte
-  // de la barre latérale. Sans ça, cliquer « Sécurité » dans le menu atterrirait
-  // sur Réglages et il faudrait recliquer.
-  const [tab, setTab] = useState<TabId>(() => {
-    if (typeof window === 'undefined') return 'reglages'
+  // null = la page d'accueil (photo + listes). Sinon, l'écran ouvert.
+  // Le menu de compte de la barre latérale pose ?s=securite dans l'URL : sans
+  // ça, cliquer « Sécurité » dans le menu atterrirait sur l'accueil et il
+  // faudrait recliquer.
+  const [vue, setVue] = useState<Vue | null>(() => {
+    if (typeof window === 'undefined') return null
     const s = new URLSearchParams(window.location.search).get('s')
-    return (TABS.some(t => t.id === s) ? s : 'reglages') as TabId
+    return (s && s in DEPUIS_MENU) ? DEPUIS_MENU[s] : null
   })
 
-  // Le menu peut demander une autre rubrique alors que la page est déjà
-  // ouverte : Next ne remonte pas le composant, donc on écoute l'évènement.
+  // Le menu peut demander un autre écran alors que la page est déjà ouverte :
+  // Next ne remonte pas le composant, donc on écoute l'évènement.
   useEffect(() => {
     function onJump(e: Event) {
       const id = (e as CustomEvent<string>).detail
-      if (TABS.some(t => t.id === id)) setTab(id as TabId)
+      if (id in DEPUIS_MENU) setVue(DEPUIS_MENU[id])
     }
     window.addEventListener('medrev-settings-tab', onJump)
     return () => window.removeEventListener('medrev-settings-tab', onJump)
   }, [])
+
+  // On remonte en haut en entrant dans un écran : arriver au milieu d'une page
+  // parce qu'on avait fait défiler l'accueil est désorientant.
+  useEffect(() => { window.scrollTo({ top: 0 }) }, [vue])
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [email, setEmail] = useState('')
@@ -391,29 +453,105 @@ export default function SettingsPage() {
   const aiUsed = profile.ai_generations_count ?? 0
   const simUsed = profile.simulator_sessions_count ?? 0
 
+  // L'identité en haut de l'accueil. Pas de photo à téléverser pour l'instant,
+  // donc les initiales, comme dans la barre latérale : c'est déjà le repère
+  // visuel du compte partout ailleurs dans l'application.
+  const nomAffiche = (profile.name || username || email.split('@')[0] || 'Mon compte').trim()
+  const initiales = nomAffiche.slice(0, 2).toUpperCase()
+
+  // Les listes de l'accueil. Chaque ligne porte sa valeur courante à droite :
+  // on lit son réglage sans avoir à entrer dedans, ce qui évite la moitié des
+  // allers-retours.
+  const GROUPES: {
+    titre: string
+    lignes: { id: Vue; sous: string; valeur?: string; teinte: string }[]
+  }[] = [
+    {
+      titre: 'Compte',
+      lignes: [
+        { id: 'profil', sous: 'Prénom, nom d’utilisateur, faculté', teinte: 'bleu' },
+        { id: 'securite', sous: 'Email, mot de passe, suppression', teinte: 'gris' },
+        { id: 'abonnement', sous: 'Formule et quotas', valeur: isPro ? 'Premium' : 'Gratuit', teinte: 'or' },
+      ],
+    },
+    {
+      titre: 'Mes études',
+      lignes: [
+        { id: 'annee', sous: 'Celle que tu révises en ce moment', valeur: yearLabel(currentYear), teinte: 'bleu' },
+        {
+          id: 'bareme',
+          sous: 'Comment le simulateur compte les points',
+          valeur: scoringPref ? SCORING_SYSTEMS[scoringPref as ScoringSystemId].label : 'Automatique',
+          teinte: 'bleu',
+        },
+      ],
+    },
+    {
+      titre: 'Application',
+      lignes: [
+        { id: 'apparence', sous: 'Thème et sons', valeur: theme === 'dark' ? 'Sombre' : 'Clair', teinte: 'violet' },
+        { id: 'aide', sous: 'Revoir la prise en main', teinte: 'gris' },
+        { id: 'contact', sous: 'Une question, un bug, un QCM à signaler', teinte: 'gris' },
+      ],
+    },
+  ]
+
   return (
     <div className="set-page">
       <div className="set-wrap">
-        <div className="set-head">
-          <h1 className="set-h1">Réglages</h1>
-          <nav className="set-tabs" aria-label="Rubriques des réglages">
-            {TABS.map(x => (
-              <button
-                key={x.id}
-                type="button"
-                className={`set-tab${tab === x.id ? ' on' : ''}`}
-                onClick={() => setTab(x.id)}
-                aria-current={tab === x.id ? 'page' : undefined}
-              >
-                {x.label}
-                <span className="set-tab-hint">{x.hint}</span>
-              </button>
+        {/* ============ ACCUEIL (photo + listes groupées) ============ */}
+        {vue === null ? (
+          <>
+            <header className="set-id">
+              <div className="set-id-avatar" aria-hidden="true">{initiales}</div>
+              <h1 className="set-id-nom">{nomAffiche}</h1>
+              <p className="set-id-mail">{email}</p>
+            </header>
+
+            {GROUPES.map(groupe => (
+              <section key={groupe.titre} className="set-groupe" aria-label={groupe.titre}>
+                <h2 className="set-groupe-h">{groupe.titre}</h2>
+                <div className="set-liste">
+                  {groupe.lignes.map(ligne => (
+                    <button
+                      key={ligne.id}
+                      type="button"
+                      className="set-ligne"
+                      onClick={() => setVue(ligne.id)}
+                    >
+                      <span className={`set-ligne-ico ${ligne.teinte}`} aria-hidden="true">
+                        {ICONES[ligne.id]}
+                      </span>
+                      <span className="set-ligne-txt">
+                        <strong>{TITRES[ligne.id]}</strong>
+                        <em>{ligne.sous}</em>
+                      </span>
+                      {ligne.valeur ? <span className="set-ligne-val">{ligne.valeur}</span> : null}
+                      <span className="set-ligne-chev" aria-hidden="true">›</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
-          </nav>
-        </div>
+
+            <button type="button" className="set-deco" onClick={logout}>
+              Se déconnecter
+            </button>
+          </>
+        ) : (
+          /* En-tête d'un écran : le chemin du retour d'abord, le titre ensuite.
+             C'est le seul endroit par où on ressort, donc il est toujours au
+             même pixel, quelle que soit la rubrique. */
+          <div className="set-head">
+            <button type="button" className="set-retour" onClick={() => setVue(null)}>
+              <span aria-hidden="true">‹</span> Réglages
+            </button>
+            <h1 className="set-h1">{TITRES[vue]}</h1>
+          </div>
+        )}
 
         {/* ============ ABONNEMENT (carte héro) ============ */}
-        {tab === 'abonnement' && (
+        {vue === 'abonnement' && (
         <section className={`set-abo${isPro ? ' pro' : ''}`} id="set-abo">
           <div className="set-abo-glow" aria-hidden="true" />
           <div className="set-abo-head">
@@ -528,9 +666,8 @@ export default function SettingsPage() {
         )}
 
         {/* ============ ANNÉE D'ÉTUDES ============ */}
-        {tab === 'reglages' && (
+        {vue === 'annee' && (
         <section className="set-card" id="set-annee">
-          <div className="set-card-h">Année d&apos;études</div>
 
           <div className="set-year-current">
             <span className="set-year-current-badge">{yearLabel(currentYear)}</span>
@@ -576,9 +713,8 @@ export default function SettingsPage() {
         )}
 
         {/* ============ PROFIL ============ */}
-        {tab === 'reglages' && (
+        {vue === 'profil' && (
         <section className="set-card" id="set-profil">
-          <div className="set-card-h">Profil</div>
 
           <div className="set-row">
             <label className="set-label">Nom</label>
@@ -631,9 +767,8 @@ export default function SettingsPage() {
         )}
 
         {/* ============ COMPTE (email + mot de passe + session) ============ */}
-        {tab === 'securite' && (
+        {vue === 'securite' && (
         <section className="set-card" id="set-compte">
-          <div className="set-card-h">Compte et sécurité</div>
 
           <div className="set-row">
             <label className="set-label">Email de connexion</label>
@@ -683,27 +818,12 @@ export default function SettingsPage() {
               {savingPassword ? 'Modification…' : 'Modifier le mot de passe'}
             </button>
           </div>
-
-          <div className="set-divider" aria-hidden="true" />
-
-          <div className="set-row set-row-inline">
-            <div>
-              <label className="set-label">Session</label>
-              <p className="set-hint">
-                Tes données restent en place : tu pourras te reconnecter à tout moment.
-              </p>
-            </div>
-            <button className="set-btn set-btn-logout" onClick={logout}>
-              Se déconnecter
-            </button>
-          </div>
         </section>
         )}
 
         {/* ============ APPARENCE ============ */}
-        {tab === 'reglages' && (
+        {vue === 'apparence' && (
         <section className="set-card" id="set-apparence">
-          <div className="set-card-h">Apparence et ambiance</div>
 
           <div className="set-row">
             <label className="set-label">Thème</label>
@@ -771,9 +891,8 @@ export default function SettingsPage() {
         )}
 
         {/* ============ AIDE ============ */}
-        {tab === 'contact' && (
+        {vue === 'contact' && (
         <section className="set-card" id="set-contact">
-          <div className="set-card-h">Nous écrire</div>
 
           <div className="set-row">
             <label className="set-label">Une question, un bug, une idée</label>
@@ -804,9 +923,8 @@ export default function SettingsPage() {
         </section>
         )}
 
-        {tab === 'aide' && (
+        {vue === 'aide' && (
         <section className="set-card" id="set-aide">
-          <div className="set-card-h">Aide</div>
 
           <div className="set-row set-row-inline">
             <div>
@@ -834,9 +952,8 @@ export default function SettingsPage() {
         )}
 
         {/* ============ SUPPRIMER (RGPD) ============ */}
-        {tab === 'reglages' && (
+        {vue === 'bareme' && (
         <section className="set-card" id="set-bareme">
-          <div className="set-card-h">Barème du simulateur</div>
           <p className="set-card-sub">Par défaut, le barème standard. Change-le si ta fac en utilise un autre.</p>
           <div className="set-bareme-grid">
             <button type="button" className={`set-bareme-opt${scoringPref === '' ? ' on' : ''}`} onClick={() => chooseScoring('')}>
@@ -853,7 +970,7 @@ export default function SettingsPage() {
         </section>
         )}
 
-        {tab === 'securite' && (
+        {vue === 'securite' && (
         <section className="set-card set-card-danger" id="set-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">

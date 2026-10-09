@@ -9,9 +9,9 @@ import { normalizeYear, yearLabel } from '@/lib/year'
 import { makeScheduleResolver } from '@/lib/schedule'
 import OnboardingTour from '@/components/OnboardingTour'
 import { currentSemestre } from '@/lib/semestre'
+import './layout.css'
 
 // Breakpoint mobile (en dessous : sidebar slide-in avec burger).
-const MOBILE_BREAKPOINT = 768
 
 type SystemRow = { id: string; year?: string; semestre?: number; schedule?: number[] | null }
 
@@ -260,214 +260,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="db-shell">
-      <style>{`
-        .db-shell {
-          display: flex;
-          min-height: 100vh;
-          background: var(--bg-app);
-          color: var(--text-primary);
-          font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
-
-          /* Aliases legacy → tokens globaux du design system */
-          --bg: var(--bg-app);
-          --card: var(--bg-card);
-          --soft: var(--bg-soft);
-          --dark: var(--text-primary);
-          --gray: var(--text-secondary);
-          --dim: var(--text-tertiary);
-          --border: var(--border-subtle);
-          --green: var(--accent-primary);
-          --gm: var(--accent-medium);
-          --gl: var(--accent-soft);
-          --amber: var(--warning);
-          --amber-soft: var(--warning-soft);
-          --rose: var(--danger);
-          --rose-soft: var(--danger-soft);
-          --cream: var(--bg-soft);
-          --al: var(--warning-soft);
-
-          /* Couleurs propres à la sidebar marine (indépendantes du thème) */
-          --rail: #15304E;
-          --rail-2: #22507E;
-          --rail-accent: #7FB0D4;
-        }
-
-        /* ===================== SIDEBAR MARINE RÉTRACTABLE ===================== */
-        .db-sidebar {
-          position: fixed;
-          left: 0; top: 0;
-          height: 100vh;
-          width: 76px;
-          flex-shrink: 0;
-          background: var(--rail);
-          color: #fff;
-          display: flex;
-          flex-direction: column;
-          padding: 20px 0;
-          overflow: hidden;
-          z-index: 40;
-          transition: width .24s cubic-bezier(.4,0,.2,1), box-shadow .24s ease;
-        }
-        .db-sidebar:hover { width: 248px; box-shadow: 22px 0 60px rgba(0,0,0,.30); }
-
-        /* libellés qui apparaissent au survol */
-        .db-lbl { opacity: 0; transition: opacity .15s ease; white-space: nowrap; }
-        .db-sidebar:hover .db-lbl { opacity: 1; }
-
-        .db-logo {
-          display: flex; align-items: center;
-          font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
-          font-size: 22px; font-weight: 700; letter-spacing: -.01em;
-          padding: 0 0 22px 26px; color: #fff; white-space: nowrap;
-        }
-        .db-logo .db-logo-r { color: var(--rail-accent); }
-
-        .db-sep { border-bottom: 1px solid rgba(255,255,255,.10); margin: 0 14px 14px; }
-
-        .db-nav-section { padding: 0; margin-bottom: 16px; }
-        .db-nav-label {
-          font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .12em; color: rgba(255,255,255,.42);
-          padding: 0 26px; margin-bottom: 6px;
-        }
-
-        .db-nav-item {
-          position: relative;
-          display: flex; align-items: center; gap: 16px;
-          height: 46px; padding: 0 18px 0 26px;
-          color: rgba(255,255,255,.64); cursor: pointer;
-          font-size: 14.5px; font-weight: 500;
-          text-decoration: none; white-space: nowrap;
-          transition: color .15s, background .15s;
-        }
-        .db-nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
-        .db-nav-item.active { color: #fff; }
-        .db-nav-item.active::before {
-          content: ''; position: absolute; left: 0; top: 0;
-          width: 3px; height: 46px; background: var(--rail-accent);
-          border-radius: 0 2px 2px 0;
-        }
-        .db-nav-item .ic {
-          width: 22px; height: 22px; min-width: 22px;
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .db-nav-item .ic svg { width: 21px; height: 21px; stroke-width: 1.7; }
-        .db-nav-item .badge {
-          margin-left: auto; font-size: 10px; font-weight: 700;
-          background: var(--rail-accent); color: var(--rail);
-          border-radius: 20px; padding: 1px 7px;
-        }
-
-        /* SEMESTER TOGGLE — masqué quand la sidebar est repliée */
-        .db-sem {
-          margin: 0 14px 16px;
-          background: rgba(255,255,255,.08);
-          border-radius: 8px; padding: 3px;
-          display: flex; gap: 2px;
-          opacity: 0; max-height: 0; overflow: hidden;
-          transition: opacity .18s ease, max-height .22s ease, margin .22s ease;
-        }
-        .db-sidebar:hover .db-sem { opacity: 1; max-height: 60px; }
-        .db-sem button {
-          flex: 1; padding: 6px 8px; border: none; background: transparent;
-          color: rgba(255,255,255,.70); font-size: 11.5px; font-weight: 600;
-          border-radius: 6px; cursor: pointer; font-family: inherit;
-          letter-spacing: .02em; transition: all .15s; white-space: nowrap;
-        }
-        .db-sem button:hover { color: #fff; }
-        .db-sem button.active { background: var(--rail-2); color: #fff; }
-
-        .db-nav-secondary { margin-bottom: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.10); }
-        .db-nav-item-btn { width: 100%; border: none; background: transparent; font-family: inherit; cursor: pointer; text-align: left; }
-
-        /* USER CARD */
-        .db-user-wrap { margin-top: auto; padding: 12px 14px 0; border-top: 1px solid rgba(255,255,255,.10); }
-        .db-user-card {
-          display: flex; align-items: center; gap: 12px;
-          padding: 9px; border-radius: 10px; background: rgba(255,255,255,.06);
-          cursor: pointer; text-decoration: none; color: inherit; transition: background .15s;
-        }
-        .db-user-card:hover { background: rgba(255,255,255,.10); }
-        .db-user-avatar {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: var(--rail-2); display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: 700; color: #fff; min-width: 32px;
-        }
-        .db-user-name { font-size: 13px; font-weight: 600; color: #fff; }
-        .db-user-meta { font-size: 11px; color: rgba(255,255,255,.55); }
-        .db-user-chev { margin-left: auto; color: rgba(255,255,255,.45); font-size: 16px; }
-
-        /* ---- Menu de compte (ouvert depuis l'avatar) ---- */
-        .db-user-wrap { position: relative; }
-        .db-usermenu {
-          /* position: fixed et non absolute : la barre latérale est un rail de
-             76 px en overflow:hidden, qui rognait le menu à la largeur d'une
-             icône. En fixed, le menu sort du rail et se pose par-dessus le
-             contenu, à une largeur lisible. */
-          position: fixed; left: 12px; bottom: 84px; width: 268px; max-width: calc(100vw - 24px);
-          z-index: 60;
-          background: var(--bg-card); color: var(--text-primary);
-          border: 1px solid var(--border-subtle); border-radius: 12px;
-          box-shadow: 0 16px 40px rgba(5, 10, 20, .34);
-          padding: 6px; overflow: hidden;
-        }
-        .db-usermenu-item {
-          width: 100%; display: flex; align-items: flex-start; gap: 10px;
-          padding: 9px 10px; border: none; border-radius: 8px;
-          background: none; text-align: left; cursor: pointer;
-          color: var(--text-primary); font: inherit;
-        }
-        .db-usermenu-item:hover { background: var(--bg-app); }
-        .db-usermenu-item span { display: block; min-width: 0; }
-        .db-usermenu-item strong { display: block; font-size: 13.5px; font-weight: 600; }
-        .db-usermenu-item em {
-          display: block; font-style: normal; font-size: 11.5px;
-          color: var(--text-secondary); margin-top: 1px;
-        }
-        .db-usermenu-ico {
-          flex: none; width: 22px; text-align: center;
-          font-size: 13px; line-height: 20px; color: var(--text-secondary);
-        }
-        .db-usermenu-item.danger strong { color: var(--danger); }
-        .db-usermenu-item.danger .db-usermenu-ico { color: var(--danger); }
-        .db-usermenu-sep { height: 1px; margin: 5px 8px; background: var(--border-subtle); }
-
-        /* MAIN */
-        .db-main {
-          flex: 1;
-          margin-left: 76px;
-          min-height: 100vh;
-          overflow-y: auto;
-          background: var(--bg-app);
-        }
-
-        /* ================ MOBILE BURGER + OVERLAY ================ */
-        .db-burger {
-          display: none; position: fixed; top: 14px; left: 14px; z-index: 200;
-          width: 40px; height: 40px; background: var(--bg-card);
-          border: 1px solid var(--border-subtle); border-radius: 8px; cursor: pointer;
-          padding: 0; font-size: 18px; color: var(--text-primary);
-          box-shadow: 0 2px 6px rgba(0,0,0,.06);
-        }
-        .db-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(10,16,26,.5); z-index: 90; }
-
-        @media (max-width: ${MOBILE_BREAKPOINT}px) {
-          .db-sidebar {
-            position: fixed; top: 0; left: 0; width: 264px; max-width: 82vw; height: 100vh;
-            transform: translateX(-100%); transition: transform .25s ease;
-            z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,.18);
-          }
-          .db-sidebar:hover { width: 264px; box-shadow: 4px 0 20px rgba(0,0,0,.18); }
-          .db-sidebar.open { transform: translateX(0); }
-          /* en mobile la sidebar est pleine : on montre tout */
-          .db-sidebar .db-lbl, .db-sidebar .db-nav-label { opacity: 1; }
-          .db-sidebar .db-sem { opacity: 1; max-height: 60px; }
-
-          .db-main { margin-left: 0; width: 100%; padding-top: 50px; }
-          .db-burger { display: flex; align-items: center; justify-content: center; }
-          .db-sidebar-overlay.open { display: block; }
-        }
-      `}</style>
 
       {/* MOBILE — bouton burger + overlay */}
       <button
@@ -485,7 +277,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
 
       {/* SIDEBAR */}
-      <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}`} data-tour="sidebar">
+      <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert ? ' menu-open' : ''}`} data-tour="sidebar">
         {/* Logo */}
         <div className="db-logo">
           <span className="db-logo-m">M</span><span className="db-lbl">ed<span className="db-logo-r">·Rev</span></span>
@@ -521,63 +313,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div style={{ flex: 1 }} />
 
-        {/* Réglages + Aide & tutoriel */}
-        <div className="db-nav-section db-nav-secondary">
-          <Link
-            href="/dashboard/settings"
-            className={`db-nav-item${isActive('/dashboard/settings') ? ' active' : ''}`}
-            data-tour="nav-settings"
-          >
-            <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-            <span className="db-lbl">Réglages</span>
-          </Link>
-          <button
-            type="button"
-            className="db-nav-item db-nav-item-btn"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem('medrev-onboarding-step')
-                localStorage.removeItem('medrev-onboarding-phase')
-                window.dispatchEvent(new Event('medrev-onboarding-replay'))
-              }
-            }}
-            aria-label="Rejouer le tutoriel"
-          >
-            <i className="ic">?</i>
-            <span className="db-lbl">Aide &amp; tutoriel</span>
-          </button>
-          <a
-            href="mailto:medrev.fr@gmail.com?subject=Retour%20MedRev&body=Mon%20retour%20(bug%2C%20id%C3%A9e%2C%20question)%20%3A%0A%0A"
-            className="db-nav-item"
-          >
-            <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg></span>
-            <span className="db-lbl">Donner mon avis</span>
-          </a>
-        </div>
+        {/* La section « Réglages / Aide / Donner mon avis » qui se trouvait ici a
+            été retirée : le menu de compte, ouvert depuis l'avatar juste en
+            dessous, couvre exactement les mêmes destinations. Deux chemins vers
+            le même endroit, à dix pixels d'écart, c'est ce qui donnait
+            l'impression de fouillis. */}
 
         {/* Carte utilisateur → menu de compte */}
         <div className="db-user-wrap" ref={menuRef}>
           {menuOuvert && (
             <div className="db-usermenu" role="menu" aria-label="Menu du compte">
               <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('reglages')}>
-                <span className="db-usermenu-ico" aria-hidden="true">⚙</span>
+                <span className="db-usermenu-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </span>
                 <span><strong>Réglages</strong><em>Études, profil, apparence</em></span>
               </button>
               <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('aide')}>
-                <span className="db-usermenu-ico" aria-hidden="true">?</span>
+                <span className="db-usermenu-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><path d="M12 17h.01"/></svg>
+                </span>
                 <span><strong>Aide et tutoriel</strong><em>Revoir la prise en main</em></span>
               </button>
               <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('securite')}>
-                <span className="db-usermenu-ico" aria-hidden="true">🔒</span>
+                <span className="db-usermenu-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+                </span>
                 <span><strong>Sécurité</strong><em>Email, mot de passe, compte</em></span>
               </button>
               <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('contact')}>
-                <span className="db-usermenu-ico" aria-hidden="true">✉</span>
+                <span className="db-usermenu-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>
+                </span>
                 <span><strong>Nous contacter</strong><em>Une question, un bug</em></span>
               </button>
               <div className="db-usermenu-sep" />
               <button type="button" role="menuitem" className="db-usermenu-item danger" onClick={seDeconnecter}>
-                <span className="db-usermenu-ico" aria-hidden="true">⏻</span>
+                <span className="db-usermenu-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+                </span>
                 <span><strong>Se déconnecter</strong></span>
               </button>
             </div>
