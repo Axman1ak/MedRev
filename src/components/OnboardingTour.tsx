@@ -381,7 +381,12 @@ const STEPS: Step[] = [
   },
   {
     kind: 'wait-click',
-    selector: '[data-tour="nav-simu"]',
+    // La barre pose data-tour={`nav-${href.split('/').pop()}`}, donc
+    // « nav-simulateur » et non « nav-simu » : avec l'ancien nom, aucun élément
+    // ne correspondait. Le projecteur ne se posait nulle part, la bulle
+    // tombait dans le coin, et le clic sur Simulateur ne faisait pas avancer
+    // le tour, puisqu'il est détecté par ce même sélecteur.
+    selector: '[data-tour="nav-simulateur"]',
     title: () => 'Va sur Simulateur',
     body: (
       <>
