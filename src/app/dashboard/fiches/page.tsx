@@ -13,7 +13,6 @@ import './styles.css'
 import { normalizeYear, scopeToYear, DEFAULT_YEAR, YEARS, yearLabel } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
 import { currentSemestre } from '@/lib/semestre'
-import BulkPolyUpload from '@/components/BulkPolyUpload'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 
@@ -161,6 +160,11 @@ export default function FichesPage() {
   const supabase = createClient()
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  // Chargement des DONNÉES, pas seulement de l'identité. L'écran ne gardait
+  // le loader que tant que `userId` était nul, or il arrive dès que
+  // auth.getUser() répond, bien avant les matières et les fiches. Entre les
+  // deux, la page s'affichait entièrement vide pendant une seconde.
+  const [loading, setLoading] = useState(true)
   // Année d'études en cours. Toute matière créée ici lui est rattachée,
   // sinon elle serait invisible dès le rechargement. Voir src/lib/year.ts.
   // Tant que yearLoaded est faux, on ignore l'année : créer une matière
@@ -168,9 +172,6 @@ export default function FichesPage() {
   // au rechargement suivant.
   const [currentYear, setCurrentYear] = useState<string>(DEFAULT_YEAR)
   const [yearLoaded, setYearLoaded] = useState(false)
-  // Dépôt groupé de polys : le vrai goulot du produit est que le cours
-  // n'arrive jamais sur la fiche (330 fiches sur 380 sans cours en prod).
-  const [showBulk, setShowBulk] = useState(false)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
@@ -278,13 +279,16 @@ export default function FichesPage() {
     setYearLoaded(Boolean(prof))
     setSystems(scoped.systems)
     setLessons(scoped.lessons)
+    setLoading(false)
   }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
       setUserId(user.id)
-      load(user.id)
+      // Un échec réseau ne doit pas laisser le loader tourner pour toujours :
+      // mieux vaut un écran vide qu'un écran qui ment.
+      load(user.id).catch(() => setLoading(false))
     })
   }, [])
 
@@ -731,7 +735,7 @@ export default function FichesPage() {
 
   // Avant : la page se dessinait vide (aucune matière, aucune fiche) le temps
   // du chargement, ce qui ressemblait à un compte vide plutôt qu'à une attente.
-  if (!userId) {
+  if (loading || !userId) {
     return <div className="fi-main"><PageLoader label="Chargement de tes matières…" /></div>
   }
 
@@ -770,14 +774,6 @@ export default function FichesPage() {
               </button>
             )}
             <div className="fi-add-group">
-              <button
-                type="button"
-                className="fi-btn-o"
-                onClick={() => setShowBulk(true)}
-                title="Déposer plusieurs polys d'un coup"
-              >
-                Déposer mes polys
-              </button>
               <button
                 data-tour="add-system"
                 className="fi-btn-o"
@@ -1581,19 +1577,6 @@ export default function FichesPage() {
             </div>
           </div>
         </div>
-      )}
-      {showBulk && userId && (
-        <BulkPolyUpload
-          userId={userId}
-          systems={semSystems}
-          lessons={lessons.filter(l => semSystems.some(sy => sy.id === l.system_id))}
-          onClose={() => setShowBulk(false)}
-          onUpdated={majs => {
-            // Mise à jour en place : recharger toute la page ferait perdre la
-            // matière sélectionnée et la position de défilement.
-            setLessons(ls => ls.map(l => majs.find(m => m.id === l.id) ?? l))
-          }}
-        />
       )}
     </>
   )

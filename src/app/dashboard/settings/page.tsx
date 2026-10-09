@@ -18,16 +18,22 @@ import './styles.css'
 import PageLoader from '@/components/PageLoader'
 import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 
-type TabId = 'etudes' | 'compte' | 'apparence' | 'abonnement'
+type TabId = 'reglages' | 'aide' | 'securite' | 'contact' | 'abonnement'
 
-// Regroupement : on range par intention, pas par ordre historique.
-// « Mes etudes » d'abord parce que c'est ce qu'on vient changer en cours
-// d'annee ; l'abonnement en dernier pour ne pas ouvrir sur un argumentaire.
+// Les rubriques reprennent EXACTEMENT les entrées du menu de compte ouvert
+// depuis l'avatar, dans la barre latérale. Un étudiant qui clique sur
+// « Sécurité » dans le menu doit retrouver « Sécurité » ici, au même nom et
+// au même endroit : c'est la seule façon de ne pas se perdre.
+//
+// Avant, quatre onglets mélangeaient les intentions : le mot de passe et le
+// tutoriel cohabitaient dans « Mon compte », la suppression de compte était
+// rangée avec les matières. D'où l'impression de fouillis.
 const TABS: { id: TabId; label: string; hint: string }[] = [
-  { id: 'etudes',     label: 'Mes études',  hint: 'année, barème' },
-  { id: 'compte',     label: 'Mon compte',  hint: 'profil, mot de passe' },
-  { id: 'apparence',  label: 'Apparence',   hint: 'thème, sons' },
-  { id: 'abonnement', label: 'Abonnement',  hint: 'formule, quotas' },
+  { id: 'reglages',   label: 'Réglages',   hint: 'études, profil, apparence' },
+  { id: 'aide',       label: 'Aide',       hint: 'tutoriel, prise en main' },
+  { id: 'securite',   label: 'Sécurité',   hint: 'email, mot de passe, compte' },
+  { id: 'contact',    label: 'Contact',    hint: 'écrire, signaler' },
+  { id: 'abonnement', label: 'Abonnement', hint: 'formule, quotas' },
 ]
 
 /** Date lisible pour la ligne "tu es passé en P2 le ...". */
@@ -66,7 +72,25 @@ export default function SettingsPage() {
 
   // Rubrique affichee. La page montrait huit sections d'affilee dans un seul
   // defilement, ce qui noyait tout. On n'en affiche plus qu'une.
-  const [tab, setTab] = useState<TabId>('etudes')
+  // L'onglet ouvert vient de l'URL (?s=securite), posée par le menu de compte
+  // de la barre latérale. Sans ça, cliquer « Sécurité » dans le menu atterrirait
+  // sur Réglages et il faudrait recliquer.
+  const [tab, setTab] = useState<TabId>(() => {
+    if (typeof window === 'undefined') return 'reglages'
+    const s = new URLSearchParams(window.location.search).get('s')
+    return (TABS.some(t => t.id === s) ? s : 'reglages') as TabId
+  })
+
+  // Le menu peut demander une autre rubrique alors que la page est déjà
+  // ouverte : Next ne remonte pas le composant, donc on écoute l'évènement.
+  useEffect(() => {
+    function onJump(e: Event) {
+      const id = (e as CustomEvent<string>).detail
+      if (TABS.some(t => t.id === id)) setTab(id as TabId)
+    }
+    window.addEventListener('medrev-settings-tab', onJump)
+    return () => window.removeEventListener('medrev-settings-tab', onJump)
+  }, [])
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [email, setEmail] = useState('')
@@ -504,7 +528,7 @@ export default function SettingsPage() {
         )}
 
         {/* ============ ANNÉE D'ÉTUDES ============ */}
-        {tab === 'etudes' && (
+        {tab === 'reglages' && (
         <section className="set-card" id="set-annee">
           <div className="set-card-h">Année d&apos;études</div>
 
@@ -552,7 +576,7 @@ export default function SettingsPage() {
         )}
 
         {/* ============ PROFIL ============ */}
-        {tab === 'compte' && (
+        {tab === 'reglages' && (
         <section className="set-card" id="set-profil">
           <div className="set-card-h">Profil</div>
 
@@ -607,7 +631,7 @@ export default function SettingsPage() {
         )}
 
         {/* ============ COMPTE (email + mot de passe + session) ============ */}
-        {tab === 'compte' && (
+        {tab === 'securite' && (
         <section className="set-card" id="set-compte">
           <div className="set-card-h">Compte et sécurité</div>
 
@@ -677,7 +701,7 @@ export default function SettingsPage() {
         )}
 
         {/* ============ APPARENCE ============ */}
-        {tab === 'apparence' && (
+        {tab === 'reglages' && (
         <section className="set-card" id="set-apparence">
           <div className="set-card-h">Apparence et ambiance</div>
 
@@ -747,7 +771,40 @@ export default function SettingsPage() {
         )}
 
         {/* ============ AIDE ============ */}
-        {tab === 'compte' && (
+        {tab === 'contact' && (
+        <section className="set-card" id="set-contact">
+          <div className="set-card-h">Nous écrire</div>
+
+          <div className="set-row">
+            <label className="set-label">Une question, un bug, une idée</label>
+            <p className="set-hint">
+              Une seule adresse, lue par la personne qui développe MedRev :{' '}
+              <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+              Pour un bug, dis sur quel écran et sur quel appareil : ça fait
+              gagner un aller-retour.
+            </p>
+          </div>
+
+          <div className="set-row">
+            <label className="set-label">Une question de QCM qui cloche</label>
+            <p className="set-hint">
+              C&apos;est le signalement le plus utile. Sous chaque QCM, le lien
+              « Signaler cette question » envoie le motif en un clic, sans quitter
+              ta session.
+            </p>
+          </div>
+
+          <div className="set-row">
+            <label className="set-label">Tu es au bureau d&apos;un tutorat</label>
+            <p className="set-hint">
+              MedRev ne produit aucun contenu de cours et ne remplace ni vos polys
+              ni vos khôlles. Écris à la même adresse, on te montre l&apos;outil.
+            </p>
+          </div>
+        </section>
+        )}
+
+        {tab === 'aide' && (
         <section className="set-card" id="set-aide">
           <div className="set-card-h">Aide</div>
 
@@ -777,7 +834,7 @@ export default function SettingsPage() {
         )}
 
         {/* ============ SUPPRIMER (RGPD) ============ */}
-        {tab === 'etudes' && (
+        {tab === 'reglages' && (
         <section className="set-card" id="set-bareme">
           <div className="set-card-h">Barème du simulateur</div>
           <p className="set-card-sub">Par défaut, le barème standard. Change-le si ta fac en utilise un autre.</p>
@@ -796,7 +853,7 @@ export default function SettingsPage() {
         </section>
         )}
 
-        {tab === 'compte' && (
+        {tab === 'securite' && (
         <section className="set-card set-card-danger" id="set-danger">
           <div className="set-card-h">Supprimer mon compte</div>
           <p className="set-hint">

@@ -397,3 +397,22 @@
     right: 16px !important;
   }
 }
+
+/* Sortie secondaire : « Ne plus me le montrer ».
+   Discrète à côté de « Plus tard », parce que l'abandon définitif ne doit pas
+   être le geste le plus facile. Un étudiant qui ferme le tour veut presque
+   toujours juste aller voir ailleurs, pas le perdre. */
+.ont-btn-quit {
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  font-size: 12px;
+  color: var(--text-tertiary, #95A0B0);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ont-btn-quit:hover { color: var(--text-secondary, #5C5C5A); }
+
+/* Les deux sorties, groupées à gauche de la barre d'actions. */
+.ont-tip-exit { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }

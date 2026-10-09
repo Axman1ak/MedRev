@@ -160,6 +160,11 @@ export default function CalendarPage() {
   const supabase = createClient()
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  // Chargement des DONNÉES, pas seulement de l'identité. L'écran ne gardait
+  // le loader que tant que `userId` était nul, or il arrive dès que
+  // auth.getUser() répond, bien avant les matières et les fiches. Entre les
+  // deux, la page s'affichait entièrement vide pendant une seconde.
+  const [loading, setLoading] = useState(true)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
@@ -211,6 +216,7 @@ export default function CalendarPage() {
     )
     setSystems(scoped.systems)
     setLessons(scoped.lessons)
+    setLoading(false)
     setTds((td as TdEvent[] | null) ?? [])
   }, [supabase])
 
@@ -218,7 +224,9 @@ export default function CalendarPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/'); return }
       setUserId(user.id)
-      load(user.id)
+      // Un échec réseau ne doit pas laisser le loader tourner pour toujours :
+      // mieux vaut un écran vide qu'un écran qui ment.
+      load(user.id).catch(() => setLoading(false))
     })
   }, [load, router, supabase])
 
@@ -529,7 +537,7 @@ export default function CalendarPage() {
   }
 
   // Avant : `return null`, donc un écran blanc jusqu'à l'arrivée des données.
-  if (!userId) return <div className="cal-page"><PageLoader label="Chargement de ton calendrier…" /></div>
+  if (loading || !userId) return <div className="cal-page"><PageLoader label="Chargement de ton calendrier…" /></div>
 
   // ============= Render =============
   const totalFiches = semLessons.length

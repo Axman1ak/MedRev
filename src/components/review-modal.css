@@ -620,3 +620,51 @@
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   color: #cdd8e6; font-size: 14px; z-index: 1; pointer-events: none;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   COUP DE POUCE APRÈS UNE NOTE BASSE (1 à 3)
+   Un bandeau d'action, pas une publicité : il propose ce qui sert
+   à cet instant précis selon ce que la fiche contient déjà.
+   Couleurs via les tokens, donc le mode sombre suit tout seul.
+   ───────────────────────────────────────────────────────────── */
+.rmod-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-primary);
+  border-radius: 8px;
+  background: var(--bg-app);
+}
+.rmod-nudge-txt {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.rmod-nudge-btn {
+  flex: none;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.rmod-nudge-btn:disabled { opacity: .5; cursor: default; }
+
+/* En sombre, --accent-primary est un bleu clair : texte sombre dessus,
+   comme les autres boutons pleins accentués du design system. */
+[data-theme="dark"] .rmod-nudge-btn { color: #0E1726; }
+
+@media (max-width: 560px) {
+  .rmod-nudge { flex-direction: column; align-items: stretch; }
+  .rmod-nudge-btn { width: 100%; }
+}

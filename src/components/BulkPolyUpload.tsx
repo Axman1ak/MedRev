@@ -1,31 +1,41 @@
 'use client'
 // src/components/BulkPolyUpload.tsx
 //
-// Dépôt groupé de polys : on lâche N PDF d'un coup, MedRev propose à quelle
-// fiche rattacher chacun, l'étudiant corrige ce qui ne va pas, et tout part
-// en une fois.
+// Rattachement de plusieurs polys d'un coup.
 //
-// POURQUOI CET ÉCRAN EXISTE
-// -------------------------
-// Sur la base de prod : 330 fiches sur 380 n'ont aucun cours attaché, et donc
-// zéro QCM. Les 49 qui ont un PDF ont des QCM dans 39 cas sur 49. La
-// génération n'a jamais été le problème : attacher le cours l'est. Et il
-// fallait jusqu'ici ouvrir chaque fiche, une par une, dans la ReviewModal.
+// COMMENT ON Y ARRIVE
+// -------------------
+// Il n'y a pas de bouton dédié. On sélectionne simplement plusieurs fichiers
+// depuis « Ajouter le polycopié (PDF) » d'une fiche : un seul fichier part
+// directement sur cette fiche, plusieurs ouvrent cet écran, qui propose à
+// quelle fiche rattacher chacun. Un geste de plus seulement quand il y a
+// plusieurs fichiers, et rien de nouveau à découvrir dans l'interface.
 //
-// RÈGLE : on propose, l'étudiant valide. Rien ne part sans un clic sur le
-// bouton final. Un mauvais rattachement enverrait le mauvais cours à la
-// génération, et une question fausse coûte plus cher que dix secondes de
-// relecture.
+// POURQUOI ÇA EXISTE
+// ------------------
+// Sur la base de prod : 330 fiches sur 380 n'ont aucun cours attaché, donc
+// zéro QCM. Les 49 qui ont un PDF ont des QCM dans 39 cas. La génération n'a
+// jamais été le problème, attacher le cours l'est, et ça se faisait fiche par
+// fiche.
+//
+// RÈGLE : on propose, l'étudiant valide. Rien ne part sans un clic final. Un
+// mauvais rattachement enverrait le mauvais cours à la génération de QCM, et
+// une question fausse coûte plus cher que dix secondes de relecture.
+//
+// Le composant charge lui-même les matières et les fiches de l'année en cours,
+// pour rester utilisable depuis n'importe quel écran qui ouvre une fiche sans
+// avoir à lui faire redescendre ses listes.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia, System } from '@/types'
 import { FREE_PDF_SIZE_MB } from '@/types'
 import { countPdfPages } from '@/lib/pdf'
 import { proposerRattachements } from '@/lib/matchFiles'
+import { normalizeYear, scopeToYear } from '@/lib/year'
 import './bulk-poly.css'
 
-type Etat = 'choix' | 'revue' | 'envoi' | 'bilan'
+type Etat = 'chargement' | 'revue' | 'envoi' | 'bilan'
 
 interface Ligne {
   file: File
@@ -38,39 +48,73 @@ interface Ligne {
 }
 
 export default function BulkPolyUpload({
-  lessons,
-  systems,
   userId,
+  files,
+  ficheEnCoursId,
   onClose,
   onUpdated,
 }: {
-  lessons: Lesson[]
-  systems: System[]
   userId: string
+  /** Fichiers déjà choisis par l'étudiant, depuis le sélecteur d'une fiche. */
+  files: File[]
+  /** Fiche depuis laquelle le dépôt a été lancé : elle passe en tête. */
+  ficheEnCoursId?: string
   onClose: () => void
   onUpdated: (maj: Lesson[]) => void
 }) {
   const supabase = createClient()
-  const [etat, setEtat] = useState<Etat>('choix')
+  const [etat, setEtat] = useState<Etat>('chargement')
   const [lignes, setLignes] = useState<Ligne[]>([])
-  const [plan, setPlan] = useState<string | null>(null)
+  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [systems, setSystems] = useState<System[]>([])
+  const [plan, setPlan] = useState<string>('free')
   const [enCours, setEnCours] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [glisse, setGlisse] = useState(false)
+  const [erreurChargement, setErreurChargement] = useState<string | null>(null)
 
-  // Le plafond de taille dépend du plan. On le lit une fois : pas la peine de
-  // le faire remonter depuis la page Fiches, qui ne s'en sert pas.
+  const preparer = useCallback((ls: Lesson[], planLu: string) => {
+    const limiteMo = planLu === 'pro' ? Infinity : FREE_PDF_SIZE_MB
+
+    // La fiche d'où part le dépôt est proposée en premier aux fichiers : c'est
+    // presque toujours celle que l'étudiant avait en tête en cliquant.
+    const candidats = ls.map(l => ({ id: l.id, nom: l.name }))
+    const props = proposerRattachements(files, f => f.name, candidats)
+
+    const lignesPretes: Ligne[] = props.map(p => ({
+      file: p.fichier,
+      cibleId: p.cibleId ?? '',
+      auto: !!p.cibleId,
+      tropGros: p.fichier.size / (1024 * 1024) > limiteMo,
+    }))
+
+    if (ficheEnCoursId && !lignesPretes.some(l => l.cibleId === ficheEnCoursId)) {
+      const orphelin = lignesPretes.find(l => !l.cibleId && !l.tropGros)
+      if (orphelin) { orphelin.cibleId = ficheEnCoursId; orphelin.auto = true }
+    }
+
+    setLignes(lignesPretes)
+    setEtat('revue')
+  }, [files, ficheEnCoursId])
+
   useEffect(() => {
     let vivant = true
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('profiles').select('plan').eq('id', user.id).single()
-        .then(({ data }) => { if (vivant) setPlan((data?.plan as string) ?? 'free') })
+    Promise.all([
+      supabase.from('systems').select('*').eq('user_id', userId).order('semestre').order('created_at'),
+      supabase.from('lessons').select('*').eq('user_id', userId).order('created_at'),
+      supabase.from('profiles').select('plan, current_year').eq('id', userId).single(),
+    ]).then(([{ data: sys }, { data: les }, { data: prof }]) => {
+      if (!vivant) return
+      const p = prof as { plan?: string; current_year?: string } | null
+      const year = normalizeYear(p?.current_year)
+      const scoped = scopeToYear((sys as System[] | null) ?? [], (les as Lesson[] | null) ?? [], year)
+      setSystems(scoped.systems)
+      setLessons(scoped.lessons)
+      setPlan(p?.plan ?? 'free')
+      preparer(scoped.lessons, p?.plan ?? 'free')
+    }).catch(() => {
+      if (vivant) setErreurChargement("Impossible de charger tes fiches. Recharge la page et réessaie.")
     })
     return () => { vivant = false }
-  }, [supabase])
-
-  const limiteMo = plan === 'pro' ? Infinity : FREE_PDF_SIZE_MB
+  }, [supabase, userId, preparer])
 
   const nomMatiere = useMemo(() => {
     const m = new Map<string, string>()
@@ -78,7 +122,6 @@ export default function BulkPolyUpload({
     return m
   }, [systems])
 
-  // Fiches proposées dans les menus déroulants, groupées par matière.
   const parMatiere = useMemo(() => {
     const g = new Map<string, Lesson[]>()
     lessons.forEach(l => {
@@ -88,26 +131,6 @@ export default function BulkPolyUpload({
     })
     return Array.from(g.entries())
   }, [lessons])
-
-  function recevoir(files: FileList | null) {
-    if (!files || files.length === 0) return
-    const pdfs = Array.from(files).filter(f => f.type === 'application/pdf')
-    if (pdfs.length === 0) return
-
-    const props = proposerRattachements(
-      pdfs,
-      f => f.name,
-      lessons.map(l => ({ id: l.id, nom: l.name })),
-    )
-
-    setLignes(props.map(p => ({
-      file: p.fichier,
-      cibleId: p.cibleId ?? '',
-      auto: !!p.cibleId,
-      tropGros: p.fichier.size / (1024 * 1024) > limiteMo,
-    })))
-    setEtat('revue')
-  }
 
   function changerCible(i: number, id: string) {
     setLignes(ls => ls.map((l, j) => (j === i ? { ...l, cibleId: id, auto: false } : l)))
@@ -178,14 +201,16 @@ export default function BulkPolyUpload({
   const echoues = lignes.filter(l => l.statut === 'erreur').length
 
   return (
-    <div className="bulk-overlay" role="dialog" aria-modal="true" aria-label="Déposer mes polys">
+    <div className="bulk-overlay" role="dialog" aria-modal="true" aria-label="Rattacher les polys">
       <div className="bulk-modal">
         <div className="bulk-head">
           <div>
-            <div className="bulk-title">Déposer mes polys</div>
+            <div className="bulk-title">
+              {files.length} polys à rattacher
+            </div>
             <div className="bulk-sub">
-              {etat === 'choix' && 'Un PDF par cours. On devine à quelle fiche chacun appartient, tu corriges si besoin.'}
-              {etat === 'revue' && 'Vérifie les rattachements avant d’envoyer.'}
+              {etat === 'chargement' && 'Lecture de tes fiches…'}
+              {etat === 'revue' && 'On a deviné d’après le nom des fichiers. Corrige ce qui ne va pas.'}
               {etat === 'envoi' && `Envoi ${enCours} sur ${aEnvoyer.length}…`}
               {etat === 'bilan' && 'Terminé.'}
             </div>
@@ -195,28 +220,10 @@ export default function BulkPolyUpload({
           )}
         </div>
 
-        {etat === 'choix' && (
-          <div
-            className={`bulk-drop${glisse ? ' on' : ''}`}
-            onDragOver={e => { e.preventDefault(); setGlisse(true) }}
-            onDragLeave={() => setGlisse(false)}
-            onDrop={e => { e.preventDefault(); setGlisse(false); recevoir(e.dataTransfer.files) }}
-            onClick={() => inputRef.current?.click()}
-          >
-            <div className="bulk-drop-main">Glisse tes PDF ici</div>
-            <div className="bulk-drop-sub">ou clique pour les choisir</div>
-            {plan !== 'pro' && (
-              <div className="bulk-drop-note">Jusqu&apos;à {FREE_PDF_SIZE_MB} Mo par fichier en Gratuit.</div>
-            )}
-            <input
-              ref={inputRef}
-              type="file"
-              accept="application/pdf"
-              multiple
-              hidden
-              onChange={e => recevoir(e.target.files)}
-            />
-          </div>
+        {erreurChargement && <div className="bulk-list"><p className="bulk-count">{erreurChargement}</p></div>}
+
+        {etat === 'chargement' && !erreurChargement && (
+          <div className="bulk-list"><p className="bulk-count">Un instant…</p></div>
         )}
 
         {(etat === 'revue' || etat === 'envoi' || etat === 'bilan') && (
@@ -230,7 +237,7 @@ export default function BulkPolyUpload({
                     <div className="bulk-file-meta">
                       {(l.file.size / (1024 * 1024)).toFixed(1)} Mo
                       {l.auto && l.cibleId && <span className="bulk-tag">rattachement proposé</span>}
-                      {l.tropGros && <span className="bulk-tag warn">trop lourd pour le plan Gratuit</span>}
+                      {l.tropGros && <span className="bulk-tag warn">trop lourd ({FREE_PDF_SIZE_MB} Mo max)</span>}
                       {fiche?.media && (fiche.media as LessonMedia).pdf_path && !l.statut && (
                         <span className="bulk-tag warn">remplacera le poly actuel</span>
                       )}
@@ -270,6 +277,7 @@ export default function BulkPolyUpload({
               <span className="bulk-count">
                 {aEnvoyer.length} fichier{aEnvoyer.length > 1 ? 's' : ''} à rattacher
                 {doublons.size > 0 && ' · corrige les doublons pour continuer'}
+                {plan !== 'pro' && lignes.some(l => l.tropGros) && ` · limite ${FREE_PDF_SIZE_MB} Mo par fichier`}
               </span>
               <button
                 type="button"

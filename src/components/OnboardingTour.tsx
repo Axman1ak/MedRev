@@ -688,11 +688,11 @@ export default function OnboardingTour({
       if (e.key === 'Escape') {
         // Avant : window.confirm(). Une boîte de dialogue native au milieu
         // d'une interface soignée fait bricolage, et elle demandait une
-        // confirmation pour une action sans conséquence (le tutoriel se
-        // relance depuis les Réglages). Échap ferme, comme le bouton
-        // « Passer le tutoriel » juste à côté.
-        handleSkip()
-      } else if (e.key === 'ArrowRight' && !isWaitClick && !shouldForceCreate) {
+        // confirmation pour une action sans conséquence. Échap met le tour
+        // en pause, comme le bouton « Plus tard » : la position est gardée,
+        // on reprend là où on s'était arrêté.
+        pauseTour()
+      } else if (e.key === 'ArrowRight' && !isWaitClick) {
         next()
       } else if (e.key === 'ArrowLeft' && stepIdx > 0) {
         prev()
@@ -713,6 +713,19 @@ export default function OnboardingTour({
   function prev() {
     if (stepIdx > 0) setStepIdx(stepIdx - 1)
   }
+  // Deux façons de sortir, et c'est la distinction qui manquait.
+  //
+  // « Plus tard » met en PAUSE : l'étape courante reste en mémoire et le tour
+  // reprend là où on l'a laissé à la prochaine visite. Avant, le seul bouton
+  // disponible effaçait la progression, donc tout étudiant qui voulait juste
+  // regarder une fiche perdait le tutoriel pour de bon.
+  function pauseTour() {
+    // On ne touche pas à LS_KEY : il contient déjà l'étape courante,
+    // réécrite à chaque changement d'étape.
+    onSkip()
+  }
+
+  // « Ne plus me le montrer » abandonne vraiment.
   function handleSkip() {
     if (typeof window !== 'undefined') localStorage.removeItem(LS_KEY)
     onSkip()
@@ -768,8 +781,11 @@ export default function OnboardingTour({
           <div className="ont-tip-body">{cur.body}</div>
           <ProgressBars count={total} active={stepIdx} />
           <div className="ont-tip-actions">
-            <button className="ont-btn-ghost" onClick={handleSkip}>
-              Passer le tutoriel
+            <button className="ont-btn-ghost" onClick={pauseTour}>
+              Plus tard
+            </button>
+            <button className="ont-btn-quit" onClick={handleSkip}>
+              Ne plus me le montrer
             </button>
             <div className="ont-tip-actions-right">
               {stepIdx > 0 && (
@@ -826,18 +842,24 @@ export default function OnboardingTour({
             )}
             <ProgressBars count={total} active={stepIdx} />
             <div className="ont-tip-actions">
-              <button className="ont-btn-ghost" onClick={handleSkip}>
-                Passer le tutoriel
+              <button className="ont-btn-ghost" onClick={pauseTour}>
+                Plus tard
+              </button>
+              <button className="ont-btn-quit" onClick={handleSkip}>
+                Ne plus me le montrer
               </button>
               <div className="ont-tip-actions-right">
                 {stepIdx > 0 && (
                   <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
                 )}
-                {!shouldForceCreate && (
-                  <button className="ont-btn-primary" onClick={next}>
-                    Suivant →
-                  </button>
-                )}
+                {/* « Suivant » est désormais TOUJOURS disponible, même sur
+                    l'étape qui demandait de créer une matière. Une visite
+                    guidée qui refuse d'avancer tant qu'on n'a pas fait le
+                    geste attendu n'est plus une visite, c'est un formulaire.
+                    L'étape reste là, elle propose, elle n'impose plus. */}
+                <button className="ont-btn-primary" onClick={next}>
+                  {shouldForceCreate ? 'Plus tard, continuer →' : 'Suivant →'}
+                </button>
               </div>
             </div>
           </div>
@@ -883,8 +905,11 @@ export default function OnboardingTour({
             </div>
             <ProgressBars count={total} active={stepIdx} />
             <div className="ont-tip-actions">
-              <button className="ont-btn-ghost" onClick={handleSkip}>
-                Passer le tutoriel
+              <button className="ont-btn-ghost" onClick={pauseTour}>
+                Plus tard
+              </button>
+              <button className="ont-btn-quit" onClick={handleSkip}>
+                Ne plus me le montrer
               </button>
               <div className="ont-tip-actions-right">
                 {stepIdx > 0 && (
@@ -917,8 +942,11 @@ export default function OnboardingTour({
           </div>
           <ProgressBars count={total} active={stepIdx} />
           <div className="ont-tip-actions">
-            <button className="ont-btn-ghost" onClick={handleSkip}>
-              Passer le tutoriel
+            <button className="ont-btn-ghost" onClick={pauseTour}>
+              Plus tard
+            </button>
+            <button className="ont-btn-quit" onClick={handleSkip}>
+              Ne plus me le montrer
             </button>
             <div className="ont-tip-actions-right">
               {stepIdx > 0 && (
@@ -1031,9 +1059,14 @@ export default function OnboardingTour({
 
         <div className="ont-tip-actions">
           {isWalkthrough ? (
-            <button className="ont-btn-ghost" onClick={handleSkip}>
-              Passer le tutoriel
-            </button>
+            <span className="ont-tip-exit">
+              <button className="ont-btn-ghost" onClick={pauseTour}>
+                Plus tard
+              </button>
+              <button className="ont-btn-quit" onClick={handleSkip}>
+                Ne plus me le montrer
+              </button>
+            </span>
           ) : (
             <span />
           )}
@@ -1043,9 +1076,9 @@ export default function OnboardingTour({
                 ← Préc.
               </button>
             )}
-            {isWalkthrough && !shouldForceCreate && (
+            {isWalkthrough && (
               <button className="ont-btn-primary" onClick={next}>
-                {isLast ? 'Terminer' : 'Suivant →'}
+                {isLast ? 'Terminer' : shouldForceCreate ? 'Plus tard, continuer →' : 'Suivant →'}
               </button>
             )}
           </div>

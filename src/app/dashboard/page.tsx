@@ -514,6 +514,11 @@ export default function DashboardPage() {
   const supabase = createClient()
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  // Chargement des DONNÉES, pas seulement de l'identité. L'écran ne gardait
+  // le loader que tant que `userId` était nul, or il arrive dès que
+  // auth.getUser() répond, bien avant les matières et les fiches. Entre les
+  // deux, la page s'affichait entièrement vide pendant une seconde.
+  const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<{ name?: string } | null>(null)
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
@@ -565,6 +570,7 @@ export default function DashboardPage() {
     )
     setSystems(scoped.systems)
     setLessons(scoped.lessons)
+    setLoading(false)
   }, [supabase])
 
   useEffect(() => {
@@ -582,7 +588,9 @@ export default function DashboardPage() {
             setProfile({ name: displayName })
           }
         })
-      load(user.id)
+      // Un échec réseau ne doit pas laisser le loader tourner pour toujours :
+      // mieux vaut un écran vide qu'un écran qui ment.
+      load(user.id).catch(() => setLoading(false))
     })
   }, [load, router, supabase])
 
@@ -722,7 +730,7 @@ export default function DashboardPage() {
   const hiddenCount = sortedQueue.length - visibleQueue.length
 
   // Avant : `return null`, donc un écran blanc jusqu'à l'arrivée des données.
-  if (!userId) return <div className="dvx"><PageLoader label="Chargement de ta journée…" /></div>
+  if (loading || !userId) return <div className="dvx"><PageLoader label="Chargement de ta journée…" /></div>
 
   // "14:00:00" → "14h" · "14:30:00" → "14h30"
   const fmtTd = (t: string | null) => {

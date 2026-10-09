@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -55,6 +55,46 @@ const FAC_NAMES: Record<string, string> = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+
+  // MENU DE COMPTE
+  // Avant, la carte utilisateur était un simple lien vers Réglages, et tout
+  // (études, mot de passe, tutoriel, suppression de compte) se retrouvait
+  // empilé derrière une seule porte. On ouvre maintenant un menu, comme dans
+  // une app bancaire : chaque intention a son entrée, et chaque entrée mène
+  // à la rubrique qui porte le même nom.
+  const [menuOuvert, setMenuOuvert] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!menuOuvert) return
+    function dehors(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOuvert(false)
+    }
+    function echap(e: KeyboardEvent) { if (e.key === 'Escape') setMenuOuvert(false) }
+    document.addEventListener('mousedown', dehors)
+    document.addEventListener('keydown', echap)
+    return () => {
+      document.removeEventListener('mousedown', dehors)
+      document.removeEventListener('keydown', echap)
+    }
+  }, [menuOuvert])
+
+  // Si on est déjà sur Réglages, Next ne remonte pas la page : on prévient
+  // l'écran par un évènement plutôt que de compter sur un remontage.
+  function allerReglages(section: string) {
+    setMenuOuvert(false)
+    if (pathname === '/dashboard/settings') {
+      window.dispatchEvent(new CustomEvent('medrev-settings-tab', { detail: section }))
+    } else {
+      router.push(`/dashboard/settings?s=${section}`)
+    }
+  }
+
+  async function seDeconnecter() {
+    setMenuOuvert(false)
+    await supabase.auth.signOut()
+    router.push('/')
+  }
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [todayCount, setTodayCount] = useState(0)
@@ -357,6 +397,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .db-user-meta { font-size: 11px; color: rgba(255,255,255,.55); }
         .db-user-chev { margin-left: auto; color: rgba(255,255,255,.45); font-size: 16px; }
 
+        /* ---- Menu de compte (ouvert depuis l'avatar) ---- */
+        .db-user-wrap { position: relative; }
+        .db-usermenu {
+          /* position: fixed et non absolute : la barre latérale est un rail de
+             76 px en overflow:hidden, qui rognait le menu à la largeur d'une
+             icône. En fixed, le menu sort du rail et se pose par-dessus le
+             contenu, à une largeur lisible. */
+          position: fixed; left: 12px; bottom: 84px; width: 268px; max-width: calc(100vw - 24px);
+          z-index: 60;
+          background: var(--bg-card); color: var(--text-primary);
+          border: 1px solid var(--border-subtle); border-radius: 12px;
+          box-shadow: 0 16px 40px rgba(5, 10, 20, .34);
+          padding: 6px; overflow: hidden;
+        }
+        .db-usermenu-item {
+          width: 100%; display: flex; align-items: flex-start; gap: 10px;
+          padding: 9px 10px; border: none; border-radius: 8px;
+          background: none; text-align: left; cursor: pointer;
+          color: var(--text-primary); font: inherit;
+        }
+        .db-usermenu-item:hover { background: var(--bg-app); }
+        .db-usermenu-item span { display: block; min-width: 0; }
+        .db-usermenu-item strong { display: block; font-size: 13.5px; font-weight: 600; }
+        .db-usermenu-item em {
+          display: block; font-style: normal; font-size: 11.5px;
+          color: var(--text-secondary); margin-top: 1px;
+        }
+        .db-usermenu-ico {
+          flex: none; width: 22px; text-align: center;
+          font-size: 13px; line-height: 20px; color: var(--text-secondary);
+        }
+        .db-usermenu-item.danger strong { color: var(--danger); }
+        .db-usermenu-item.danger .db-usermenu-ico { color: var(--danger); }
+        .db-usermenu-sep { height: 1px; margin: 5px 8px; background: var(--border-subtle); }
+
         /* MAIN */
         .db-main {
           flex: 1;
@@ -480,9 +555,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </a>
         </div>
 
-        {/* User card → Settings */}
-        <div className="db-user-wrap">
-          <Link href="/dashboard/settings" className="db-user-card" title="Paramètres">
+        {/* Carte utilisateur → menu de compte */}
+        <div className="db-user-wrap" ref={menuRef}>
+          {menuOuvert && (
+            <div className="db-usermenu" role="menu" aria-label="Menu du compte">
+              <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('reglages')}>
+                <span className="db-usermenu-ico" aria-hidden="true">⚙</span>
+                <span><strong>Réglages</strong><em>Études, profil, apparence</em></span>
+              </button>
+              <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('aide')}>
+                <span className="db-usermenu-ico" aria-hidden="true">?</span>
+                <span><strong>Aide et tutoriel</strong><em>Revoir la prise en main</em></span>
+              </button>
+              <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('securite')}>
+                <span className="db-usermenu-ico" aria-hidden="true">🔒</span>
+                <span><strong>Sécurité</strong><em>Email, mot de passe, compte</em></span>
+              </button>
+              <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('contact')}>
+                <span className="db-usermenu-ico" aria-hidden="true">✉</span>
+                <span><strong>Nous contacter</strong><em>Une question, un bug</em></span>
+              </button>
+              <div className="db-usermenu-sep" />
+              <button type="button" role="menuitem" className="db-usermenu-item danger" onClick={seDeconnecter}>
+                <span className="db-usermenu-ico" aria-hidden="true">⏻</span>
+                <span><strong>Se déconnecter</strong></span>
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            className="db-user-card"
+            onClick={() => setMenuOuvert(v => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuOuvert}
+            title="Mon compte"
+          >
             <div className="db-user-avatar">{initials}</div>
             <div className="db-lbl" style={{ minWidth: 0, flex: 1 }}>
               <div className="db-user-name">{profile?.name || '...'}</div>
@@ -492,8 +599,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {profile?.fac ? ` · ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
               </div>
             </div>
-            <span className="db-user-chev db-lbl">›</span>
-          </Link>
+            <span className="db-user-chev db-lbl">{menuOuvert ? '⌄' : '›'}</span>
+          </button>
         </div>
       </aside>
 
