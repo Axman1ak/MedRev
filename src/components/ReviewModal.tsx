@@ -166,6 +166,9 @@ export default function ReviewModal({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
+  // Le sélecteur unique du bouton « Ajouter mon cours » : il accepte PDF et
+  // vidéo, et c'est le type du fichier qui décide de la suite.
+  const coursInputRef = useRef<HTMLInputElement>(null)
 
   // Transcript state (auto-déclenché après upload vidéo, regen possible)
   const [transcribing, setTranscribing] = useState(false)
@@ -590,6 +593,25 @@ export default function ReviewModal({
   const flashcardsRaw = (lesson as { flashcards?: unknown }).flashcards
   const cartesCount = Array.isArray(flashcardsRaw) ? flashcardsRaw.length : 0
 
+  // Le transcript tenait dans un bloc de douze lignes sous la vidéo, avec son
+  // propre libellé, son propre bouton et son propre style en ligne. C'est un
+  // détail technique : il se replie en une mention dans la ligne du fichier,
+  // et son seul bouton n'apparaît que s'il y a quelque chose à faire.
+  const nbSegments = Array.isArray(media.transcript) ? media.transcript.length : 0
+  const transcriptNote =
+    transcribing ? ' · transcription en cours (1-2 min)'
+    : nbSegments > 0 ? ' · transcript prêt'
+    : transcribeError ? ' · transcript en erreur'
+    : ' · pas encore de transcript'
+  const transcriptAction = (transcribing || !hasVideo) ? null : (
+    <button
+      type="button"
+      className="rmod-cours-act"
+      onClick={() => void transcribeVideo()}
+      title="Le transcript sert à générer les QCM depuis la vidéo"
+    >{nbSegments > 0 ? 'Regénérer' : 'Transcrire'}</button>
+  )
+
   return (
     <>
     <div className="rmod-overlay" data-tour="review-modal" onClick={onClose}>
@@ -666,151 +688,120 @@ export default function ReviewModal({
 
 
             {/* ─────────────────────────────────────────────── */}
-            {/*  Bloc Sources (vidéo + PDF)                    */}
+            {/*  Le cours, puis les deux façons de s'entraîner  */}
+            {/*                                                 */}
+            {/*  Avant, « Sources » occupait la moitié de la    */}
+            {/*  modale avec deux grandes zones de dépôt —      */}
+            {/*  vidéo et PDF séparées — et poussait les QCM    */}
+            {/*  et les flashcards sous la ligne de flottaison. */}
+            {/*  Or déposer un cours se fait une fois ; les QCM */}
+            {/*  et les cartes servent à chaque révision. Le    */}
+            {/*  dépôt tient donc en un bouton, qui accepte     */}
+            {/*  indifféremment PDF et vidéo, et les deux       */}
+            {/*  entraînements sont côte à côte, visibles sans  */}
+            {/*  faire défiler.                                 */}
             {/* ─────────────────────────────────────────────── */}
             <div className="rmod-divider" />
             <div data-tour="sources">
-            <div className="rmod-block-label">Sources</div>
+            <div className="rmod-block-label">Cours</div>
 
-            {/* Vidéo */}
-            {hasVideo ? (
-              <div className="rmod-src-row">
-                <div className="rmod-src-icon video">{'▶'}</div>
-                <div className="rmod-src-name">
-                  cours.{getExt(media.video_path || '', 'mp4')}
+            <div className="rmod-cours">
+              {hasVideo && (
+                <div className="rmod-cours-row">
+                  <span className="rmod-cours-ic video" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m9.5 8.5 6 3.5-6 3.5Z" /><rect x="3" y="4" width="18" height="16" rx="2.5" /></svg>
+                  </span>
+                  <span className="rmod-cours-nom">
+                    cours.{getExt(media.video_path || '', 'mp4')}
+                    <em>{formatDuration(media.video_duration_s) || formatSize(media.video_size)}{transcriptNote}</em>
+                  </span>
+                  {transcriptAction}
+                  <button
+                    type="button"
+                    className="rmod-cours-act"
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                  >{uploadingVideo ? '…' : 'Remplacer'}</button>
+                  <button
+                    type="button"
+                    className="rmod-cours-act danger"
+                    onClick={() => removeMedia('video')}
+                    disabled={uploadingVideo}
+                    aria-label="Supprimer la vidéo"
+                  >{'×'}</button>
                 </div>
-                <div className="rmod-src-meta">
-                  {formatDuration(media.video_duration_s) || formatSize(media.video_size)}
+              )}
+
+              {hasPdf && (
+                <div className="rmod-cours-row">
+                  <span className="rmod-cours-ic pdf" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /></svg>
+                  </span>
+                  <span className="rmod-cours-nom">
+                    poly.pdf
+                    <em>{media.pdf_pages ? `${media.pdf_pages} pages` : formatSize(media.pdf_size)}</em>
+                  </span>
+                  <button
+                    type="button"
+                    className="rmod-cours-act"
+                    onClick={() => pdfInputRef.current?.click()}
+                    disabled={uploadingPdf}
+                  >{uploadingPdf ? '…' : 'Remplacer'}</button>
+                  <button
+                    type="button"
+                    className="rmod-cours-act danger"
+                    onClick={() => removeMedia('pdf')}
+                    disabled={uploadingPdf}
+                    aria-label="Supprimer le PDF"
+                  >{'×'}</button>
                 </div>
+              )}
+
+              {/* Un seul bouton. L'étudiant dépose ce qu'il a — un poly, une
+                  vidéo, ou dix polys d'un coup — et on trie par type ensuite.
+                  Lui demander d'abord « vidéo ou PDF ? » était une question
+                  qui n'apportait rien : le fichier le dit déjà. */}
+              {!(hasVideo && hasPdf) && (
                 <button
                   type="button"
-                  className="rmod-src-replace"
-                  onClick={() => videoInputRef.current?.click()}
-                  disabled={uploadingVideo}
+                  className={`rmod-cours-add${hasAnySource ? ' mini' : ''}`}
+                  onClick={() => coursInputRef.current?.click()}
+                  disabled={uploadingVideo || uploadingPdf}
                 >
-                  {uploadingVideo ? '...' : 'Remplacer'}
+                  <span className="rmod-cours-add-plus" aria-hidden="true">+</span>
+                  <span>
+                    {uploadingVideo ? 'Upload de la vidéo…'
+                      : uploadingPdf ? 'Upload du PDF…'
+                      : hasAnySource ? (hasPdf ? 'Ajouter la vidéo du cours' : 'Ajouter le polycopié')
+                      : 'Ajouter mon cours'}
+                  </span>
+                  {!hasAnySource && <em>PDF ou vidéo · plusieurs fichiers acceptés</em>}
                 </button>
-                <button
-                  type="button"
-                  className="rmod-src-replace rmod-src-remove"
-                  onClick={() => removeMedia('video')}
-                  disabled={uploadingVideo}
-                  aria-label="Supprimer la vidéo"
-                >{'×'}</button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="rmod-src-empty"
-                onClick={() => videoInputRef.current?.click()}
-                disabled={uploadingVideo}
-              >
-                <span className="rmod-src-plus">+</span>
-                <span>{uploadingVideo ? 'Upload de la vidéo…' : 'Ajouter la vidéo du cours'}</span>
-              </button>
-            )}
+              )}
+            </div>
 
-            {/* Transcript : statut + bouton regen, affiché seulement si vidéo présente */}
-            {hasVideo && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '4px 10px',
-                fontSize: 12,
-                color: 'var(--gray)',
-                fontFamily: "var(--font-hanken), serif",
-                fontStyle: 'italic',
-                marginTop: -4,
-                marginBottom: 4,
-              }}>
-                {transcribing ? (
-                  <>
-                    <span style={{ color: '#C47B2B' }}>{'…'}</span>
-                    Transcription en cours (1-2 min pour 1h de vidéo)
-                  </>
-                ) : transcribeError ? (
-                  <>
-                    <span style={{ color: '#C75050' }}>Erreur transcript : {transcribeError}.</span>
-                    <button
-                      type="button"
-                      onClick={() => void transcribeVideo()}
-                      style={{
-                        background: 'none', border: 'none', color: '#2C5F8A',
-                        cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
-                        padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
-                      }}
-                    >Réessayer</button>
-                  </>
-                ) : media.transcript && media.transcript.length > 0 ? (
-                  <>
-                    <span style={{ color: '#2C5F8A' }}>{'✓'}</span>
-                    Transcript prêt · {media.transcript.length} segments
-                    <button
-                      type="button"
-                      onClick={() => void transcribeVideo()}
-                      style={{
-                        background: 'none', border: 'none', color: 'var(--gray)',
-                        cursor: 'pointer', fontSize: 11, textDecoration: 'underline',
-                        padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
-                        marginLeft: 'auto',
-                      }}
-                    >Regénérer</button>
-                  </>
-                ) : (
-                  <>
-                    <span>Pas de transcript</span>
-                    <button
-                      type="button"
-                      onClick={() => void transcribeVideo()}
-                      style={{
-                        background: 'none', border: 'none', color: '#2C5F8A',
-                        cursor: 'pointer', fontSize: 12, textDecoration: 'underline',
-                        padding: 0, fontFamily: 'inherit', fontStyle: 'inherit',
-                      }}
-                    >Générer maintenant</button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* PDF */}
-            {hasPdf ? (
-              <div className="rmod-src-row">
-                <div className="rmod-src-icon pdf">{'📄'}</div>
-                <div className="rmod-src-name">poly.pdf</div>
-                <div className="rmod-src-meta">
-                  {media.pdf_pages ? `${media.pdf_pages} p.` : formatSize(media.pdf_size)}
-                </div>
-                <button
-                  type="button"
-                  className="rmod-src-replace"
-                  onClick={() => pdfInputRef.current?.click()}
-                  disabled={uploadingPdf}
-                >
-                  {uploadingPdf ? '...' : 'Remplacer'}
-                </button>
-                <button
-                  type="button"
-                  className="rmod-src-replace rmod-src-remove"
-                  onClick={() => removeMedia('pdf')}
-                  disabled={uploadingPdf}
-                  aria-label="Supprimer le PDF"
-                >{'×'}</button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="rmod-src-empty"
-                onClick={() => pdfInputRef.current?.click()}
-                disabled={uploadingPdf}
-              >
-                <span className="rmod-src-plus">+</span>
-                <span>{uploadingPdf ? 'Upload du PDF…' : 'Ajouter le polycopié (PDF, ou plusieurs d\u2019un coup)'}</span>
-              </button>
-            )}
-
-            {/* Inputs cachés — déclenchés par les boutons ci-dessus */}
+            {/* Inputs cachés. Le premier accepte tout : c'est celui du bouton
+                « Ajouter mon cours ». Les deux autres restent typés, pour que
+                « Remplacer » sur une ligne ne propose que le bon format. */}
+            <input
+              ref={coursInputRef}
+              type="file"
+              accept="application/pdf,video/mp4,video/webm,video/quicktime"
+              multiple
+              style={{ display: 'none' }}
+              onChange={e => {
+                const fs = Array.from(e.target.files ?? [])
+                e.target.value = ''
+                if (fs.length === 0) return
+                const videos = fs.filter(f => f.type.startsWith('video/'))
+                const pdfs = fs.filter(f => !f.type.startsWith('video/'))
+                // Une fiche ne porte qu'une vidéo : on prend la première et on
+                // le dit, plutôt que d'en avaler trois en silence.
+                if (videos.length > 0) uploadMedia(videos[0], 'video')
+                if (pdfs.length === 1) uploadMedia(pdfs[0], 'pdf')
+                else if (pdfs.length > 1) setPolysEnVrac(pdfs)
+              }}
+            />
             <input
               ref={videoInputRef}
               type="file"
@@ -839,101 +830,92 @@ export default function ReviewModal({
             {uploadError && (
               <div className="rmod-upload-error">{uploadError}</div>
             )}
+            {transcribeError && (
+              <div className="rmod-upload-error">Transcript : {transcribeError}</div>
+            )}
             </div>{/* /data-tour="sources" */}
 
             {/* ─────────────────────────────────────────────── */}
-            {/*  Bloc QCM générés                              */}
+            {/*  Les deux entraînements, à égalité              */}
             {/* ─────────────────────────────────────────────── */}
             <div className="rmod-divider" />
-            <div data-tour="qcm-section">
-            <div className="rmod-block-label">QCM générés depuis ces sources</div>
+            <div className="rmod-duo">
+              <div className="rmod-feat" data-tour="qcm-section">
+                <div className="rmod-feat-h">
+                  <span className="rmod-feat-ic qcm" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h9" /><path d="m17.5 17 1.6 1.6 3-3.4" /></svg>
+                  </span>
+                  QCM
+                </div>
 
-            {qcmCount > 0 ? (
-              <div className="rmod-qcm-line">
-                <div className="rmod-qcm-num">{qcmCount}</div>
-                <div className="rmod-qcm-meta">QCM disponibles sur cette fiche</div>
-                <div className="rmod-qcm-actions">
-                  <button
-                    type="button"
-                    className="rmod-qcm-regen"
-                    onClick={() => generateQcms('append')}
-                    disabled={generating}
-                    title="Ajouter 30 questions de plus (sur d'autres aspects du cours)"
-                  >
-                    {generating ? '…' : '+ Ajouter 30'}
-                  </button>
-                  <button
-                    type="button"
-                    className="rmod-qcm-cta"
-                    onClick={startQcmSession}
-                    disabled={generating}
-                  >
-                    Lancer une session
-                  </button>
+                {qcmCount > 0 ? (
+                  <>
+                    <div className="rmod-feat-n">{qcmCount}<em>question{qcmCount > 1 ? 's' : ''}</em></div>
+                    <button
+                      type="button"
+                      className="rmod-feat-cta"
+                      onClick={startQcmSession}
+                      disabled={generating}
+                    >M&apos;entraîner</button>
+                    <button
+                      type="button"
+                      className="rmod-feat-2nd"
+                      onClick={() => generateQcms('append')}
+                      disabled={generating}
+                      title="Ajouter 30 questions de plus, sur d'autres aspects du cours"
+                    >{generating ? 'Génération…' : '+ 30 questions'}</button>
+                  </>
+                ) : hasAnySource ? (
+                  <>
+                    <button
+                      type="button"
+                      className="rmod-feat-cta"
+                      onClick={() => generateQcms('replace')}
+                      disabled={generating}
+                    >{generating ? 'Génération… (30-60s)' : 'Générer 30 QCM'}</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="rmod-feat-cta ghost" disabled>
+                      En attente du cours
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="rmod-feat">
+                <div className="rmod-feat-h">
+                  <span className="rmod-feat-ic cartes" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="14" height="13" rx="2.5" /><path d="M7.5 4h11A2.5 2.5 0 0 1 21 6.5v10" /></svg>
+                  </span>
+                  Flashcards
                 </div>
+
+                {cartesCount > 0 ? (
+                  <>
+                    <div className="rmod-feat-n">{cartesCount}<em>carte{cartesCount > 1 ? 's' : ''}</em></div>
+                    <button type="button" className="rmod-feat-cta" onClick={openCartes}>
+                      Réviser les cartes
+                    </button>
+                    <button type="button" className="rmod-feat-2nd" onClick={openCartes}>
+                      Gérer le paquet
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="rmod-feat-cta" onClick={openCartes}>
+                      Créer des cartes
+                    </button>
+                  </>
+                )}
               </div>
-            ) : hasAnySource ? (
-              <div className="rmod-qcm-line">
-                <div className="rmod-qcm-meta rmod-qcm-meta-grow">
-                  Aucun QCM encore. L&apos;IA peut en générer depuis {hasVideo && hasPdf ? 'la vidéo et le PDF' : hasVideo ? 'la vidéo' : 'le PDF'}.
-                </div>
-                <button
-                  type="button"
-                  className="rmod-qcm-cta"
-                  onClick={() => generateQcms('replace')}
-                  disabled={generating}
-                >
-                  {generating ? 'Génération… (30-60s)' : 'Générer 30 QCM'}
-                </button>
-              </div>
-            ) : (
-              <div className="rmod-qcm-empty">
-                Les QCM seront générés automatiquement <em>dès qu&apos;une source sera ajoutée</em>.
-              </div>
-            )}
+            </div>
 
             {genError && (
               <div className="rmod-upload-error">{genError}</div>
             )}
             {genInfo && (
               <div className="rmod-gen-info">{genInfo}</div>
-            )}
-            </div>{/* /data-tour="qcm-section" */}
-
-            {/* ─────────────────────────────────────────────── */}
-            {/*  Bloc Flashcards maison (recto/verso)          */}
-            {/* ─────────────────────────────────────────────── */}
-            <div className="rmod-divider" />
-            <div className="rmod-block-label">Flashcards (recto/verso)</div>
-            {cartesCount > 0 ? (
-              <div className="rmod-qcm-line">
-                <div className="rmod-qcm-num">{cartesCount}</div>
-                <div className="rmod-qcm-meta">
-                  carte{cartesCount > 1 ? 's' : ''} sur cette fiche
-                </div>
-                <div className="rmod-qcm-actions">
-                  <button
-                    type="button"
-                    className="rmod-qcm-cta"
-                    onClick={openCartes}
-                  >
-                    Réviser les cartes
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="rmod-qcm-line">
-                <div className="rmod-qcm-meta rmod-qcm-meta-grow">
-                  Crée tes propres cartes question/réponse pour cette fiche.
-                </div>
-                <button
-                  type="button"
-                  className="rmod-qcm-cta"
-                  onClick={openCartes}
-                >
-                  Créer des cartes
-                </button>
-              </div>
             )}
           </>
         )}
