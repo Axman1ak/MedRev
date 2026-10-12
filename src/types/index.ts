@@ -53,6 +53,12 @@ export interface AiQuestion {
   why?: string[]
   // Forme objet (post-2026-05) ou string (legacy data) ou absent.
   source_ref?: AiQuestionSourceRef | string | null
+  // Question illustrée : la figure du poly à montrer AVEC l'énoncé.
+  // `page` est l'index dans le fichier PDF (1 = première page), `box` un
+  // cadre en coordonnées normalisées 0-1000 [y0, x0, y1, x1].
+  // Absent sur toutes les questions générées avant 2026-10 : une question
+  // sans `visual` reste une question de texte, rien ne change pour elle.
+  visual?: { page: number; box: [number, number, number, number] } | null
   // Compteurs cumulés sur les sessions QCM par fiche (incrémentés à chaque
   // session via persistSessionResults). Optionnels = pas encore répondu.
   attempts?: number

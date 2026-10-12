@@ -11,6 +11,8 @@
 //   Vidéos > MAX_VIDEO_SIZE (250 Mo) → erreur "vidéo trop lourde" pour MVP.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { boxValide, rognerSurFigure, reponseLisible } from '@/lib/visualCheck'
+import { lirePages, texteDansCadre } from '@/lib/pdfRegion'
 import { createClient } from '@/lib/supabase/server'
 
 export const maxDuration = 300 // Pro plan max ; transcript+PDF prend ~15-30s, vidéo upload peut prendre 60-90s
@@ -251,6 +253,9 @@ type SanitizedQuestion = {
   // l'a pas fournie ou l'a fournie mal formée.
   why?: string[]
   source_ref: { pdf_page?: number; video_ts?: number } | null
+  // Figure du poly à montrer AVEC l'énoncé. Posé par l'IA, puis rogné et
+  // validé par nous (voir étape 8e) : jamais gardé tel quel.
+  visual?: { page: number; box: [number, number, number, number] } | null
 }
 
 // Réordonne aléatoirement les 5 options d'une question pour casser le biais
@@ -295,6 +300,17 @@ function reletterAndShuffleOptions(q: SanitizedQuestion): SanitizedQuestion {
     : undefined
 
   return { ...q, options: newOptions, answer: newAnswer, why: newWhy }
+}
+
+/**
+ * L'énoncé ne tient-il debout que si l'image est là ?
+ *
+ * Quand on retire une illustration (voir étape 8e), une question comme « Que
+ * montre le schéma ci-dessous ? » devient du bruit : il vaut mieux perdre la
+ * question que la poser sans son support. Un énoncé autoporteur, lui, reste.
+ */
+function renvoieAUneFigure(q: string): boolean {
+  return /(ci-dessus|ci-dessous|ci-contre|(?:la|cette|une|de la|sur la)\s+(?:figure|coupe|micrographie|photographie|planche|image)|(?:le|ce|du|sur le)\s+(?:sch[ée]ma|graphique|clich[ée]))/i.test(q)
 }
 
 function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
@@ -359,9 +375,22 @@ function sanitizeQuestions(raw: unknown[], maxN: number): SanitizedQuestion[] {
       }
     }
 
+    // Cadre d'illustration proposé par l'IA. On le prend tel quel ici : il
+    // sera rogné puis validé plus bas, contre le texte réel de la page.
+    let visual: SanitizedQuestion['visual'] = null
+    const v = r.visual
+    if (v && typeof v === 'object') {
+      const vo = v as Record<string, unknown>
+      const page = typeof vo.pdf_page === 'number' ? Math.round(vo.pdf_page) : NaN
+      const box = vo.box
+      if (Number.isInteger(page) && page >= 1 && boxValide(box)) {
+        visual = { page, box: box as [number, number, number, number] }
+      }
+    }
+
     // Shuffle des options pour neutraliser le biais positionnel de Gemini.
     const shuffled = reletterAndShuffleOptions({
-      question, options, answer: answerArr, explanation, why, source_ref: sourceRef,
+      question, options, answer: answerArr, explanation, why, source_ref: sourceRef, visual,
     })
 
     out.push(shuffled)
@@ -497,7 +526,10 @@ export async function POST(req: NextRequest) {
       | { fileData: { mimeType: string; fileUri: string } }
     > = []
 
-    // PDF
+    // PDF. On garde le blob sous la main : l'étape 8e relit les coordonnées du
+    // texte de certaines pages pour valider les cadres d'illustration, et il
+    // serait absurde de le retélécharger depuis Storage pour ça.
+    let pdfSource: Blob | null = null
     if (media.pdf_path) {
       const { data: pdfBlob, error: pdfErr } = await supabase.storage
         .from('lesson-media')
@@ -505,6 +537,7 @@ export async function POST(req: NextRequest) {
       if (pdfErr || !pdfBlob) {
         return NextResponse.json({ error: 'PDF introuvable dans Storage' }, { status: 500 })
       }
+      pdfSource = pdfBlob
       if (pdfBlob.size < PDF_INLINE_THRESHOLD) {
         const arrBuf = await pdfBlob.arrayBuffer()
         const b64 = Buffer.from(arrBuf).toString('base64')
@@ -614,7 +647,19 @@ ${existingQuestions.length > 0 ? '- Couvre des aspects DIFFÉRENTS de ceux déj�
   - "pdf_page" : numéro de page du PDF (entier ≥ 1) si l'info vient du PDF
   - "video_ts" : timestamp en secondes dans la vidéo (entier ≥ 0) si l'info vient de la vidéo
   - Tu peux remplir l'un, l'autre, ou les deux. Si vraiment indéterminable, omets le champ.
-- Questions précises avec valeurs numériques exactes, définitions officielles, pièges réalistes.
+- Questions précises avec valeurs numériques exactes, définitions officielles, pièges réalistes.${media.pdf_path ? `
+QUESTIONS SUR LES FIGURES DU POLYCOPIÉ :
+Le poly contient parfois de vraies figures : schémas annotés, coupes histologiques, graphiques, arbres décisionnels. Au concours, des questions tombent dessus. Quand une figure porte une notion examinable, pose une question DESSUS et ajoute à cette question un objet "visual" :
+    "visual": { "pdf_page": <entier >= 1>, "box": [y0, x0, y1, x1] }
+- "pdf_page" se compte dans le FICHIER : 1 = première page du PDF, 2 = deuxième, etc. N'utilise PAS les numéros imprimés sur les pages, ils sont souvent décalés.
+- "box" est le cadre de la figure en coordonnées normalisées de 0 à 1000 sur la page : y0/x0 = coin haut-gauche, y1/x1 = coin bas-droit. Il doit contenir la figure ENTIÈRE et RIEN QUE la figure — ni le paragraphe au-dessus, ni la phrase en dessous. Les annotations collées au schéma (flèches, étiquettes, légende interne) restent dedans.
+- L'étudiante verra cette zone recadrée À CÔTÉ de l'énoncé, et rien d'autre de la page : la question doit être répondable avec cette seule image.
+- Une figure dont la légende donne la réponse ne fait pas une bonne question : choisis-en une autre, ou pose une question dont la réponse n'est pas écrite dans le cadre.
+- Une seule question par figure. N'ajoute "visual" QUE si l'image est nécessaire pour répondre : une question de texte omet complètement le champ.
+Exemple d'ajout sur une question illustrée (tous les autres champs sont identiques aux exemples ci-dessous) :
+    "source_ref": { "pdf_page": 7 },
+    "visual": { "pdf_page": 7, "box": [180, 90, 540, 880] }
+` : ''}
 - Pas de questions évidentes ou triviales.
 - Langue : français médical rigoureux.
 
@@ -765,6 +810,63 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
       throw new Error('Toutes les questions générées étaient des doublons des existantes. Réessaie ou lance la génération sur d\'autres sources.')
     }
 
+    // 8e. Vérification des questions illustrées.
+    //
+    // Mesuré sur un poly d'histologie réel : Gemini LOCALISE bien les figures
+    // (6 pages sur 6, 6 cadres sur 6 sur la bonne figure) mais ne sait pas
+    // juger si son cadre contient la réponse — il a affirmé que non 6 fois sur
+    // 6, c'était faux 2 fois. On ne lui demande donc pas son avis : on lit le
+    // texte réellement présent dans la zone avec pdf.js, on rogne le cadre sur
+    // la plus grande bande sans texte, et on contrôle que la réponse n'y est
+    // pas lisible. Détail du raisonnement dans src/lib/visualCheck.ts.
+    //
+    // Retirer une illustration ne supprime pas la question : elle redevient une
+    // question de texte. On ne jette que les énoncés qui ne veulent plus rien
+    // dire sans leur figure.
+    let visuelsGardes = 0
+    let visuelsRetires = 0
+    const aVisuel = sanitized.filter(q => q.visual)
+    if (aVisuel.length > 0) {
+      if (!pdfSource) {
+        // Pas de PDF sous la main : aucun moyen de vérifier, donc aucune image.
+        for (const q of aVisuel) q.visual = null
+      } else {
+        try {
+          const buf = await pdfSource.arrayBuffer()
+          const lues = await lirePages(buf, aVisuel.map(q => q.visual!.page))
+          for (const q of aVisuel) {
+            const v = q.visual!
+            const lue = lues.get(v.page)
+            // Page hors du fichier : le numéro était faux, on n'invente pas.
+            if (!lue) { q.visual = null; continue }
+            const { blocs, images } = lue
+            const rogne = rognerSurFigure(v.box, blocs, images)
+            // null = pas de figure montrable entière dans cette zone.
+            if (!rogne) { q.visual = null; continue }
+            // Deuxième filet : la réponse reste-t-elle écrite dans le cadre rogné ?
+            const bonnes = q.answer.map(i => q.options[i] ?? '').filter(Boolean)
+            if (reponseLisible(texteDansCadre(blocs, rogne), bonnes)) { q.visual = null; continue }
+            q.visual = { page: v.page, box: rogne }
+          }
+        } catch (e) {
+          // Lecture du PDF impossible : mieux vaut des questions sans image que
+          // des images qui donnent la réponse.
+          console.warn('[generate-qcm] vérification des illustrations échouée:', e)
+          for (const q of aVisuel) q.visual = null
+        }
+      }
+      visuelsGardes = sanitized.filter(q => q.visual).length
+      visuelsRetires = aVisuel.length - visuelsGardes
+      const avant = sanitized.length
+      sanitized = sanitized.filter(q => q.visual || !renvoieAUneFigure(q.question))
+      if (sanitized.length === 0) {
+        throw new Error('Les questions générées portaient toutes sur des figures inexploitables. Relance la génération.')
+      }
+      if (avant !== sanitized.length) {
+        console.log(`[generate-qcm] ${avant - sanitized.length} question(s) supprimée(s) : renvoi à une figure retirée`)
+      }
+    }
+
     // 8d. Mélange l'ordre du batch (sinon Gemini sort par ordre de pages source)
     sanitized = shuffle(sanitized)
 
@@ -823,6 +925,10 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
       questions: sanitized,
       videoIncluded,
       transcriptIncluded,
+      // Illustrations : combien de questions partent avec leur figure, et
+      // combien ont perdu la leur à la vérification.
+      visuelsGardes,
+      visuelsRetires,
       videoSkipReason,
       // Quota info pour l'UI client (toast "il vous reste X générations gratuites"
       // ou warning Premium "tu approches le cap mensuel")

@@ -1,0 +1,47 @@
+/* src/components/question-figure.css
+   La figure du poly affichée À CÔTÉ de l'énoncé d'une question illustrée.
+
+   Fond blanc en permanence, thème sombre compris : le canvas contient un
+   extrait de PDF, c'est-à-dire du trait noir sur rien. Le teinter en sombre
+   effacerait le schéma. */
+
+.qfig {
+  margin: 0 0 24px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  /* Assez de place pour lire un schéma, pas assez pour pousser les
+     propositions sous la ligne de flottaison. */
+  max-width: 620px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+}
+
+.qfig-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.qfig-cap {
+  margin: 8px 2px 0;
+  font-size: 11px;
+  letter-spacing: .02em;
+  color: var(--text-tertiary);
+}
+
+/* Pendant le rendu : une plaque de la hauteur d'un schéma moyen, pour que le
+   contenu sous la figure ne saute pas quand elle arrive. */
+.qfig-attente {
+  min-height: 180px;
+  background: var(--bg-soft);
+  border-style: dashed;
+}
+.qfig-attente .qfig-cap { opacity: .5; }
+
+@media (max-width: 768px) {
+  .qfig { padding: 8px; border-radius: 12px; }
+  .qfig-attente { min-height: 140px; }
+}

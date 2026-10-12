@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson, Profile, Annale, AiQuestionSourceRef, LessonMedia, ScoringSystemId } from '@/types'
+import QuestionFigure from '@/components/QuestionFigure'
 import SourceLightbox from '@/components/SourceLightbox'
 import { SCORING_SYSTEMS, getScoringForFac, FREE_PDF_SIZE_MB } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
@@ -46,6 +47,23 @@ interface Question {
   systemId?: string
   sourceRef?: AiQuestionSourceRef | null
   media?: LessonMedia
+  // Question illustrée : la figure du poly à montrer avec l'énoncé. Absente
+  // des annales (pas de PDF source) et de toutes les questions d'avant 2026-10.
+  visual?: { page: number; box: [number, number, number, number] } | null
+}
+
+// Normalise le cadre d'illustration. Les coordonnées ont été rognées et
+// validées à la génération (voir /api/generate-qcm, étape 8e) : ici on ne fait
+// que vérifier la forme, au cas où un vieux document traînerait en base.
+function normalizeVisual(raw: unknown): Question['visual'] {
+  if (!raw || typeof raw !== 'object') return null
+  const v = raw as Record<string, unknown>
+  const page = typeof v.page === 'number' ? v.page : NaN
+  const box = v.box
+  if (!Number.isInteger(page) || page < 1) return null
+  if (!Array.isArray(box) || box.length !== 4) return null
+  if (!box.every(n => typeof n === 'number' && Number.isFinite(n))) return null
+  return { page, box: box as [number, number, number, number] }
 }
 
 // Normalise un source_ref (objet {pdf_page?, video_ts?}) — comme dans les QCM de fiche.
@@ -205,6 +223,7 @@ function parseQuestions(lesson: Lesson, systemName: string, systemId: string): Q
       systemId,
       sourceRef: normalizeSourceRef(q.source_ref),
       media: (lesson as { media?: LessonMedia }).media,
+      visual: normalizeVisual(q.visual),
     })
   }
   return out
@@ -1322,6 +1341,12 @@ export default function SimulateurPage() {
               </span>
             </div>
             <div className="sim-ses-q-text">{q.question}</div>
+
+            {/* Question illustrée : la figure vient du poly de la fiche, pas
+                d'une image stockée. Elle précède les propositions. */}
+            {q.visual && q.media?.pdf_path && (
+              <QuestionFigure pdfPath={q.media.pdf_path} page={q.visual.page} box={q.visual.box} />
+            )}
 
             <div className="sim-ses-q-options multi">
               {q.options.map((opt, i) => {

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System } from '@/types'
+import QuestionFigure from '@/components/QuestionFigure'
 import { normalizeAnswer, isMultiAnswer } from '@/types'
 import { cleanExplanation, whyFor, correctAnswersRecap } from '@/lib/qcmText'
 import SourceLightbox from '@/components/SourceLightbox'
@@ -550,6 +551,12 @@ export default function QcmSessionPage() {
           </span>
         </div>
         <h1 className="qcm-q-stem">{q.question}</h1>
+
+        {/* Question illustrée : la figure du poly est montrée AVEC l'énoncé,
+            avant les propositions. Sans elle, la question serait impossible. */}
+        {q.visual && media.pdf_path && (
+          <QuestionFigure pdfPath={media.pdf_path} page={q.visual.page} box={q.visual.box} />
+        )}
 
         <div className={`qcm-options${multi ? ' multi' : ''}`}>
           {q.options.map((opt, i) => {
