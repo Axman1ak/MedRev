@@ -415,14 +415,17 @@ function AuthContent() {
         if (sysErr) console.error('[signup] Création des matières échouée:', sysErr)
       }
 
-      // Welcome email : on attend avec un timeout court pour ne pas bloquer
-      // le signup si Resend est lent ou down. La race condition précédente
-      // (fetch fire-and-forget puis window.location.href immédiat) pouvait
-      // interrompre la requête avant qu'elle parte.
-      await Promise.race([
-        fetch('/api/welcome-email', { method: 'POST' }).catch(() => null),
-        new Promise(r => setTimeout(r, 2500)),
-      ])
+      // Email de bienvenue. `keepalive` demande au navigateur de mener la
+      // requête à son terme MÊME si la page change juste après : c'est fait
+      // pour ça. On n'a donc plus besoin d'attendre, et l'inscription ne perd
+      // plus jusqu'à deux secondes et demie à patienter.
+      //
+      // L'ancienne version attendait au plus 2,5 s puis changeait de page, ce
+      // qui pouvait interrompre l'envoi en vol. Si Resend répondait lentement,
+      // le mail ne partait pas et personne ne le voyait.
+      try {
+        void fetch('/api/welcome-email', { method: 'POST', keepalive: true }).catch(() => null)
+      } catch {}
       window.location.href = '/dashboard'
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur inconnue')
