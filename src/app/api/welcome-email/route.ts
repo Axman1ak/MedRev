@@ -22,10 +22,10 @@ import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM_ADDRESS = process.env.WELCOME_EMAIL_FROM || 'MedRev <onboarding@resend.dev>'
-// URL de l'app utilisée dans les liens du mail. Lue depuis env var pour pouvoir
-// migrer vers un domaine custom sans toucher au code. Fallback sur l'URL Vercel
-// actuelle si la var n'est pas définie.
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://med-rev-eight.vercel.app'
+// URL de l'app utilisée dans les liens du mail. Le repli est le domaine de
+// production : il pointait sur l'URL vercel.app, donc un étudiant qui cliquait
+// depuis son mail atterrissait ailleurs que sur le site.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.medrev.fr'
 
 export async function POST() {
   try {
@@ -50,7 +50,7 @@ export async function POST() {
       .select('name, username')
       .eq('id', user.id)
       .single()
-    const firstName = (profile?.name || profile?.username || '').split(' ')[0] || 'futur médecin'
+    const firstName = prenomLisible(profile?.name || profile?.username || '')
 
     // Envoi via l'API REST Resend (pas besoin du SDK pour un seul appel)
     const resp = await fetch('https://api.resend.com/emails', {
@@ -86,85 +86,135 @@ export async function POST() {
 // ============================================================
 // Templates email (HTML + plain text)
 // ============================================================
-// Style sobre, maximum readable. Pas de couleurs criardes, fonts système
-// pour pas dépendre de Google Fonts qui ne charge pas dans tous les clients
-// mail (Outlook notamment).
+// Styles écrits en ligne, polices système, aucune image : un client mail ne
+// lit pas de feuille de style externe, et la plupart bloquent les images par
+// défaut. Le seul visuel, la bande des 14 paliers, est donc dessiné en cases
+// de tableau pour que tout le monde le voie.
+
+// Palette, reprise de la landing : bleu nuit, crème, bleu clair. Écrite en
+// dur, un client mail ne lit ni variables CSS ni feuille externe.
+const NUIT = '#17304F'
+const NUIT_PROFOND = '#0E1D33'
+const CREME = '#F3EFE7'
+const BLEU = '#9AC4E0'
+const BLEU_TEXTE = '#6E9CC4'
+const GRIS = '#5B6B7C'
+
+/**
+ * Le prénom à afficher, ou rien.
+ *
+ * Le pseudo d'inscription n'est pas toujours un prénom : « bonnefoy.l »
+ * donnait « Bienvenue, bonnefoy.l », ce qui sonne comme un mail automatique
+ * mal réglé. Dès que la chaîne ressemble à un identifiant (point, tiret bas,
+ * chiffre), on préfère ne pas nommer la personne du tout.
+ */
+function prenomLisible(brut: string): string {
+  const mot = (brut || '').trim().split(/\s+/)[0] || ''
+  if (!mot || /[._\-0-9@]/.test(mot) || mot.length > 20) return ''
+  return mot.charAt(0).toUpperCase() + mot.slice(1)
+}
+
+/**
+ * Un bloc : illustration, numéro, titre, texte, lien. L'illustration alterne
+ * de côté d'un bloc à l'autre, et passe au-dessus du texte sur téléphone.
+ *
+ * Les illustrations sont des PNG servis par le site lui-même (public/email/).
+ * Si le client mail bloque les images, il reste le numéro, le titre, le texte
+ * et le lien : la colonne de texte porte tout le message à elle seule.
+ */
+function bloc(o: { num: string; img: string; alt: string; titre: string; accent: string; texte: string; lien: string; href: string; imageAGauche: boolean }): string {
+  const visuel = `<td class="col" width="250" valign="middle">
+      <img src="${APP_URL}/email/${o.img}" width="250" alt="${o.alt}" style="display:block;width:250px;max-width:100%;height:auto;border:0;border-radius:16px;" /></td>`
+  const espace = '<td class="gap" width="28">&nbsp;</td>'
+  const texte = `<td class="col" valign="middle">
+      <div style="font:700 11px/1 Helvetica,Arial,sans-serif;letter-spacing:.18em;color:${BLEU};margin-bottom:10px;">${o.num}</div>
+      <div style="font:700 19px/1.3 Helvetica,Arial,sans-serif;color:${NUIT};margin-bottom:8px;">${o.titre} <em style="font-style:italic;font-weight:400;color:${BLEU_TEXTE};">${o.accent}</em></div>
+      <div style="font:14px/1.65 Helvetica,Arial,sans-serif;color:${GRIS};margin-bottom:12px;">${o.texte}</div>
+      <a href="${o.href}" style="font:700 13px/1 Helvetica,Arial,sans-serif;color:${NUIT};text-decoration:none;border-bottom:2px solid ${BLEU};padding-bottom:3px;">${o.lien} &rarr;</a></td>`
+  const ordre = o.imageAGauche ? visuel + espace + texte : texte + espace + visuel
+  return `<tr><td style="padding:26px 30px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>${ordre}</tr></table></td></tr>`
+}
 
 function buildHtml(firstName: string): string {
+  const salut = firstName
+    ? `Bienvenue,<br /><em style="font-style:italic;font-weight:400;color:${BLEU};">${escapeHtml(firstName)}</em>`
+    : `<em style="font-style:italic;font-weight:400;color:${BLEU};">Bienvenue</em>`
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light only" />
 <title>Bienvenue sur MedRev</title>
+<style>@media (max-width:480px){.col{display:block!important;width:100%!important;padding:0 0 14px!important;}.gap{display:none!important;}.hero{font-size:34px!important;}}</style>
 </head>
-<body style="margin:0;padding:0;background:#FAFAF7;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;color:#1A1A1A;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAFAF7;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="540" style="max-width:540px;background:#FFFFFF;border:1px solid #E8E6E0;border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:32px 36px 0;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#2D6A4F;margin-bottom:14px;">MedRev</div>
-          <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:26px;font-weight:500;letter-spacing:-0.01em;color:#1A1A1A;line-height:1.2;">
-            Bienvenue, ${escapeHtml(firstName)}.
-          </h1>
-          <p style="margin:0 0 18px;font-size:15px;line-height:1.55;color:#5C5C5A;">
-            Tu viens de créer ton compte MedRev. La méthode est simple : tu charges tes cours, l'IA génère des QCM, et l'app te dit quoi réviser chaque jour pour que tu retiennes pour de bon.
-          </p>
-        </td></tr>
+<body style="margin:0;padding:0;background:${CREME};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Ton compte est ouvert. Voilà par quoi commencer.</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${CREME};">
 
-        <tr><td style="padding:0 36px 8px;">
-          <h2 style="margin:24px 0 12px;font-family:Georgia,serif;font-size:17px;font-weight:500;color:#1A1A1A;">Pour bien démarrer</h2>
-          <ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.7;color:#1A1A1A;">
-            <li><strong>Crée ta première fiche</strong> dans une matière (déjà pré-configurées selon ta fac).</li>
-            <li><strong>Upload une vidéo de cours et/ou un PDF</strong>. MedRev en extrait le contenu et te génère 30 QCM en 1 minute.</li>
-            <li><strong>Note la fiche au jour J</strong> sur 1 à 5. La courbe d'oubli prend le relais et te programme les révisions suivantes.</li>
-          </ol>
-        </td></tr>
-
-        <tr><td style="padding:24px 36px 8px;">
-          <a href="${APP_URL}/dashboard" style="display:inline-block;background:#1B4332;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:9px;letter-spacing:0.01em;">
-            Aller sur mon dashboard →
-          </a>
-        </td></tr>
-
-        <tr><td style="padding:18px 36px 32px;">
-          <p style="margin:18px 0 0;font-family:Georgia,serif;font-style:italic;font-size:14px;color:#5C5C5A;line-height:1.5;">
-            Tout est gratuit pour démarrer (matières et fiches illimitées, courbe J, calendrier, bibliothèque). L'IA et le simulateur ont quelques limites en gratuit ; tu peux passer Premium quand tu en auras vraiment besoin.
-          </p>
-        </td></tr>
-
-        <tr><td style="border-top:1px solid #E8E6E0;padding:18px 36px;">
-          <p style="margin:0;font-size:12px;color:#9A9A98;line-height:1.5;">
-            Une question, un bug, une idée ? Réponds simplement à ce mail.
-            <br />
-            <span style="color:#C4C2BA;">© 2026 MedRev · Données sur Supabase Paris</span>
-          </p>
-        </td></tr>
-      </table>
+<!-- Bandeau d'accueil pleine largeur : il sort de la colonne de 560 px et
+     touche les deux bords de la fenêtre, comme le haut de la landing. Le
+     contenu, lui, reste centré sur la même largeur que la suite. -->
+<tr><td align="center" style="background:${NUIT_PROFOND};padding:0;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="width:100%;max-width:560px;">
+    <tr><td align="center" style="padding:30px 24px 44px;">
+      <div style="font:700 13px/1 Helvetica,Arial,sans-serif;letter-spacing:.34em;color:${BLEU};padding-bottom:28px;">MEDREV</div>
+      <div class="hero" style="font:700 40px/1.1 Helvetica,Arial,sans-serif;color:#FFFFFF;letter-spacing:-.02em;">${salut}</div>
+      <div style="font:15px/1.6 Helvetica,Arial,sans-serif;color:#A9BDD2;padding-top:18px;max-width:380px;">Ton compte est ouvert. Voilà les trois choses que MedRev va faire pour toi cette année.</div>
     </td></tr>
   </table>
+</td></tr>
+
+<tr><td align="center" style="padding:10px 12px 34px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="width:100%;max-width:560px;">
+
+  ${bloc({ num: '01', img: 'bloc1.png', alt: 'Une fiche de cours importée dans MedRev', titre: 'Importe ton cours,', accent: 'l&rsquo;IA écrit tes QCM', texte: 'Dépose ton poly ou la rediffusion. Trente questions au format concours, tirées de tes supports à toi, en une minute.', lien: 'Créer ma première fiche', href: `${APP_URL}/dashboard/fiches`, imageAGauche: true })}
+  ${bloc({ num: '02', img: 'bloc2.png', alt: 'Les paliers de révision, de J0 à J120', titre: 'La courbe J', accent: 'planifie tes révisions', texte: 'Quatorze paliers se programment seuls, de J1 à J120. Tu n&rsquo;as plus à décider quoi réviser le matin.', lien: 'Voir mon calendrier', href: `${APP_URL}/dashboard/calendar`, imageAGauche: false })}
+  ${bloc({ num: '03', img: 'bloc3.png', alt: 'Les rangs, d&rsquo;Apprenti à Maître', titre: 'D&rsquo;Apprenti', accent: 'à Maître', texte: 'Ton indice de préparation monte avec ta maîtrise et ton assiduité. Dix minutes de révision suffisent à valider ta journée.', lien: 'Ouvrir mon tableau de bord', href: `${APP_URL}/dashboard`, imageAGauche: true })}
+
+  <tr><td align="center" style="padding:16px 30px 8px;">
+    <a href="${APP_URL}/dashboard/fiches" style="display:inline-block;background:${BLEU};color:${NUIT_PROFOND};text-decoration:none;font:700 15px/1 Helvetica,Arial,sans-serif;padding:16px 32px;border-radius:12px;">Charger mon premier cours &rarr;</a>
+  </td></tr>
+
+  <tr><td align="center" style="padding:22px 30px 0;">
+    <p style="margin:0;font:14px/1.6 Helvetica,Arial,sans-serif;color:${GRIS};">Une question, un bug, une idée ? Réponds à ce mail. C&rsquo;est lu, et par quelqu&rsquo;un.</p>
+  </td></tr>
+
+  <tr><td align="center" style="padding:22px 30px 0;">
+    <p style="margin:0;font:11px/1.6 Helvetica,Arial,sans-serif;color:#9AA7B4;">MedRev &middot; gratuit pour démarrer &middot; données hébergées en France</p>
+  </td></tr>
+
+</table></td></tr></table>
 </body>
 </html>`
 }
 
 function buildText(firstName: string): string {
-  return `Bienvenue, ${firstName}.
+  return `${firstName ? `Bienvenue, ${firstName}.` : 'Bienvenue sur MedRev.'}
 
-Tu viens de créer ton compte MedRev. La méthode est simple : tu charges tes cours, l'IA génère des QCM, et l'app te dit quoi réviser chaque jour pour que tu retiennes pour de bon.
+Ton compte est ouvert. Voilà les trois choses que MedRev va faire pour toi
+cette année.
 
-Pour bien démarrer :
+01 — IMPORTE TON COURS, L'IA ÉCRIT TES QCM
+Dépose ton poly ou la rediffusion. Trente questions au format concours,
+tirées de tes supports à toi, en une minute.
+${APP_URL}/dashboard/fiches
 
-1. Crée ta première fiche dans une matière (déjà pré-configurées selon ta fac).
-2. Upload une vidéo de cours et/ou un PDF. MedRev en extrait le contenu et te génère 30 QCM en 1 minute.
-3. Note la fiche au jour J sur 1 à 5. La courbe d'oubli prend le relais et te programme les révisions suivantes.
+02 — LA COURBE J PLANIFIE TES RÉVISIONS
+Quatorze paliers se programment seuls, de J1 à J120. Tu n'as plus à décider
+quoi réviser le matin.
+${APP_URL}/dashboard/calendar
 
-Aller sur mon dashboard : ${APP_URL}/dashboard
+03 — D'APPRENTI À MAÎTRE
+Ton indice de préparation monte avec ta maîtrise et ton assiduité. Dix
+minutes de révision suffisent à valider ta journée.
+${APP_URL}/dashboard
 
-Tout est gratuit pour démarrer (matières et fiches illimitées, courbe J, calendrier, bibliothèque). L'IA et le simulateur ont quelques limites en gratuit ; tu peux passer Premium quand tu en auras vraiment besoin.
+Une question, un bug, une idée ? Réponds à ce mail. C'est lu, et par
+quelqu'un.
 
-Une question, un bug, une idée ? Réponds simplement à ce mail.
-
-— MedRev · Données sur Supabase Paris
+MedRev, gratuit pour démarrer, données hébergées en France
 `
 }
 
