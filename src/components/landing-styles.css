@@ -347,6 +347,31 @@
 .auth-opt-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
 .auth-opt-tag { font-family: var(--lp-fm); font-size: 10px; background: var(--lp-bg-soft); color: var(--lp-text-soft); border: 1px solid var(--lp-border); border-radius: 999px; padding: 2px 8px; }
 
+/* ---- Étape « tes matières » ----
+   Liste à cocher : la proposition arrive entièrement cochée, l'étudiant
+   élague. Plus compacte que les items de fac — il y en a une dizaine à
+   l'écran, pas trois. */
+.auth-mat-list { display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow-y: auto; margin-bottom: 12px; padding-right: 2px; }
+.auth-mat-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 1px solid var(--lp-border); border-radius: 10px; cursor: pointer; font: 500 13px/1.3 var(--lp-fb); background: var(--lp-bg-card); color: var(--lp-text-dim); transition: all .15s; text-align: left; font-family: inherit; }
+.auth-mat-item:hover { border-color: var(--lp-text-dim); }
+.auth-mat-item.on { border-color: var(--lp-accent); background: var(--lp-accent-soft); color: var(--lp-text); }
+.auth-mat-box { flex: 0 0 auto; width: 17px; height: 17px; display: grid; place-items: center; border: 1.5px solid var(--lp-border-strong); border-radius: 5px; font-size: 10px; line-height: 1; color: #fff; background: transparent; }
+.auth-mat-item.on .auth-mat-box { background: var(--lp-accent); border-color: var(--lp-accent); }
+.auth-mat-ico { flex: 0 0 auto; display: grid; place-items: center; color: var(--lp-text-dim); }
+.auth-mat-ico svg { width: 16px; height: 16px; display: block; }
+.auth-mat-item.on .auth-mat-ico { color: var(--lp-accent); }
+/* Une matière ajoutée à la main peut être longue : on coupe la ligne plutôt
+   que de déformer la rangée. */
+.auth-mat-nom { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.auth-mat-add { display: flex; gap: 8px; margin-bottom: 12px; }
+.auth-mat-add .auth-input { flex: 1 1 auto; margin-bottom: 0; }
+.auth-mat-add-btn { flex: 0 0 auto; padding: 0 16px; border: 1px solid var(--lp-border); border-radius: 10px; background: var(--lp-bg-soft); color: var(--lp-text); font: 500 12.5px/1 var(--lp-fb); cursor: pointer; transition: all .15s; font-family: inherit; }
+.auth-mat-add-btn:hover:not(:disabled) { border-color: var(--lp-text-dim); background: var(--lp-bg-card); }
+.auth-mat-add-btn:disabled { opacity: .45; cursor: default; }
+
+.auth-mat-note { font-family: var(--lp-fi); font-style: italic; font-size: 12px; line-height: 1.5; color: var(--lp-text-dim); margin-bottom: 16px; }
+
 /* === LEGAL PAGES === */
 .legal-wrap { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; padding: 80px 32px 60px; }
 .legal-header { text-align: center; margin-bottom: 56px; }
