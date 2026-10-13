@@ -3,8 +3,15 @@
 
 /* Aliases vers les tokens globaux du design system (src/app/globals.css).
    Les tokens --bg-app, --bg-card, etc. changent automatiquement avec
-   data-theme="dark", donc tout suit le thème sans plus toucher. */
-.fi-main {
+   data-theme="dark", donc tout suit le thème sans plus toucher.
+
+   DÉCLARÉS AUSSI SUR .fi-overlay. Les modales de la page (suppression,
+   renommage, paliers, chapitres) sont rendues en DEHORS de .fi-main, comme
+   soeurs et non comme descendantes. Elles n'héritaient donc d'aucun de ces
+   alias : `background: var(--s1)` tombait sur du transparent et le bouton
+   « Supprimer », en texte blanc, devenait invisible sur une modale blanche. */
+.fi-main,
+.fi-overlay {
   --cream: var(--bg-soft);
   --bg: var(--bg-app);
   --card: var(--bg-card);
@@ -34,7 +41,8 @@
 }
 
 /* En mode sombre on assombrit les soft des scores pour rester lisibles */
-[data-theme="dark"] .fi-main {
+[data-theme="dark"] .fi-main,
+[data-theme="dark"] .fi-overlay {
   --s1-soft: #3D1F1F;
   --s2-soft: #3D2D1A;
   --s3-soft: #3D331A;
