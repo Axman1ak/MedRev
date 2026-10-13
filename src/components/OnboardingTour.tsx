@@ -50,7 +50,7 @@
 //  - tooltip-only : aucun spot, aucun voile, tooltip en haut à droite
 
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import './onboarding-tour.css'
 
 type StepKind = 'walkthrough' | 'wait-click' | 'tooltip-only' | 'celebration'
@@ -59,7 +59,16 @@ type TipPos = 'right' | 'bottom' | 'top' | 'left'
 interface Step {
   kind: StepKind
   selector?: string
-  path?: string  // informatif seulement (plus d'auto-route)
+  // Page sur laquelle la cible de cette étape existe. Si l'élève n'y est
+  // plus, le tour l'y ramène tout seul : sans ça, un clic de travers suffit à
+  // laisser le tutoriel pointer un élément absent, sans rien proposer.
+  // On ne la met PAS sur les étapes « clique sur tel onglet » : la cible y est
+  // un lien de la barre latérale, présent partout, et c'est l'élève qui doit
+  // faire le geste.
+  route?: string
+  // L'étape parle d'une fiche existante. Si aucune carte n'est à l'écran, le
+  // tour demande à la page Fiches d'en montrer une avant de renoncer.
+  besoinFiche?: boolean
   title: (firstName: string) => string
   body: React.ReactNode
   // Title et body alternatifs utilisés UNIQUEMENT pour les steps avec
@@ -135,6 +144,7 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="add-system"]',
+    route: '/dashboard/fiches',
     title: () => 'Crée une matière',
     body: (
       <>
@@ -147,6 +157,7 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="matiere-form"]',
+    route: '/dashboard/fiches',
     title: () => 'Le formulaire de matière',
     body: (
       <>
@@ -169,6 +180,7 @@ const STEPS: Step[] = [
   {
     kind: 'wait-click',
     selector: '[data-tour="add-lesson"]',
+    route: '/dashboard/fiches',
     title: () => 'Ajoute une fiche',
     body: (
       <>
@@ -182,6 +194,7 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="fiche-form"]',
+    route: '/dashboard/fiches',
     title: () => 'Crée ta première fiche',
     body: (
       <>
@@ -227,6 +240,8 @@ const STEPS: Step[] = [
     // Étape fusionnée : explication courbe J + notation, ET clic pour ouvrir la modale
     kind: 'wait-click',
     selector: '[data-tour="lesson-card"]',
+    route: '/dashboard/fiches',
+    besoinFiche: true,
     title: () => 'La courbe J et la notation',
     body: (
       <>
@@ -245,6 +260,8 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="picker-j"]',
+    route: '/dashboard/fiches',
+    besoinFiche: true,
     title: () => 'Le picker des paliers J',
     body: (
       <>
@@ -261,6 +278,8 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="sources"]',
+    route: '/dashboard/fiches',
+    besoinFiche: true,
     title: () => 'Vidéo et PDF du cours',
     body: (
       <>
@@ -280,6 +299,8 @@ const STEPS: Step[] = [
   {
     kind: 'walkthrough',
     selector: '[data-tour="qcm-section"]',
+    route: '/dashboard/fiches',
+    besoinFiche: true,
     title: () => 'QCM générés par IA',
     body: (
       <>
@@ -320,6 +341,7 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
+    route: '/dashboard/calendar',
     title: () => 'Le Calendrier',
     body: (
       <>
@@ -345,6 +367,7 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
+    route: '/dashboard',
     title: () => "Aujourd'hui, ton tableau de bord",
     body: (
       <>
@@ -364,6 +387,7 @@ const STEPS: Step[] = [
   // depuis le dashboard quand il aura quelques fiches notées.
   {
     kind: 'tooltip-only',
+    route: '/dashboard',
     title: () => 'La bibliothèque : 2000 livres',
     body: (
       <>
@@ -398,6 +422,7 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
+    route: '/dashboard/simulateur',
     title: () => 'Le Simulateur',
     body: (
       <>
@@ -430,6 +455,7 @@ const STEPS: Step[] = [
   },
   {
     kind: 'tooltip-only',
+    route: '/dashboard/stats',
     title: () => 'Les Statistiques',
     body: (
       <>
@@ -467,6 +493,14 @@ const STEPS: Step[] = [
   },
 ]
 
+// Bornes de la phase qui a besoin d'une fiche existante. Calculées depuis
+// STEPS : elles étaient écrites en dur (9 à 13) et sont devenues fausses au
+// premier réordonnancement — le tour proposait alors son résumé « aucune
+// fiche » sur les étapes du calendrier.
+const PREMIERE_FICHE = STEPS.findIndex(s => s.besoinFiche)
+const DERNIERE_FICHE = STEPS.map(s => !!s.besoinFiche).lastIndexOf(true)
+const APRES_FICHES = DERNIERE_FICHE + 1
+
 const LS_KEY = 'medrev-onboarding-step'
 
 interface Props {
@@ -488,6 +522,13 @@ export default function OnboardingTour({
   existingLessonCount = 0,
 }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
+  // Dans une ref, jamais en dépendance d'effet : l'objet rendu par useRouter
+  // change d'identité à chaque mise à jour du contexte de navigation, et un
+  // effet qui en dépend se relance en boucle — son minuteur n'arrive alors
+  // jamais à terme. Même piège que le `rect` du projecteur, plus bas.
+  const routerRef = useRef(router)
+  routerRef.current = router
 
   const [stepIdx, setStepIdx] = useState<number>(() => {
     if (typeof window === 'undefined') return 0
@@ -497,6 +538,12 @@ export default function OnboardingTour({
     return n
   })
   const [rect, setRect] = useState<Rect | null>(null)
+  // Y a-t-il une carte de fiche à l'écran ? Gardé en état, et non lu au vol
+  // pendant le rendu : la page Fiches peut en faire apparaître une APRÈS
+  // (voir l'effet « faire apparaître une fiche »), et un test fait pendant le
+  // rendu ne serait jamais refait — le tour restait bloqué sur son message
+  // « aucune fiche encore créée » alors qu'une carte était là.
+  const [carteFiche, setCarteFiche] = useState(false)
 
   const tipRef = useRef<HTMLDivElement | null>(null)
   const [tipDims, setTipDims] = useState<{ w: number; h: number } | null>(null)
@@ -529,6 +576,52 @@ export default function OnboardingTour({
   }, [stepIdx])
 
   // (PAS d'auto-route — l'utilisateur clique chaque nav link lui-même)
+
+  // ---------- Ramener l'élève sur la page de l'étape ----------
+  // Le tour laissait l'élève se perdre : un clic ailleurs, et l'étape pointait
+  // un élément absent de la page, sans jamais y revenir. Chaque étape sait
+  // maintenant où vit sa cible ; si on n'y est plus, on y retourne.
+  // Le délai laisse la page finir de se monter avant qu'on la déclare perdue.
+  useEffect(() => {
+    if (!cur.route || pathname === cur.route) return
+    const cible = cur.route
+    // Le délai laisse la page finir de se monter avant qu'on la déclare perdue.
+    // D'abord la navigation douce du routeur, qui garde l'état de la page.
+    const doux = setTimeout(() => routerRef.current.push(cible), 450)
+    // Puis le filet. Mesuré : `router.push` reste parfois sans effet, l'URL ne
+    // bouge pas et le tour continue de désigner un élément absent — soit
+    // exactement la panne qu'on répare. Au bout de deux secondes on recharge
+    // pour de bon : c'est moins élégant, ça aboutit toujours, et l'étape en
+    // cours est dans localStorage, donc le tour reprend où il en était.
+    const dur = setTimeout(() => {
+      if (window.location.pathname !== cible) window.location.assign(cible)
+    }, 2000)
+    return () => { clearTimeout(doux); clearTimeout(dur) }
+  }, [stepIdx, cur.route, pathname])
+
+  // ---------- Faire apparaître une fiche quand l'étape en parle ----------
+  // Une carte de fiche peut manquer à l'écran sans que l'élève y soit pour
+  // rien : sa matière sélectionnée n'en a aucune, ou ses fiches sont dans
+  // l'autre semestre. On demande alors à la page Fiches d'en montrer une.
+  // Une seule demande par étape, sinon on lutterait contre l'élève qui
+  // change de matière pendant que le tour tourne.
+  const ficheDemandee = useRef<number | null>(null)
+  useEffect(() => {
+    // Pas de garde sur le nombre de fiches connu : il vient d'une requête du
+    // layout qui peut ne rien avoir renvoyé. Si l'étudiant n'a vraiment aucune
+    // fiche, la demande ne trouve rien à montrer et le repli « aucune fiche »
+    // prend le relais — ça ne coûte rien, et ça évite de dépendre d'un
+    // compteur pour une décision qu'on peut lire dans le DOM.
+    if (!cur.besoinFiche) return
+    if (pathname !== '/dashboard/fiches') return
+    if (ficheDemandee.current === stepIdx) return
+    const id = setTimeout(() => {
+      if (document.querySelector('[data-tour="lesson-card"]')) return
+      ficheDemandee.current = stepIdx
+      window.dispatchEvent(new CustomEvent('medrev-tour-voir-fiche'))
+    }, 500)
+    return () => clearTimeout(id)
+  }, [stepIdx, cur.besoinFiche, pathname])
 
   // ---------- Click listener (wait-click uniquement) ----------
   useEffect(() => {
@@ -603,6 +696,7 @@ export default function OnboardingTour({
   // ---------- Compute spotlight rect ----------
   const computeRect = useCallback(() => {
     if (typeof document === 'undefined') return
+    setCarteFiche(!!document.querySelector('[data-tour="lesson-card"]'))
     if (isTooltipOnly || !cur.selector) {
       setRect(null)
       return
@@ -832,13 +926,9 @@ export default function OnboardingTour({
     // Cas spécial 2 : utilisateur sans fiche encore créée. La phase lesson-card
     // (étapes 10-14, indices 9-13) ne peut pas s'afficher. On consolide ces 5
     // étapes en un aperçu unique et on saute directement à la phase 3 (Calendrier).
-    const inLessonRange = stepIdx >= 9 && stepIdx <= 13
+    const inLessonRange = stepIdx >= PREMIERE_FICHE && stepIdx <= DERNIERE_FICHE
     const onFichesPage = pathname === '/dashboard/fiches'
-    const noLessonCardInDom =
-      typeof document !== 'undefined' &&
-      !document.querySelector('[data-tour="lesson-card"]')
-
-    if (inLessonRange && onFichesPage && noLessonCardInDom) {
+    if (inLessonRange && onFichesPage && !carteFiche) {
       return (
         <div className="ont-root" role="dialog" aria-modal="true">
           <div
@@ -847,7 +937,7 @@ export default function OnboardingTour({
             style={{ top: 24, right: 24, width: 360 }}
           >
             <div className="ont-tip-step">
-              Aperçu (étapes {stepIdx + 1} à 14)
+              Aperçu (étapes {stepIdx + 1} à {DERNIERE_FICHE + 1})
             </div>
             <h4 className="ont-tip-title">Aucune fiche encore créée</h4>
             <div className="ont-tip-body">
@@ -879,7 +969,7 @@ export default function OnboardingTour({
                 )}
                 <button
                   className="ont-btn-primary"
-                  onClick={() => setStepIdx(14)}
+                  onClick={() => setStepIdx(APRES_FICHES)}
                 >
                   Continuer le tour →
                 </button>
@@ -902,6 +992,14 @@ export default function OnboardingTour({
           <div className="ont-tip-body" style={{ color: '#6B6F6A' }}>
             {stepBody}
           </div>
+          {/* Filet visible : le retour sur la bonne page est automatique, mais
+              si la navigation n'a pas abouti l'élève a le geste sous la main
+              au lieu d'une bulle qui désigne le vide. */}
+          {cur.route && pathname !== cur.route && (
+            <button className="ont-btn-ghost ont-btn-emmener" onClick={() => window.location.assign(cur.route!)}>
+              M&apos;y emmener
+            </button>
+          )}
           <ProgressBars count={total} active={stepIdx} />
           <div className="ont-tip-actions">
             <button className="ont-btn-ghost" onClick={pauseTour}>

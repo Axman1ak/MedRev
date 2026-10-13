@@ -364,13 +364,12 @@
    que de déformer la rangée. */
 .auth-mat-nom { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.auth-mat-add { display: flex; gap: 8px; margin-bottom: 12px; }
+.auth-mat-add { display: flex; gap: 8px; margin-bottom: 18px; }
 .auth-mat-add .auth-input { flex: 1 1 auto; margin-bottom: 0; }
 .auth-mat-add-btn { flex: 0 0 auto; padding: 0 16px; border: 1px solid var(--lp-border); border-radius: 10px; background: var(--lp-bg-soft); color: var(--lp-text); font: 500 12.5px/1 var(--lp-fb); cursor: pointer; transition: all .15s; font-family: inherit; }
 .auth-mat-add-btn:hover:not(:disabled) { border-color: var(--lp-text-dim); background: var(--lp-bg-card); }
 .auth-mat-add-btn:disabled { opacity: .45; cursor: default; }
 
-.auth-mat-note { font-family: var(--lp-fi); font-style: italic; font-size: 12px; line-height: 1.5; color: var(--lp-text-dim); margin-bottom: 16px; }
 
 /* === LEGAL PAGES === */
 .legal-wrap { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; padding: 80px 32px 60px; }

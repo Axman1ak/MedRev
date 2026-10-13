@@ -265,6 +265,25 @@ export default function FichesPage() {
     return () => window.removeEventListener('medrev-sem-change', onSem)
   }, [])
 
+  // Le tutoriel demande à voir une fiche (étape « la courbe J et la
+  // notation »). Elle restait bloquée sans rien proposer quand aucune carte
+  // n'était à l'écran — et ça n'avait souvent rien à voir avec l'étudiant :
+  // la matière sélectionnée n'avait pas de fiche, ou ses fiches étaient dans
+  // l'autre semestre. On lève ici tout ce qui peut les cacher, puis on
+  // sélectionne la première matière qui en a une.
+  useEffect(() => {
+    function onVoirFiche() {
+      setSemester('year')
+      setFilterNote('all')
+      setFilterProgress('all')
+      setShowDueOnly(false)
+      const avecFiches = systems.find(sy => lessons.some(l => l.system_id === sy.id))
+      if (avecFiches) setSelectedSystemId(avecFiches.id)
+    }
+    window.addEventListener('medrev-tour-voir-fiche', onVoirFiche)
+    return () => window.removeEventListener('medrev-tour-voir-fiche', onVoirFiche)
+  }, [systems, lessons])
+
   const load = useCallback(async (uid: string) => {
     const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
       supabase.from('systems').select('*').eq('user_id', uid).order('semestre').order('created_at'),

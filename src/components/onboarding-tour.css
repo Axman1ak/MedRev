@@ -427,3 +427,16 @@
 .ont-tip-exit { display: flex; align-items: center; gap: 12px; }
 .ont-tip-exit .ont-btn-ghost { padding: 2px 0; font-size: 12px; }
 .ont-tip-exit .ont-btn-ghost:hover { background: none; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Bouton de secours du repli « cible introuvable » : il ramène sur la page de
+   l'étape. Pleine largeur pour qu'on le voie, discret pour ne pas concurrencer
+   « Suivant ». */
+.ont-btn-emmener {
+  display: block;
+  width: 100%;
+  margin: 12px 0 4px;
+  padding: 9px 12px;
+  border: 1px dashed var(--border-strong, #D2CFC7);
+  border-radius: 9px;
+  text-align: center;
+}

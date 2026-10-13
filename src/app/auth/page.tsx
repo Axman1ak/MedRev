@@ -196,11 +196,6 @@ const FAC_SYSTEMS: Record<string, Record<string, Matiere[]>> = {
   },
 }
 
-// Une liste est-elle relevée sur de vrais comptes de cette fac, ou est-ce le
-// socle national proposé faute de mieux ? L'écran ne dit pas la même chose
-// dans les deux cas.
-const FACS_VERIFIEES = new Set(['sorbonne'])
-
 // =============================================================
 // MÉTADONNÉES UI pour l'étape « choix de l'option »
 // =============================================================
@@ -299,7 +294,6 @@ function AuthContent() {
 
   const selectedFac = FACS.find(f => f.id === fac)
   const totalSteps = selectedFac?.hasOptions ? 4 : 3
-  const facVerifiee = FACS_VERIFIEES.has(fac)
   const matieresGardees = proposees.filter(m => !retirees.has(m.name))
 
   // Recherche de fac : on affiche les 3 premières facs correspondantes (toute
@@ -645,9 +639,7 @@ function AuthContent() {
                     Promettre « la maquette de ta fac » à un étudiant de Nantes
                     serait faux : on n'a relevé que la Sorbonne. */}
                 <div className="auth-step-sub">
-                  {facVerifiee
-                    ? <>Relevé sur de vrais comptes de ta fac. Décoche ce que tu n&apos;as pas, ajoute ce qui manque.</>
-                    : <>Ce sont les UE du <em>programme national</em>. Ta fac les découpe et les nomme peut-être autrement : décoche, et ajoute les tiennes.</>}
+                  Décoche ce que tu n&apos;as pas, ajoute ce qui manque.
                 </div>
 
                 <div className="auth-mat-list" ref={listeMatRef}>
@@ -683,10 +675,6 @@ function AuthContent() {
                   <button type="button" className="auth-mat-add-btn" onClick={ajouterMatiere} disabled={!nouvelleMat.trim()}>
                     Ajouter
                   </button>
-                </div>
-
-                <div className="auth-mat-note">
-                  Tout est en premier semestre pour l&apos;instant · tu déplaces une matière en S2 quand tu veux, depuis Fiches.
                 </div>
 
                 <button
