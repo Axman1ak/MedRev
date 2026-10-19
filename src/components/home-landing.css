@@ -359,6 +359,14 @@
 
 /* phone width */
 @container (max-width: 860px){
+/* téléphone : tout un peu plus petit, pour respirer et voir la carte en entier */
+.hl-hr-t{font-size:34px}
+.hl-hr-s{font-size:15px}
+.hl-sn-t{font-size:26px}
+.hl-jt{font-size:11px;padding:4px 9px}
+.hl-rm,.hl-qz,.hl-bp,.hl-pt{zoom:.92}
+.hl-en-t{font-size:28px}
+.hl-wy-t{font-size:30px}
 .hl-hr{grid-template-columns:minmax(0,1fr);padding:40px 20px 64px;gap:28px}
 .hl-hr-ctas{flex-direction:column;align-items:stretch}
 .hl-dv{width:100%;height:330px;margin:0}
@@ -367,7 +375,7 @@
 .hl-dv:before{width:420px;height:340px}
 .hl-sn-stage{grid-template-columns:minmax(0,1fr);gap:18px;padding:22px 18px 18px;align-content:center}
 .hl-sn-txt{gap:10px}
-.hl-sn-cap{min-height:68px;font-size:15px}
+.hl-sn-cap{min-height:60px;font-size:14px}
 .hl-rm{padding:15px}
 .hl-rm-title{font-size:17px}
 .hl-rm-js{padding:6px 1px;gap:4px}
