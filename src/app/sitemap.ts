@@ -1,9 +1,11 @@
 import type { MetadataRoute } from 'next'
 
-const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://med-rev-eight.vercel.app'
+import { SITE_URL } from '@/lib/site'
+
+const BASE = SITE_URL
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ['', '/pricing', '/methode', '/manifesto', '/contact', '/mentions-legales', '/cgu', '/confidentialite']
+  const pages = ['', '/methode', '/manifesto', '/contact', '/mentions-legales', '/cgu', '/confidentialite']
   const now = new Date()
   return pages.map(p => ({
     url: `${BASE}${p}`,

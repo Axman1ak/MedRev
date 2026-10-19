@@ -14,6 +14,7 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Hanken_Grotesk, Fraunces, Plus_Jakarta_Sans, Cormorant_Garamond, Cinzel, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { SITE_URL } from '@/lib/site'
 
 // ============================================================
 // FONTS
@@ -115,7 +116,7 @@ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded'
 // METADATA — SEO + cartes de partage
 // ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://med-rev-eight.vercel.app'),
+  metadataBase: new URL(SITE_URL),
 
   title: {
     default: 'MedRev · Tes cours, tes QCM, ton planning.',
@@ -139,7 +140,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: 'https://med-rev-eight.vercel.app',
+    url: SITE_URL,
     siteName: 'MedRev',
     title: 'MedRev · Tes cours, tes QCM, ton planning.',
     description:
@@ -165,8 +166,13 @@ export const metadata: Metadata = {
     },
   },
 
+  // Google affiche l'icône à côté du résultat s'il en trouve une d'au moins
+  // 48 px : on lui donne le .ico (16/32/48) et une version 512 px.
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+    ],
     apple: '/apple-icon.png',
   },
 
