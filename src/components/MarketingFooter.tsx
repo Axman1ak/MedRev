@@ -17,32 +17,35 @@
 //
 // 3. Ni les mentions légales ni un contact n'étaient atteignables depuis le
 //    footer. La seule adresse du site était enfouie dans l'article 1 des CGU.
+//
+// Octobre 2026 : même pied de page marine que l'accueil (site-chrome.css).
 
 import Link from 'next/link'
 import MedRevMark from '@/components/MedRevMark'
+import './site-chrome.css'
 
 export default function MarketingFooter() {
   return (
-    <footer className="lp-footer">
-      <div className="lp-footer-inner">
-        <div className="lp-footer-brand">
-          <div className="lp-footer-logo lp-logo-mk"><MedRevMark size={26} /><b>MedRev</b></div>
-          <div className="lp-footer-tag">
-            La méthode des prépas, sans le prix.
-            <br />
-            Conçu en France pour les P1.
+    <footer className="sc-ft">
+      <div className="sc-ft-in">
+        <div className="sc-ft-brand">
+          <MedRevMark bg="#fff" fg="#15304E" size={30} />
+          <div>
+            <b>MedRev</b>
+            <span>Conçu en France pour la 1re année de santé.</span>
           </div>
         </div>
-      </div>
-      <div className="lp-footer-bottom">
-        <span>© 2026 MedRev · Données hébergées en Europe</span>
-        <span className="lp-footer-legal">
+        <nav className="sc-ft-nav" aria-label="Liens du site">
+          <Link href="/#comment">Comment ça marche</Link>
+          <Link href="/methode">La méthode</Link>
+          <Link href="/manifesto">Manifesto</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/mentions-legales">Mentions légales</Link>
           <Link href="/cgu">CGU</Link>
           <Link href="/confidentialite">Confidentialité</Link>
-        </span>
+        </nav>
       </div>
+      <div className="sc-ft-bot">© 2026 MedRev. Données hébergées en Europe.</div>
     </footer>
   )
 }

@@ -1,0 +1,106 @@
+/* src/components/site-chrome.css
+   Barre du haut et pied de page de TOUTES les pages publiques (accueil,
+   méthode, manifesto, inscription, pages légales). Une seule source :
+   MarketingNav.tsx et MarketingFooter.tsx. Classes préfixées sc-.
+
+   Hauteur de la barre : 60 px + 3 px de progression = 63 px (56 + 3 sur
+   téléphone). La page d'accueil cale ses scènes collantes dessus
+   (home-landing.css), donc ne pas changer l'un sans l'autre. */
+
+.sc-nv {
+  position: sticky; top: 0; z-index: 60;
+  background: #15304E; color: #fff;
+  font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.sc-nv *, .sc-ft * { box-sizing: border-box; }
+.sc-nv-in {
+  max-width: 1180px; margin: 0 auto; height: 60px; padding: 0 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.sc-logo {
+  display: flex; align-items: center; gap: 10px; min-height: 44px;
+  color: #fff; text-decoration: none; flex: none;
+}
+.sc-logo svg { display: block; flex: none; }
+.sc-logo span {
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 700; font-size: 19px; letter-spacing: -.035em;
+}
+
+/* Les pages : du texte simple, collé au logo */
+.sc-links { display: flex; align-items: center; gap: 4px; margin-left: 28px; }
+.sc-link {
+  position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  color: rgba(255, 255, 255, .72); text-decoration: none; font-size: 14.5px; font-weight: 500;
+  transition: color .15s;
+}
+.sc-link:hover { color: #fff; }
+.sc-link.on { color: #fff; }
+.sc-link.on::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: 6px;
+  height: 2px; border-radius: 2px; background: #7FB0D4;
+}
+
+/* Le compte : deux vrais boutons, à droite, séparés des pages */
+.sc-acts { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.sc-acts::before {
+  content: ''; width: 1px; height: 22px; background: rgba(255, 255, 255, .18); margin-right: 6px;
+}
+.sc-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 40px; padding: 0 16px; border-radius: 10px;
+  font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+  transition: background .2s, box-shadow .2s, transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.sc-btn-out { color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .34); }
+.sc-btn-out:hover { color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+.sc-btn-in { background: #fff; color: #15304E; }
+.sc-btn-in:hover { background: #E9F0F7; color: #15304E; transform: translateY(-1px); }
+
+/* Progression de lecture */
+.sc-prog { height: 3px; background: rgba(255, 255, 255, .08); }
+.sc-prog i { display: block; height: 100%; background: #7FB0D4; transform-origin: left; transform: scaleX(0); }
+@supports (animation-timeline: scroll()) {
+  .sc-prog i { animation: sc-p linear both; animation-timeline: scroll(root); }
+}
+@keyframes sc-p { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+
+@media (max-width: 860px) {
+  .sc-nv-in { height: 56px; padding: 0 14px; gap: 8px; }
+  .sc-links { display: none; }
+  .sc-acts { gap: 8px; }
+  .sc-acts::before { display: none; }
+  .sc-btn { min-height: 38px; padding: 0 12px; font-size: 14px; }
+}
+@media (max-width: 380px) {
+  .sc-logo span { display: none; }
+}
+
+/* ===== PIED DE PAGE ===== */
+.sc-ft {
+  background: #15304E; color: rgba(255, 255, 255, .7); font-size: 13.5px;
+  font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+}
+.sc-ft-in {
+  max-width: 1180px; margin: 0 auto; padding: 36px 24px 22px;
+  display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between; align-items: flex-start;
+}
+.sc-ft-brand { display: flex; align-items: center; gap: 12px; }
+.sc-ft-brand svg { display: block; flex: none; }
+.sc-ft-brand b {
+  display: block; color: #fff;
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 17px; font-weight: 700; letter-spacing: -.03em;
+}
+.sc-ft-nav { display: flex; flex-wrap: wrap; gap: 0 22px; }
+.sc-ft a { color: rgba(255, 255, 255, .8); text-decoration: none; min-height: 40px; display: inline-flex; align-items: center; }
+.sc-ft a:hover { color: #fff; }
+.sc-ft-bot {
+  max-width: 1180px; margin: 0 auto; padding: 14px 24px 26px;
+  border-top: 1px solid rgba(255, 255, 255, .1); font-size: 12.5px; color: rgba(255, 255, 255, .5);
+}
+@media (max-width: 860px) {
+  .sc-ft-in { flex-direction: column; padding: 30px 20px 16px; }
+  .sc-ft-bot { padding: 14px 20px 24px; }
+}
