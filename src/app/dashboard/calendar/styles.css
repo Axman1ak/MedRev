@@ -1151,3 +1151,14 @@
   .cal-td { height: auto; min-height: 38px; padding: 7px 9px; }
   .cal-td-title { white-space: normal; }
 }
+
+/* ===== TÉLÉPHONE, VERSION COMPACTE (moins de défilement) =====
+   L'en-tête de chaque jour tient sur une ligne : « MARDI 20 » à gauche, le
+   nombre de révisions à droite. */
+@media (max-width: 560px) {
+  .cal-week { gap: 8px; }
+  .cal-day-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .cal-day-num-row { flex: 1; margin-top: 0; align-items: center; }
+  .cal-day-num { font-size: 19px; }
+  .cal-week .cal-day-list { padding: 6px 6px 8px; gap: 3px; }
+}

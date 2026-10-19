@@ -1528,3 +1528,10 @@
 }
 .st6-forecast-teaser:hover { text-decoration: underline; }
 .st4-day-ok { margin-top: 6px; }
+
+/* ===== TÉLÉPHONE, VERSION COMPACTE ===== */
+@media (max-width: 560px) {
+  .st4-ring-wrap { width: 150px; }
+  .st5-hero { padding: 14px 16px; gap: 8px; }
+  .st5-col { gap: 12px; }
+}

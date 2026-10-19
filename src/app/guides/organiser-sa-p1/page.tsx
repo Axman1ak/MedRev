@@ -21,7 +21,7 @@ import './styles.css'
 const URL = SITE_URL + '/guides/organiser-sa-p1'
 const TITLE = 'Comment organiser sa P1 de médecine (PASS, LAS) : la méthode jour par jour'
 const DESCRIPTION =
-  "Le guide pour organiser sa première année de santé : apprendre une fois, revoir au bon moment (J+1, J+3, J+7…), une liste chaque matin, une semaine type et la préparation des partiels."
+  "Le guide pour organiser sa première année de santé : apprendre une fois, revoir au bon moment (J+1, J+3, J+7…), une liste chaque matin, une semaine type et la préparation du concours."
 
 export const metadata: Metadata = {
   title: 'Comment organiser sa P1 (PASS, LAS) : la méthode jour par jour',
@@ -51,7 +51,7 @@ const SOMMAIRE = [
   ['note', 'Se noter honnêtement'],
   ['qcm', "Les QCM, dès le début"],
   ['semaine', 'Une semaine type'],
-  ['partiel', 'Le mois avant le partiel'],
+  ['concours', 'Le mois avant le concours'],
   ['erreurs', 'Les erreurs qui coûtent cher'],
   ['questions', 'Questions fréquentes'],
 ]
@@ -63,13 +63,13 @@ export default function GuideOrganiserP1() {
       <MarketingNav current="guide" />
 
       <section className="ln-subhero">
-        <span className="ln-kicker">Guide, première année de santé</span>
+        <span className="ln-kicker">Pour la P1 : PASS et LAS</span>
         <h1 className="ln-subhero-h1">
           Comment organiser sa P1 : <em>la méthode jour par jour.</em>
         </h1>
         <p className="ln-subhero-sub">
           PASS ou LAS, le problème est le même : des dizaines de chapitres, et
-          pas de mode d&apos;emploi pour s&apos;en souvenir le jour de l&apos;examen.
+          pas de mode d&apos;emploi pour s&apos;en souvenir le jour du concours.
           Voici une méthode simple, à appliquer dès la première semaine.
         </p>
       </section>
@@ -88,7 +88,7 @@ export default function GuideOrganiserP1() {
           <p className="gd-lead">
             La P1 ne se joue pas sur l&apos;intelligence. Elle se joue sur
             l&apos;organisation : savoir chaque jour quoi revoir, et ne rien laisser
-            filer jusqu&apos;au partiel. Une méthode régulière bat presque toujours
+            filer jusqu&apos;au concours. Une méthode régulière bat presque toujours
             les grosses révisions de dernière minute.
           </p>
 
@@ -104,7 +104,7 @@ export default function GuideOrganiserP1() {
             Sans révision, on oublie vite : la moitié de ce qu&apos;on vient
             d&apos;apprendre peut disparaître en quelques jours. C&apos;est ce
             qu&apos;on appelle la <strong>courbe de l&apos;oubli</strong>. Relire
-            tout le programme juste avant l&apos;examen ne suffit pas : il y en a
+            tout le programme juste avant le concours ne suffit pas : il y en a
             trop, et ce qui a été oublié doit presque être réappris.
           </p>
 
@@ -177,11 +177,11 @@ export default function GuideOrganiserP1() {
           </p>
           <ul>
             <li>repérer les fiches à revoir plus tôt que prévu (celles notées 1 ou 2) ;</li>
-            <li>savoir, à l&apos;approche du partiel, quelles matières sont solides et lesquelles ne le sont pas.</li>
+            <li>savoir, à l&apos;approche du concours, quelles matières sont solides et lesquelles ne le sont pas.</li>
           </ul>
           <p>
             Une note n&apos;est utile que si elle est honnête. Mieux vaut un 2 vrai
-            qu&apos;un 4 rassurant qui cache un trou le jour de l&apos;examen.
+            qu&apos;un 4 rassurant qui cache un trou le jour du concours.
           </p>
 
           <h2 id="qcm">Les QCM, dès le début et pas seulement à la fin</h2>
@@ -194,7 +194,7 @@ export default function GuideOrganiserP1() {
           <ul>
             <li>Fais quelques QCM sur un chapitre quelques jours après l&apos;avoir appris.</li>
             <li>Lis la correction de chaque proposition, même celles que tu as eues justes.</li>
-            <li>Garde les annales de ta fac pour les dernières semaines : elles montrent le format exact de l&apos;examen.</li>
+            <li>Garde les annales de ta fac pour les dernières semaines : elles montrent le format exact du concours.</li>
           </ul>
 
           <h2 id="semaine">Une semaine type</h2>
@@ -224,13 +224,13 @@ export default function GuideOrganiserP1() {
             qu&apos;on apprend, et une année entière ne se tient pas sans pauses.
           </p>
 
-          <h2 id="partiel">Le mois avant le partiel : ne pas tout recommencer</h2>
+          <h2 id="concours">Le mois avant le concours : ne pas tout recommencer</h2>
           <p>
             Si tu as tenu tes J, tu n&apos;as pas à tout relire depuis le début.
             Le dernier mois sert à consolider :
           </p>
           <ul>
-            <li>Note la date de l&apos;examen et compte les jours qui restent.</li>
+            <li>Note la date du concours et compte les jours qui restent.</li>
             <li>Reprends en priorité les fiches les moins bien notées, matière par matière.</li>
             <li>Passe aux annales et aux examens blancs dans les conditions réelles (temps limité).</li>
             <li>Garde ta liste des J en parallèle : ce qui est solide doit le rester.</li>

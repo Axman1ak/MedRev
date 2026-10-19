@@ -729,10 +729,12 @@ export default function DashboardPage() {
   // pas une ligne entière → moins de vide en bas.
   // Sans bouton, la dernière ligne n'a pas de gap après elle, d'où le + gap.
   const fitAll = Math.max(1, Math.floor((flistM.h + flistM.gap) / flistM.stride))
-  // Téléphone : jamais de troncature, la liste entière défile avec la page.
-  const moreThanFit = !isNarrow && sortedQueue.length > fitAll
+  // Téléphone : les 5 premières (les retards d'abord), le reste derrière
+  // « Voir N fiches de plus », pour ne pas faire défiler toute la liste.
+  const PHONE_MAX = 5
+  const moreThanFit = isNarrow ? sortedQueue.length > PHONE_MAX : sortedQueue.length > fitAll
   // Avec bouton : n lignes + n gaps + le coût mesuré du bouton.
-  const fitWithBtn = Math.max(1, Math.floor((flistM.h - flistM.btnCost) / flistM.stride))
+  const fitWithBtn = isNarrow ? PHONE_MAX : Math.max(1, Math.floor((flistM.h - flistM.btnCost) / flistM.stride))
   const visibleQueue = moreThanFit ? sortedQueue.slice(0, fitWithBtn) : sortedQueue
   const hiddenCount = sortedQueue.length - visibleQueue.length
 
