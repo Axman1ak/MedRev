@@ -10,6 +10,7 @@ import { makeScheduleResolver } from '@/lib/schedule'
 import OnboardingTour from '@/components/OnboardingTour'
 import { currentSemestre } from '@/lib/semestre'
 import './layout.css'
+import MedRevMark from '@/components/MedRevMark'
 
 // Breakpoint mobile (en dessous : sidebar slide-in avec burger).
 
@@ -280,7 +281,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert ? ' menu-open' : ''}`} data-tour="sidebar">
         {/* Logo */}
         <div className="db-logo">
-          <span className="db-logo-m">M</span><span className="db-lbl">ed<span className="db-logo-r">·Rev</span></span>
+          <MedRevMark size={26} bg="#fff" fg="#15304E" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
         </div>
 
         {/* Semester toggle */}

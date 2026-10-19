@@ -5,6 +5,7 @@
 // La page courante est passée en prop `current` pour mettre en gras le lien actif.
 
 import Link from 'next/link'
+import MedRevMark from '@/components/MedRevMark'
 
 type Current = 'home' | 'pricing' | 'methode' | 'manifesto' | null
 
@@ -19,7 +20,7 @@ export default function MarketingNav({ current = null }: { current?: Current }) 
         <Link href="/pricing">Voir ce qui est inclus →</Link>
       </div>
       <nav className="lp-nav">
-        <Link href="/" className="lp-logo">Med<span>·Rev</span></Link>
+        <Link href="/" className="lp-logo lp-logo-mk" aria-label="MedRev, accueil"><MedRevMark size={30} /><b>MedRev</b></Link>
         <div className="lp-nav-links">
           <Link href="/methode" className={current === 'methode' ? 'active' : ''}>Méthode</Link>
           <Link href="/manifesto" className={current === 'manifesto' ? 'active' : ''}>Manifesto</Link>
