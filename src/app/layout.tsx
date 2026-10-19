@@ -181,6 +181,12 @@ export const metadata: Metadata = {
   },
 
   category: 'education',
+
+  // Validation de la propriété www.medrev.fr dans Google Search Console.
+  // Ne pas retirer : Google revérifie régulièrement que la balise est là.
+  verification: {
+    google: 'LqBWckWm_AqusXjJEGRcwpDcm_RhVWSkWs5q3_HEpJQ',
+  },
 }
 
 // ============================================================
