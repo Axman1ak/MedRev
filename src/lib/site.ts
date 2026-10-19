@@ -13,4 +13,7 @@ export const SITE_URL = 'https://www.medrev.fr'
 // Google s'en sert pour comprendre que ces comptes et le site sont la même
 // marque. Ajouter chaque adresse complète ici dès qu'un compte existe, ex. :
 //   'https://www.instagram.com/medrev.fr/'
-export const SOCIAL_PROFILES: string[] = []
+export const SOCIAL_PROFILES: string[] = [
+  'https://www.instagram.com/medrev.fr/',
+  'https://www.tiktok.com/@medrev.fr',
+]

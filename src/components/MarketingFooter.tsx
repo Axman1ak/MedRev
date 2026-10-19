@@ -44,6 +44,8 @@ export default function MarketingFooter() {
           <Link href="/mentions-legales">Mentions légales</Link>
           <Link href="/cgu">CGU</Link>
           <Link href="/confidentialite">Confidentialité</Link>
+          <a href="https://www.instagram.com/medrev.fr/" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <a href="https://www.tiktok.com/@medrev.fr" target="_blank" rel="noopener noreferrer">TikTok</a>
         </nav>
       </div>
       <div className="sc-ft-bot">© 2026 MedRev. Données hébergées en Europe.</div>
