@@ -16,6 +16,7 @@ import type { CSSProperties } from 'react'
 import MedRevMark from '@/components/MedRevMark'
 import MarketingNav from '@/components/MarketingNav'
 import MarketingFooter from '@/components/MarketingFooter'
+import ScrollFallback from '@/components/ScrollFallback'
 import './home-landing.css'
 
 export default function HomeLanding() {
@@ -952,6 +953,7 @@ export default function HomeLanding() {
       </section>
 
       <MarketingFooter />
+      <ScrollFallback />
     </div>
   )
 }
