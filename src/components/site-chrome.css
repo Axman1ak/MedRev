@@ -84,6 +84,8 @@
   .sc-logo { gap: 8px; }
   .sc-logo svg { width: 28px; height: 28px; }
   .sc-logo span { font-size: 17px; }
+  /* « Se connecter » devient un simple lien, seul « Commencer » reste un bouton */
+  .sc-btn-out { box-shadow: none; padding: 0 8px; font-weight: 500; color: rgba(255, 255, 255, .82); }
 }
 @media (max-width: 380px) {
   .sc-logo span { display: none; }

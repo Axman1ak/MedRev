@@ -364,7 +364,6 @@
 .hl-hr-s{font-size:15px}
 .hl-sn-t{font-size:26px}
 .hl-jt{font-size:11px;padding:4px 9px}
-.hl-rm,.hl-qz,.hl-bp,.hl-pt{zoom:.92}
 .hl-en-t{font-size:28px}
 .hl-wy-t{font-size:30px}
 .hl-hr{grid-template-columns:minmax(0,1fr);padding:44px 28px 72px;gap:36px}
@@ -464,3 +463,32 @@
 /* ancres : ne pas finir sous la barre collante */
 .hl-mr-root section{scroll-margin-top:60px}
 .hl-mr-root a{-webkit-tap-highlight-color:transparent}
+
+/* ===== TÉLÉPHONE, VERSION ÉPURÉE =====
+   Tout est centré : l'étiquette et le titre en haut, un seul visuel au
+   milieu, la légende fixée en bas. Rien n'est recentré verticalement quand
+   une carte change de hauteur, donc plus rien ne bouge pendant le
+   défilement. L'ordinateur n'est pas concerné. */
+@container (max-width: 860px){
+.hl-hr{text-align:center;padding:40px 24px 56px;gap:30px}
+.hl-hr>div:first-child{display:flex;flex-direction:column;align-items:center}
+.hl-hr-t{margin-top:16px}
+.hl-hr-s{margin-left:auto;margin-right:auto;max-width:320px}
+.hl-hr-ctas{flex-direction:column;align-items:center;gap:10px}
+.hl-hr-ctas .hl-mr-btn{min-width:250px}
+.hl-dv{height:auto;display:flex;justify-content:center;padding:6px 0 10px}
+.hl-dv:before{width:380px;height:380px}
+.hl-lt{display:none}
+.hl-hp{position:relative;right:auto;top:auto;zoom:.92}
+
+.hl-sn-stage{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:20px;padding:34px 24px 0;text-align:center}
+.hl-sn-txt{display:contents}
+.hl-sn .hl-jt{order:1}
+.hl-sn-t{order:2;margin-top:-8px;max-width:330px}
+.hl-sn-vis{order:3;margin-top:6px}
+.hl-sn-cap{order:4;position:absolute;left:24px;right:24px;bottom:26px;height:46px;min-height:0;max-width:none;margin:0 auto;text-align:center;font-size:14px}
+
+.hl-en{flex-direction:column;align-items:center;text-align:center;padding:80px 24px 72px}
+.hl-en-t{margin-left:auto;margin-right:auto}
+.hl-en .hl-mr-btn{width:auto;min-width:250px}
+}
