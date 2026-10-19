@@ -367,14 +367,14 @@
 .hl-rm,.hl-qz,.hl-bp,.hl-pt{zoom:.92}
 .hl-en-t{font-size:28px}
 .hl-wy-t{font-size:30px}
-.hl-hr{grid-template-columns:minmax(0,1fr);padding:40px 20px 64px;gap:28px}
+.hl-hr{grid-template-columns:minmax(0,1fr);padding:44px 28px 72px;gap:36px}
 .hl-hr-ctas{flex-direction:column;align-items:stretch}
 .hl-dv{width:100%;height:330px;margin:0}
 .hl-lt{zoom:.62;left:-24px;top:0}
 .hl-hp{zoom:.78;right:-6px;top:64px}
 .hl-dv:before{width:420px;height:340px}
-.hl-sn-stage{grid-template-columns:minmax(0,1fr);gap:18px;padding:22px 18px 18px;align-content:center}
-.hl-sn-txt{gap:10px}
+.hl-sn-stage{grid-template-columns:minmax(0,1fr);gap:34px;padding:28px 28px 24px;align-content:center}
+.hl-sn-txt{gap:12px}
 .hl-sn-cap{min-height:60px;font-size:14px}
 .hl-rm{padding:15px}
 .hl-rm-title{font-size:17px}
@@ -396,7 +396,7 @@
 .hl-wy-logo{width:92px;height:92px}
 .hl-wy-name{font-size:34px}
 .hl-wy-tag{font-size:15px}
-.hl-en{padding:80px 20px 72px}
+.hl-en{padding:88px 28px 80px}
 .hl-en .hl-mr-btn{width:100%}
 }
 @supports (animation-timeline: view()){
@@ -405,6 +405,61 @@
 .hl-wy-stage{top:59px;height:calc(100vh - 59px);height:calc(100svh - 59px)}
 }
 }
+
+/* ===== Navigateurs sans animations liées au défilement (Safari avant la
+   version 26, Firefox) : les mêmes animations, pilotées par
+   ScrollFallback.tsx. Le script ajoute .hl-js (animations d'une seconde,
+   en pause), puis place chaque animation au point qui correspond au
+   défilement. ===== */
+.hl-js .hl-sn{height:230vh}
+.hl-js .hl-sn-2{height:290vh}
+.hl-js .hl-sn-stage{position:sticky;top:63px;height:calc(100vh - 63px);height:calc(100svh - 63px);max-height:880px}
+.hl-js .hl-wy{height:400vh}
+.hl-js .hl-wy-stage{position:sticky;top:63px;height:calc(100vh - 63px);height:calc(100svh - 63px)}
+.hl-js .hl-sn *,.hl-js .hl-wy *{animation-fill-mode:both;animation-timing-function:linear;animation-duration:1s;animation-play-state:paused;animation-delay:0s;animation-timeline:auto}
+.hl-js .hl-sn-cap .hl-c1{display:block;position:absolute;left:0;right:0;top:0;animation-name:hl-k-c1}
+.hl-js .hl-sn-cap .hl-c2{position:absolute;left:0;right:0;top:0;animation-name:hl-k-c2}
+.hl-js .hl-wy-w{display:block;animation-name:hl-k-w}
+.hl-js .hl-wy-a{display:block;animation-name:hl-k-wa}
+.hl-js .hl-wy-b{display:block;animation-name:hl-k-wb}
+.hl-js .hl-wy-li{display:flex;animation-name:hl-k-li}
+.hl-js .hl-wy-li .hl-bx{animation-name:hl-k-bx}
+.hl-js .hl-wy-li .hl-bx svg{animation-name:hl-k-bxs}
+.hl-js .hl-wy-li .hl-jj{animation-name:hl-k-jj}
+.hl-js .hl-wy-end{animation-name:hl-k-end}
+.hl-js .hl-wy-glow{animation-name:hl-k-glow}
+.hl-js .hl-s2-s4{animation-name:hl-k-s4}
+.hl-js .hl-s2-st{animation-name:hl-k-st}
+.hl-js .hl-s2-st1{animation-name:hl-k-st1}
+.hl-js .hl-s2-st2{animation-name:hl-k-st2}
+.hl-js .hl-s2-jbox{animation-name:hl-k-jbox}
+.hl-js .hl-s2-toast{animation-name:hl-k-toast}
+.hl-js .hl-qz-file{animation-name:hl-k-qfile}
+.hl-js .hl-qz-gen{animation-name:hl-k-qgen}
+.hl-js .hl-qz-add{animation-name:hl-k-qadd}
+.hl-js .hl-qz-pdf{animation-name:hl-k-qpdf}
+.hl-js .hl-qz-btn{animation-name:hl-k-qbtn}
+.hl-js .hl-qz-load{animation-name:hl-k-qload}
+.hl-js .hl-qz-load .hl-rm-prog i{animation-name:hl-k-qprog}
+.hl-js .hl-qz-q{animation-name:hl-k-qq}
+.hl-js .hl-qz-o.hl-ok .hl-qz-ck i{animation-name:hl-k-qsel}
+.hl-js .hl-qz-o.hl-ok .hl-qz-ck b{animation-name:hl-k-qgreen}
+.hl-js .hl-qz-o.hl-ok{animation-name:hl-k-qok}
+.hl-js .hl-qz-o.hl-no{animation-name:hl-k-qno}
+.hl-js .hl-qz-t em{animation-name:hl-k-qmark}
+.hl-js .hl-qz-val{animation-name:hl-k-qval}
+.hl-js .hl-qz-fb{animation-name:hl-k-qfb}
+.hl-js .hl-s3-r1{animation-name:hl-k-r1}
+.hl-js .hl-s3-r2{animation-name:hl-k-r2}
+.hl-js .hl-cnt{animation-name:hl-k-cnt}
+.hl-js .hl-bp-done{animation-name:hl-k-done}
+.hl-js .hl-pt-num{animation-name:hl-k-num}
+.hl-js .hl-pt-bar i{animation-name:hl-k-bar}
+.hl-js .hl-pt-alert{animation-name:hl-k-alert}
+@container (max-width: 860px){.hl-js .hl-sn-stage{top:59px;height:calc(100vh - 59px);height:calc(100svh - 59px)}
+.hl-js .hl-wy-stage{top:59px;height:calc(100vh - 59px);height:calc(100svh - 59px)}
+}
+
 
 /* ancres : ne pas finir sous la barre collante */
 .hl-mr-root section{scroll-margin-top:60px}
