@@ -69,11 +69,6 @@ export default function ManifestoPage() {
             pour pousser à payer.
           </p>
           <p className="manifesto-p">
-            Le Premium démarre à <strong>5,75 €/mois</strong> (69 €/an) ou
-            <strong> 9,99 €/mois</strong> sans engagement. Il débloque l&apos;IA
-            en illimité et le mode Examen blanc. Tu paies ce que tu utilises.
-          </p>
-          <p className="manifesto-p">
             Que tu sois <strong>déjà en prépa</strong> et que tu cherches un
             outil pour mieux organiser ton travail, ou que tu prépares la P1
             sans encadrement supplémentaire, MedRev s&apos;adapte à ton
@@ -81,9 +76,9 @@ export default function ManifestoPage() {
             travaille bien.
           </p>
           <div className="manifesto-numbers">
-            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">69 €</div><div className="manifesto-num-stat-lbl">L&apos;année complète</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">30</div><div className="manifesto-num-stat-lbl">QCM par cours</div></div>
             <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">14</div><div className="manifesto-num-stat-lbl">Paliers J</div></div>
-            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">0 €</div><div className="manifesto-num-stat-lbl">Pour démarrer</div></div>
+            <div className="manifesto-num-stat"><div className="manifesto-num-stat-num">0 €</div><div className="manifesto-num-stat-lbl">Sans carte bancaire</div></div>
           </div>
         </section>
 

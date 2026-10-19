@@ -167,8 +167,7 @@ export default function MethodePage() {
               la bonne en B/C).
             </p>
             <p className="lp-method-p" style={{ fontFamily: 'var(--lp-fi)', fontStyle: 'italic', color: 'var(--lp-text-soft)' }}>
-              Coût pour toi : 0 € pour 10 générations en gratuit, illimité
-              en Premium. Coût pour nous : ~1 centime par génération.
+              Coût pour nous : environ 1 centime par génération.
               Transparent.
             </p>
           </div>
