@@ -19,13 +19,14 @@
 //    footer. La seule adresse du site était enfouie dans l'article 1 des CGU.
 
 import Link from 'next/link'
+import MedRevMark from '@/components/MedRevMark'
 
 export default function MarketingFooter() {
   return (
     <footer className="lp-footer">
       <div className="lp-footer-inner">
         <div className="lp-footer-brand">
-          <div className="lp-footer-logo">Med·Rev</div>
+          <div className="lp-footer-logo lp-logo-mk"><MedRevMark size={26} /><b>MedRev</b></div>
           <div className="lp-footer-tag">
             La méthode des prépas, sans le prix.
             <br />

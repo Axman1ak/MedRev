@@ -104,6 +104,10 @@
   padding: 0 0 22px 26px; color: #fff; white-space: nowrap;
 }
 .db-logo .db-logo-r { color: var(--rail-accent); }
+/* Logo (octobre 2026) : le M dans son carré, centré dans le rail replié
+   (76 px), le nom apparaît à côté au survol comme les autres libellés. */
+.db-logo { gap: 12px; padding-left: 25px; }
+.db-logo-mk { flex: none; display: block; }
 
 .db-sep { border-bottom: 1px solid rgba(255,255,255,.10); margin: 0 14px 14px; }
 
