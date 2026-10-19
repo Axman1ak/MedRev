@@ -82,8 +82,10 @@
 
 .dvx .bib{flex:3 1 0;min-height:0}
 .dvx .todo-scroll{flex:1;min-height:0;overflow-y:auto}
-.dvx .case{background:var(--cream);border-radius:14px;padding:16px 16px 0;margin-top:14px;border:1px solid var(--line2)}
-.dvx .shelf{display:flex;gap:3px;align-items:flex-end;height:62px;border-bottom:6px solid #6B4F32;border-radius:1px;margin-bottom:14px;padding:0 2px}
+/* La bibliothèque remplit la hauteur du panneau : l'étagère grandit avec lui
+   (62 px minimum, 150 px maximum) et les livres suivent, en % de l'étagère. */
+.dvx .case{background:var(--cream);border-radius:14px;padding:16px 16px 0;margin-top:14px;border:1px solid var(--line2);flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.dvx .shelf{display:flex;gap:3px;align-items:flex-end;flex:1 1 0;min-height:62px;max-height:150px;border-bottom:6px solid #6B4F32;border-radius:1px;margin-bottom:14px;padding:0 2px}
 .dvx .shelf:last-child{margin-bottom:16px}
 .dvx .bk{flex:1;border-radius:2px 2px 0 0;position:relative}
 .dvx .bk::after{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:60%;height:2px;background:rgba(255,255,255,.35);border-radius:2px}

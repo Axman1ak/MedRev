@@ -492,7 +492,7 @@ function DashGarden({ userId }: { userId: string | null }) {
       <div className="case">
         {shelves.map((row, r) => (
           <div className="shelf" key={r}>
-            {row.map((b, i) => <span key={i} className="bk" style={{ background: b.bg, height: b.h }} />)}
+            {row.map((b, i) => <span key={i} className="bk" style={{ background: b.bg, height: Math.round((b.h / 62) * 100) + '%' }} />)}
           </div>
         ))}
       </div>
