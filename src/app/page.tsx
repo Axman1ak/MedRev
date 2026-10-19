@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 import HomeLanding from '@/components/HomeLanding'
-import { SITE_URL } from '@/lib/site'
+import { SITE_URL, SOCIAL_PROFILES } from '@/lib/site'
 
 // L'adresse canonique de l'accueil : une seule pour Google.
 export const metadata: Metadata = {
@@ -29,6 +29,7 @@ const JSON_LD = {
       name: 'MedRev',
       url: SITE_URL + '/',
       logo: SITE_URL + '/icon-512.png',
+      ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES } : {}),
     },
   ],
 }

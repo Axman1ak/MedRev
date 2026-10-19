@@ -22,7 +22,7 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Tarifs · MedRev',
+  title: 'Tarifs',
   description: 'Choisis le plan qui te porte jusqu\'aux examens. Gratuit pour démarrer, Premium à 69 €/an.',
 }
 

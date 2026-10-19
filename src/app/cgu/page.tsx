@@ -11,7 +11,7 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Conditions Générales d\'Utilisation · MedRev',
+  title: 'Conditions Générales d\'Utilisation',
   description: 'CGU de MedRev : éditeur, objet, inscription, tarifs, résiliation, propriété intellectuelle, responsabilité, droit applicable.',
 }
 

@@ -13,7 +13,7 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'La méthode · MedRev',
+  title: 'La méthode',
   description: 'Courbe d\'Ebbinghaus, 14 paliers J0 → J+120, génération QCM par IA, mode angles morts. La méthode MedRev expliquée en détail.',
 }
 

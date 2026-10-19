@@ -10,7 +10,7 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Manifesto · MedRev',
+  title: 'Manifesto',
   description: 'La médecine devrait être méritocratique. Pourquoi MedRev existe.',
 }
 
