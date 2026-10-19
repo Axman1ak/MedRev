@@ -1038,3 +1038,22 @@
   .fi-chap-del { width: 34px; height: 34px; }
   .fi-menu-item { padding-top: 11px; padding-bottom: 11px; }
 }
+
+/* ===== TÉLÉPHONE, VERSION COMPACTE (moins de défilement) =====
+   Les matières passent en deux colonnes de petites tuiles au lieu d'une
+   grande carte par ligne, et les fiches sont plus serrées. */
+@media (max-width: 560px) {
+  .fi-topbar { gap: 10px; margin-bottom: 12px; }
+  .fi-actions > button, .fi-actions > a { min-height: 38px; }
+  .fi-search { min-height: 40px; }
+  .mtabs { grid-template-columns: 1fr 1fr; gap: 8px; padding-bottom: 12px; }
+  .mtab { padding: 9px 34px 9px 10px; gap: 9px; border-radius: 13px; }
+  .mtab:hover { transform: none; }
+  .mtab .micon { width: 32px; height: 32px; border-radius: 9px; }
+  .mtab .micon svg { width: 19px; height: 19px; }
+  .mtab .nm { font-size: 13.5px; }
+  .mtab .ct { font-size: 10.5px; }
+  .fi-menu-btn { width: 30px; height: 30px; }
+  .card-body { padding: 11px 12px; gap: 9px; }
+  .stamps { padding: 8px 7px; gap: 4px; }
+}

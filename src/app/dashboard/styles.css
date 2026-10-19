@@ -231,3 +231,22 @@
   .dvx .todo .del { opacity: 1; padding: 6px 8px; font-size: 20px; }
   .dvx .todo { padding: 11px 0; }
 }
+
+/* ===== TÉLÉPHONE, VERSION COMPACTE (moins de défilement) ===== */
+@media (max-width: 720px) {
+  .dvx { padding-top: 18px; }
+  .dvx .topbar { gap: 12px; margin-bottom: 14px; }
+  .dvx .search { display: none; }
+  .dvx .grid { gap: 14px; }
+  .dvx .panel { padding: 16px 14px; border-radius: 18px; }
+  .dvx .flist { margin-top: 12px; gap: 7px; }
+  .dvx .fiche { align-items: center; padding: 9px 11px; }
+  .dvx .fnm { font-size: 14.5px; }
+  .dvx .go { padding: 11px 18px; }
+  /* Bibliothèque : une seule étagère, plus basse */
+  .dvx .case { padding: 12px 12px 0; margin-top: 10px; }
+  .dvx .shelf { height: 46px; min-height: 46px; margin-bottom: 10px; }
+  .dvx .shelf + .shelf { display: none; }
+  .dvx .bib-foot { margin-top: 10px; }
+  .dvx .bignum { font-size: 28px; }
+}
