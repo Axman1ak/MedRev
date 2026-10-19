@@ -262,15 +262,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="db-shell">
 
-      {/* MOBILE — bouton burger + overlay */}
-      <button
-        type="button"
-        className="db-burger"
-        onClick={() => setMobileNavOpen(o => !o)}
-        aria-label={mobileNavOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-      >
-        {mobileNavOpen ? '✕' : '☰'}
-      </button>
+      {/* TÉLÉPHONE : barre marine en haut (logo + menu), comme le téléphone
+          montré sur la page d'accueil. Le menu s'ouvre sous la barre. */}
+      <header className="db-mtop">
+        <Link href="/dashboard" className="db-mtop-logo" onClick={() => setMobileNavOpen(false)}>
+          <MedRevMark size={30} bg="#fff" fg="#15304E" />
+          <span>MedRev</span>
+        </Link>
+        <button
+          type="button"
+          className="db-mtop-btn"
+          onClick={() => setMobileNavOpen(o => !o)}
+          aria-label={mobileNavOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+          aria-expanded={mobileNavOpen}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            {mobileNavOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+        </button>
+      </header>
       <div
         className={`db-sidebar-overlay${mobileNavOpen ? ' open' : ''}`}
         onClick={() => setMobileNavOpen(false)}

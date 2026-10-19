@@ -303,3 +303,33 @@
   .db-burger { display: flex; align-items: center; justify-content: center; }
   .db-sidebar-overlay.open { display: block; }
 }
+
+/* ================ TÉLÉPHONE : BARRE DU HAUT ================
+   Barre marine fixe avec le logo et le menu, à la place du bouton qui
+   flottait seul. Le menu latéral s'ouvre sous la barre, qui reste visible
+   pour le refermer. */
+.db-mtop { display: none; }
+@media (max-width: 768px) {
+  .db-mtop {
+    display: flex; align-items: center; justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 120;
+    height: 58px; padding: 0 12px 0 20px;
+    background: #15304E; color: #fff;
+    box-shadow: 0 1px 0 rgba(255,255,255,.06);
+  }
+  .db-mtop-logo {
+    display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none;
+    font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 700; font-size: 19px; letter-spacing: -.03em;
+  }
+  .db-mtop-logo svg { display: block; flex: none; }
+  .db-mtop-btn {
+    width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent;
+    color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .db-mtop-btn:active { background: rgba(255,255,255,.1); }
+  .db-burger { display: none !important; }
+  .db-main { padding-top: 58px; padding-left: 8px; padding-right: 8px; }
+  .db-sidebar { top: 58px; height: calc(100% - 58px); }
+  .db-sidebar-overlay { top: 58px; }
+}

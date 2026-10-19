@@ -81,6 +81,8 @@
 .dvx .add input::placeholder{color:var(--dim)}
 
 .dvx .bib{flex:3 1 0;min-height:0}
+/* À faire : partage la hauteur avec la Bibliothèque sur ordinateur. Cette taille était écrite en dur dans DashTodo et écrasait le panneau à 38 px sur téléphone. */
+.dvx .todo-panel{flex:2 1 0;min-height:0}
 .dvx .todo-scroll{flex:1;min-height:0;overflow-y:auto}
 /* La bibliothèque remplit la hauteur du panneau : l'étagère grandit avec lui
    (62 px minimum, 150 px maximum) et les livres suivent, en % de l'étagère. */
@@ -177,7 +179,7 @@
    cassait en trois lignes, et la liste ne montrait qu'UNE fiche avant le
    bouton « voir plus ». Ici la page defile normalement et montre tout. */
 @media (max-width: 720px) {
-  .dvx { height: auto; min-height: 100vh; overflow: visible; padding: 14px 14px 32px; }
+  .dvx { height: auto; min-height: 100vh; overflow: visible; padding: 22px 12px 40px; }
 
   /* .grid est en `flex: 1; min-height: 0` pour remplir la hauteur de l'ecran sur
      ordinateur. Sur telephone ce meme reglage autorise la grille a etre PLUS
@@ -195,6 +197,7 @@
      pendant que leur contenu deborde de plus de 200 px hors de la page, donc
      hors d'atteinte au doigt. Sur telephone chacun reprend sa hauteur reelle. */
   .dvx .col-r > .panel,
+  .dvx .todo-panel,
   .dvx .bib { flex: none; }
   .dvx .todo-scroll { flex: none; min-height: 0; overflow-y: visible; }
 
