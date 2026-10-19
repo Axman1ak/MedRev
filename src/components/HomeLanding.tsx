@@ -14,39 +14,14 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import MedRevMark from '@/components/MedRevMark'
+import MarketingNav from '@/components/MarketingNav'
+import MarketingFooter from '@/components/MarketingFooter'
 import './home-landing.css'
 
 export default function HomeLanding() {
   return (
     <div className="hl-mr-root" style={{ '--acc': '#22507E' } as CSSProperties}>
-      {/* BARRE MARINE */}
-      <header className="hl-nv">
-        <div className="hl-nv-in">
-          <a className="hl-nv-logo" href="#haut" aria-label="MedRev, accueil">
-            <MedRevMark bg="#fff" fg="#15304E" size={36} />
-            <span className="hl-mr-h" style={{ fontSize: '19px', color: '#fff' } as CSSProperties}>
-              MedRev
-            </span>
-          </a>
-          <nav className="hl-nv-r" aria-label="Navigation principale">
-            <a className="hl-nv-link" href="#cours">
-              Comment ça marche
-            </a>
-            <Link className="hl-nv-link" href="/methode">
-              La méthode
-            </Link>
-            <Link className="hl-nv-link" href="/auth?mode=login">
-              Se connecter
-            </Link>
-            <Link className="hl-mr-btn hl-nv-cta" href="/auth">
-              Commencer
-            </Link>
-          </nav>
-        </div>
-        <div className="hl-nv-prog" aria-hidden="true">
-          <i></i>
-        </div>
-      </header>
+      <MarketingNav current="home" />
 
       {/* HERO */}
       <section id="haut" className="hl-hr">
@@ -532,176 +507,12 @@ export default function HomeLanding() {
         </div>
       </section>
 
-      {/* J+1 : LE COURS */}
-      <section id="cours" className="hl-sn hl-sn-1">
+      {/* J+1 : LA NOTE */}
+      <section id="comment" className="hl-sn hl-sn-1">
         <div className="hl-sn-stage">
           <div className="hl-sn-txt">
             <span className="hl-jt">
-              <i></i>J+1, le cours
-            </span>
-            <h2 className="hl-mr-h hl-sn-t">
-              Ton cours devient <span className="hl-mr-acc">des QCM.</span>
-            </h2>
-            <div className="hl-sn-cap">
-              <p className="hl-c1">Ajoute le poly ou la vidéo de l'amphi à ta fiche.</p>
-              <p className="hl-c2">MedRev génère 30 QCM sur ton cours, prêts pour t'entraîner.</p>
-            </div>
-          </div>
-          <div className="hl-sn-vis">
-            <div
-              className="hl-rm"
-              role="img"
-              aria-label="La fenêtre d&#x27;une fiche MedRev : on ajoute le poly et la vidéo du cours, puis MedRev génère 30 QCM"
-            >
-              <div className="hl-rm-file" aria-hidden="true">
-                <i>PDF</i>poly-anatomie.pdf
-              </div>
-              <div aria-hidden="true">
-                <div className="hl-rm-head">
-                  <div>
-                    <div className="hl-rm-kick">Choisis un J à noter</div>
-                    <div className="hl-rm-title">Membre supérieur</div>
-                    <div className="hl-rm-meta">Anatomie, appris le 14 octobre</div>
-                  </div>
-                  <span className="hl-rm-x">×</span>
-                </div>
-                <div className="hl-rm-jp">
-                  <div className="hl-rm-js">
-                    <span className="hl-rm-jl">J+0</span>
-                    <span className="hl-rm-st hl-s4"></span>
-                    <span className="hl-rm-jst">Fait, 4/5</span>
-                  </div>
-                  <div className="hl-rm-js">
-                    <span className="hl-rm-jl">J+1</span>
-                    <span className="hl-rm-st hl-s3"></span>
-                    <span className="hl-rm-jst">Fait, 3/5</span>
-                  </div>
-                  <div className="hl-rm-js">
-                    <span className="hl-rm-jl">J+3</span>
-                    <span className="hl-rm-st hl-to"></span>
-                    <span className="hl-rm-jst">Aujour­d'hui</span>
-                  </div>
-                  <div className="hl-rm-js hl-lock">
-                    <span className="hl-rm-jl">J+5</span>
-                    <span className="hl-rm-st hl-fu"></span>
-                    <span className="hl-rm-jst">Dans 2 j</span>
-                  </div>
-                  <div className="hl-rm-js hl-lock">
-                    <span className="hl-rm-jl">J+7</span>
-                    <span className="hl-rm-st hl-fu"></span>
-                    <span className="hl-rm-jst">Dans 4 j</span>
-                  </div>
-                  <div className="hl-rm-js hl-lock">
-                    <span className="hl-rm-jl">J+15</span>
-                    <span className="hl-rm-st hl-fu"></span>
-                    <span className="hl-rm-jst">Dans 12 j</span>
-                  </div>
-                  <div className="hl-rm-js hl-lock">
-                    <span className="hl-rm-jl">J+21</span>
-                    <span className="hl-rm-st hl-fu"></span>
-                    <span className="hl-rm-jst">Dans 18 j</span>
-                  </div>
-                </div>
-                <div className="hl-rm-div"></div>
-                <div className="hl-rm-lbl">Cours</div>
-                <div className="hl-rm-cours">
-                  <div className="hl-rm-add hl-s1-add hl-rm-gone">
-                    <span className="hl-rm-plus">+</span>Ajouter mon cours<em>PDF ou vidéo</em>
-                  </div>
-                  <div className="hl-rm-row hl-s1-pdf">
-                    <svg
-                      width="17"
-                      height="17"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#C47B2B"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"></path>
-                      <path d="M14 3v5h5"></path>
-                    </svg>
-                    poly.pdf<em>46 pages</em>
-                  </div>
-                  <div className="hl-rm-row hl-s1-vid">
-                    <svg
-                      width="17"
-                      height="17"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#22507E"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="m9.5 8.5 6 3.5-6 3.5Z"></path>
-                      <rect x="3" y="4" width="18" height="16" rx="2.5"></rect>
-                    </svg>
-                    cours.mp4<em>1 h 52, transcript prêt</em>
-                  </div>
-                </div>
-                <div className="hl-rm-div"></div>
-                <div className="hl-rm-duo">
-                  <div className="hl-rm-feat">
-                    <div className="hl-rm-fh">
-                      <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#15304E"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M4 6h16M4 12h16M4 18h9"></path>
-                        <path d="m17.5 17 1.6 1.6 3-3.4"></path>
-                      </svg>
-                      QCM
-                    </div>
-                    <div className="hl-s1-gen-c">
-                      <div className="hl-rm-fn">
-                        30<em>questions</em>
-                      </div>
-                      <span className="hl-rm-cta">M'entraîner</span>
-                    </div>
-                    <div className="hl-rm-layer hl-s1-gen-a" style={{ opacity: 0 } as CSSProperties}>
-                      <span className="hl-rm-cta">Générer 30 QCM</span>
-                    </div>
-                    <div className="hl-rm-layer hl-s1-gen-b" style={{ opacity: 0 } as CSSProperties}>
-                      <div style={{ fontSize: '12px', color: '#5F5F58' } as CSSProperties}>Génération… (30-60 s)</div>
-                      <div className="hl-rm-prog">
-                        <i></i>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="hl-rm-feat">
-                    <div className="hl-rm-fh">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C47B2B" strokeWidth="1.8" strokeLinejoin="round">
-                        <rect x="4" y="5" width="13" height="15" rx="2"></rect>
-                        <path d="M8 3h10a2 2 0 0 1 2 2v12"></path>
-                      </svg>
-                      Cartes
-                    </div>
-                    <div className="hl-rm-fn">
-                      12<em>cartes</em>
-                    </div>
-                    <span className="hl-rm-cta hl-ghost">Réviser</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* J+3 : LA NOTE */}
-      <section className="hl-sn hl-sn-2">
-        <div className="hl-sn-stage">
-          <div className="hl-sn-txt">
-            <span className="hl-jt">
-              <i></i>J+3, la note
+              <i></i>J+1, la note
             </span>
             <h2 className="hl-mr-h hl-sn-t">
               Tu te notes, <span className="hl-mr-acc">MedRev planifie.</span>
@@ -715,14 +526,14 @@ export default function HomeLanding() {
             <div
               className="hl-rm"
               role="img"
-              aria-label="Après la révision J+3, l&#x27;étudiant choisit la note 4, Bien. La pastille J+3 devient verte et la prochaine révision est prévue à J+5"
+              aria-label="Après la révision J+1, l'étudiant choisit la note 4, Bien. La pastille J+1 devient verte et la prochaine révision est prévue à J+3"
             >
               <div aria-hidden="true">
                 <div className="hl-rm-head">
                   <div>
                     <div className="hl-rm-kick">Session de révision</div>
                     <div className="hl-rm-title">Membre supérieur</div>
-                    <div className="hl-rm-meta">Anatomie, J+3 prévue aujourd'hui</div>
+                    <div className="hl-rm-meta">Anatomie, J+1 prévue aujourd'hui</div>
                   </div>
                   <span className="hl-rm-x">×</span>
                 </div>
@@ -732,13 +543,8 @@ export default function HomeLanding() {
                     <span className="hl-rm-st hl-s4"></span>
                     <span className="hl-rm-jst">Fait, 4/5</span>
                   </div>
-                  <div className="hl-rm-js">
-                    <span className="hl-rm-jl">J+1</span>
-                    <span className="hl-rm-st hl-s3"></span>
-                    <span className="hl-rm-jst">Fait, 3/5</span>
-                  </div>
                   <div className="hl-rm-js hl-s2-jbox">
-                    <span className="hl-rm-jl">J+3</span>
+                    <span className="hl-rm-jl">J+1</span>
                     <span className="hl-rm-st hl-s4 hl-s2-st"></span>
                     <span className="hl-rm-jst">
                       <span className="hl-s2-st1" style={{ position: 'absolute', left: '0', right: '0', opacity: 0 } as CSSProperties}>
@@ -748,24 +554,29 @@ export default function HomeLanding() {
                     </span>
                   </div>
                   <div className="hl-rm-js hl-lock">
-                    <span className="hl-rm-jl">J+5</span>
+                    <span className="hl-rm-jl">J+3</span>
                     <span className="hl-rm-st hl-fu"></span>
                     <span className="hl-rm-jst">Dans 2 j</span>
                   </div>
                   <div className="hl-rm-js hl-lock">
-                    <span className="hl-rm-jl">J+7</span>
+                    <span className="hl-rm-jl">J+5</span>
                     <span className="hl-rm-st hl-fu"></span>
                     <span className="hl-rm-jst">Dans 4 j</span>
                   </div>
                   <div className="hl-rm-js hl-lock">
+                    <span className="hl-rm-jl">J+7</span>
+                    <span className="hl-rm-st hl-fu"></span>
+                    <span className="hl-rm-jst">Dans 6 j</span>
+                  </div>
+                  <div className="hl-rm-js hl-lock">
                     <span className="hl-rm-jl">J+15</span>
                     <span className="hl-rm-st hl-fu"></span>
-                    <span className="hl-rm-jst">Dans 12 j</span>
+                    <span className="hl-rm-jst">Dans 14 j</span>
                   </div>
                   <div className="hl-rm-js hl-lock">
                     <span className="hl-rm-jl">J+21</span>
                     <span className="hl-rm-st hl-fu"></span>
-                    <span className="hl-rm-jst">Dans 18 j</span>
+                    <span className="hl-rm-jst">Dans 20 j</span>
                   </div>
                 </div>
                 <div className="hl-rm-div"></div>
@@ -796,7 +607,114 @@ export default function HomeLanding() {
                   </div>
                 </div>
                 <div className="hl-rm-toast hl-s2-toast">
-                  <i></i>Note 4/5 enregistrée pour J+3. Prochaine révision : J+5.
+                  <i></i>Note 4/5 enregistrée pour J+1. Prochaine révision : J+3.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* J+3 : LES QCM (le cours arrive, MedRev génère, on répond) */}
+      <section id="qcm" className="hl-sn hl-sn-2">
+        <div className="hl-sn-stage">
+          <div className="hl-sn-txt">
+            <span className="hl-jt">
+              <i></i>J+3, les QCM
+            </span>
+            <h2 className="hl-mr-h hl-sn-t">
+              Ton cours devient <span className="hl-mr-acc">des QCM.</span>
+            </h2>
+            <div className="hl-sn-cap">
+              <p className="hl-c1">Ajoute le poly ou la vidéo de l'amphi à ta fiche.</p>
+              <p className="hl-c2">MedRev en tire 30 QCM, corrigés avec la page du cours.</p>
+            </div>
+          </div>
+          <div className="hl-sn-vis">
+            <div
+              className="hl-qz"
+              role="img"
+              aria-label="On ajoute le poly du cours, MedRev génère 30 QCM, puis on répond à une question sur le nerf radial : trois bonnes réponses cochées, corrigées avec la page du poly"
+            >
+              <div className="hl-qz-file" aria-hidden="true">
+                <i>PDF</i>poly-anatomie.pdf
+              </div>
+
+              {/* 1. la fiche reçoit le cours et lance la génération */}
+              <div className="hl-qz-gen" aria-hidden="true" style={{ opacity: 0 }}>
+                <div className="hl-rm-kick">Fiche</div>
+                <div className="hl-rm-title">Membre supérieur</div>
+                <div className="hl-rm-meta">Anatomie</div>
+                <div className="hl-rm-div"></div>
+                <div className="hl-rm-lbl">Cours</div>
+                <div className="hl-rm-cours">
+                  <div className="hl-rm-add hl-qz-add">
+                    <span className="hl-rm-plus">+</span>Ajouter mon cours<em>PDF ou vidéo</em>
+                  </div>
+                  <div className="hl-rm-row hl-qz-pdf">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C47B2B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"></path>
+                      <path d="M14 3v5h5"></path>
+                    </svg>
+                    poly.pdf<em>46 pages</em>
+                  </div>
+                </div>
+                <div className="hl-rm-div"></div>
+                <div className="hl-qz-genbox">
+                  <span className="hl-rm-cta hl-qz-btn">Générer 30 QCM</span>
+                  <div className="hl-qz-load">
+                    <div style={{ fontSize: '12px', color: '#5F5F58' }}>Génération… (30-60 s)</div>
+                    <div className="hl-rm-prog">
+                      <i></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. la question, comme dans l'appli */}
+              <div className="hl-qz-q" aria-hidden="true">
+                <div className="hl-qz-top">
+                  <span>Membre supérieur</span>
+                  <div className="hl-qz-bar">
+                    <i></i>
+                  </div>
+                  <span className="hl-qz-n">1 / 30</span>
+                </div>
+                <div className="hl-qz-kick">
+                  Question 1<span>QCM · plusieurs bonnes réponses</span>
+                </div>
+                <div className="hl-qz-stem">À propos du nerf radial :</div>
+                <div className="hl-qz-opts">
+                  <div className="hl-qz-o hl-ok" style={{ '--a': '40%', '--b': '43%' } as CSSProperties}>
+                    <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
+                    <span className="hl-qz-t">A. Il innerve le muscle triceps brachial.<em>Vrai · tu l'as cochée</em></span>
+                  </div>
+                  <div className="hl-qz-o hl-no">
+                    <span className="hl-qz-ck"></span>
+                    <span className="hl-qz-t">B. Il passe dans le canal carpien.<em>Faux</em></span>
+                  </div>
+                  <div className="hl-qz-o hl-ok" style={{ '--a': '46%', '--b': '49%' } as CSSProperties}>
+                    <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
+                    <span className="hl-qz-t">C. Sa paralysie donne une main tombante.<em>Vrai · tu l'as cochée</em></span>
+                  </div>
+                  <div className="hl-qz-o hl-no">
+                    <span className="hl-qz-ck"></span>
+                    <span className="hl-qz-t">D. Sa paralysie donne une main en griffe.<em>Faux</em></span>
+                  </div>
+                  <div className="hl-qz-o hl-ok" style={{ '--a': '52%', '--b': '55%' } as CSSProperties}>
+                    <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
+                    <span className="hl-qz-t">E. Il innerve les extenseurs de l'avant-bras.<em>Vrai · tu l'as cochée</em></span>
+                  </div>
+                </div>
+                <div className="hl-qz-end">
+                  <div className="hl-qz-fb">
+                    <b>Bonne réponse</b>
+                    <span className="hl-qz-src">
+                      <i>poly p. 12</i>
+                      <i className="hl-v">vidéo 34:10</i>
+                    </span>
+                  </div>
+                  <span className="hl-qz-val" style={{ opacity: 0 }}>Valider (3 cochées) →</span>
                 </div>
               </div>
             </div>
@@ -1033,20 +951,7 @@ export default function HomeLanding() {
         </Link>
       </section>
 
-      <footer className="hl-ft">
-        <div className="hl-ft-in">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' } as CSSProperties}>
-            <MedRevMark bg="#fff" fg="#15304E" size={26} />
-            Conçu en France pour la 1re année de santé.
-          </span>
-          <nav aria-label="Liens légaux" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 20px' } as CSSProperties}>
-            <Link href="/contact">Contact</Link>
-            <Link href="/mentions-legales">Mentions légales</Link>
-            <Link href="/cgu">CGU</Link>
-            <Link href="/confidentialite">Confidentialité</Link>
-          </nav>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   )
 }

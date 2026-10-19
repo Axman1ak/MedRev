@@ -429,14 +429,3 @@
   .legal-wrap, .manifesto-wrap { padding: 50px 18px; }
 }
 
-/* Logo MedRev (octobre 2026) : le M dans son carré + le nom. Ajouté sans
-   toucher aux règles .lp-logo / .lp-footer-logo existantes. */
-.lp-logo.lp-logo-mk, .lp-footer-logo.lp-logo-mk {
-  display: inline-flex; align-items: center; gap: 10px;
-  text-transform: none; letter-spacing: -.03em;
-  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
-}
-.lp-logo.lp-logo-mk b, .lp-footer-logo.lp-logo-mk b { font-weight: 700; color: inherit; }
-.lp-logo.lp-logo-mk b { font-size: 19px; }
-.lp-footer-logo.lp-logo-mk b { font-size: 17px; }
-.lp-logo-mk svg { flex: none; display: block; }

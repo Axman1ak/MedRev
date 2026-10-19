@@ -1,0 +1,148 @@
+/* src/components/site-public.css
+   Habillage des pages publiques (méthode, manifesto, inscription, pages
+   légales, contact) dans le style de la page d'accueil : fond crème #FAF8F4,
+   marine #15304E, bleu #22507E, titres Bricolage gras, étiquettes en mono,
+   plus de bandeau nuit ni d'italique bleu clair.
+
+   Tout est préfixé « html body .lp-page » : ça gagne sur
+   landing-styles.css et landing-night.css quel que soit l'ordre de
+   chargement des CSS, et ça ne touche à rien d'autre dans l'appli.
+   Importé par MarketingNav.tsx. */
+
+html body .lp-page {
+  --lp-bg: #FAF8F4;
+  --lp-bg-card: #FFFFFF;
+  --lp-bg-soft: #F2F1ED;
+  --lp-bg-muted: #EBE7DF;
+  --lp-border: #EBE7DF;
+  --lp-border-strong: #E2DDD2;
+  --lp-text: #181915;
+  --lp-text-soft: #5F5F58;
+  --lp-text-dim: #8E8E85;
+  --lp-accent: #15304E;
+  --lp-accent-medium: #22507E;
+  --lp-accent-soft: #E9F0F7;
+  --lp-accent-glow: rgba(34, 80, 126, .18);
+  --lp-fi: var(--font-hanken), system-ui, sans-serif;
+  --lp-fk: var(--font-hanken), system-ui, sans-serif;
+  --lp-fm: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  background: #FAF8F4;
+  color: #181915;
+  /* clip au lieu de hidden : sinon la barre du haut ne reste pas collée */
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+html body .lp-page::before { display: none; }
+
+/* ===== EN-TÊTE DE PAGE : clair, aligné sur l'accueil ===== */
+html body .lp-page .ln-subhero {
+  background: #FAF8F4;
+  text-align: left;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 24px 48px;
+  overflow: visible;
+}
+html body .lp-page .ln-subhero::after {
+  left: 24px; right: 24px; background: #EBE7DF;
+}
+html body .lp-page .ln-subhero-auth { padding: 56px 24px 36px; }
+
+/* l'étiquette : la même puce mono que « J+1, le cours » sur l'accueil */
+html body .lp-page .ln-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; letter-spacing: .02em; text-transform: none;
+  color: #22507E; background: #E9F0F7; border: 0; border-radius: 8px; padding: 5px 10px;
+}
+html body .lp-page .ln-kicker::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: #22507E;
+}
+html body .lp-page .ln-subhero-h1 {
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 700; letter-spacing: -.035em; line-height: 1.02;
+  font-size: clamp(36px, 5vw, 62px);
+  color: #15304E; margin: 18px 0 0; max-width: 860px;
+}
+html body .lp-page .ln-subhero-h1 em { font-style: normal; color: #22507E; }
+html body .lp-page .ln-subhero-sub {
+  margin: 18px 0 0; max-width: 560px;
+  font-size: 17px; line-height: 1.55; color: #5F5F58;
+}
+html body .lp-page .ln-subhero-sub strong { color: #15304E; }
+html body .lp-page .ln-subhero-meta {
+  font-family: var(--font-hanken), sans-serif; font-style: normal; color: #8E8E85;
+}
+
+/* pages légales : l'en-tête est dans la colonne de texte */
+html body .lp-page .legal-header.ln-subhero {
+  border-radius: 0; padding: 0 0 28px; margin: 0 0 34px; max-width: none;
+  border-bottom: 1px solid #EBE7DF;
+}
+html body .lp-page .legal-wrap { padding-top: 64px; }
+
+/* ===== SECTIONS ===== */
+html body .lp-page .lp-section-kicker,
+html body .lp-page .manifesto-num {
+  font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; letter-spacing: .02em; text-transform: none;
+  color: #22507E;
+}
+html body .lp-page .lp-section-h2,
+html body .lp-page .manifesto-h2,
+html body .lp-page .lp-cta-h2,
+html body .lp-page .legal-h2 {
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 700; letter-spacing: -.03em; color: #15304E;
+}
+html body .lp-page .lp-section-h2 em,
+html body .lp-page .manifesto-h2 em,
+html body .lp-page .lp-cta-h2 em { font-style: normal; font-weight: 700; color: #22507E; }
+html body .lp-page .lp-section-sub,
+html body .lp-page .lp-cta-sub,
+html body .lp-page .lp-faq-item p { font-style: normal; }
+html body .lp-page .lp-method-p em,
+html body .lp-page .manifesto-p em { font-style: normal; color: #22507E; }
+html body .lp-page .manifesto-quote {
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-style: normal; color: #15304E; border-left: 3px solid #22507E;
+}
+html body .lp-page .lp-cta::before { display: none; }
+
+/* ===== BOUTONS : ceux de l'accueil ===== */
+html body .lp-page .lp-btn-primary,
+html body .lp-page .ln-btn-primary {
+  min-height: 50px; padding: 0 24px; border-radius: 12px;
+  background: #15304E; border: 0; color: #fff; box-shadow: none;
+  font: 600 16px/1 var(--font-hanken), sans-serif;
+  justify-content: center;
+}
+html body .lp-page .lp-btn-primary:hover,
+html body .lp-page .ln-btn-primary:hover { background: #22507E; color: #fff; box-shadow: none; transform: translateY(-2px); }
+html body .lp-page .lp-btn-secondary,
+html body .lp-page .ln-btn-ghost {
+  min-height: 50px; padding: 0 24px; border-radius: 12px;
+  background: #fff; border: 0; color: #15304E; box-shadow: inset 0 0 0 1px #E2DDD2;
+  font: 600 16px/1 var(--font-hanken), sans-serif;
+  justify-content: center;
+}
+html body .lp-page .lp-btn-secondary:hover,
+html body .lp-page .ln-btn-ghost:hover { background: #fff; box-shadow: inset 0 0 0 1px #3E6F9C; }
+
+/* ===== INSCRIPTION / CONNEXION ===== */
+html body .lp-page .auth-card {
+  border-color: #EBE7DF; border-radius: 16px;
+  box-shadow: 0 30px 70px -30px rgba(21, 48, 78, .35), 0 0 0 1px rgba(21, 48, 78, .04);
+}
+html body .lp-page .auth-submit {
+  min-height: 48px; border: 0; border-radius: 12px; background: #15304E; font-size: 15px; box-shadow: none;
+}
+html body .lp-page .auth-submit:hover { background: #22507E; }
+html body .lp-page .auth-trust-check { background: #E9F0F7; border-color: transparent; color: #22507E; }
+
+@media (max-width: 860px) {
+  html body .lp-page .ln-subhero { padding: 40px 20px 32px; }
+  html body .lp-page .ln-subhero::after { left: 20px; right: 20px; }
+  html body .lp-page .ln-subhero-auth { padding: 32px 20px 24px; }
+  html body .lp-page .legal-wrap { padding: 40px 20px 48px; }
+}

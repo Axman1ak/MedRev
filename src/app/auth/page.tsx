@@ -480,7 +480,7 @@ function AuthContent() {
           <div>
             <div className="auth-trust">
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit pour démarrer · fiches illimitées</div>
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données hébergées en France 🇫🇷</div>
+              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données hébergées en Europe</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Sans publicité ni tracking</div>
             </div>
           </div>
