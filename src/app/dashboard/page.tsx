@@ -712,9 +712,16 @@ export default function DashboardPage() {
     ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
 
-  // Tri par palier J croissant (plus petit J d'abord) — ordre visuel & de révision.
+  // Ordre de la liste : les retards d'abord (les plus en retard en tête),
+  // puis le reste par palier J croissant. C'est ce que promet la page
+  // d'accueil (« Les retards d'abord »).
   const sortedQueue = useMemo(
-    () => [...todayQueue].sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex]),
+    () => [...todayQueue].sort((a, b) => {
+      const la = a.due.status === 'missed' ? a.due.overdueDays : 0
+      const lb = b.due.status === 'missed' ? b.due.overdueDays : 0
+      if (la !== lb) return lb - la
+      return schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex]
+    }),
     [todayQueue]
   )
   // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
