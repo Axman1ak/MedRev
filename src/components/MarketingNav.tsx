@@ -17,7 +17,7 @@ import MedRevMark from '@/components/MedRevMark'
 import './site-chrome.css'
 import './site-public.css'
 
-type Current = 'home' | 'pricing' | 'methode' | 'manifesto' | null
+type Current = 'home' | 'pricing' | 'methode' | 'manifesto' | 'guide' | null
 
 export default function MarketingNav({ current = null }: { current?: Current }) {
   return (
@@ -30,6 +30,7 @@ export default function MarketingNav({ current = null }: { current?: Current }) 
         <nav className="sc-links" aria-label="Pages">
           <Link href="/#comment" className="sc-link">Comment ça marche</Link>
           <Link href="/methode" className={`sc-link${current === 'methode' ? ' on' : ''}`}>La méthode</Link>
+          <Link href="/guides/organiser-sa-p1" className={`sc-link${current === 'guide' ? ' on' : ''}`}>Organiser sa P1</Link>
           <Link href="/manifesto" className={`sc-link${current === 'manifesto' ? ' on' : ''}`}>Manifesto</Link>
         </nav>
         <div className="sc-acts">

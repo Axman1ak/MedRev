@@ -10,7 +10,7 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Politique de Confidentialité · MedRev',
+  title: 'Politique de Confidentialité',
   description: 'Politique de confidentialité de MedRev, conforme RGPD. Données collectées, finalités, sous-traitants, droits de l\'utilisateur.',
 }
 

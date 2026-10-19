@@ -1,25 +1,18 @@
 // src/app/opengraph-image.tsx
 //
-// OG image dynamique pour MedRev. Next.js 14 (App Router) génère cette image
-// à la première requête puis la cache. Elle apparaît automatiquement quand
-// on partage un lien MedRev sur WhatsApp, Twitter, Discord, LinkedIn, etc.
-//
-// Pour personnaliser par page (ex : /pricing avec une OG dédiée), créer un
-// opengraph-image.tsx dans le dossier de cette page. Cette version sert de
-// fallback global pour la racine.
-//
-// Format standard 1200×630 (recommandation OG/Twitter).
+// L'image qui s'affiche quand on partage un lien MedRev (WhatsApp, Instagram,
+// Discord, LinkedIn…). 1200 × 630. Même langage que la page d'accueil :
+// fond marine, logo M, titre en Bricolage Grotesque.
 
 import { ImageResponse } from 'next/og'
+import { MEDREV_M_PATH } from '@/components/MedRevMark'
 
 export const runtime = 'edge'
-export const alt = 'MedRev · Tes cours, tes QCM, ton planning.'
+export const alt = 'MedRev : ta P1, organisée toute seule. Fiches, QCM et planning de révision.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-// Fetch d'une font Google sur le CDN. La 1ère requête est plus lente, ensuite
-// c'est cached côté Vercel Edge. Pour MedRev on charge Fraunces qui est notre
-// font de marque (utilisée dans le H1 du site).
+// On ne charge que les lettres utilisées, depuis Google Fonts.
 async function loadGoogleFont(family: string, text: string): Promise<ArrayBuffer> {
   const url = `https://fonts.googleapis.com/css2?family=${family}&text=${encodeURIComponent(text)}`
   const css = await (await fetch(url)).text()
@@ -30,13 +23,12 @@ async function loadGoogleFont(family: string, text: string): Promise<ArrayBuffer
   return await fontResp.arrayBuffer()
 }
 
-export default async function Image() {
-  // Texte qu'on va utiliser dans l'image — on ne load que les glyphs nécessaires
-  const ogText = "MedRev MED·REV Tes cours, tes QCM, ton planning. La méthode des prépas, sans le prix. POUR LES P1"
+const TEXT = 'MedRev Ta P1, organisée toute seule. Fiches, QCM et planning de révision. Pour la P1, PASS et LAS www.medrev.fr'
 
-  const [frauncesRegular, frauncesItalic] = await Promise.all([
-    loadGoogleFont('Fraunces:wght@500', ogText),
-    loadGoogleFont('Fraunces:ital,wght@1,400', ogText),
+export default async function Image() {
+  const [bold, medium] = await Promise.all([
+    loadGoogleFont('Bricolage+Grotesque:wght@700', TEXT),
+    loadGoogleFont('Bricolage+Grotesque:wght@500', TEXT),
   ])
 
   return new ImageResponse(
@@ -45,125 +37,56 @@ export default async function Image() {
         style={{
           width: '100%',
           height: '100%',
-          background: '#FAFAF7',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '80px',
-          position: 'relative',
-          fontFamily: 'Fraunces',
+          justifyContent: 'space-between',
+          padding: '64px 80px',
+          background: 'radial-gradient(80% 90% at 85% 20%, #22507E 0%, #15304E 55%, #0F2440 100%)',
+          color: '#fff',
+          fontFamily: 'Bricolage',
         }}
       >
-        {/* Halo radial subtil en arrière-plan */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background:
-              'radial-gradient(ellipse 60% 40% at 50% 30%, rgba(44, 95, 138, 0.15) 0%, transparent 65%)',
-          }}
-        />
-
-        {/* Logo top-left */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 60,
-            left: 80,
-            fontSize: 28,
-            fontWeight: 500,
-            letterSpacing: 6,
-            color: '#1A1A1A',
-            display: 'flex',
-            fontFamily: 'serif',
-            textTransform: 'uppercase',
-          }}
-        >
-          MED·<span style={{ color: '#2C5F8A' }}>REV</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <svg width="76" height="76" viewBox="0 0 48 48">
+            <rect width="48" height="48" rx="13" fill="#fff" />
+            <path d={MEDREV_M_PATH} fill="#15304E" />
+          </svg>
+          <div style={{ fontSize: 46, fontWeight: 700, letterSpacing: -1.5 }}>MedRev</div>
         </div>
 
-        {/* Badge kicker */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '10px 24px',
-            background: '#DDECE3',
-            border: '1px solid rgba(44, 95, 138, 0.25)',
-            borderRadius: 999,
-            fontSize: 16,
-            fontWeight: 500,
-            color: '#1B3A5B',
-            letterSpacing: 3,
-            textTransform: 'uppercase',
-            marginBottom: 36,
-            fontFamily: 'serif',
-          }}
-        >
-          Pour les P1 · Rentrée 2026
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignSelf: 'flex-start',
+              fontSize: 24,
+              fontWeight: 500,
+              color: '#9CC4E8',
+              background: 'rgba(156, 196, 232, 0.14)',
+              borderRadius: 12,
+              padding: '8px 18px',
+              marginBottom: 26,
+            }}
+          >
+            Pour la P1, PASS et LAS
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', fontSize: 92, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1 }}>
+            <span>Ta P1, organisée</span>
+            <span style={{ color: '#9CC4E8' }}>toute seule.</span>
+          </div>
         </div>
 
-        {/* H1 principal */}
-        <div
-          style={{
-            fontSize: 100,
-            fontWeight: 500,
-            color: '#1A1A1A',
-            textAlign: 'center',
-            lineHeight: 1.02,
-            letterSpacing: -3,
-            marginBottom: 28,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <span>Tes cours, tes QCM,</span>
-          <span style={{ fontStyle: 'italic', color: '#1B3A5B' }}>ton planning.</span>
-        </div>
-
-        {/* Subtitle italique */}
-        <div
-          style={{
-            fontSize: 30,
-            fontStyle: 'italic',
-            color: '#5C5C5A',
-            textAlign: 'center',
-            lineHeight: 1.4,
-            maxWidth: 900,
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          La méthode des prépas, sans le prix.
-        </div>
-
-        {/* Footer subtle */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 60,
-            right: 80,
-            fontSize: 16,
-            color: '#9A9A98',
-            letterSpacing: 1,
-            display: 'flex',
-            fontFamily: 'serif',
-          }}
-        >
-          medrev · la méthode des prépas, sans le prix
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: 28, fontWeight: 500, color: 'rgba(255,255,255,0.75)' }}>
+          <span>Fiches, QCM et planning de révision.</span>
+          <span>www.medrev.fr</span>
         </div>
       </div>
     ),
     {
       ...size,
       fonts: [
-        { name: 'Fraunces', data: frauncesRegular, style: 'normal', weight: 500 },
-        { name: 'Fraunces', data: frauncesItalic, style: 'italic', weight: 400 },
+        { name: 'Bricolage', data: bold, style: 'normal', weight: 700 },
+        { name: 'Bricolage', data: medium, style: 'normal', weight: 500 },
       ],
     }
   )

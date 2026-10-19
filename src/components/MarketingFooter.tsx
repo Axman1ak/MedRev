@@ -38,6 +38,7 @@ export default function MarketingFooter() {
         <nav className="sc-ft-nav" aria-label="Liens du site">
           <Link href="/#comment">Comment ça marche</Link>
           <Link href="/methode">La méthode</Link>
+          <Link href="/guides/organiser-sa-p1">Organiser sa P1</Link>
           <Link href="/manifesto">Manifesto</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/mentions-legales">Mentions légales</Link>

@@ -1,0 +1,82 @@
+/* src/app/guides/organiser-sa-p1/styles.css
+   Mise en page du guide. Classes préfixées gd-. Couleurs de l'accueil. */
+
+.gd-wrap {
+  max-width: 1180px; margin: 0 auto; padding: 40px 24px 96px;
+  display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 56px; align-items: start;
+}
+
+.gd-toc { position: sticky; top: 87px; font-size: 14px; }
+.gd-toc-t {
+  font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; color: #22507E; margin-bottom: 10px;
+}
+.gd-toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid #EBE7DF; }
+.gd-toc li a {
+  display: block; padding: 6px 0 6px 14px; margin-left: -2px; border-left: 2px solid transparent;
+  color: #5F5F58; text-decoration: none; line-height: 1.35;
+}
+.gd-toc li a:hover { color: #15304E; border-left-color: #22507E; }
+
+.gd-art { max-width: 720px; color: #181915; font-size: 17px; line-height: 1.7; }
+.gd-art p { margin: 0 0 18px; }
+.gd-art .gd-lead { font-size: 19px; line-height: 1.6; color: #15304E; margin-bottom: 8px; }
+.gd-art h2 {
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 700; letter-spacing: -.03em; line-height: 1.15;
+  font-size: clamp(24px, 3vw, 32px); color: #15304E;
+  margin: 52px 0 16px; scroll-margin-top: 80px;
+}
+.gd-art h3 {
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
+  font-weight: 700; letter-spacing: -.02em; font-size: 20px; color: #15304E; margin: 28px 0 8px;
+}
+.gd-art ul { margin: 0 0 18px; padding-left: 22px; list-style: disc outside; }
+.gd-art li { margin: 6px 0; }
+.gd-art li::marker { color: #22507E; }
+.gd-art strong { color: #15304E; }
+
+.gd-js { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 6px 0 22px; }
+.gd-j {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px 4px; border-radius: 12px; background: #fff; border: 1px solid #EBE7DF; text-align: center;
+}
+.gd-j b {
+  font-family: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  font-size: 15px; color: #22507E;
+}
+.gd-j span { font-size: 12px; line-height: 1.3; color: #5F5F58; }
+
+.gd-table-wrap { overflow-x: auto; margin: 4px 0 20px; border-radius: 14px; border: 1px solid #EBE7DF; background: #fff; }
+.gd-table { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.45; }
+.gd-table th {
+  text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #5F5F58; background: #F2F1ED; padding: 10px 14px;
+}
+.gd-table td { padding: 10px 14px; border-top: 1px solid #EBE7DF; vertical-align: top; }
+.gd-table td:first-child { font-weight: 600; color: #15304E; white-space: nowrap; }
+
+.gd-cta {
+  margin-top: 56px; padding: 28px; border-radius: 18px; background: #15304E; color: #fff;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.gd-cta-k { font-family: var(--font-jetbrains), 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #9CC4E8; margin-bottom: 8px; }
+.gd-art .gd-cta-t { margin: 0; font-size: 18px; line-height: 1.5; color: #fff; }
+.gd-cta-b { display: flex; flex-wrap: wrap; gap: 10px; }
+.gd-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px;
+  border-radius: 12px; background: #fff; color: #15304E; font-weight: 600; font-size: 15.5px; text-decoration: none;
+}
+.gd-btn:hover { background: #E9F0F7; color: #15304E; }
+.gd-btn-g { background: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .35); }
+.gd-btn-g:hover { background: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+
+@media (max-width: 860px) {
+  .gd-wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 24px 20px 72px; }
+  .gd-toc { position: static; padding: 16px 18px; border-radius: 14px; background: #fff; border: 1px solid #EBE7DF; }
+  .gd-art { font-size: 16px; }
+  .gd-art .gd-lead { font-size: 17.5px; }
+  .gd-js { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .gd-cta { padding: 22px; }
+  .gd-btn { width: 100%; }
+}

@@ -119,11 +119,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
 
   title: {
-    default: 'MedRev · Tes cours, tes QCM, ton planning.',
-    template: '%s · MedRev',
+    // Le titre de l'accueil dans Google : le nom, puis les mots que les
+    // étudiants tapent vraiment (P1, médecine, PASS, LAS).
+    default: 'MedRev : organise ta P1 de médecine (PASS, LAS)',
+    template: '%s | MedRev',
   },
   description:
-    'La méthode des prépas, sans le prix. Importe ta vidéo de cours et ton poly, MedRev génère 30 QCM et programme tes 14 paliers de révision. Pour les P1 françaises.',
+    "Pour la P1 de santé (PASS, LAS) : tes cours deviennent des fiches, des QCM corrigés et un planning de révision qui te dit quoi revoir chaque jour. Gratuit, sans carte bancaire.",
 
   keywords: [
     'P1', 'PASS', 'LAS', '1re année santé', 'voie unique santé',
@@ -142,16 +144,16 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     url: SITE_URL,
     siteName: 'MedRev',
-    title: 'MedRev · Tes cours, tes QCM, ton planning.',
+    title: 'MedRev : organise ta P1 de médecine (PASS, LAS)',
     description:
-      'La méthode des prépas, sans le prix. 30 QCM générés sur ta vidéo, planning J0 → J+120, simulateur type examens.',
+      'Tes cours deviennent des fiches, des QCM corrigés et un planning de révision. Gratuit, sans carte bancaire.',
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'MedRev · Tes cours, tes QCM, ton planning.',
+    title: 'MedRev : organise ta P1 de médecine (PASS, LAS)',
     description:
-      'La méthode des prépas, sans le prix. 30 QCM sur ta vidéo, 14 paliers de révision, 100 % auto-organisé. Pour les P1.',
+      'Tes cours deviennent des fiches, des QCM corrigés et un planning de révision. Gratuit, sans carte bancaire.',
   },
 
   robots: {

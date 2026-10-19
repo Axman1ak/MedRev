@@ -19,7 +19,7 @@ import '@/components/landing-styles.css'
 import '@/components/landing-night.css'
 
 export const metadata = {
-  title: 'Mentions légales · MedRev',
+  title: 'Mentions légales',
   description: 'Mentions légales de MedRev : éditeur, directeur de la publication, hébergeurs, contact.',
 }
 
