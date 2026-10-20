@@ -561,3 +561,14 @@
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   color: #cdd8e6; font-size: 14px; z-index: 1; pointer-events: none;
 }
+
+/* Génération des QCM en cours (GenProgress, variant « fiche ») */
+.gp-fiche { margin-top: 10px; font-family: var(--font-hanken), sans-serif; }
+.gp-fiche-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-primary); font-weight: 500; }
+.gp-fiche-top b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent-primary); }
+.gp-fiche-bar { margin-top: 6px; height: 6px; border-radius: 6px; background: var(--border-subtle); overflow: hidden; }
+.gp-fiche-bar i { display: block; height: 100%; border-radius: 6px; background: var(--accent-primary); transform-origin: left; transition: transform .4s linear; }
+.gp-fiche.gp-done .gp-fiche-bar i { background: var(--success, #4F8A45); }
+.gp-fiche.gp-done .gp-fiche-top b { color: var(--success, #4F8A45); }
+.gp-fiche.gp-error .gp-fiche-bar i { background: var(--danger, #C75050); }
+.gp-fiche-hint { margin-top: 6px; font-size: 11.5px; color: var(--text-secondary); }
