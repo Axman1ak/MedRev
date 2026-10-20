@@ -8,7 +8,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System } from '@/types'
+import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System, Flashcard } from '@/types'
+import { missedIndices, addCardsFromMistakes } from '@/lib/qcmMissed'
+import Link from 'next/link'
 import QuestionFigure from '@/components/QuestionFigure'
 import { normalizeAnswer, isMultiAnswer } from '@/types'
 import { cleanExplanation, whyFor, correctAnswersRecap } from '@/lib/qcmText'
@@ -82,6 +84,10 @@ export default function QcmSessionPage() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [startTime, setStartTime] = useState<number>(Date.now())
   const [showSource, setShowSource] = useState<AiQuestionSourceRef | null>(null)
+  // Session limitée aux questions ratées (ouverte via « Refaire les ratées »)
+  const [onlyMissed, setOnlyMissed] = useState(false)
+  // Flashcards créées à partir des erreurs de la session qui vient de finir
+  const [cardsAdded, setCardsAdded] = useState(0)
 
   // Reset scroll au montage
   useEffect(() => {
@@ -133,7 +139,13 @@ export default function QcmSessionPage() {
 
       // Mélange les questions à chaque ouverture (ordre différent par session)
       // tout en conservant l'index d'origine pour reporter les compteurs.
-      const indexed = aiQs.map((q, i) => ({ q, idx: i }))
+      // « Refaire les ratées » depuis la fiche : ?ratees=1. S'il n'y a plus
+      // aucune ratée (tout a été réussi entre-temps), on propose tout.
+      const wantMissed = new URLSearchParams(window.location.search).has('ratees')
+      const missed = wantMissed ? missedIndices(aiQs) : []
+      const pool = missed.length > 0 ? missed : aiQs.map((_, i) => i)
+      setOnlyMissed(missed.length > 0)
+      const indexed = pool.map(i => ({ q: aiQs[i], idx: i }))
       const shuffledIndexed = shuffleArr(indexed)
       setQuestions(shuffledIndexed.map(x => x.q))
       setOrigIndices(shuffledIndexed.map(x => x.idx))
@@ -216,18 +228,33 @@ export default function QcmSessionPage() {
       const cur = allQs[origIdx]
       const newAttempts = (cur.attempts || 0) + 1
       const newCorrect = (cur.correct || 0) + (ans.isCorrect ? 1 : 0)
-      allQs[origIdx] = { ...cur, attempts: newAttempts, correct: newCorrect }
+      allQs[origIdx] = { ...cur, attempts: newAttempts, correct: newCorrect, last_correct: !!ans.isCorrect }
     })
 
-    // Update local d'abord pour rendu instantané
-    setLesson(prev => (prev ? { ...prev, ai_questions: allQs as AiQuestion[] } : prev))
+    // Flashcards automatiques : une carte par proposition mal jugée dans
+    // les questions ratées de cette session (voir src/lib/qcmMissed.ts).
+    const mistakes = answers
+      .map((ans, i) => ({ ans, q: questions[i] }))
+      .filter(x => x.q && x.ans && x.ans.selected.length > 0 && x.ans.isCorrect === false)
+      .map(x => ({ q: x.q, selected: x.ans.selected }))
+    const prevCards = Array.isArray(lesson.flashcards) ? (lesson.flashcards as Flashcard[]) : []
+    const { cards, added } = addCardsFromMistakes(prevCards, mistakes)
+    setCardsAdded(added)
 
-    // Puis persistance DB (best-effort)
+    // Update local d'abord pour rendu instantané
+    setLesson(prev => (prev ? { ...prev, ai_questions: allQs as AiQuestion[], flashcards: cards } : prev))
+
+    // Puis persistance DB (best-effort). Les cartes partent dans la même
+    // requête ; si elle échoue, on retente au moins les compteurs seuls.
     try {
-      await supabase
-        .from('lessons')
-        .update({ ai_questions: allQs as AiQuestion[] })
-        .eq('id', lesson.id)
+      const update: { ai_questions: AiQuestion[]; flashcards?: Flashcard[] } = { ai_questions: allQs as AiQuestion[] }
+      if (added > 0) update.flashcards = cards
+      const { error } = await supabase.from('lessons').update(update).eq('id', lesson.id)
+      if (error && added > 0) {
+        console.error('[qcm] persist with cards failed, retry without:', error)
+        setCardsAdded(0)
+        await supabase.from('lessons').update({ ai_questions: allQs as AiQuestion[] }).eq('id', lesson.id)
+      }
     } catch (e) {
       console.error('[qcm] persist results failed:', e)
     }
@@ -271,6 +298,7 @@ export default function QcmSessionPage() {
     setOrigIndices(shuffled.map(x => x.idx))
     setAnswers(shuffled.map(() => ({ selected: [], isCorrect: null })))
     setCurrentIdx(0)
+    setCardsAdded(0)
     setStartTime(Date.now())
     setPhase('question')
   }
@@ -297,6 +325,7 @@ export default function QcmSessionPage() {
     setOrigIndices(shuffledPairs.map(p => p.idx))
     setAnswers(shuffledPairs.map(() => ({ selected: [], isCorrect: null })))
     setCurrentIdx(0)
+    setCardsAdded(0)
     setStartTime(Date.now())
     setPhase('question')
   }
@@ -478,6 +507,13 @@ export default function QcmSessionPage() {
             </div>
           )}
 
+          {cardsAdded > 0 && lesson && (
+            <Link href={`/dashboard/fiches/${lesson.id}/cartes`} className="qcm-end-cards">
+              <strong>{cardsAdded} flashcard{cardsAdded > 1 ? 's' : ''}</strong> créée{cardsAdded > 1 ? 's' : ''} à partir de tes erreurs
+              <span>Les réviser →</span>
+            </Link>
+          )}
+
           <div className="qcm-end-actions">
             <button className="qcm-end-btn ghost" onClick={quitToFiches}>Retour à la fiche</button>
             {chronicallyFailed.length > 0 ? (
@@ -531,7 +567,7 @@ export default function QcmSessionPage() {
       <div className="qcm-topbar">
         <button className="qcm-topback" onClick={quitToFiches}>←</button>
         <span className="qcm-ctx">
-          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · session de <em>{questions.length} questions</em>
+          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
         </span>
       </div>
 

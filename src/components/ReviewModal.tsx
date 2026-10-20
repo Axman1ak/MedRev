@@ -7,7 +7,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Lesson, LessonMedia } from '@/types'
+import type { Lesson, LessonMedia, AiQuestion } from '@/types'
+import { missedIndices } from '@/lib/qcmMissed'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import { toDateStr, todayStr } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
@@ -493,6 +494,11 @@ export default function ReviewModal({
     router.push(`/dashboard/fiches/${lesson.id}/qcm`)
   }
 
+  function startMissedSession() {
+    onClose()
+    router.push(`/dashboard/fiches/${lesson.id}/qcm?ratees=1`)
+  }
+
   function openCartes() {
     onClose()
     router.push(`/dashboard/fiches/${lesson.id}/cartes`)
@@ -587,6 +593,7 @@ export default function ReviewModal({
 
   const aiQuestions: unknown[] = Array.isArray(lesson.ai_questions) ? lesson.ai_questions : []
   const qcmCount = aiQuestions.length
+  const missedCount = missedIndices(aiQuestions as AiQuestion[]).length
 
   // Flashcards maison (colonne lessons.flashcards, jsonb). Accès défensif :
   // la colonne peut être absente sur de vieilles rows pas encore re-fetchées.
@@ -857,6 +864,14 @@ export default function ReviewModal({
                       onClick={startQcmSession}
                       disabled={generating}
                     >M&apos;entraîner</button>
+                    {missedCount > 0 && (
+                      <button
+                        type="button"
+                        className="rmod-feat-cta alt"
+                        onClick={startMissedSession}
+                        disabled={generating}
+                      >Refaire les {missedCount} ratée{missedCount > 1 ? 's' : ''}</button>
+                    )}
                     <button
                       type="button"
                       className="rmod-feat-2nd"

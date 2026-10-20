@@ -1,7 +1,8 @@
 'use client'
 // src/app/dashboard/fiches/[lessonId]/cartes/page.tsx
 //
-// Flashcards maison (recto/verso) par fiche — création manuelle uniquement.
+// Flashcards par fiche : créées à la main, ou automatiquement à partir des
+// propositions ratées en QCM (origin 'qcm', voir src/lib/qcmMissed.ts).
 // 2 modes : gestion (liste + ajout/édition/suppression) et révision
 // (flip recto→verso, "Je savais" / "À revoir", boucle sur les ratées).
 // Stockage : colonne lessons.flashcards (jsonb), même pattern que ai_questions.
@@ -153,7 +154,11 @@ export default function CartesPage() {
     const back = editBack.trim()
     if (!front || !back) return
     const ok = await saveCards(cards.map(c =>
-      c.id === editingId ? { ...c, front, back } : c
+      c.id === editingId
+        ? (c.origin === 'qcm' && (front !== c.front || back !== c.back)
+            ? { ...c, front, back, origin: undefined, stem: undefined, prop: undefined, verdict: undefined, why: undefined }
+            : { ...c, front, back })
+        : c
     ))
     if (ok) setEditingId(null)
   }
@@ -278,6 +283,7 @@ export default function CartesPage() {
               <p className="fc-empty-text">
                 Une carte = une question au recto, la réponse au verso.
                 Idéal pour les définitions, les valeurs seuils, les listes à connaître par cœur.
+                Les propositions que tu rates en QCM arrivent ici toutes seules.
               </p>
             </div>
           ) : (
@@ -312,10 +318,24 @@ export default function CartesPage() {
                   ) : (
                     <>
                       <span className="fc-row-num">{i + 1}</span>
-                      <div className="fc-row-faces">
-                        <div className="fc-row-front">{c.front}</div>
-                        <div className="fc-row-back">{c.back}</div>
-                      </div>
+                      {c.origin === 'qcm' && c.prop ? (
+                        <div className="fc-row-faces">
+                          <div className="fc-row-front">
+                            <span className="fc-row-tag">Erreur de QCM</span>
+                            {c.stem && <span className="fc-row-stem">{c.stem}</span>}
+                            {c.prop}
+                          </div>
+                          <div className="fc-row-back">
+                            <strong className={c.verdict ? 'fc-true' : 'fc-false'}>{c.verdict ? 'Vrai' : 'Faux'}</strong>
+                            {c.why}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="fc-row-faces">
+                          <div className="fc-row-front">{c.front}</div>
+                          <div className="fc-row-back">{c.back}</div>
+                        </div>
+                      )}
                       {(c.reviews || 0) > 0 && (
                         <span
                           className="fc-row-stat"
@@ -353,11 +373,33 @@ export default function CartesPage() {
             onClick={() => setFlipped(f => !f)}
             aria-label={flipped ? 'Voir le recto' : 'Voir la réponse'}
           >
-            <span className="fc-card-side">{flipped ? 'Verso · réponse' : 'Recto · question'}</span>
-            <span className="fc-card-text">{flipped ? current.back : current.front}</span>
-            <span className="fc-card-hint">
-              {flipped ? 'Clique pour revoir la question' : 'Clique pour révéler la réponse'}
-            </span>
+            {current.origin === 'qcm' && current.prop ? (
+              flipped ? (
+                <>
+                  <span className="fc-card-side">Réponse</span>
+                  <span className={`fc-verdict ${current.verdict ? 'fc-true' : 'fc-false'}`}>
+                    {current.verdict ? 'Vrai' : 'Faux'}
+                  </span>
+                  {current.why && <span className="fc-card-why">{current.why}</span>}
+                  <span className="fc-card-hint">Clique pour revoir la proposition</span>
+                </>
+              ) : (
+                <>
+                  <span className="fc-card-side">Vrai ou faux ?</span>
+                  {current.stem && <span className="fc-card-stem">{current.stem}</span>}
+                  <span className="fc-card-text">{current.prop}</span>
+                  <span className="fc-card-hint">Clique pour révéler la réponse</span>
+                </>
+              )
+            ) : (
+              <>
+                <span className="fc-card-side">{flipped ? 'Verso · réponse' : 'Recto · question'}</span>
+                <span className="fc-card-text">{flipped ? current.back : current.front}</span>
+                <span className="fc-card-hint">
+                  {flipped ? 'Clique pour revoir la question' : 'Clique pour révéler la réponse'}
+                </span>
+              </>
+            )}
           </button>
 
           {flipped ? (

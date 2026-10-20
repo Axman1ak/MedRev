@@ -623,3 +623,18 @@
     padding: 10px 0 12px; margin-top: 8px; z-index: 5; }
   .qcm-validate, .qcm-next { width: 100%; min-height: 48px; }
 }
+
+/* Flashcards créées automatiquement à partir des erreurs de la session */
+.qcm-end-cards {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  width: 100%; max-width: 540px; margin: 20px auto 0; padding: 13px 16px;
+  border: 1px solid var(--border); border-left: 3px solid var(--amber);
+  border-radius: 10px; background: var(--card);
+  color: var(--dark); font-size: 13px; line-height: 1.4; text-align: left; text-decoration: none;
+}
+.qcm-end-cards strong { font-weight: 600; }
+.qcm-end-cards span { flex: none; color: var(--green); font-weight: 600; white-space: nowrap; }
+.qcm-end-cards:hover span { text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 560px) {
+  .qcm-end-cards { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
