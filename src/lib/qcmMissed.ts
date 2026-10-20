@@ -10,9 +10,9 @@
 //    considère ratées si elles ont été ratées au moins une fois. Dès qu'on
 //    y répond à nouveau, last_correct prend le relais.
 //
-// 2. Fabriquer des flashcards à partir des erreurs. Une carte par
-//    proposition mal jugée (cochée alors que fausse, ou vraie et oubliée) :
-//    recto = l'énoncé + la proposition, verso = Vrai ou Faux (+ la
+// 2. Fabriquer des flashcards à partir des erreurs : une carte par question
+//    ratée (au plus 10 par session), sur la proposition mal jugée la plus
+//    parlante. Recto = l'énoncé + la proposition, verso = Vrai ou Faux (+ la
 //    justification de la proposition quand la question en a une).
 
 import type { AiQuestion, Flashcard } from '@/types'
@@ -46,9 +46,16 @@ function makeId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
 }
 
+/** Au plus une carte par question ratée, et au plus ce nombre par session. */
+export const MAX_CARDS_PER_SESSION = 10
+
 /**
- * Ajoute au paquet les cartes des propositions mal jugées. Renvoie le
- * nouveau paquet et le nombre de cartes réellement ajoutées.
+ * Ajoute au paquet les cartes des erreurs de la session. Une seule carte par
+ * question ratée : la proposition fausse qu'on a cochée en priorité (c'est
+ * une idée fausse à corriger), sinon la proposition vraie oubliée. Si cette
+ * proposition a déjà sa carte, on prend l'erreur suivante de la question.
+ * Au plus MAX_CARDS_PER_SESSION cartes, pour garder un paquet qu'on révise
+ * vraiment. Renvoie le nouveau paquet et le nombre de cartes ajoutées.
  */
 export function addCardsFromMistakes(
   existing: Flashcard[],
@@ -59,29 +66,30 @@ export function addCardsFromMistakes(
   const fresh: Flashcard[] = []
 
   for (const { q, selected } of mistakes) {
+    if (fresh.length >= MAX_CARDS_PER_SESSION) break
     const correct = normalizeAnswer(q.answer)
-    q.options.forEach((opt, i) => {
-      const isTrue = correct.includes(i)
-      const wasChecked = selected.includes(i)
-      if (isTrue === wasChecked) return // proposition bien jugée
-      const prop = stripLetter(opt)
-      if (!prop) return
-      const qkey = keyFor(q.question, prop)
-      if (known.has(qkey)) return
-      known.add(qkey)
-      const why = whyFor(q, i, q.options.length)
-      fresh.push({
-        id: makeId(),
-        front: `${q.question.trim()}\n${prop}`,
-        back: why ? `${isTrue ? 'Vrai' : 'Faux'}\n${why}` : (isTrue ? 'Vrai' : 'Faux'),
-        created_at: now,
-        origin: 'qcm',
-        stem: q.question.trim(),
-        prop,
-        verdict: isTrue,
-        why: why || undefined,
-        qkey,
-      })
+    const errors = q.options
+      .map((opt, i) => ({ i, prop: stripLetter(opt), isTrue: correct.includes(i), checked: selected.includes(i) }))
+      .filter(o => o.prop && o.isTrue !== o.checked)
+      // fausses cochées d'abord, puis vraies oubliées
+      .sort((a, b) => Number(a.isTrue) - Number(b.isTrue))
+    const pick = errors.find(o => !known.has(keyFor(q.question, o.prop)))
+    if (!pick) continue
+    const qkey = keyFor(q.question, pick.prop)
+    known.add(qkey)
+    const why = whyFor(q, pick.i, q.options.length)
+    const verdict = pick.isTrue ? 'Vrai' : 'Faux'
+    fresh.push({
+      id: makeId(),
+      front: `${q.question.trim()}\n${pick.prop}`,
+      back: why ? `${verdict}\n${why}` : verdict,
+      created_at: now,
+      origin: 'qcm',
+      stem: q.question.trim(),
+      prop: pick.prop,
+      verdict: pick.isTrue,
+      why: why || undefined,
+      qkey,
     })
   }
   return { cards: [...existing, ...fresh], added: fresh.length }
