@@ -28,7 +28,7 @@ export default function HomeLanding() {
       <section id="haut" className="hl-hr">
         <div>
           <span className="hl-jt hl-hr-in" style={{ '--dl': '.05s' } as CSSProperties}>
-            <i></i>Pour la P1, PASS et LAS
+            <i></i>Pour la P1 : PASS et LAS
           </span>
           <h1 className="hl-mr-h hl-hr-t hl-hr-in" style={{ '--dl': '.12s' } as CSSProperties}>
             Ta P1, organisée <span className="hl-mr-acc">toute seule.</span>
