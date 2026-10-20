@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia, AiQuestion } from '@/types'
 import { missedIndices } from '@/lib/qcmMissed'
+import { startGen, finishGen, dropGen, isGenerating, useGenJobs } from '@/lib/qcmGenStore'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import { toDateStr, todayStr } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
@@ -176,7 +177,23 @@ export default function ReviewModal({
   const [transcribeError, setTranscribeError] = useState<string | null>(null)
 
   // QCM generation state
-  const [generating, setGenerating] = useState(false)
+  const [generatingHere, setGenerating] = useState(false)
+  // Une génération lancée puis fenêtre fermée continue en arrière-plan :
+  // si on rouvre la fiche pendant ce temps, les boutons restent bloqués et
+  // la fiche se recharge toute seule quand les QCM arrivent.
+  const genJobs = useGenJobs()
+  const bgGenerating = genJobs.some(j => j.lessonId === lesson.id && j.status === 'running')
+  const generating = generatingHere || bgGenerating
+  const wasBgGenerating = useRef(bgGenerating)
+  useEffect(() => {
+    if (wasBgGenerating.current && !bgGenerating && !generatingHere) {
+      void supabase.from('lessons').select('*').eq('id', lesson.id).single().then(({ data }) => {
+        if (data) { setLesson(data as Lesson); if (onUpdated) onUpdated(data as Lesson) }
+      })
+    }
+    wasBgGenerating.current = bgGenerating
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bgGenerating])
   const [genError, setGenError] = useState<string | null>(null)
   const [genInfo, setGenInfo] = useState<string | null>(null)
 
@@ -505,9 +522,14 @@ export default function ReviewModal({
   }
 
   async function generateQcms(mode: 'replace' | 'append' = 'replace') {
+    if (isGenerating(lesson.id)) return
     setGenError(null)
     setGenInfo(null)
     setGenerating(true)
+    startGen(lesson.id, lesson.name)
+    let genOk = false
+    let genQuota = false
+    let genCount: number | undefined
     try {
       const res = await fetch('/api/generate-qcm', {
         method: 'POST',
@@ -541,6 +563,7 @@ export default function ReviewModal({
           const qType: PaywallInfo['quota'] = d.quota === 'video_size'
             ? 'video_size'
             : 'ai_generations'
+          genQuota = true
           setPaywall({
             quota: qType,
             used: d.used,
@@ -552,6 +575,8 @@ export default function ReviewModal({
         throw new Error(data.error || `Erreur génération (HTTP ${res.status})`)
       }
 
+      genOk = true
+      genCount = typeof data.count === 'number' ? data.count : undefined
       // Recharge la lesson pour récupérer les ai_questions à jour
       const { data: updated } = await supabase
         .from('lessons')
@@ -573,6 +598,8 @@ export default function ReviewModal({
       setGenError(`Échec : ${msg}`)
     } finally {
       setGenerating(false)
+      if (genQuota) dropGen(lesson.id)
+      else finishGen(lesson.id, genOk, genCount)
     }
   }
 
