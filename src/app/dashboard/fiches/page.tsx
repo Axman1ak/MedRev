@@ -12,6 +12,7 @@ import { DEFAULT_J, scheduleOf, makeScheduleResolver, normalizeSchedule } from '
 import './styles.css'
 import { normalizeYear, scopeToYear, DEFAULT_YEAR, YEARS, yearLabel } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
+import GenProgress from '@/components/GenProgress'
 import { currentSemestre } from '@/lib/semestre'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
@@ -1056,6 +1057,8 @@ export default function FichesPage() {
                       </span>
                     </div>
                   </div>
+                  {/* QCM en cours de génération pour cette fiche */}
+                  <GenProgress lessonId={lesson.id} variant="carte" />
                 </div>
               )
             }

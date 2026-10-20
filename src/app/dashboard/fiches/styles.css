@@ -1057,3 +1057,9 @@
   .card-body { padding: 11px 12px; gap: 9px; }
   .stamps { padding: 8px 7px; gap: 4px; }
 }
+
+/* Génération des QCM en cours : fine barre au bas de la carte (GenProgress « carte ») */
+.gp-card { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border-subtle); border-radius: 0 0 12px 12px; overflow: hidden; pointer-events: none; }
+.gp-card i { display: block; height: 100%; background: var(--accent-primary); transform-origin: left; transition: transform .4s linear; }
+.gp-card.gp-done i { background: var(--success, #4F8A45); }
+.gp-card.gp-error i { background: var(--danger, #C75050); }

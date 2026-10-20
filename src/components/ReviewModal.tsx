@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia, AiQuestion } from '@/types'
 import { missedIndices } from '@/lib/qcmMissed'
 import { startGen, finishGen, dropGen, isGenerating, useGenJobs } from '@/lib/qcmGenStore'
+import GenProgress from '@/components/GenProgress'
 import { FREE_VIDEO_SIZE_MB, FREE_PDF_SIZE_MB } from '@/types'
 import { toDateStr, todayStr } from '@/types'
 import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
@@ -183,6 +184,8 @@ export default function ReviewModal({
   // la fiche se recharge toute seule quand les QCM arrivent.
   const genJobs = useGenJobs()
   const bgGenerating = genJobs.some(j => j.lessonId === lesson.id && j.status === 'running')
+  // une génération en cours ou qui vient de finir : sa barre remplace le bouton « + 30 questions »
+  const hasGenJob = genJobs.some(j => j.lessonId === lesson.id)
   const generating = generatingHere || bgGenerating
   const wasBgGenerating = useRef(bgGenerating)
   useEffect(() => {
@@ -897,15 +900,19 @@ export default function ReviewModal({
                         className="rmod-feat-cta alt"
                         onClick={startMissedSession}
                         disabled={generating}
-                      >Refaire les {missedCount} ratée{missedCount > 1 ? 's' : ''}</button>
+                      >{missedCount > 1 ? `Refaire les ${missedCount} ratées` : 'Refaire la question ratée'}</button>
                     )}
-                    <button
-                      type="button"
-                      className="rmod-feat-2nd"
-                      onClick={() => generateQcms('append')}
-                      disabled={generating}
-                      title="Ajouter 30 questions de plus, sur d'autres aspects du cours"
-                    >{generating ? 'Génération…' : '+ 30 questions'}</button>
+                    {hasGenJob ? (
+                      <GenProgress lessonId={lesson.id} variant="fiche" />
+                    ) : (
+                      <button
+                        type="button"
+                        className="rmod-feat-2nd"
+                        onClick={() => generateQcms('append')}
+                        disabled={generating}
+                        title="Ajouter 30 questions de plus, sur d'autres aspects du cours"
+                      >+ 30 questions</button>
+                    )}
                   </>
                 ) : hasAnySource ? (
                   <>
@@ -914,7 +921,8 @@ export default function ReviewModal({
                       className="rmod-feat-cta"
                       onClick={() => generateQcms('replace')}
                       disabled={generating}
-                    >{generating ? 'Génération… (30-60s)' : 'Générer 30 QCM'}</button>
+                    >{generating ? 'Génération en cours' : 'Générer 30 QCM'}</button>
+                    <GenProgress lessonId={lesson.id} variant="fiche" />
                   </>
                 ) : (
                   <>

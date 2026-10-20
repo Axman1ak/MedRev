@@ -11,7 +11,6 @@ import OnboardingTour from '@/components/OnboardingTour'
 import { currentSemestre } from '@/lib/semestre'
 import './layout.css'
 import MedRevMark from '@/components/MedRevMark'
-import GenProgress from '@/components/GenProgress'
 
 // Breakpoint mobile (en dessous : sidebar slide-in avec burger).
 
@@ -270,7 +269,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <MedRevMark size={30} bg="#fff" fg="#15304E" />
           <span>MedRev</span>
         </Link>
-        <GenProgress variant="mobile" />
         <button
           type="button"
           className="db-mtop-btn"
@@ -325,9 +323,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <div style={{ flex: 1 }} />
-
-        {/* QCM en cours de génération : visible même fiche fermée */}
-        <GenProgress variant="side" />
 
         {/* La section « Réglages / Aide / Donner mon avis » qui se trouvait ici a
             été retirée : le menu de compte, ouvert depuis l'avatar juste en
