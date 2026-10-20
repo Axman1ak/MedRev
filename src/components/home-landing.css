@@ -236,13 +236,15 @@
 
 /* ===== SCROLL-DRIVEN (start states are always visible) ===== */
 @supports (animation-timeline: view()){
-.hl-sn{height:230vh}
-.hl-sn-2{height:290vh}
+.hl-sn{height:185vh}
+.hl-sn-2{height:245vh}.hl-sn-4{height:200vh}
 .hl-sn-stage{position:sticky;top:63px;height:calc(100vh - 63px);height:calc(100svh - 63px);max-height:880px}
-.hl-wy{height:400vh}
+.hl-wy{height:330vh}
 .hl-wy-stage{position:sticky;top:63px;height:calc(100vh - 63px);height:calc(100svh - 63px)}
 .hl-sn-1{view-timeline:--hl-t1 block}.hl-sn-2{view-timeline:--hl-t2 block}.hl-sn-3{view-timeline:--hl-t3 block}.hl-sn-4{view-timeline:--hl-t4 block}.hl-wy{view-timeline:--hl-t0 block}
 .hl-sn *,.hl-wy *{animation-fill-mode:both;animation-timing-function:linear;animation-range:contain 0% contain 100%}
+/* Chaque scène anime sur toute sa hauteur (plus de temps mort au début ni à la fin) : la plage est calée sur la partie réellement animée des keyframes. Mêmes valeurs dans ScrollFallback.tsx et HomeLanding.tsx (data-r0/r1). */
+.hl-wy *{animation-range:contain -12.8% contain 107.2%}.hl-sn-1 *{animation-range:contain -53.8% contain 208.8%}.hl-sn-2 *{animation-range:contain -1.1% contain 126.2%}.hl-sn-3 *{animation-range:contain -38.0% contain 152.9%}.hl-sn-4 *{animation-range:contain -1.1% contain 126.2%}
 .hl-wy *{animation-timeline:--hl-t0}
 .hl-sn-1 *{animation-timeline:--hl-t1}.hl-sn-2 *{animation-timeline:--hl-t2}.hl-sn-3 *{animation-timeline:--hl-t3}.hl-sn-4 *{animation-timeline:--hl-t4}
 .hl-sn-cap .hl-c1{display:block;position:absolute;left:0;right:0;top:0;animation-name:hl-k-c1}
@@ -278,10 +280,10 @@
 .hl-qz-load .hl-rm-prog i{animation-name:hl-k-qprog}
 .hl-qz-q{animation-name:hl-k-qq}
 .hl-qz-o.hl-ok .hl-qz-ck i{animation-name:hl-k-qsel;animation-range:contain var(--a) contain var(--b)}
-.hl-qz-o.hl-ok .hl-qz-ck b{animation-name:hl-k-qgreen;animation-range:contain 62% contain 66%}
-.hl-qz-o.hl-ok{animation-name:hl-k-qok;animation-range:contain 62% contain 66%}
-.hl-qz-o.hl-no{animation-name:hl-k-qno;animation-range:contain 62% contain 66%}
-.hl-qz-t em{animation-name:hl-k-qmark;animation-range:contain 64% contain 69%}
+.hl-qz-o.hl-ok .hl-qz-ck b{animation-name:hl-k-qgreen;animation-range:contain 77.8% contain 82.9%}
+.hl-qz-o.hl-ok{animation-name:hl-k-qok;animation-range:contain 77.8% contain 82.9%}
+.hl-qz-o.hl-no{animation-name:hl-k-qno;animation-range:contain 77.8% contain 82.9%}
+.hl-qz-t em{animation-name:hl-k-qmark;animation-range:contain 80.4% contain 86.7%}
 .hl-qz-val{animation-name:hl-k-qval}
 .hl-qz-fb{animation-name:hl-k-qfb}
 
@@ -294,10 +296,10 @@
 /* J+15 partiel */
 .hl-pt-num{animation-name:hl-k-num}
 .hl-pt-bar i{animation-name:hl-k-bar}
-.hl-pt-r1 i{animation-range:contain 20% contain 42%}
-.hl-pt-r2 i{animation-range:contain 26% contain 48%}
-.hl-pt-r3 i{animation-range:contain 32% contain 54%}
-.hl-pt-r4 i{animation-range:contain 38% contain 60%}
+.hl-pt-r1 i{animation-range:contain 24.4% contain 52.4%}
+.hl-pt-r2 i{animation-range:contain 32.0% contain 60.0%}
+.hl-pt-r3 i{animation-range:contain 39.6% contain 67.6%}
+.hl-pt-r4 i{animation-range:contain 47.3% contain 75.3%}
 .hl-pt-alert{animation-name:hl-k-alert}
 }
 
@@ -410,10 +412,10 @@
    ScrollFallback.tsx. Le script ajoute .hl-js (animations d'une seconde,
    en pause), puis place chaque animation au point qui correspond au
    défilement. ===== */
-.hl-js .hl-sn{height:230vh}
-.hl-js .hl-sn-2{height:290vh}
+.hl-js .hl-sn{height:185vh}
+.hl-js .hl-sn-2{height:245vh}.hl-js .hl-sn-4{height:200vh}
 .hl-js .hl-sn-stage{position:sticky;top:63px;height:calc(100vh - 63px);height:calc(100svh - 63px);max-height:880px}
-.hl-js .hl-wy{height:400vh}
+.hl-js .hl-wy{height:330vh}
 .hl-js .hl-wy-stage{position:sticky;top:63px;height:calc(100vh - 63px);height:calc(100svh - 63px)}
 .hl-js .hl-sn *,.hl-js .hl-wy *{animation-fill-mode:both;animation-timing-function:linear;animation-duration:1s;animation-play-state:paused;animation-delay:0s;animation-timeline:auto}
 .hl-js .hl-sn-cap .hl-c1{display:block;position:absolute;left:0;right:0;top:0;animation-name:hl-k-c1}

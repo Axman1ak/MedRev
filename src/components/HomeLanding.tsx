@@ -326,7 +326,7 @@ export default function HomeLanding() {
       </section>
 
       {/* J0 : POURQUOI (fond sombre) */}
-      <section id="pourquoi" className="hl-wy">
+      <section id="pourquoi" className="hl-wy" data-r0="-12.8" data-r1="107.2">
         <div
           className="hl-wy-stage"
           role="img"
@@ -509,7 +509,7 @@ export default function HomeLanding() {
       </section>
 
       {/* J+1 : LA NOTE */}
-      <section id="comment" className="hl-sn hl-sn-1">
+      <section id="comment" className="hl-sn hl-sn-1" data-r0="-53.8" data-r1="208.8">
         <div className="hl-sn-stage">
           <div className="hl-sn-txt">
             <span className="hl-jt">
@@ -617,7 +617,7 @@ export default function HomeLanding() {
       </section>
 
       {/* J+3 : LES QCM (le cours arrive, MedRev génère, on répond) */}
-      <section id="qcm" className="hl-sn hl-sn-2">
+      <section id="qcm" className="hl-sn hl-sn-2" data-r0="-1.1" data-r1="126.2">
         <div className="hl-sn-stage">
           <div className="hl-sn-txt">
             <span className="hl-jt">
@@ -686,7 +686,7 @@ export default function HomeLanding() {
                 </div>
                 <div className="hl-qz-stem">À propos du nerf radial :</div>
                 <div className="hl-qz-opts">
-                  <div className="hl-qz-o hl-ok" style={{ '--a': '40%', '--b': '43%' } as CSSProperties}>
+                  <div className="hl-qz-o hl-ok" style={{ '--a': '49.8%', '--b': '53.6%' } as CSSProperties}>
                     <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
                     <span className="hl-qz-t">A. Il innerve le muscle triceps brachial.<em>Vrai · tu l'as cochée</em></span>
                   </div>
@@ -694,7 +694,7 @@ export default function HomeLanding() {
                     <span className="hl-qz-ck"></span>
                     <span className="hl-qz-t">B. Il passe dans le canal carpien.<em>Faux</em></span>
                   </div>
-                  <div className="hl-qz-o hl-ok" style={{ '--a': '46%', '--b': '49%' } as CSSProperties}>
+                  <div className="hl-qz-o hl-ok" style={{ '--a': '57.5%', '--b': '61.3%' } as CSSProperties}>
                     <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
                     <span className="hl-qz-t">C. Sa paralysie donne une main tombante.<em>Vrai · tu l'as cochée</em></span>
                   </div>
@@ -702,7 +702,7 @@ export default function HomeLanding() {
                     <span className="hl-qz-ck"></span>
                     <span className="hl-qz-t">D. Sa paralysie donne une main en griffe.<em>Faux</em></span>
                   </div>
-                  <div className="hl-qz-o hl-ok" style={{ '--a': '52%', '--b': '55%' } as CSSProperties}>
+                  <div className="hl-qz-o hl-ok" style={{ '--a': '65.1%', '--b': '68.9%' } as CSSProperties}>
                     <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
                     <span className="hl-qz-t">E. Il innerve les extenseurs de l'avant-bras.<em>Vrai · tu l'as cochée</em></span>
                   </div>
@@ -724,7 +724,7 @@ export default function HomeLanding() {
       </section>
 
       {/* J+7 : LA LISTE */}
-      <section className="hl-sn hl-sn-3">
+      <section className="hl-sn hl-sn-3" data-r0="-38.0" data-r1="152.9">
         <div className="hl-sn-stage">
           <div className="hl-sn-txt">
             <span className="hl-jt">
@@ -854,7 +854,7 @@ export default function HomeLanding() {
       </section>
 
       {/* J+15 : LE PARTIEL */}
-      <section className="hl-sn hl-sn-4">
+      <section className="hl-sn hl-sn-4" data-r0="-1.1" data-r1="126.2">
         <div className="hl-sn-stage">
           <div className="hl-sn-txt">
             <span className="hl-jt">

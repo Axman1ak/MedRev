@@ -21,14 +21,14 @@ const clamp = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
 
 // Plages propres à certains éléments, en % de la scène (comme dans le CSS).
 const RANGES: [string, number, number][] = [
-  ['.hl-qz-o.hl-ok .hl-qz-ck b', 62, 66],
-  ['.hl-qz-o.hl-ok', 62, 66],
-  ['.hl-qz-o.hl-no', 62, 66],
-  ['.hl-qz-t em', 64, 69],
-  ['.hl-pt-r1 i', 20, 42],
-  ['.hl-pt-r2 i', 26, 48],
-  ['.hl-pt-r3 i', 32, 54],
-  ['.hl-pt-r4 i', 38, 60],
+  ['.hl-qz-o.hl-ok .hl-qz-ck b', 77.8, 82.9],
+  ['.hl-qz-o.hl-ok', 77.8, 82.9],
+  ['.hl-qz-o.hl-no', 77.8, 82.9],
+  ['.hl-qz-t em', 80.4, 86.7],
+  ['.hl-pt-r1 i', 24.4, 52.4],
+  ['.hl-pt-r2 i', 32.0, 60.0],
+  ['.hl-pt-r3 i', 39.6, 67.6],
+  ['.hl-pt-r4 i', 47.3, 75.3],
 ]
 
 export default function ScrollFallback() {
@@ -58,7 +58,7 @@ export default function ScrollFallback() {
       // coches de la scène sombre : 38-40 %, 42-44 %, … selon l'ordre
       sc.querySelectorAll<HTMLElement>('.hl-wy-li').forEach((li, k) => {
         const svg = li.querySelector<HTMLElement>('.hl-bx svg')
-        if (svg) list.push({ el: svg, a: 38 + 4 * k, b: 40 + 4 * k })
+        if (svg) list.push({ el: svg, a: -12.8 + 1.2000 * (38 + 4 * k), b: -12.8 + 1.2000 * (40 + 4 * k) })
       })
       items.set(sc, list)
     }
@@ -74,11 +74,15 @@ export default function ScrollFallback() {
       for (const sc of scenes) {
         const r = sc.getBoundingClientRect()
         const span = r.height - vh
-        const p = span > 0 ? clamp(-r.top / span) : r.top < 0 ? 1 : 0
+        // Progression dans la partie épinglée (0-1, peut déborder), puis plage
+        // propre à la scène (data-r0/r1, mêmes valeurs que le CSS) : l'animation
+        // remplit toute la hauteur de la scène, sans temps mort.
+        const p = span > 0 ? -r.top / span : r.top < 0 ? 1 : 0
+        const r0 = parseFloat(sc.dataset.r0 || '0'), r1 = parseFloat(sc.dataset.r1 || '100')
         for (const anim of sc.getAnimations({ subtree: true })) {
           const target = (anim.effect as KeyframeEffect | null)?.target
           const range = target ? own.get(target) : undefined
-          const q = range ? clamp((p * 100 - range[0]) / (range[1] - range[0])) : p
+          const q = range ? clamp((p * 100 - range[0]) / (range[1] - range[0])) : clamp((p * 100 - r0) / (r1 - r0))
           anim.pause()
           anim.currentTime = Math.min(q, 0.9999) * 1000
         }
