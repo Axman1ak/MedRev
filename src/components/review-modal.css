@@ -473,6 +473,11 @@
 }
 .rmod-feat-cta:hover { opacity: .9; }
 .rmod-feat-cta:disabled { opacity: .5; cursor: default; }
+.rmod-feat-cta.alt {
+  margin-top: 6px;
+  background: none; color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1.5px var(--accent-primary);
+}
 .rmod-feat-cta.ghost {
   background: none; color: var(--text-secondary);
   border: 1px dashed var(--border-subtle);
@@ -490,7 +495,7 @@
 .rmod-feat-2nd:disabled { opacity: .5; cursor: default; }
 
 /* En sombre, --green est un bleu clair : du blanc dessus tombe à 3,39:1. */
-[data-theme="dark"] .rmod-feat-cta:not(.ghost),
+[data-theme="dark"] .rmod-feat-cta:not(.ghost):not(.alt),
 [data-theme="dark"] .rmod-cours-add-plus { color: #0E1726; }
 [data-theme="dark"] .rmod-cours-add.mini .rmod-cours-add-plus { color: var(--accent-primary); }
 

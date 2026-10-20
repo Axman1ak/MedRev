@@ -63,6 +63,9 @@ export interface AiQuestion {
   // session via persistSessionResults). Optionnels = pas encore répondu.
   attempts?: number
   correct?: number
+  // Résultat de la DERNIÈRE tentative (2026-10). Sert à « Refaire les
+  // ratées » depuis la fiche. Absent = jamais répondu depuis cet ajout.
+  last_correct?: boolean
   // Champs rétro-compat (legacy AVANT la refonte 2026-05) — toujours typés
   // optionnels. Utilisés par d'anciens chemins de code (ex : page /dashboard/lesson/[id])
   // qui n'a pas encore été migrée vers les nouveaux noms. NE PAS supprimer
@@ -98,6 +101,16 @@ export interface Flashcard {
   reviews?: number      // nb de fois vue en session
   known?: number        // nb de fois marquée "je savais"
   last_reviewed_at?: string
+  // Cartes créées automatiquement à partir d'une erreur de QCM (2026-10).
+  // front/back restent remplis (texte brut) pour tout code qui ne connaît
+  // que ces deux champs ; les champs ci-dessous servent à un affichage
+  // plus lisible (énoncé en petit, proposition en grand, Vrai/Faux).
+  origin?: 'qcm'
+  stem?: string
+  prop?: string
+  verdict?: boolean
+  why?: string
+  qkey?: string
 }
 
 // Annale d'examen (PDF + questions extraites par IA) — table annales,

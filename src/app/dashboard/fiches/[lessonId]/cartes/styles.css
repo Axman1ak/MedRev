@@ -421,3 +421,32 @@
   .fc-card { min-height: 220px; padding: 24px 20px; }
   .fc-card-text { font-size: 18px; }
 }
+
+/* Cartes créées à partir d'une erreur de QCM : énoncé en petit, proposition
+   en grand au recto ; Vrai ou Faux en grand au verso, justification dessous. */
+.fc-card-stem {
+  max-width: 460px;
+  font-size: 13.5px; line-height: 1.45; color: var(--fc-gray);
+  overflow-wrap: anywhere;
+}
+.fc-verdict {
+  font-family: var(--font-bricolage), serif;
+  font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em;
+}
+.fc-true { color: var(--fc-green); }
+.fc-false { color: var(--fc-red); }
+.fc-card-why {
+  max-width: 460px;
+  font-size: 14px; line-height: 1.5; color: var(--fc-dark);
+  overflow-wrap: anywhere;
+}
+.fc-row-tag {
+  display: inline-block; margin-bottom: 4px; padding: 1px 7px;
+  border-radius: 20px; background: var(--fc-soft); border: 1px solid var(--fc-border);
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--fc-gray);
+}
+.fc-row-stem { display: block; font-weight: 400; color: var(--fc-gray); font-size: 12px; margin-bottom: 2px; }
+.fc-row-back strong { display: block; font-weight: 700; }
+@media (max-width: 560px) {
+  .fc-verdict { font-size: 34px; }
+}
