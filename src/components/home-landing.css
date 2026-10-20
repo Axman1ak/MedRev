@@ -481,14 +481,17 @@
 .hl-lt{display:none}
 .hl-hp{position:relative;right:auto;top:auto;zoom:.8}
 
-.hl-sn-stage{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:20px;padding:34px 24px 0;text-align:center}
+/* Titre + visuel centrés dans la hauteur de l'écran, au-dessus de la
+   légende. Le visuel a une hauteur réservée fixe : le centrage ne bouge
+   donc pas quand une carte grandit ou rétrécit (pas de tremblement). */
+.hl-sn-stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 24px 20px;text-align:center}
 .hl-sn-txt{display:contents}
 .hl-sn .hl-jt{order:1}
 .hl-sn-t{order:2;margin-top:-8px;max-width:330px}
-.hl-sn-vis{order:3;margin-top:6px}
+.hl-sn-vis{order:3;margin-top:4px;flex:none;height:min(362px,calc(100svh - 290px));align-items:flex-start}
 /* visuels un peu plus petits que l'écran : moins larges, moins hauts */
 .hl-sn-vis>.hl-rm,.hl-sn-vis>.hl-qz,.hl-sn-vis>.hl-bp,.hl-sn-vis>.hl-pt{transform:scale(.86);transform-origin:50% 0}
-.hl-sn-cap{order:4;position:absolute;left:24px;right:24px;bottom:26px;height:46px;min-height:0;max-width:none;margin:0 auto;text-align:center;font-size:14px}
+.hl-sn-cap{order:4;position:relative;flex:none;width:100%;max-width:340px;height:48px;min-height:0;margin:0;text-align:center;font-size:14px}
 
 .hl-en{flex-direction:column;align-items:center;text-align:center;padding:80px 24px 72px}
 .hl-en-t{margin-left:auto;margin-right:auto}

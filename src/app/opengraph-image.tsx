@@ -23,7 +23,7 @@ async function loadGoogleFont(family: string, text: string): Promise<ArrayBuffer
   return await fontResp.arrayBuffer()
 }
 
-const TEXT = 'MedRev Ta P1, organisée toute seule. Fiches, QCM et planning de révision. Pour la P1, PASS et LAS www.medrev.fr'
+const TEXT = 'MedRev Ta P1, organisée toute seule. Fiches, QCM et planning de révision. Pour la P1 : PASS et LAS www.medrev.fr'
 
 export default async function Image() {
   const [bold, medium] = await Promise.all([
@@ -68,7 +68,7 @@ export default async function Image() {
               marginBottom: 26,
             }}
           >
-            Pour la P1, PASS et LAS
+            Pour la P1 : PASS et LAS
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: 92, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1 }}>
             <span>Ta P1, organisée</span>
