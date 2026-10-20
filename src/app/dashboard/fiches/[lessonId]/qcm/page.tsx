@@ -509,7 +509,7 @@ export default function QcmSessionPage() {
 
           {cardsAdded > 0 && lesson && (
             <Link href={`/dashboard/fiches/${lesson.id}/cartes`} className="qcm-end-cards">
-              <strong>{cardsAdded} flashcard{cardsAdded > 1 ? 's' : ''}</strong> créée{cardsAdded > 1 ? 's' : ''} à partir de tes erreurs
+              <em><strong>{cardsAdded} flashcard{cardsAdded > 1 ? 's' : ''}</strong> créée{cardsAdded > 1 ? 's' : ''} à partir de tes erreurs</em>
               <span>Les réviser →</span>
             </Link>
           )}
@@ -585,6 +585,11 @@ export default function QcmSessionPage() {
           <span className={`qcm-q-type${multi ? ' multi' : ''}`}>
             {multi ? 'QCM · plusieurs bonnes réponses' : 'QCS · une seule bonne réponse'}
           </span>
+          {isFeedback && (
+            <span className={`qcm-verdict ${ans?.isCorrect ? 'ok' : 'ko'}`}>
+              {ans?.isCorrect ? 'Juste' : 'Faux'}
+            </span>
+          )}
         </div>
         <h1 className="qcm-q-stem">{q.question}</h1>
 
@@ -599,8 +604,12 @@ export default function QcmSessionPage() {
             const isSelected = ans?.selected.includes(i) ?? false
             const isCorrect = correctIdxs.includes(i)
             let cls = 'qcm-option'
+            // Correction : seule une proposition vraie ET cochée est en bleu.
+            // Une vraie oubliée est une erreur au même titre qu'une fausse
+            // cochée (la question est comptée fausse dans les deux cas).
             if (isFeedback) {
-              if (isCorrect) cls += ' correct'
+              if (isCorrect && isSelected) cls += ' correct'
+              else if (isCorrect) cls += ' missed'
               else if (isSelected) cls += ' wrong'
               else cls += ' dim'
             } else if (isSelected) {
@@ -631,8 +640,12 @@ export default function QcmSessionPage() {
                 role={multi ? 'checkbox' : 'radio'}
                 aria-checked={isSelected}
               >
-                <span className={`qcm-letter${multi ? ' check' : ''}`}>
-                  {multi ? (isSelected ? '✓' : '') : letterFor(i)}
+                <span className={`qcm-letter${multi ? ' check' : ''}`} aria-hidden="true">
+                  {multi
+                    ? (isFeedback
+                        ? (isSelected ? (isCorrect ? '✓' : '✕') : '')
+                        : (isSelected ? '✓' : ''))
+                    : letterFor(i)}
                 </span>
                 <span className="qcm-text">
                   {multi && <span className="qcm-text-letter">{letterFor(i)}.</span>}
@@ -647,7 +660,7 @@ export default function QcmSessionPage() {
 
         {hasFeedbackBox && (
           <div className={`qcm-feedback ${ans?.isCorrect ? 'right' : 'wrong'}`}>
-            <div className="qcm-feedback-label">{ans?.isCorrect ? 'Bonne réponse' : 'À retenir'}</div>
+            <div className="qcm-feedback-label">{ans?.isCorrect ? 'Bonne réponse' : multi ? 'Faux : il fallait cocher exactement les bonnes propositions' : 'À retenir'}</div>
             {(explText || recap) && <p className="qcm-feedback-text">{explText || recap}</p>}
             {canShowSource && sourceRef && (
               <div className="qcm-source-row">

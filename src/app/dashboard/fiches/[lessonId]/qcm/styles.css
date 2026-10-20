@@ -342,6 +342,27 @@
    qui est justement celle qu'on vient lire quand on hésitait. On garde le
    retrait visuel, mais pas au prix de la lisibilité. */
 .qcm-option.dim { opacity: .78; }
+
+/* Vraie mais pas cochée : c'est une erreur, donc rouge comme une fausse
+   cochée, mais la case reste vide (on ne l'a pas cochée). */
+.qcm-option.missed {
+  border-color: var(--rose, #C75050);
+  background: var(--rose-soft, #F5DADA);
+  align-items: flex-start;
+}
+.qcm-option.missed .qcm-letter { border-color: var(--rose, #C75050); color: var(--rose, #C75050); }
+.qcm-options.multi .qcm-option.missed .qcm-letter.check { border: 1.5px dashed var(--rose, #C75050); background: transparent; }
+.qcm-option.missed .qcm-mark { color: #8E3434; }
+[data-theme="dark"] .qcm-option.missed .qcm-mark { color: #E39B9B; }
+
+/* Verdict de la question, à côté du type, pendant la correction */
+.qcm-verdict {
+  display: inline-flex; align-items: center; margin-left: 8px; padding: 2px 9px;
+  border-radius: 20px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.qcm-verdict.ok { background: var(--gl, #D8EAE0); color: var(--gm, #2D6A4F); }
+.qcm-verdict.ko { background: var(--rose-soft, #F5DADA); color: #8E3434; }
+[data-theme="dark"] .qcm-verdict.ko { color: #E39B9B; }
 .qcm-option:disabled { cursor: default; }
 
 /* ---- Mode QCM multi : pastille checkbox au lieu de lettre ---- */
@@ -365,18 +386,16 @@
   border-color: var(--gm, #2D6A4F);
   color: #fff;
 }
-.qcm-options.multi .qcm-option.correct .qcm-letter.check::after {
-  content: "✓";
-  color: #fff;
-}
 .qcm-options.multi .qcm-option.wrong .qcm-letter.check {
   background: var(--rose, #C75050);
   border-color: var(--rose, #C75050);
 }
-.qcm-options.multi .qcm-option.wrong .qcm-letter.check::after {
-  content: "✕";
-  color: #fff;
-}
+/* Le symbole (✓ ou ✕) est écrit dans la case par la page, un seul à la
+   fois : avant, une coche invisible et la croix se partageaient la case,
+   d'où une croix décalée. */
+.qcm-options.multi .qcm-option.correct .qcm-letter.check,
+.qcm-options.multi .qcm-option.wrong .qcm-letter.check { color: #fff; }
+.qcm-options.multi .qcm-option .qcm-letter.check { font-style: normal; line-height: 1; font-family: var(--font-hanken), system-ui, sans-serif; }
 /* Lettre affichée AVANT le texte de l'option en mode multi
    (puisque la pastille ronde a été remplacée par une checkbox). */
 .qcm-text-letter {
@@ -627,11 +646,12 @@
 /* Flashcards créées automatiquement à partir des erreurs de la session */
 .qcm-end-cards {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  width: 100%; max-width: 540px; margin: 20px auto 0; padding: 13px 16px;
+  box-sizing: border-box; width: 100%; max-width: 540px; margin: 20px 0 22px; padding: 13px 16px;
   border: 1px solid var(--border); border-left: 3px solid var(--amber);
   border-radius: 10px; background: var(--card);
   color: var(--dark); font-size: 13px; line-height: 1.4; text-align: left; text-decoration: none;
 }
+.qcm-end-cards em { font-style: normal; min-width: 0; }
 .qcm-end-cards strong { font-weight: 600; }
 .qcm-end-cards span { flex: none; color: var(--green); font-weight: 600; white-space: nowrap; }
 .qcm-end-cards:hover span { text-decoration: underline; text-underline-offset: 2px; }
