@@ -11,8 +11,7 @@
 //    y répond à nouveau, last_correct prend le relais.
 //
 // 2. Fabriquer des flashcards à partir des erreurs : une carte par question
-//    ratée (au plus 10 par session), sur la proposition mal jugée la plus
-//    parlante. Recto = l'énoncé + la proposition, verso = Vrai ou Faux (+ la
+//    ratée, sans plafond, sur la proposition mal jugée la plus parlante. Recto = l'énoncé + la proposition, verso = Vrai ou Faux (+ la
 //    justification de la proposition quand la question en a une).
 
 import type { AiQuestion, Flashcard } from '@/types'
@@ -46,16 +45,13 @@ function makeId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
 }
 
-/** Au plus une carte par question ratée, et au plus ce nombre par session. */
-export const MAX_CARDS_PER_SESSION = 10
-
 /**
  * Ajoute au paquet les cartes des erreurs de la session. Une seule carte par
  * question ratée : la proposition fausse qu'on a cochée en priorité (c'est
  * une idée fausse à corriger), sinon la proposition vraie oubliée. Si cette
  * proposition a déjà sa carte, on prend l'erreur suivante de la question.
- * Au plus MAX_CARDS_PER_SESSION cartes, pour garder un paquet qu'on révise
- * vraiment. Renvoie le nouveau paquet et le nombre de cartes ajoutées.
+ * Chaque question ratée donne sa carte (pas de plafond par session).
+ * Renvoie le nouveau paquet et le nombre de cartes ajoutées.
  */
 export function addCardsFromMistakes(
   existing: Flashcard[],
@@ -66,7 +62,6 @@ export function addCardsFromMistakes(
   const fresh: Flashcard[] = []
 
   for (const { q, selected } of mistakes) {
-    if (fresh.length >= MAX_CARDS_PER_SESSION) break
     const correct = normalizeAnswer(q.answer)
     const errors = q.options
       .map((opt, i) => ({ i, prop: stripLetter(opt), isTrue: correct.includes(i), checked: selected.includes(i) }))
