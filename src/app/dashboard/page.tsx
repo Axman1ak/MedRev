@@ -424,9 +424,11 @@ function fmtHours(ms: number): string {
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
 }
 
+const SUBS_SHOWN = 8 // 4 lignes de 2 : au-delà, petit lien « Voir les N autres »
 function DashProgress({ userId, lessons, systems }: { userId: string | null; lessons: Lesson[]; systems: System[] }) {
   const supabase = createClient()
   const [dayLog, setDayLog] = useState<Record<string, number>>({})
+  const [allSubs, setAllSubs] = useState(false)
 
   useEffect(() => {
     if (!userId) return
@@ -510,7 +512,7 @@ function DashProgress({ userId, lessons, systems }: { userId: string | null; les
         <div className="dpg-sec dpg-subs">
           <div className="dpg-lbl"><span>Maîtrise par matière</span><span>dernière note 4 ou 5</span></div>
           <div className="dpg-subgrid">
-            {view.subjects.map(s => (
+            {(allSubs ? view.subjects : view.subjects.slice(0, SUBS_SHOWN)).map(s => (
               <div key={s.id} className="dpg-sub" title={`${s.name} : ${s.pct}% des fiches maîtrisées`}>
                 <span className="dpg-sub-top">
                   <span className="dpg-sub-n"><span className="dpg-dot" style={{ background: s.color }} />{s.name}</span>
@@ -520,6 +522,11 @@ function DashProgress({ userId, lessons, systems }: { userId: string | null; les
               </div>
             ))}
           </div>
+          {view.subjects.length > SUBS_SHOWN && (
+            <button type="button" className="dpg-more" onClick={() => setAllSubs(v => !v)}>
+              {allSubs ? 'Voir moins' : `Voir les ${view.subjects.length - SUBS_SHOWN} autres`}
+            </button>
+          )}
         </div>
       )}
     </div>
