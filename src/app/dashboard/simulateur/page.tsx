@@ -1105,10 +1105,6 @@ export default function SimulateurPage() {
           <div className="sim-cfg-top">
             <div className="sim-kick">Simulateur</div>
             <h1 className="sim-title">Ton <em>entraînement</em></h1>
-            <p className="sim-cfg-sub">
-              Avec tes propres QCM. Noté au barème de ta fac, mais pas classé : tes questions
-              viennent de tes polys, elles ne sont pas les mêmes que celles des autres.
-            </p>
           </div>
 
           <div className="sim-panneau">
@@ -1242,7 +1238,7 @@ export default function SimulateurPage() {
                   onClick={() => setMode('examen')}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                  Examen blanc perso, chronométré
+                  Examen blanc
                 </button>
               </div>
             </section>
@@ -1295,7 +1291,6 @@ export default function SimulateurPage() {
               <div className="sim-lb-ghost" aria-hidden="true">
                 {[1, 2, 3, 4, 5].map(n => <div key={n}><b>{n}</b><i /><em /></div>)}
               </div>
-              <p>Le classement s&apos;ouvre avec le premier concours blanc. Tu y apparaîtras sous ton prénom et l&apos;initiale de ton nom, ou sous un pseudo.</p>
             </div>
           </section>
         </aside>

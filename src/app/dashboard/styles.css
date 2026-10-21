@@ -275,9 +275,12 @@
 .dvx .dpg-bar{height:6px;border-radius:99px;background:var(--line2);overflow:hidden}
 .dvx .dpg-bar i{display:block;height:100%;border-radius:99px}
 .dvx .dpg-pct{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
-.dvx .dpg{overflow-y:auto}
 @media (max-width:720px){
   .dvx .dpg-kpis{gap:6px}
   .dvx .dpg-kpis div{padding:10px}
   .dvx .dpg-kpis b{font-size:19px}
 }
+.dvx .add-btn{flex:none;width:26px;height:26px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--marine2);font-size:17px;font-weight:600;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;transition:background .15s,border-color .15s}
+.dvx .add-btn:hover{background:var(--marine-soft);border-color:var(--marine3)}
+/* Progression : hauteur naturelle, jamais de barre de défilement */
+.dvx .dpg{flex:none;overflow:visible}

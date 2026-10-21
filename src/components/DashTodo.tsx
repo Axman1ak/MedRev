@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 type Todo = { id: string; text: string; done: boolean; position: number }
@@ -8,6 +8,7 @@ export default function DashTodo({ userId }: { userId: string | null }) {
   const supabase = createClient()
   const [todos, setTodos] = useState<Todo[]>([])
   const [draft, setDraft] = useState('')
+  const addInput = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     if (!userId) return
@@ -74,8 +75,14 @@ export default function DashTodo({ userId }: { userId: string | null }) {
           </div>
         ))}
         <div className="add">
-          <span>+</span>
+          <button
+            type="button"
+            className="add-btn"
+            aria-label="Ajouter la tâche"
+            onClick={() => { if (draft.trim()) add(); else addInput.current?.focus() }}
+          >+</button>
           <input
+            ref={addInput}
             value={draft}
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') add() }}
