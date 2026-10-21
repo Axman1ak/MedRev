@@ -49,6 +49,7 @@ type Step = 0 | 1 | 2
 type Attempt = { origIdx: number; selected: number[]; correct: boolean }
 
 const TRAIN_SIZE = 10
+const CARDS_SIZE = 10
 const GRADE_LABELS: Record<Score, [string, string]> = {
   1: ['À revoir', "Je ne m'en souvenais presque pas"],
   2: ['Faible', 'Beaucoup de trous'],
@@ -215,6 +216,16 @@ function suggestGrade(ok: number, total: number): Score | null {
   const r = ok / total
   return r >= 0.9 ? 5 : r >= 0.75 ? 4 : r >= 0.55 ? 3 : r >= 0.35 ? 2 : 1
 }
+// Flashcards à revoir : d'abord les jamais vues (dont celles créées par les
+// erreurs de QCM), puis les moins bien sues.
+function pickDeck(cards: Flashcard[]): string[] {
+  const ratio = (c: Flashcard) => (c.reviews ? (c.known || 0) / c.reviews : -1)
+  return [...cards]
+    .map(c => ({ c, r: Math.random() }))
+    .sort((a, b) => ratio(a.c) - ratio(b.c) || a.r - b.r)
+    .slice(0, CARDS_SIZE)
+    .map(x => x.c.id)
+}
 const stripLetter = (s: string) => s.replace(/^\s*[A-E][.)]\s*/, '')
 
 // ===================== PAGE =====================
@@ -260,7 +271,15 @@ function SessionBody() {
   const [attempts, setAttempts] = useState<Attempt[]>([])
   const [trainSaved, setTrainSaved] = useState<{ ok: number; total: number; cards: number } | null>(null)
   const [grade, setGrade] = useState<Score | null>(null)
-  const [stats, setStats] = useState<{ qcmOk: number; qcmTotal: number }>({ qcmOk: 0, qcmTotal: 0 })
+  const [gradeTouched, setGradeTouched] = useState(false)
+  const [stats, setStats] = useState({ qcmOk: 0, qcmTotal: 0, cardsKnown: 0, cardsTotal: 0 })
+  // Flashcards dans « S'entraîner »
+  const [mode, setMode] = useState<'qcm' | 'cards'>('qcm')
+  const [deck, setDeck] = useState<string[]>([])
+  const [ci, setCi] = useState(0)
+  const [flipped, setFlipped] = useState(false)
+  const [cardRes, setCardRes] = useState<Record<string, boolean>>({})
+  const [cardsSaved, setCardsSaved] = useState<{ known: number; total: number } | null>(null)
   const [source, setSource] = useState<AiQuestionSourceRef | null>(null)
   const [genSynth, setGenSynth] = useState<'idle' | 'running' | 'error'>('idle')
   const [genSynthErr, setGenSynthErr] = useState<string | null>(null)
@@ -328,7 +347,8 @@ function SessionBody() {
   // Remise à zéro quand on change de fiche
   const resetFiche = useCallback(() => {
     setStep(0); setPlan([]); setQi(0); setSel([]); setChecked(false); setAttempts([]); setTrainSaved(null)
-    setGrade(null); setGenSynth('idle'); setGenSynthErr(null); setGenQcmErr(null)
+    setGrade(null); setGradeTouched(false); setMode('qcm'); setDeck([]); setCi(0); setFlipped(false); setCardRes({}); setCardsSaved(null)
+    setGenSynth('idle'); setGenSynthErr(null); setGenQcmErr(null)
   }, [])
 
   const replaceLesson = useCallback((l: Lesson) => {
@@ -340,15 +360,18 @@ function SessionBody() {
   useEffect(() => { document.querySelector('.se-root')?.scrollTo({ top: 0 }) }, [step, idx])
 
   // ---------- Entraînement ----------
+  const lessonCards: Flashcard[] = useMemo(() => (Array.isArray(current?.lesson.flashcards) ? (current!.lesson.flashcards as Flashcard[]) : []), [current])
+
   const startTraining = useCallback(() => {
     setStep(1)
     if (plan.length === 0 && !trainSaved) { setPlan(pickTraining(qs)); setQi(0); setSel([]); setChecked(false); setAttempts([]) }
-  }, [plan.length, trainSaved, qs])
+    if (qs.length === 0 && lessonCards.length > 0 && deck.length === 0) { setMode('cards'); setDeck(pickDeck(lessonCards)); setCi(0); setFlipped(false) }
+  }, [plan.length, trainSaved, qs, lessonCards, deck.length])
 
   // Enregistre les réponses (compteurs, dernière réussite) et crée les flashcards
-  const saveTraining = useCallback(async (list: Attempt[]) => {
-    if (!current || trainSaved) return
-    if (list.length === 0) { setTrainSaved({ ok: 0, total: 0, cards: 0 }); return }
+  const saveTraining = useCallback(async (list: Attempt[]): Promise<Flashcard[]> => {
+    if (!current || trainSaved) return lessonCards
+    if (list.length === 0) { setTrainSaved({ ok: 0, total: 0, cards: 0 }); return lessonCards }
     const all = [...qs] as AiQuestion[]
     for (const a of list) {
       const q = all[a.origIdx]
@@ -358,16 +381,65 @@ function SessionBody() {
     const { cards, added } = addCardsFromMistakes(prevCards, list.filter(a => !a.correct).map(a => ({ q: qs[a.origIdx], selected: a.selected })))
     const ok = list.filter(a => a.correct).length
     setTrainSaved({ ok, total: list.length, cards: added })
-    setStats(s => ({ qcmOk: s.qcmOk + ok, qcmTotal: s.qcmTotal + list.length }))
-    setGrade(g => g ?? suggestGrade(ok, list.length))
+    setStats(s => ({ ...s, qcmOk: s.qcmOk + ok, qcmTotal: s.qcmTotal + list.length }))
     replaceLesson({ ...current.lesson, ai_questions: all, flashcards: cards })
     const update: { ai_questions: AiQuestion[]; flashcards?: Flashcard[] } = { ai_questions: all }
     if (added > 0) update.flashcards = cards
     const { error } = await supabase.from('lessons').update(update).eq('id', current.lesson.id)
     if (error && added > 0) await supabase.from('lessons').update({ ai_questions: all }).eq('id', current.lesson.id)
-  }, [current, trainSaved, qs, supabase, replaceLesson])
+    return cards
+  }, [current, trainSaved, qs, supabase, replaceLesson, lessonCards])
 
-  const goRate = useCallback(() => { void saveTraining(attempts); setStep(2) }, [saveTraining, attempts])
+  // Enregistre les flashcards revues (compteurs vues / sues)
+  const saveCards = useCallback(async (res: Record<string, boolean>) => {
+    if (!current || cardsSaved) return
+    const ids = Object.keys(res)
+    if (ids.length === 0) return
+    const nowIso = new Date().toISOString()
+    const cards = lessonCards.map(c => (c.id in res ? { ...c, reviews: (c.reviews || 0) + 1, known: (c.known || 0) + (res[c.id] ? 1 : 0), last_reviewed_at: nowIso } : c))
+    const known = ids.filter(id => res[id]).length
+    setCardsSaved({ known, total: ids.length })
+    setStats(s => ({ ...s, cardsKnown: s.cardsKnown + known, cardsTotal: s.cardsTotal + ids.length }))
+    replaceLesson({ ...current.lesson, flashcards: cards })
+    await supabase.from('lessons').update({ flashcards: cards }).eq('id', current.lesson.id)
+  }, [current, cardsSaved, lessonCards, replaceLesson, supabase])
+
+  // Fin des QCM : on enchaîne sur les flashcards (dont celles tirées des erreurs)
+  const finishQcm = useCallback(async () => {
+    const cards = await saveTraining(attempts)
+    if (cards.length > 0) { setMode('cards'); setDeck(d => (d.length ? d : pickDeck(cards))); setCi(0); setFlipped(false) }
+    else setStep(2)
+  }, [saveTraining, attempts])
+
+  const openCards = useCallback(async () => {
+    const cards = attempts.length && !trainSaved ? await saveTraining(attempts) : lessonCards
+    setMode('cards')
+    setDeck(d => (d.length ? d : pickDeck(cards)))
+  }, [attempts, trainSaved, saveTraining, lessonCards])
+
+  const markCard = useCallback((known: boolean) => {
+    const id = deck[ci]
+    if (!id) return
+    const res = { ...cardRes, [id]: known }
+    setCardRes(res)
+    if (ci + 1 >= deck.length) { void saveCards(res); setStep(2) }
+    else { setCi(ci + 1); setFlipped(false) }
+  }, [deck, ci, cardRes, saveCards])
+
+  const saveAllPending = useCallback(async () => {
+    if (!trainSaved && attempts.length) await saveTraining(attempts)
+    if (!cardsSaved && Object.keys(cardRes).length) await saveCards(cardRes)
+  }, [trainSaved, attempts, saveTraining, cardsSaved, cardRes, saveCards])
+
+  const goRate = useCallback(() => { void saveAllPending(); setStep(2) }, [saveAllPending])
+
+  // Note proposée : QCM justes + flashcards sues, tant que l'étudiante n'a pas choisi
+  const sugg = (() => {
+    const ok = (trainSaved?.ok ?? 0) + (cardsSaved?.known ?? 0)
+    const total = (trainSaved?.total ?? 0) + (cardsSaved?.total ?? 0)
+    return { ok, total, grade: suggestGrade(ok, total) }
+  })()
+  useEffect(() => { if (step === 2 && !gradeTouched && sugg.grade) setGrade(sugg.grade) }, [step, gradeTouched, sugg.grade])
 
   const validate = useCallback(() => {
     const q = qs[plan[qi]]
@@ -378,9 +450,9 @@ function SessionBody() {
   }, [qs, plan, qi, sel])
 
   const nextQuestion = useCallback(() => {
-    if (qi + 1 >= plan.length) { void saveTraining(attempts); setStep(2); return }
+    if (qi + 1 >= plan.length) { void finishQcm(); return }
     setQi(qi + 1); setSel([]); setChecked(false)
-  }, [qi, plan.length, saveTraining, attempts])
+  }, [qi, plan.length, finishQcm])
 
   // ---------- Génération (QCM, synthèse) depuis la session ----------
   const generateQcm = useCallback(async () => {
@@ -431,7 +503,7 @@ function SessionBody() {
   const rate = useCallback(async (score: Score) => {
     if (!current || busy) return
     setBusy(true)
-    if (!trainSaved && attempts.length > 0) await saveTraining(attempts)
+    await saveAllPending()
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
     while (sysJ.length > newSteps.length) newSteps.push(null)
     newSteps[current.due.stepIndex] = current.due.status === 'fresh'
@@ -443,7 +515,7 @@ function SessionBody() {
     setResults(arr)
     setBusy(false)
     advance(arr)
-  }, [current, busy, trainSaved, attempts, saveTraining, sysJ.length, today, supabase, replaceLesson, results, idx, advance])
+  }, [current, busy, saveAllPending, sysJ.length, today, supabase, replaceLesson, results, idx, advance])
 
   const report = useCallback(async () => {
     if (!current || busy) return
@@ -469,11 +541,12 @@ function SessionBody() {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.key === 'ArrowLeft' && idx > 0) goTo(idx - 1)
       else if (e.key === 'ArrowRight' && idx < queue.length - 1) goTo(idx + 1)
-      else if (step === 2 && /^[1-5]$/.test(e.key)) setGrade(Number(e.key) as Score)
+      else if (step === 2 && /^[1-5]$/.test(e.key)) { setGrade(Number(e.key) as Score); setGradeTouched(true) }
+      else if (step === 1 && mode === 'cards' && e.key === ' ') { e.preventDefault(); setFlipped(f => !f) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [phase, idx, queue.length, step, goTo])
+  }, [phase, idx, queue.length, step, mode, goTo])
 
   // ===================== RENDUS =====================
   if (phase === 'loading') return <div className="se-root"><PageLoader label="Préparation de ta session…" /></div>
@@ -511,7 +584,7 @@ function SessionBody() {
           <div className="se-kicker se-ok">Session terminée</div>
           <h1 className="se-done-title">{rated} fiche{rated > 1 ? 's' : ''} revue{rated > 1 ? 's' : ''}.</h1>
           <p className="se-done-sub">
-            {dur} de travail{stats.qcmTotal > 0 ? `, ${stats.qcmOk} QCM justes sur ${stats.qcmTotal}` : ''}.
+            {dur} de travail{stats.qcmTotal > 0 ? `, ${stats.qcmOk} QCM justes sur ${stats.qcmTotal}` : ''}{stats.cardsTotal > 0 ? `, ${stats.cardsKnown} flashcard${stats.cardsKnown > 1 ? 's' : ''} sue${stats.cardsKnown > 1 ? 's' : ''} sur ${stats.cardsTotal}` : ''}.
           </p>
           <section className="se-card se-done-list">
             {queue.map((it, i) => {
@@ -557,11 +630,13 @@ function SessionBody() {
   const nextDate = nextI < sysJ.length && current.lesson.learn_date ? stepDate(current.lesson, nextI, sysJ) : null
   const tq = plan.length ? qs[plan[qi]] : undefined
   const okSoFar = attempts.filter(a => a.correct).length
-  const suggested = trainSaved ? suggestGrade(trainSaved.ok, trainSaved.total) : null
+  const fc = deck.length ? lessonCards.find(c => c.id === deck[ci]) : undefined
+  const cardSeen = Object.keys(cardRes).length
+  const cardKnown = Object.values(cardRes).filter(Boolean).length
 
   const steps: { label: string; sub: string }[] = [
     { label: 'Relire', sub: synth ? 'Ta fiche de synthèse' : 'Ton cours' },
-    { label: "S'entraîner", sub: qs.length ? `${Math.min(TRAIN_SIZE, qs.length)} QCM sur ce cours` : 'QCM de la fiche' },
+    { label: "S'entraîner", sub: qs.length && lessonCards.length ? 'QCM et flashcards' : qs.length ? `${Math.min(TRAIN_SIZE, qs.length)} QCM sur ce cours` : lessonCards.length ? 'Tes flashcards' : 'QCM et flashcards' },
     { label: 'Se noter', sub: 'Avec ton résultat' },
   ]
 
@@ -586,7 +661,7 @@ function SessionBody() {
           <button type="button" className="se-btn se-btn-ghost-dark" onClick={() => {
             if (paused) { setPausedMs(p => p + (Date.now() - pauseFrom!)); setPauseFrom(null) } else setPauseFrom(Date.now())
           }}>{paused ? 'Reprendre' : 'Pause'}</button>
-          <button type="button" className="se-btn se-btn-link-dark" onClick={() => { if (!trainSaved && attempts.length) void saveTraining(attempts); setPhase('done') }}>Terminer</button>
+          <button type="button" className="se-btn se-btn-link-dark" onClick={() => { void saveAllPending(); setPhase('done') }}>Terminer</button>
         </div>
       </header>
 
@@ -726,7 +801,65 @@ function SessionBody() {
           {step === 1 && (
             <section className="se-card se-panel se-split">
               <div className="se-split-main">
-                {qs.length === 0 ? (
+                {(qs.length > 0 || lessonCards.length > 0) && (
+                  <div className="se-tabs" role="tablist" aria-label="Type d'entraînement">
+                    <button type="button" role="tab" aria-selected={mode === 'qcm'} className={mode === 'qcm' ? 'on' : ''} onClick={() => setMode('qcm')}>
+                      QCM <span>{qs.length ? Math.min(TRAIN_SIZE, qs.length) : 0}</span>
+                    </button>
+                    <button type="button" role="tab" aria-selected={mode === 'cards'} className={mode === 'cards' ? 'on' : ''} onClick={() => void openCards()}>
+                      Flashcards <span>{deck.length || Math.min(CARDS_SIZE, lessonCards.length)}</span>
+                    </button>
+                  </div>
+                )}
+                {mode === 'cards' ? (
+                  lessonCards.length === 0 ? (
+                    <div className="se-nosynth">
+                      <h2>Pas encore de flashcards</h2>
+                      <p>Elles se créent toutes seules à partir de tes erreurs de QCM. Tu peux aussi en écrire depuis la fiche.</p>
+                    </div>
+                  ) : cardsSaved ? (
+                    <div className="se-nosynth">
+                      <h2>Flashcards terminées</h2>
+                      <p>{cardsSaved.known} sue{cardsSaved.known > 1 ? 's' : ''} sur {cardsSaved.total}.</p>
+                    </div>
+                  ) : fc ? (
+                    <>
+                      <div className="se-qhead"><span>Carte {ci + 1} sur {deck.length}{!fc.reviews ? ', nouvelle' : ''}</span><span>Espace pour retourner</span></div>
+                      <div className="se-bar"><i style={{ width: `${(ci / deck.length) * 100}%` }} /></div>
+                      <button type="button" className={`se-fc${flipped ? ' back' : ''}`} onClick={() => setFlipped(f => !f)} aria-label={flipped ? 'Voir le recto' : 'Voir la réponse'}>
+                        {fc.origin === 'qcm' && fc.prop ? (
+                          !flipped ? (
+                            <>
+                              <span className="se-fc-side">Vrai ou faux ?</span>
+                              {fc.stem && <span className="se-fc-stem">{fc.stem}</span>}
+                              <span className="se-fc-text">{fc.prop}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="se-fc-side">Réponse</span>
+                              <span className={`se-fc-verdict ${fc.verdict ? 'v' : 'f'}`}>{fc.verdict ? 'Vrai' : 'Faux'}</span>
+                              {fc.why && <span className="se-fc-why">{fc.why}</span>}
+                            </>
+                          )
+                        ) : (
+                          <>
+                            <span className="se-fc-side">{flipped ? 'Réponse' : 'Question'}</span>
+                            <span className="se-fc-text">{flipped ? fc.back : fc.front}</span>
+                          </>
+                        )}
+                        <span className="se-fc-hint">{flipped ? 'Clique pour revoir la question' : 'Clique pour voir la réponse'}</span>
+                      </button>
+                      <div className="se-actions se-fc-acts">
+                        {!flipped
+                          ? <button type="button" className="se-btn se-btn-primary" onClick={() => setFlipped(true)}>Voir la réponse</button>
+                          : <>
+                              <button type="button" className="se-btn se-btn-ghost se-fc-no" onClick={() => markCard(false)}>À revoir</button>
+                              <button type="button" className="se-btn se-btn-primary" onClick={() => markCard(true)}>Je savais</button>
+                            </>}
+                      </div>
+                    </>
+                  ) : null
+                ) : qs.length === 0 ? (
                   <div className="se-nosynth">
                     <h2>Pas encore de QCM pour cette fiche</h2>
                     {hasSource ? (
@@ -740,7 +873,7 @@ function SessionBody() {
                   </div>
                 ) : trainSaved ? (
                   <div className="se-nosynth">
-                    <h2>Entraînement terminé</h2>
+                    <h2>QCM terminés</h2>
                     <p>{trainSaved.ok} juste{trainSaved.ok > 1 ? 's' : ''} sur {trainSaved.total}.{trainSaved.cards > 0 ? ` ${trainSaved.cards} flashcard${trainSaved.cards > 1 ? 's' : ''} créée${trainSaved.cards > 1 ? 's' : ''} à partir de tes erreurs.` : ''}</p>
                   </div>
                 ) : tq ? (
@@ -788,23 +921,36 @@ function SessionBody() {
                     <div className="se-actions">
                       {!checked
                         ? <button type="button" className="se-btn se-btn-primary" onClick={validate} disabled={sel.length === 0}>Valider</button>
-                        : <button type="button" className="se-btn se-btn-primary" onClick={nextQuestion}>{qi + 1 >= plan.length ? 'Passer à la note' : 'Question suivante'}</button>}
+                        : <button type="button" className="se-btn se-btn-primary" onClick={nextQuestion}>{qi + 1 < plan.length ? 'Question suivante' : lessonCards.length || attempts.some(a => !a.correct) ? 'Passer aux flashcards' : 'Passer à la note'}</button>}
                     </div>
                   </>
                 ) : null}
               </div>
               <div className="se-split-side">
-                {qs.length > 0 && !trainSaved && (
+                {mode === 'qcm' && qs.length > 0 && !trainSaved && (
                   <div className="se-box">
-                    <span className="se-muted">Pour l&apos;instant</span>
+                    <span className="se-muted">QCM, pour l&apos;instant</span>
                     <div className="se-mini-stats">
                       <div><b className="se-ok">{okSoFar}</b><span>juste{okSoFar > 1 ? 's' : ''}</span></div>
                       <div><b className="se-late">{attempts.length - okSoFar}</b><span>fausse{attempts.length - okSoFar > 1 ? 's' : ''}</span></div>
                     </div>
                   </div>
                 )}
-                <div className="se-info">Chaque erreur devient une flashcard et compte dans tes statistiques.</div>
-                <button type="button" className="se-btn se-btn-ghost se-push" onClick={goRate}>{attempts.length ? 'Arrêter et me noter' : 'Passer à la note'}</button>
+                {mode === 'cards' && lessonCards.length > 0 && !cardsSaved && (
+                  <div className="se-box">
+                    <span className="se-muted">Flashcards, pour l&apos;instant</span>
+                    <div className="se-mini-stats">
+                      <div><b className="se-ok">{cardKnown}</b><span>sue{cardKnown > 1 ? 's' : ''}</span></div>
+                      <div><b className="se-late">{cardSeen - cardKnown}</b><span>à revoir</span></div>
+                    </div>
+                  </div>
+                )}
+                <div className="se-info">
+                  {mode === 'qcm'
+                    ? 'Chaque erreur devient une flashcard. Après les QCM, tu passes aux flashcards.'
+                    : 'Les nouvelles cartes viennent de tes erreurs de QCM, puis celles que tu sais le moins.'}
+                </div>
+                <button type="button" className="se-btn se-btn-ghost se-push" onClick={goRate}>{attempts.length || cardSeen ? 'Arrêter et me noter' : 'Passer à la note'}</button>
               </div>
             </section>
           )}
@@ -812,20 +958,22 @@ function SessionBody() {
           {/* ===== 3. SE NOTER ===== */}
           {step === 2 && (
             <section className="se-card se-panel se-rate">
-              {trainSaved && trainSaved.total > 0 && (
+              {sugg.total > 0 && (
                 <div className="se-rate-stats">
-                  <div><b>{trainSaved.ok} / {trainSaved.total}</b><span>QCM justes</span></div>
-                  <div><b>{trainSaved.cards}</b><span>nouvelle{trainSaved.cards > 1 ? 's' : ''} flashcard{trainSaved.cards > 1 ? 's' : ''}</span></div>
+                  <div><b>{trainSaved && trainSaved.total ? `${trainSaved.ok} / ${trainSaved.total}` : 'Aucun'}</b><span>QCM justes</span></div>
+                  {cardsSaved
+                    ? <div><b>{cardsSaved.known} / {cardsSaved.total}</b><span>flashcards sues</span></div>
+                    : <div><b>{trainSaved?.cards ?? 0}</b><span>nouvelle{(trainSaved?.cards ?? 0) > 1 ? 's' : ''} flashcard{(trainSaved?.cards ?? 0) > 1 ? 's' : ''}</span></div>}
                   <div><b>{current.lastScore !== null ? `${current.lastScore}/5` : 'Aucune'}</b><span>note précédente</span></div>
                 </div>
               )}
               <div>
                 <h2 className="se-h2">Comment ça s&apos;est passé ?</h2>
-                <p className="se-p">{suggested ? <>Avec {trainSaved!.ok} sur {trainSaved!.total}, on te propose <b>{suggested}, {GRADE_LABELS[suggested][0]}</b>. Tu peux choisir une autre note.</> : 'Sois honnête : ta note sert à savoir où tu en es.'}</p>
+                <p className="se-p">{sugg.grade ? <>Avec {[trainSaved?.total ? `${trainSaved.ok} QCM sur ${trainSaved.total}` : '', cardsSaved?.total ? `${cardsSaved.known} flashcard${cardsSaved.known > 1 ? 's' : ''} sur ${cardsSaved.total}` : ''].filter(Boolean).join(' et ')}, on te propose <b>{sugg.grade}, {GRADE_LABELS[sugg.grade][0]}</b>. Tu peux choisir une autre note.</> : 'Sois honnête : ta note sert à savoir où tu en es.'}</p>
               </div>
               <div className="se-grades" role="radiogroup" aria-label="Note de 1 à 5">
                 {([1, 2, 3, 4, 5] as Score[]).map(n => (
-                  <button key={n} type="button" role="radio" aria-checked={grade === n} className={`se-grade g${n}${grade === n ? ' on' : ''}`} onClick={() => setGrade(n)}>
+                  <button key={n} type="button" role="radio" aria-checked={grade === n} className={`se-grade g${n}${grade === n ? ' on' : ''}`} onClick={() => { setGrade(n); setGradeTouched(true) }}>
                     <b>{n}</b><span className="se-grade-l">{GRADE_LABELS[n][0]}</span><span className="se-grade-h">{GRADE_LABELS[n][1]}</span>
                   </button>
                 ))}
