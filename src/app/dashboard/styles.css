@@ -293,3 +293,5 @@
 .dvx .dpg-subgrid .dpg-bar{height:5px}
 .dvx .dpg-subgrid .dpg-sub{align-items:stretch}
 .dvx .dpg-subgrid .dpg-bar{display:block;width:100%}
+.dvx .dpg-more{display:block;margin:10px auto 0;padding:2px 6px;border:none;background:none;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--gray);cursor:pointer}
+.dvx .dpg-more:hover{color:var(--marine2);text-decoration:underline;text-underline-offset:3px}
