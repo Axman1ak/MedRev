@@ -481,7 +481,6 @@ function DashProgress({ userId, lessons, systems }: { userId: string | null; les
       })
       .filter(s => s.total > 0)
       .sort((a, b) => b.total - a.total)
-      .slice(0, 5)
     return { streak, weekMs, weeks, mastered, subjects }
   }, [dayLog, lessons, systems])
 
@@ -510,13 +509,17 @@ function DashProgress({ userId, lessons, systems }: { userId: string | null; les
       {view.subjects.length > 0 && (
         <div className="dpg-sec dpg-subs">
           <div className="dpg-lbl"><span>Maîtrise par matière</span><span>dernière note 4 ou 5</span></div>
-          {view.subjects.map(s => (
-            <div key={s.id} className="dpg-sub">
-              <span className="dpg-sub-n"><span className="dpg-dot" style={{ background: s.color }} />{s.name}</span>
-              <span className="dpg-bar"><i style={{ width: `${s.pct}%`, background: s.color }} /></span>
-              <span className="dpg-pct">{s.pct}%</span>
-            </div>
-          ))}
+          <div className="dpg-subgrid">
+            {view.subjects.map(s => (
+              <div key={s.id} className="dpg-sub" title={`${s.name} : ${s.pct}% des fiches maîtrisées`}>
+                <span className="dpg-sub-top">
+                  <span className="dpg-sub-n"><span className="dpg-dot" style={{ background: s.color }} />{s.name}</span>
+                  <span className="dpg-pct">{s.pct}%</span>
+                </span>
+                <span className="dpg-bar"><i style={{ width: `${s.pct}%`, background: s.color }} /></span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

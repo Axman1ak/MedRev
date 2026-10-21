@@ -284,3 +284,12 @@
 .dvx .add-btn:hover{background:var(--marine-soft);border-color:var(--marine3)}
 /* Progression : hauteur naturelle, jamais de barre de défilement */
 .dvx .dpg{flex:none;overflow:visible}
+
+/* Maîtrise par matière : toutes les matières, en deux colonnes compactes */
+.dvx .dpg-subgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 18px}
+.dvx .dpg-subgrid .dpg-sub{display:flex;flex-direction:column;gap:5px;padding:0;font-size:12.5px}
+.dvx .dpg-sub-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.dvx .dpg-subgrid .dpg-pct{flex:none;font-size:12px}
+.dvx .dpg-subgrid .dpg-bar{height:5px}
+.dvx .dpg-subgrid .dpg-sub{align-items:stretch}
+.dvx .dpg-subgrid .dpg-bar{display:block;width:100%}
