@@ -481,7 +481,7 @@ function DashProgress({ userId, lessons, systems }: { userId: string | null; les
       })
       .filter(s => s.total > 0)
       .sort((a, b) => b.total - a.total)
-      .slice(0, 6)
+      .slice(0, 5)
     return { streak, weekMs, weeks, mastered, subjects }
   }, [dayLog, lessons, systems])
 

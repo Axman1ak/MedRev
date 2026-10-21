@@ -30,7 +30,9 @@ import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import { isMissed, addCardsFromMistakes } from '@/lib/qcmMissed'
 import { cleanExplanation, whyFor, correctAnswersRecap } from '@/lib/qcmText'
-import { startGen, finishGen } from '@/lib/qcmGenStore'
+import { startGen, finishGen, useGenJobs } from '@/lib/qcmGenStore'
+import { countPdfPages } from '@/lib/pdf'
+import { FREE_PDF_SIZE_MB, FREE_VIDEO_SIZE_MB } from '@/types'
 import GenProgress from '@/components/GenProgress'
 import SourceLightbox from '@/components/SourceLightbox'
 import QuestionFigure from '@/components/QuestionFigure'
@@ -286,6 +288,13 @@ function SessionBody() {
   const [genQcmErr, setGenQcmErr] = useState<string | null>(null)
 
   const userIdRef = useRef<string | null>(null)
+  const [planName, setPlanName] = useState<string | null>(null)
+  const [uploading, setUploading] = useState<null | 'pdf' | 'video'>(null)
+  const [uploadErr, setUploadErr] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const pdfInput = useRef<HTMLInputElement>(null)
+  const videoInput = useRef<HTMLInputElement>(null)
+  const genJobs = useGenJobs()
 
   // ---------- Chargement ----------
   useEffect(() => {
@@ -298,11 +307,12 @@ function SessionBody() {
       const [{ data: sys }, { data: les }, { data: prof }, time] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id),
         supabase.from('lessons').select('*').eq('user_id', user.id),
-        supabase.from('profiles').select('current_year').eq('id', user.id).single(),
+        supabase.from('profiles').select('current_year, plan').eq('id', user.id).single(),
         pullTime(supabase, user.id),
       ])
       if (cancelled) return
       timeRef.current = time
+      setPlanName(((prof as { plan?: string } | null)?.plan) ?? null)
       const scoped = scopeToYear((sys as System[] | null) ?? [], (les as Lesson[] | null) ?? [], normalizeYear((prof as { current_year?: string } | null)?.current_year))
       setSystems(scoped.systems)
       setAllLessons(scoped.lessons)
@@ -488,6 +498,53 @@ function SessionBody() {
     }
   }, [current, replaceLesson])
 
+  // ---------- Ajouter le cours depuis la session ----------
+  const uploadCourse = useCallback(async (file: File) => {
+    if (!current || !userId) return
+    setUploadErr(null)
+    const kind: 'pdf' | 'video' | null = file.type === 'application/pdf' ? 'pdf' : file.type.startsWith('video/') ? 'video' : null
+    if (!kind) { setUploadErr('Dépose un PDF (le poly) ou une vidéo (le cours en amphi).'); return }
+    const sizeMB = file.size / (1024 * 1024)
+    if (planName === 'free' && kind === 'pdf' && sizeMB > FREE_PDF_SIZE_MB) { setUploadErr(`Ton PDF fait ${sizeMB.toFixed(0)} Mo. Le mode Gratuit limite à ${FREE_PDF_SIZE_MB} Mo.`); return }
+    if (planName === 'free' && kind === 'video' && sizeMB > FREE_VIDEO_SIZE_MB) { setUploadErr(`Ta vidéo fait ${sizeMB.toFixed(0)} Mo. Le mode Gratuit limite à ${FREE_VIDEO_SIZE_MB} Mo.`); return }
+    setUploading(kind)
+    try {
+      const prev = (current.lesson.media ?? {}) as LessonMedia
+      const ext = kind === 'pdf' ? 'pdf' : ((file.name.split('.').pop() || 'mp4').toLowerCase())
+      const path = `${userId}/${current.lesson.id}/${kind === 'pdf' ? 'poly' : 'cours'}.${ext}`
+      if (kind === 'video' && prev.video_path && prev.video_path !== path) await supabase.storage.from('lesson-media').remove([prev.video_path])
+      const { error: upErr } = await supabase.storage.from('lesson-media').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) throw upErr
+      const nowIso = new Date().toISOString()
+      const next: LessonMedia = kind === 'pdf'
+        ? { ...prev, pdf_path: path, pdf_pages: (await countPdfPages(file)) ?? undefined, pdf_size: file.size, pdf_uploaded_at: nowIso, pdf_name: file.name }
+        : { ...prev, video_path: path, video_size: file.size, video_uploaded_at: nowIso, video_name: file.name }
+      const { error: dbErr } = await supabase.from('lessons').update({ media: next }).eq('id', current.lesson.id)
+      if (dbErr) throw dbErr
+      replaceLesson({ ...current.lesson, media: next })
+      if (kind === 'video') {
+        // Transcription en arrière-plan (comme depuis la fiche)
+        const id = current.lesson.id
+        void fetch('/api/transcribe-video', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: id }) })
+          .then(async () => { const { data } = await supabase.from('lessons').select('*').eq('id', id).single(); if (data) replaceLesson(data as Lesson) })
+          .catch(() => {})
+      }
+    } catch (e) {
+      setUploadErr(`L'envoi a échoué : ${e instanceof Error ? e.message : 'erreur inconnue'}`)
+    } finally {
+      setUploading(null)
+    }
+  }, [current, userId, planName, supabase, replaceLesson])
+
+  // Crée en une fois ce qui manque : fiche de synthèse et QCM
+  const createAll = useCallback(() => {
+    if (!current) return
+    const m = (current.lesson.media ?? {}) as LessonMedia & { transcript?: unknown[] }
+    const canSynth = !!m.pdf_path || (Array.isArray(m.transcript) && m.transcript.length > 0)
+    if (!m.synthese && canSynth) void generateSynthese()
+    if (!(current.lesson.ai_questions || []).length) void generateQcm()
+  }, [current, generateSynthese, generateQcm])
+
   // ---------- Noter / reporter ----------
   const findNextEmpty = (arr: (Result | null)[], from: number) => {
     for (let i = from + 1; i < arr.length; i++) if (arr[i] === null) return i
@@ -634,6 +691,60 @@ function SessionBody() {
   const cardSeen = Object.keys(cardRes).length
   const cardKnown = Object.values(cardRes).filter(Boolean).length
 
+  const qcmRunning = genJobs.some(j => j.lessonId === current.lesson.id && j.status === 'running')
+  const missingSynth = !synth
+  const missingQcm = qs.length === 0
+
+  // Écran « ajoute ton cours » / « crée ta synthèse et tes QCM »
+  const courseSetup = (
+    !hasSource ? (
+      <div className="se-setup">
+        <h2>Ajoute ton cours pour réviser cette fiche</h2>
+        <p className="se-setup-sub">MedRev a besoin du poly ou de la vidéo de l&apos;amphi. À partir du fichier, il prépare tout le reste.</p>
+        <ol className="se-howto">
+          <li><b>1</b><span><strong>Dépose ton cours</strong>Le poly en PDF ou la vidéo de l&apos;amphi.</span></li>
+          <li><b>2</b><span><strong>MedRev prépare ta révision</strong>Une fiche de synthèse, 30 QCM et des flashcards.</span></li>
+          <li><b>3</b><span><strong>Tu révises ici</strong>Relire, t&apos;entraîner, te noter, à chaque palier.</span></li>
+        </ol>
+        <div
+          className={`se-drop${dragOver ? ' over' : ''}${uploading ? ' busy' : ''}`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) void uploadCourse(f) }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+          <b>{uploading === 'pdf' ? 'Envoi du poly…' : uploading === 'video' ? 'Envoi de la vidéo…' : 'Glisse ton fichier ici'}</b>
+          <span>ou</span>
+          <div className="se-drop-btns">
+            <button type="button" className="se-btn se-btn-primary" disabled={!!uploading} onClick={() => pdfInput.current?.click()}>Choisir le poly (PDF)</button>
+            <button type="button" className="se-btn se-btn-ghost" disabled={!!uploading} onClick={() => videoInput.current?.click()}>Ajouter la vidéo</button>
+          </div>
+          <input ref={pdfInput} type="file" accept="application/pdf" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
+          <input ref={videoInput} type="file" accept="video/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
+        </div>
+        {uploadErr && <p className="se-err" role="alert">{uploadErr}</p>}
+      </div>
+    ) : (
+      <div className="se-setup">
+        <h2>{missingSynth && missingQcm ? 'Ton cours est ajouté, prépare ta révision' : missingQcm ? 'Crée les QCM de ce cours' : 'Crée ta fiche de synthèse'}</h2>
+        <p className="se-setup-sub">En un clic, MedRev lit {media.pdf_name || media.video_name ? <b>{media.pdf_name || media.video_name}</b> : 'ton cours'} et prépare ce qui manque.</p>
+        <ul className="se-check">
+          <li className="ok"><i>✓</i><span><strong>Cours ajouté</strong>{media.pdf_path ? `Poly${media.pdf_pages ? `, ${media.pdf_pages} pages` : ''}` : 'Vidéo de l\'amphi'}</span></li>
+          <li className={synth ? 'ok' : genSynth === 'running' ? 'run' : ''}><i>{synth ? '✓' : '2'}</i><span><strong>Fiche de synthèse</strong>{synth ? 'Prête' : genSynth === 'running' ? 'En cours, environ 20 secondes' : 'Les idées clés, un tableau et les pièges'}</span></li>
+          <li className={!missingQcm ? 'ok' : qcmRunning ? 'run' : ''}><i>{!missingQcm ? '✓' : '3'}</i><span><strong>QCM et flashcards</strong>{!missingQcm ? `${qs.length} QCM prêts` : qcmRunning ? 'En cours, 30 à 60 secondes' : '30 QCM, et une flashcard par erreur'}</span></li>
+        </ul>
+        {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
+        {(missingSynth || missingQcm) && (
+          <button type="button" className="se-btn se-btn-primary se-setup-go" onClick={createAll} disabled={genSynth === 'running' || qcmRunning}>
+            {genSynth === 'running' || qcmRunning ? 'Préparation en cours…' : missingSynth && missingQcm ? 'Créer la synthèse et les QCM' : missingQcm ? 'Créer les QCM' : 'Créer ma fiche de synthèse'}
+          </button>
+        )}
+        {genSynthErr && <p className="se-err" role="alert">{genSynthErr}</p>}
+        {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
+      </div>
+    )
+  )
+
   const steps: { label: string; sub: string }[] = [
     { label: 'Relire', sub: synth ? 'Ta fiche de synthèse' : 'Ton cours' },
     { label: "S'entraîner", sub: qs.length && lessonCards.length ? 'QCM et flashcards' : qs.length ? `${Math.min(TRAIN_SIZE, qs.length)} QCM sur ce cours` : lessonCards.length ? 'Tes flashcards' : 'QCM et flashcards' },
@@ -745,23 +856,7 @@ function SessionBody() {
                       </dl>
                     )}
                   </>
-                ) : (
-                  <div className="se-nosynth">
-                    <h2>Relis ton cours</h2>
-                    {hasSource ? (
-                      <>
-                        <p>MedRev peut résumer ton cours en une fiche courte : les idées clés, les notions centrales et les pièges. Pour l&apos;avoir en tête avant de t&apos;entraîner.</p>
-                        <button type="button" className="se-btn se-btn-primary" onClick={generateSynthese} disabled={genSynth === 'running'}>
-                          {genSynth === 'running' ? 'Création de la fiche…' : 'Créer ma fiche de synthèse'}
-                        </button>
-                        {genSynth === 'running' && <p className="se-muted">Environ 20 secondes.</p>}
-                        {genSynthErr && <p className="se-err" role="alert">{genSynthErr}</p>}
-                      </>
-                    ) : (
-                      <p>Ajoute le poly ou la vidéo du cours à cette fiche pour avoir une fiche de synthèse et des QCM. En attendant, relis ton cours de ton côté.</p>
-                    )}
-                  </div>
-                )}
+                ) : courseSetup}
               </div>
               <div className="se-split-side">
                 {(synth?.pieges.length || missedQs.length) ? (
@@ -790,7 +885,13 @@ function SessionBody() {
                     {media.video_path && <button type="button" className="se-btn se-btn-ghost" onClick={() => setSource({ video_ts: 0 })}>Vidéo de l&apos;amphi</button>}
                   </div>
                 )}
-                <button type="button" className="se-btn se-btn-primary se-push" onClick={qs.length || hasSource ? startTraining : goRate}>
+                {!hasSource && (
+                  <div className="se-box">
+                    <b>Pas de fichier sous la main ?</b>
+                    <span className="se-muted">Relis ton cours de ton côté, puis note-toi. Tu pourras ajouter le poly plus tard.</span>
+                  </div>
+                )}
+                <button type="button" className={`se-btn se-push ${hasSource ? 'se-btn-primary' : 'se-btn-ghost'}`} onClick={qs.length || hasSource ? startTraining : goRate}>
                   {qs.length || hasSource ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
                 </button>
               </div>
@@ -860,17 +961,7 @@ function SessionBody() {
                     </>
                   ) : null
                 ) : qs.length === 0 ? (
-                  <div className="se-nosynth">
-                    <h2>Pas encore de QCM pour cette fiche</h2>
-                    {hasSource ? (
-                      <>
-                        <p>MedRev peut créer 30 QCM à partir de ton cours, en 30 à 60 secondes.</p>
-                        <button type="button" className="se-btn se-btn-primary" onClick={generateQcm}>Créer les QCM</button>
-                        <GenProgress lessonId={current.lesson.id} variant="fiche" />
-                        {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
-                      </>
-                    ) : <p>Ajoute le poly ou la vidéo du cours à la fiche pour pouvoir t&apos;entraîner. Tu peux passer directement à la note.</p>}
-                  </div>
+                  courseSetup
                 ) : trainSaved ? (
                   <div className="se-nosynth">
                     <h2>QCM terminés</h2>
@@ -992,7 +1083,7 @@ function SessionBody() {
           )}
 
           <div className="se-under">
-            <span className="se-hint">Raccourcis : flèches pour changer de fiche, 1 à 5 pour choisir ta note</span>
+            <span />
             <button type="button" className="se-btn se-btn-link" onClick={report} disabled={busy}>Reporter cette fiche à demain</button>
           </div>
         </main>
