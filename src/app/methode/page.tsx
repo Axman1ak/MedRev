@@ -14,7 +14,7 @@ import '@/components/landing-night.css'
 
 export const metadata = {
   title: 'La méthode',
-  description: 'Courbe d\'Ebbinghaus, 14 paliers J0 → J+120, génération QCM par IA, mode angles morts. La méthode MedRev expliquée en détail.',
+  description: 'Comment MedRev organise ta P1 de médecine : révisions espacées de J+0 à J+120, fiche de synthèse, QCM et flashcards tirés de tes cours.',
 }
 
 export default function MethodePage() {

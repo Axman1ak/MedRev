@@ -19,7 +19,7 @@ const JSON_LD = {
       '@type': 'WebSite',
       '@id': SITE_URL + '/#site',
       name: 'MedRev',
-      alternateName: ['medrev.fr', 'Med Rev'],
+      alternateName: ['medrev.fr', 'Med Rev', 'MedRev médecine', 'MedRev P1'],
       url: SITE_URL + '/',
       inLanguage: 'fr-FR',
     },
