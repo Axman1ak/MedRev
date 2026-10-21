@@ -398,11 +398,13 @@ export default function ReviewModal({
         newMedia.video_duration_s = durationS
         newMedia.video_size = file.size
         newMedia.video_uploaded_at = new Date().toISOString()
+        newMedia.video_name = file.name
       } else {
         newMedia.pdf_path = path
         newMedia.pdf_pages = pdfPages
         newMedia.pdf_size = file.size
         newMedia.pdf_uploaded_at = new Date().toISOString()
+        newMedia.pdf_name = file.name
       }
 
       const { data: updated, error: dbErr } = await supabase
@@ -483,6 +485,7 @@ export default function ReviewModal({
     } = { ...existingMedia }
     if (kind === 'video') {
       delete newMedia.video_path
+      delete newMedia.video_name
       delete newMedia.video_duration_s
       delete newMedia.video_size
       delete newMedia.video_uploaded_at
@@ -491,6 +494,7 @@ export default function ReviewModal({
       delete newMedia.transcript_generated_at
     } else {
       delete newMedia.pdf_path
+      delete newMedia.pdf_name
       delete newMedia.pdf_pages
       delete newMedia.pdf_size
       delete newMedia.pdf_uploaded_at
@@ -749,7 +753,7 @@ export default function ReviewModal({
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m9.5 8.5 6 3.5-6 3.5Z" /><rect x="3" y="4" width="18" height="16" rx="2.5" /></svg>
                   </span>
                   <span className="rmod-cours-nom">
-                    cours.{getExt(media.video_path || '', 'mp4')}
+                    <span className="rmod-cours-fname" title={media.video_name || `cours.${getExt(media.video_path || '', 'mp4')}`}>{media.video_name || `cours.${getExt(media.video_path || '', 'mp4')}`}</span>
                     <em>{formatDuration(media.video_duration_s) || formatSize(media.video_size)}{transcriptNote}</em>
                   </span>
                   {transcriptAction}
@@ -775,7 +779,7 @@ export default function ReviewModal({
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /></svg>
                   </span>
                   <span className="rmod-cours-nom">
-                    poly.pdf
+                    <span className="rmod-cours-fname" title={media.pdf_name || 'poly.pdf'}>{media.pdf_name || 'poly.pdf'}</span>
                     <em>{media.pdf_pages ? `${media.pdf_pages} pages` : formatSize(media.pdf_size)}</em>
                   </span>
                   <button

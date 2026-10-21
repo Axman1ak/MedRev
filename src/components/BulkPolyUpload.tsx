@@ -177,6 +177,7 @@ export default function BulkPolyUpload({
           pdf_pages: pages ?? undefined,
           pdf_size: ligne.file.size,
           pdf_uploaded_at: new Date().toISOString(),
+          pdf_name: ligne.file.name,
         }
 
         const { data: maj, error: dbErr } = await supabase

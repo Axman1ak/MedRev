@@ -8,7 +8,6 @@ import { createClient } from '@/lib/supabase/client'
 import DashTodo from '@/components/DashTodo'
 import ReviewModal from '@/components/ReviewModal'
 import SubjectIcon from '@/components/SubjectIcon'
-import BibliothecaSvg, { BibliothecaTreasuresPanel, BIBLIOTHECA_TOTAL_CAPACITY, BIBLIOTHECA_TREASURES, unlockedTreasuresCount, nextTreasure as nextBibTreasure } from '@/components/BibliothecaSvg'
 import type { System, Lesson, TdEvent } from '@/types'
 import { toDateStr, todayStr } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
@@ -405,106 +404,121 @@ function buildMetaForDue(due: DueInfo, systemName: string, lastScore: Score | nu
   return { text: parts.join(' · '), withOverdue: due.status === 'missed' }
 }
 
-// ======================= MINI BIBLIOTHÈQUE (lecture du state Focus) =======================
-// On ne fait QUE lire l'état de la bibliothèque (localStorage prioritaire, Supabase optionnel).
-// La culture se fait sur la page /dashboard/focus — ici on l'expose en aperçu via le
-// composant <BibliothecaSvg> partagé pour un rendu strictement identique.
-type BibSnapshot = { elapsedMs: number; fichesCount: number }
-
-function readBibLocal(userId: string): BibSnapshot {
-  if (typeof window === 'undefined') return { elapsedMs: 0, fichesCount: 0 }
-  try {
-    const raw = localStorage.getItem('medrev-garden-' + userId)
-    if (!raw) return { elapsedMs: 0, fichesCount: 0 }
-    const parsed = JSON.parse(raw)
-    return {
-      elapsedMs: Number(parsed.elapsedMs ?? 0),
-      fichesCount: Number(parsed.fichesCount ?? 0),
-    }
-  } catch {
-    return { elapsedMs: 0, fichesCount: 0 }
+// ======================= CARTE PROGRESSION =======================
+// Remplace l'ancienne bibliothèque : des chiffres réels, sans métaphore.
+// Temps de travail : gardens.day_log (alimenté par la session de travail).
+// Maîtrise : une fiche est maîtrisée quand sa dernière note (officielle ou
+// temporaire) vaut 4 ou 5.
+function progDayKey(d: Date) { return toDateStr(d) }
+function lastEffectiveScore(l: Lesson): number | null {
+  const steps = (Array.isArray(l.steps) ? l.steps : []) as StepEntry[]
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const sc = effectiveStepScore(steps[i])
+    if (sc) return sc
   }
+  return null
+}
+function fmtHours(ms: number): string {
+  const min = Math.round(ms / 60000)
+  if (min < 60) return `${min} min`
+  return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
 }
 
-// ======================= MINI BIBLIOTHÈQUE COMPONENT =======================
-// Aperçu compact de la bibliothèque annuelle. Utilise <BibliothecaSvg> pour
-// un rendu identique au focus, juste à plus petite échelle.
-function DashGarden({ userId }: { userId: string | null }) {
+function DashProgress({ userId, lessons, systems }: { userId: string | null; lessons: Lesson[]; systems: System[] }) {
   const supabase = createClient()
-  const [bib, setBib] = useState<BibSnapshot | null>(null)
+  const [dayLog, setDayLog] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!userId) return
-    setBib(readBibLocal(userId))
+    let off = false
     void (async () => {
       try {
-        const { data } = await supabase
-          .from('gardens')
-          .select('elapsed_ms, fiches_count')
-          .eq('user_id', userId)
-          .maybeSingle()
-        if (!data) return
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cloudFiches = Number((data as any).fiches_count ?? 0)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cloudElapsed = Number((data as any).elapsed_ms ?? 0)
-        setBib(prev => {
-          const local = prev ?? { elapsedMs: 0, fichesCount: 0 }
-          return { elapsedMs: Math.max(local.elapsedMs, cloudElapsed), fichesCount: Math.max(local.fichesCount, cloudFiches) }
-        })
+        const { data } = await supabase.from('gardens').select('day_log').eq('user_id', userId).maybeSingle()
+        const raw = (data as { day_log?: unknown } | null)?.day_log
+        if (off || !raw || typeof raw !== 'object') return
+        const out: Record<string, number> = {}
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (typeof v === 'number' && v > 0) out[k] = v
+        setDayLog(out)
       } catch {}
     })()
-    const uid: string = userId
-    function onStorage(e: StorageEvent) { if (e.key === 'medrev-garden-' + uid) setBib(readBibLocal(uid)) }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    return () => { off = true }
   }, [userId, supabase])
 
-  useEffect(() => {
-    if (!userId) return
-    const uid = userId
-    function onVisible() { if (document.visibilityState === 'visible') setBib(readBibLocal(uid)) }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [userId])
-
-  const fichesCount = bib?.fichesCount ?? 0
-  const treasures = unlockedTreasuresCount(fichesCount)
-  const upcoming = nextBibTreasure(fichesCount)
-  const progPct = Math.min(100, Math.round((treasures / 6) * 100))
-
-  const shelves = useMemo(() => {
-    const cols = ['#15304E', '#22507E', '#2E5E8E', '#3E6F9C', '#6E93B8']
-    return [0, 1].map(row => Array.from({ length: 22 }, (_, i) => {
-      const gold = (i + row * 5) % 9 === 4
-      const sh = cols[(i * 3 + row * 5) % 5]
-      const h = 30 + Math.round(Math.abs(Math.sin((i + row * 5) * 1.3)) * 30)
-      return { bg: gold ? '#BE914A' : sh, h }
-    }))
-  }, [])
+  const view = useMemo(() => {
+    const today = new Date(); today.setHours(12, 0, 0, 0)
+    // Série : jours consécutifs avec du travail, jusqu'à aujourd'hui (ou hier si rien encore aujourd'hui)
+    let streak = 0
+    const d = new Date(today)
+    if (!dayLog[progDayKey(d)]) d.setDate(d.getDate() - 1)
+    while (dayLog[progDayKey(d)]) { streak++; d.setDate(d.getDate() - 1) }
+    // Semaine en cours (depuis lundi)
+    const monday = new Date(today); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+    let weekMs = 0
+    for (let i = 0; i < 7; i++) { const x = new Date(monday); x.setDate(x.getDate() + i); weekMs += dayLog[progDayKey(x)] ?? 0 }
+    // 8 semaines : colonnes = semaines, lignes = lundi..dimanche
+    const start = new Date(monday); start.setDate(start.getDate() - 7 * 7)
+    const weeks: { key: string; lvl: number; future: boolean; title: string }[][] = []
+    for (let w = 0; w < 8; w++) {
+      const col = []
+      for (let k = 0; k < 7; k++) {
+        const x = new Date(start); x.setDate(x.getDate() + w * 7 + k)
+        const key = progDayKey(x)
+        const min = (dayLog[key] ?? 0) / 60000
+        const lvl = min <= 0 ? 0 : min < 30 ? 1 : min < 60 ? 2 : min < 120 ? 3 : 4
+        const label = x.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+        col.push({ key, lvl, future: x > today, title: min > 0 ? `${label} : ${fmtHours(min * 60000)}` : `${label} : rien` })
+      }
+      weeks.push(col)
+    }
+    // Maîtrise
+    const mastered = lessons.filter(l => (lastEffectiveScore(l) ?? 0) >= 4).length
+    const colorMap = buildSubjectColorMap(systems)
+    const subjects = systems
+      .map(s => {
+        const ls = lessons.filter(l => l.system_id === s.id)
+        const m = ls.filter(l => (lastEffectiveScore(l) ?? 0) >= 4).length
+        return { id: s.id, name: s.name, total: ls.length, pct: ls.length ? Math.round((m / ls.length) * 100) : 0, color: (s as { color?: string | null }).color || colorMap.get(s.id) || '#3E6F9C' }
+      })
+      .filter(s => s.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6)
+    return { streak, weekMs, weeks, mastered, subjects }
+  }, [dayLog, lessons, systems])
 
   return (
-    <div className="panel bib reveal d3">
+    <div className="panel bib dpg reveal d3">
       <div className="phead">
-        <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h6v14H4zM10 5h6v14h-6z" strokeLinejoin="round"/><path d="M16 6l4 .8-2.4 13.3-3.9-.8" strokeLinejoin="round"/></svg></div>
-        <div><div className="ptitle">Bibliothèque</div><div className="psub">ta collection grandit</div></div>
+        <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V10M10 19V5M16 19v-6M22 19H2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+        <div><div className="ptitle">Ta progression</div><div className="psub">ton travail, semaine après semaine</div></div>
+        <Link href="/dashboard/stats" className="dpg-link">Statistiques</Link>
       </div>
-      <div className="case">
-        {shelves.map((row, r) => (
-          <div className="shelf" key={r}>
-            {row.map((b, i) => <span key={i} className="bk" style={{ background: b.bg, height: Math.round((b.h / 62) * 100) + '%' }} />)}
-          </div>
-        ))}
+      <div className="dpg-kpis">
+        <div><b>{view.streak} j</b><span>d&apos;affilée</span></div>
+        <div><b>{fmtHours(view.weekMs)}</b><span>cette semaine</span></div>
+        <div><b>{view.mastered} / {lessons.length}</b><span>fiches maîtrisées</span></div>
       </div>
-      <div className="bib-foot">
-        <div className="bignum">{fichesCount} <small>ouvrage{fichesCount > 1 ? 's' : ''}</small></div>
-        <div className="tres-pill"><span className="gd" />{treasures} trésor{treasures > 1 ? 's' : ''}</div>
+      <div className="dpg-sec">
+        <div className="dpg-lbl"><span>8 dernières semaines</span><span>plus foncé = plus de temps</span></div>
+        <div className="dpg-heat" role="img" aria-label="Temps de travail par jour sur les 8 dernières semaines">
+          {view.weeks.map((col, w) => (
+            <div key={w} className="dpg-col">
+              {col.map(c => <i key={c.key} className={`l${c.lvl}${c.future ? ' fut' : ''}`} title={c.title} />)}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="prog"><i style={{ width: progPct + '%' }} /></div>
-      <div className="prog-lbl">{upcoming ? `prochain trésor à ${upcoming.at} h de focus` : 'tous les trésors débloqués'}</div>
-      <Link href="/dashboard/focus?vue=biblio" className="bib-visit">
-        Contempler la bibliothèque →
-      </Link>
+      {view.subjects.length > 0 && (
+        <div className="dpg-sec dpg-subs">
+          <div className="dpg-lbl"><span>Maîtrise par matière</span><span>dernière note 4 ou 5</span></div>
+          {view.subjects.map(s => (
+            <div key={s.id} className="dpg-sub">
+              <span className="dpg-sub-n"><span className="dpg-dot" style={{ background: s.color }} />{s.name}</span>
+              <span className="dpg-bar"><i style={{ width: `${s.pct}%`, background: s.color }} /></span>
+              <span className="dpg-pct">{s.pct}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -834,7 +848,7 @@ export default function DashboardPage() {
 
         <div className="col-r">
           <DashTodo userId={userId} />
-          <DashGarden userId={userId} />
+          <DashProgress userId={userId} lessons={lessons} systems={systems} />
         </div>
       </div>
 
@@ -923,7 +937,7 @@ function TodayModal({
             <div className="full-stat-val"><em>{queue.length}</em> révision{queue.length > 1 ? 's' : ''}</div>
           </div>
           <Link href={startHref} className="btn-focus-lg" onClick={onClose}>
-            Démarrer la session focus
+            Démarrer la session
           </Link>
         </div>
 

@@ -1,137 +1,100 @@
 'use client'
 // src/app/dashboard/focus/page.tsx
-// Session focus plein écran : enchaîne les fiches dues dans l'ordre suggéré.
-// Lit ?lesson=<id> (mode solo) et ?system=<id> (filtre matière).
-// Sans param : queue d'aujourd'hui filtrée par le semestre courant (localStorage 'medrev-sem').
 //
-// Navigation : flèches gauche/droite (boutons + clavier). Re-rating possible
-// quand on revient sur une fiche déjà notée (overwrite DB).
-// Visuel : plante qui pousse au sommet de la card — 1 feuille colorée par fiche notée,
-// fleur quand tout est terminé.
+// SESSION DE TRAVAIL (refonte 2026-10, remplace la session « bibliothèque »).
+//
+// Les fiches dues aujourd'hui, l'une après l'autre, chacune en 3 étapes :
+//   1. Relire      : la fiche de synthèse (courte) + les erreurs de l'étudiante,
+//                    le poly complet en un clic.
+//   2. S'entraîner : jusqu'à 10 QCM de la fiche, dans la page (ratées d'abord).
+//                    Chaque erreur devient une flashcard (src/lib/qcmMissed.ts) et
+//                    les compteurs de chaque question sont mis à jour.
+//   3. Se noter    : avec le résultat des QCM sous les yeux et une note proposée.
+//                    La note est enregistrée comme avant (score officiel, ou
+//                    temporaire si le palier n'est pas encore dû).
+//
+// Paramètres d'URL inchangés : ?lesson=<id> (cette fiche en premier),
+// ?system=<id> (une matière), ?lessons=id1,id2 (retravailler, notes temporaires).
+//
+// Temps de travail : toujours compté par jour dans gardens.day_log (page Stats,
+// carte Progression du tableau de bord). Les colonnes de l'ancienne
+// bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import BibliothecaSvg, { BIBLIOTHECA_TOTAL_CAPACITY, unlockedTreasuresCount, nextTreasure as nextBibTreasure, nextMilestone, bookAtPoint, BIB_VIEWBOX } from '@/components/BibliothecaSvg'
-import { playBookOpen, playBookClose, playStamp, playWhoosh } from '@/lib/sounds'
-import LiveBook from '@/components/LiveBook'
-import type { System, Lesson } from '@/types'
-import { toDateStr, todayStr } from '@/types'
+import type { System, Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, Flashcard } from '@/types'
+import { toDateStr, todayStr, normalizeAnswer } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
-import './styles.css'
 import { normalizeYear, scopeToYear } from '@/lib/year'
+import { isMissed, addCardsFromMistakes } from '@/lib/qcmMissed'
+import { cleanExplanation, whyFor, correctAnswersRecap } from '@/lib/qcmText'
+import { startGen, finishGen } from '@/lib/qcmGenStore'
+import GenProgress from '@/components/GenProgress'
+import SourceLightbox from '@/components/SourceLightbox'
+import QuestionFigure from '@/components/QuestionFigure'
+import ReportQuestion from '@/components/ReportQuestion'
 import PageLoader from '@/components/PageLoader'
-
-const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
-
-const SCORE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
-  1: '#C75050',
-  2: '#E08B3C',
-  3: '#D9B24A',
-  4: '#7AA56B',
-  5: '#1B4332',
-}
-
-// Cible de complétion de la bibliothèque : 1500h cumulées (~ 1 année P1).
-// 1 fiche notée ≈ 1h d'étude → 1 livre ajouté à la bibliothèque.
-// Au-delà de 1500 fiches, la bibliothèque reste pleine.
-const TIME_TO_FULL_MS = BIBLIOTHECA_TOTAL_CAPACITY * 60 * 60 * 1000
+import './styles.css'
 
 // ===================== TYPES =====================
 type Score = 1 | 2 | 3 | 4 | 5
-type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string } | null
+type StepEntry = { score?: Score; ok?: boolean; date?: string; note?: string; temp_score?: number } | null
+type DueInfo = { stepIndex: number; dueDate: string; status: 'missed' | 'today' | 'fresh'; overdueDays: number }
+type QueueItem = { lesson: Lesson; due: DueInfo; lastScore: Score | null; lastDate: string | null }
+type Result = { kind: 'rated'; score: Score } | { kind: 'reported' }
+type Phase = 'loading' | 'empty' | 'session' | 'done'
+type Step = 0 | 1 | 2
+type Attempt = { origIdx: number; selected: number[]; correct: boolean }
 
-type DueInfo = {
-  stepIndex: number
-  dueDate: string
-  status: 'missed' | 'today' | 'fresh'
-  overdueDays: number
+const TRAIN_SIZE = 10
+const GRADE_LABELS: Record<Score, [string, string]> = {
+  1: ['À revoir', "Je ne m'en souvenais presque pas"],
+  2: ['Faible', 'Beaucoup de trous'],
+  3: ['Moyen', "L'essentiel, avec des erreurs"],
+  4: ['Bien', 'Quelques détails à revoir'],
+  5: ['Maîtrisé', 'Tout était là'],
 }
 
-type QueueItem = {
-  lesson: Lesson
-  due: DueInfo
-  lastScore: Score | null
-  priority: number
-}
-
-type Result = {
-  lessonId: string
-  lessonName: string
-  systemName: string
-  // atMs = ms écoulées depuis le début de la session quand l'action a été prise.
-  // Sert à positionner la feuille à la bonne hauteur sur la tige (qui grandit avec le temps).
-  outcome:
-    | { kind: 'rated'; score: Score; atMs: number }
-    | { kind: 'reported'; atMs: number }
-}
-
-// 'lobby' = vue contemplative : la bibliothèque entière + bouton "Commencer".
-// La session ne montre QUE le livre qui s'écrit (modèle Forest/Focus Tree :
-// le jardin se contemple avant et après, jamais pendant).
-type Phase = 'loading' | 'lobby' | 'session' | 'done' | 'empty'
-
-// ===================== HELPERS =====================
+// ===================== DATES & PLANNING (logique reprise de l'ancienne session) =====================
 function dateStrFromOffset(base: string, offset: number): string {
   const d = new Date(base + 'T12:00:00')
   d.setDate(d.getDate() + offset)
   return toDateStr(d)
 }
-
-function formatBookDate(d: string): string {
-  try {
-    return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-  } catch { return d }
-}
-
 function daysBetween(a: string, b: string): number {
-  return Math.round(
-    (new Date(b + 'T12:00:00').getTime() - new Date(a + 'T12:00:00').getTime()) / 86400000
-  )
+  return Math.round((new Date(b + 'T12:00:00').getTime() - new Date(a + 'T12:00:00').getTime()) / 86400000)
 }
-
-// stepScore : lit le score OFFICIEL uniquement. Utilisé pour la logique
-// de calendrier (due, nextUndone, queue priority de base).
+function prettyDate(d: string): string {
+  try { return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) } catch { return d }
+}
+function shortDate(d: string): string {
+  try { return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) } catch { return d }
+}
 function stepScore(s: StepEntry): Score | null {
   if (!s) return null
-  if (typeof (s as { score?: number }).score === 'number') {
-    const sc = (s as { score: number }).score
-    if (sc >= 1 && sc <= 5) return sc as Score
-  }
-  if (typeof (s as { ok?: boolean }).ok === 'boolean') {
-    return (s as { ok: boolean }).ok ? 5 : 1
-  }
+  if (typeof s.score === 'number' && s.score >= 1 && s.score <= 5) return s.score as Score
+  if (typeof s.ok === 'boolean') return s.ok ? 5 : 1
   return null
 }
-
-// effectiveStepScore : score officiel sinon temp_score. Reflète l'état perçu
-// par l'utilisateur — un retravailler en avance compte comme "score posé"
-// jusqu'au vrai J.
 function effectiveStepScore(s: StepEntry): Score | null {
   const off = stepScore(s)
   if (off) return off
-  if (!s) return null
-  const t = (s as { temp_score?: number }).temp_score
-  if (typeof t === 'number' && t >= 1 && t <= 5) return t as Score
-  return null
+  const t = s?.temp_score
+  return typeof t === 'number' && t >= 1 && t <= 5 ? (t as Score) : null
 }
-
-function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
-  if (!lesson.learn_date) return ''
-  return dateStrFromOffset(lesson.learn_date, j[i])
+function stepDate(lesson: Lesson, i: number, j: number[]): string {
+  return lesson.learn_date ? dateStrFromOffset(lesson.learn_date, j[i]) : ''
 }
-
-function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {
+function getLast(lesson: Lesson, j: number[]): { score: Score | null; date: string | null } {
   const steps = (lesson.steps as StepEntry[]) || []
   for (let i = j.length - 1; i >= 0; i--) {
     const sc = effectiveStepScore(steps[i])
-    if (sc) return sc
+    if (sc) return { score: sc, date: steps[i]?.date ?? null }
   }
-  return null
+  return { score: null, date: null }
 }
-
-// Reporter / Annuler (colonnes lessons.skips / lessons.postpones).
 function lessonSkips(l: Lesson): number[] {
   const s = (l as { skips?: unknown }).skips
   return Array.isArray(s) ? (s as number[]) : []
@@ -140,8 +103,7 @@ function lessonPostpones(l: Lesson): Record<string, string> {
   const p = (l as { postpones?: unknown }).postpones
   return p && typeof p === 'object' ? (p as Record<string, string>) : {}
 }
-
-function getDueForToday(lesson: Lesson, today: string, j: number[] = DEFAULT_J): DueInfo | null {
+function getDueOn(lesson: Lesson, day: string, j: number[]): DueInfo | null {
   if (!lesson.learn_date) return null
   const steps = (lesson.steps as StepEntry[]) || []
   const skips = lessonSkips(lesson)
@@ -150,282 +112,72 @@ function getDueForToday(lesson: Lesson, today: string, j: number[] = DEFAULT_J):
     if (stepScore(steps[i])) continue
     if (skips.includes(i)) continue
     const dd = postpones[String(i)] ?? stepDate(lesson, i, j)
-    if (dd <= today) {
-      return {
-        stepIndex: i,
-        dueDate: dd,
-        status: dd === today ? 'today' : 'missed',
-        overdueDays: dd < today ? daysBetween(dd, today) : 0,
-      }
-    }
-    break // steps chronologiques
+    if (dd <= day) return { stepIndex: i, dueDate: dd, status: dd === day ? 'today' : 'missed', overdueDays: dd < day ? daysBetween(dd, day) : 0 }
+    break
   }
   return null
 }
-
-function getNextUndoneJ(lesson: Lesson, j: number[] = DEFAULT_J): number | null {
+function getNextUndone(lesson: Lesson, j: number[]): number | null {
   const steps = (lesson.steps as StepEntry[]) || []
-  for (let i = 0; i < j.length; i++) {
-    if (!stepScore(steps[i])) return i
-  }
+  for (let i = 0; i < j.length; i++) if (!stepScore(steps[i])) return i
   return null
 }
-
-function computeTodayQueue(lessons: Lesson[], today: string, schedOf: (id: string | null | undefined) => number[]): QueueItem[] {
-  const out: QueueItem[] = []
-  lessons.forEach(l => {
-    const j = schedOf(l.system_id)
-    const due = getDueForToday(l, today, j)
-    if (!due) return
-    const lastScore = getLastScore(l, j)
-    let priority: number
-    if (due.status === 'missed') {
-      priority = -due.overdueDays * 100 + (lastScore ?? 3) * 10
-    } else if (lastScore !== null) {
-      priority = 1000 + lastScore * 100
-    } else {
-      priority = 6000 + due.stepIndex
-    }
-    out.push({ lesson: l, due, lastScore, priority })
-  })
-  // Ordre de révision : palier J croissant (plus petit J d'abord).
-  return out.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
+function syntheticDue(l: Lesson, j: number[], today: string): DueInfo | null {
+  const due = getDueOn(l, today, j)
+  if (due) return due
+  const idx = getNextUndone(l, j)
+  if (idx === null) return null
+  if (!l.learn_date) return { stepIndex: idx, dueDate: today, status: 'fresh', overdueDays: 0 }
+  const dd = stepDate(l, idx, j)
+  return { stepIndex: idx, dueDate: dd, status: dd <= today ? (dd === today ? 'today' : 'missed') : 'fresh', overdueDays: dd < today ? daysBetween(dd, today) : 0 }
 }
-
-function buildQueue(
-  lessons: Lesson[],
-  systems: System[],
-  lessonParam: string | null,
-  systemParam: string | null,
-  lessonsParam: string | null,
-  today: string
-): QueueItem[] {
+function item(l: Lesson, due: DueInfo, j: number[]): QueueItem {
+  const last = getLast(l, j)
+  return { lesson: l, due, lastScore: last.score, lastDate: last.date }
+}
+function buildQueue(lessons: Lesson[], systems: System[], lessonParam: string | null, systemParam: string | null, lessonsParam: string | null, today: string): QueueItem[] {
   const schedOf = makeScheduleResolver(systems)
-  // 0) Mode "retravailler multi" : si ?lessons=id1,id2,id3 fourni, on construit
-  //    une queue UNIQUEMENT de ces fiches, chacune sur son prochain J non noté
-  //    avec status: 'fresh'. Le focus utilisera cette info pour écrire en
-  //    temp_score (pas en score officiel) et ne pas bouger le calendrier.
   if (lessonsParam) {
-    const ids = lessonsParam.split(',').map(s => s.trim()).filter(Boolean)
-    const queue: QueueItem[] = []
-    for (const id of ids) {
-      const l = lessons.find(x => x.id === id)
-      if (!l) continue
-      let due: DueInfo | null = getDueForToday(l, today, schedOf(l.system_id))
-      if (!due) {
-        const idx = getNextUndoneJ(l, schedOf(l.system_id))
-        if (idx !== null) {
-          if (l.learn_date) {
-            const dd = stepDate(l, idx, schedOf(l.system_id))
-            due = {
-              stepIndex: idx,
-              dueDate: dd,
-              status: dd <= today ? (dd === today ? 'today' : 'missed') : 'fresh',
-              overdueDays: dd < today ? daysBetween(dd, today) : 0,
-            }
-          } else {
-            due = { stepIndex: idx, dueDate: today, status: 'fresh', overdueDays: 0 }
-          }
-        }
-      }
-      if (due) {
-        queue.push({ lesson: l, due, lastScore: getLastScore(l, schedOf(l.system_id)), priority: -1 })
-      }
-    }
-    return queue
+    return lessonsParam.split(',').map(s => s.trim()).filter(Boolean)
+      .map(id => lessons.find(x => x.id === id))
+      .filter((l): l is Lesson => !!l)
+      .map(l => { const j = schedOf(l.system_id); const d = syntheticDue(l, j, today); return d ? item(l, d, j) : null })
+      .filter((x): x is QueueItem => !!x)
   }
-
-  // 1) Construit la queue de base : toutes les J du jour.
-  //    Filtre par matière si ?system= explicite ; sinon par le semestre courant.
-  let baseQueue: QueueItem[]
-  if (systemParam) {
-    const sysLessons = lessons.filter(l => l.system_id === systemParam)
-    baseQueue = computeTodayQueue(sysLessons, today, schedOf)
-  } else {
+  let pool: Lesson[]
+  if (systemParam) pool = lessons.filter(l => l.system_id === systemParam)
+  else {
     const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
     const sem: 1 | 2 | 'year' = semRaw === '1' ? 1 : semRaw === 'year' ? 'year' : 2
-    // En mode 'year' : pas de filtre par semestre, on prend toutes les leçons
-    const semLessons = sem === 'year'
-      ? lessons
-      : lessons.filter(l => {
-          const sys = systems.find(s => s.id === l.system_id)
-          return sys?.semestre === sem
-        })
-    baseQueue = computeTodayQueue(semLessons, today, schedOf)
+    pool = sem === 'year' ? lessons : lessons.filter(l => systems.find(s => s.id === l.system_id)?.semestre === sem)
   }
-
-  // 2) Si une fiche précise est demandée (?lesson=), on la place en première position
-  //    de la queue complète — pas de mode solo, l'utilisateur peut naviguer aux autres
-  //    via les flèches.
+  const q: QueueItem[] = []
+  for (const l of pool) {
+    const j = schedOf(l.system_id)
+    const d = getDueOn(l, today, j)
+    if (d) q.push(item(l, d, j))
+  }
+  q.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
   if (lessonParam) {
-    const existingIdx = baseQueue.findIndex(q => q.lesson.id === lessonParam)
-    if (existingIdx > 0) {
-      // Déjà dans la queue : on la déplace en tête.
-      const [item] = baseQueue.splice(existingIdx, 1)
-      baseQueue.unshift(item)
-    } else if (existingIdx === -1) {
-      // Pas dans la queue d'aujourd'hui (ex : fiche fragile pas encore due) :
-      // on la prepend avec un DueInfo synthétique sur le prochain J non noté.
+    const at = q.findIndex(x => x.lesson.id === lessonParam)
+    if (at > 0) q.unshift(q.splice(at, 1)[0])
+    else if (at === -1) {
       const l = lessons.find(x => x.id === lessonParam)
-      if (l) {
-        let due: DueInfo | null = getDueForToday(l, today, schedOf(l.system_id))
-        if (!due) {
-          const idx = getNextUndoneJ(l, schedOf(l.system_id))
-          if (idx !== null) {
-            if (l.learn_date) {
-              const dd = stepDate(l, idx, schedOf(l.system_id))
-              due = {
-                stepIndex: idx,
-                dueDate: dd,
-                status: dd <= today ? (dd === today ? 'today' : 'missed') : 'fresh',
-                overdueDays: dd < today ? daysBetween(dd, today) : 0,
-              }
-            } else {
-              due = { stepIndex: idx, dueDate: today, status: 'fresh', overdueDays: 0 }
-            }
-          }
-        }
-        if (due) {
-          baseQueue.unshift({ lesson: l, due, lastScore: getLastScore(l, schedOf(l.system_id)), priority: -1 })
-        }
-      }
+      if (l) { const j = schedOf(l.system_id); const d = syntheticDue(l, j, today); if (d) q.unshift(item(l, d, j)) }
     }
-    // existingIdx === 0 : déjà en tête, rien à faire.
   }
-
-  return baseQueue
+  return q
 }
 
-// ===================== PLANT (SVG inline) =====================
-// La tige grandit avec le TEMPS (linéairement jusqu'à TIME_TO_FULL_MS).
-// Chaque fiche notée dépose une feuille à la hauteur où la tige était au moment
-// de la note (récupéré via outcome.atMs). Les feuilles ne bougent plus une fois
-// posées : à la fin, elles racontent visuellement le rythme de la session
-// (clusters bas = session rapide, étalées = session lente).
-
-type PlantProps = {
-  elapsedMs: number
-  timeToFullMs: number
-  /** Si true (écran bilan), tige forcée au max et fleur affichée. */
-  forceFull?: boolean
-}
-
-// Géométrie SVG compacte (viewBox 120x130)
-const POT_Y = 110
-const STEM_TOP_MIN_Y = 30
-
-// Composant compact utilisé sur l'écran bilan : petite plante générique en pot
-// qui grandit avec le temps. La fleur s'ouvre quand forceFull. Pas de feuilles
-// liées aux notes — le score n'est plus encodé visuellement.
-function FocusPlant({ elapsedMs, timeToFullMs, forceFull = false }: PlantProps) {
-  const stemProgress = forceFull
-    ? 1
-    : Math.max(0, Math.min(1, elapsedMs / timeToFullMs))
-  const stemTopY = POT_Y - stemProgress * (POT_Y - STEM_TOP_MIN_Y)
-
-  return (
-    <div className="focus-plant-wrap" aria-hidden="true">
-      <svg viewBox="0 0 120 130" className="focus-plant-svg" role="img">
-        <title>Progression de la session</title>
-
-        {/* Pot */}
-        <path d="M 50 110 L 70 110 L 67 125 L 53 125 Z" fill="#A37147" />
-        <path d="M 50 110 L 70 110 L 68 108 L 52 108 Z" fill="#7E5630" />
-        <ellipse cx="60" cy="108" rx="9" ry="1.5" fill="#5C3A21" />
-
-        {/* Tige */}
-        <g
-          className="focus-plant-stem-group"
-          style={{
-            transform: `scaleY(${stemProgress})`,
-            transformOrigin: `60px ${POT_Y}px`,
-          }}
-        >
-          <line x1={60} y1={POT_Y} x2={60} y2={STEM_TOP_MIN_Y}
-                stroke="#2D6A4F" strokeWidth={2.6} strokeLinecap="round" />
-        </g>
-
-        {/* Petites feuilles décoratives le long de la tige (apparaissent avec la croissance) */}
-        {[0.35, 0.55, 0.75].map((t, i) => {
-          if (stemProgress < t) return null
-          const yPos = POT_Y - t * (POT_Y - STEM_TOP_MIN_Y)
-          const side = i % 2 === 0 ? -1 : 1
-          const cx = 60 + side * 8
-          return (
-            <g key={`leaf-${i}`} className="focus-plant-leaf">
-              <ellipse cx={cx} cy={yPos} rx={7} ry={3} fill="#7AA56B"
-                       transform={`rotate(${side * 25} ${cx} ${yPos})`} />
-              <ellipse cx={cx} cy={yPos - 0.6} rx={3} ry={1}
-                       fill="rgba(255,255,255,0.28)"
-                       transform={`rotate(${side * 25} ${cx} ${yPos})`} />
-            </g>
-          )
-        })}
-
-        {/* Fleur au sommet (bilan) */}
-        {forceFull && (
-          <g className="focus-plant-flower">
-            {[0, 72, 144, 216, 288].map(angle => (
-              <ellipse key={angle} cx={60} cy={stemTopY - 7}
-                       rx={4.2} ry={2.4}
-                       transform={`rotate(${angle} 60 ${stemTopY})`}
-                       fill="#F4B5C9" opacity={0.92} />
-            ))}
-            <circle cx={60} cy={stemTopY} r={2.6} fill="#F3D88A" />
-          </g>
-        )}
-      </svg>
-    </div>
-  )
-}
-
-// ===================== BIBLIOTHÈQUE (état persistant annuel) =====================
-// 1 fiche notée = 1 livre ajouté à la bibliothèque (cumulé sur l'année).
-// Persisté en localStorage (clé "medrev-garden-{userId}" — réutilisée pour
-// éviter une migration de schéma. Le champ legacy `elements` est ignoré.)
-
-// Registre des livres : une entrée par livre rangé.
-// n = rang du livre (1-based, = fichesCount au moment du rangement)
-// t = titre de la fiche, s = note (1-5), d = date, m = minutes écoulées
-// dans la session au moment de la notation.
-type BookLogEntry = { n: number; t: string; s: Score; d: string; m: number }
-
-function parseBookLog(raw: unknown): BookLogEntry[] {
-  if (!Array.isArray(raw)) return []
-  const out: BookLogEntry[] = []
-  for (const e of raw) {
-    if (!e || typeof e !== 'object') continue
-    const { n, t, s, d, m } = e as Record<string, unknown>
-    if (typeof n !== 'number' || n < 1) continue
-    if (typeof t !== 'string') continue
-    if (typeof s !== 'number' || s < 1 || s > 5) continue
-    out.push({ n, t, s: s as Score, d: typeof d === 'string' ? d : '', m: typeof m === 'number' ? m : 0 })
-  }
+// ===================== TEMPS DE TRAVAIL (gardens.day_log) =====================
+type SbClient = ReturnType<typeof createClient>
+type TimeState = { startedDate?: string; elapsedMs: number; dayLog: Record<string, number> }
+function parseDayLog(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (typeof v === 'number' && v > 0) out[k] = v
   return out
 }
-
-// Union par rang (un livre = une entrée), borné à la capacité du meuble.
-function mergeBookLogs(a: BookLogEntry[], b: BookLogEntry[]): BookLogEntry[] {
-  const map = new Map<number, BookLogEntry>()
-  for (const e of a) map.set(e.n, e)
-  for (const e of b) if (!map.has(e.n)) map.set(e.n, e)
-  return Array.from(map.values()).sort((x, y) => x.n - y.n).slice(-BIBLIOTHECA_TOTAL_CAPACITY)
-}
-
-type DayBibliothecaState = {
-  startedDate?: string  // date de la première session
-  elapsedMs: number     // temps cumulé total (sur l'année), pour stats
-  fichesCount: number   // nombre total de fiches notées (sur l'année)
-  // Temps de révision PAR JOUR (ms) — { "YYYY-MM-DD": ms }. Alimenté par le
-  // tick de sauvegarde (30 s). Sert à la règle d'assiduité de la page Stats :
-  // un jour compte à partir de 10 minutes de révision réelle.
-  dayLog: Record<string, number>
-  // Registre des livres (gardens.book_log). Peut être vide pour les livres
-  // rangés avant l'existence du registre.
-  bookLog: BookLogEntry[]
-}
-
-// Garde les ~220 derniers jours du dayLog (le jsonb reste petit).
 function pruneDayLog(log: Record<string, number>): Record<string, number> {
   const keys = Object.keys(log).sort()
   if (keys.length <= 220) return log
@@ -433,1108 +185,677 @@ function pruneDayLog(log: Record<string, number>): Record<string, number> {
   for (const k of keys.slice(-220)) out[k] = log[k]
   return out
 }
-
-function parseDayLog(raw: unknown): Record<string, number> {
-  if (!raw || typeof raw !== 'object') return {}
-  const out: Record<string, number> = {}
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof v === 'number' && v > 0) out[k] = v
-  }
-  return out
-}
-
-const BIB_KEY_BASE = 'medrev-garden'
-
-function bibKey(userId: string | null): string | null {
-  if (!userId) return null
-  return BIB_KEY_BASE + '-' + userId
-}
-
-function loadDayBibliotheca(today: string, userId: string | null): DayBibliothecaState {
-  const empty: DayBibliothecaState = { startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {}, bookLog: [] }
-  if (typeof window === 'undefined') return empty
-  const key = bibKey(userId)
-  if (!key) return empty
+async function pullTime(supabase: SbClient, userId: string): Promise<TimeState> {
   try {
-    const raw = localStorage.getItem(key)
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<DayBibliothecaState>
-      return {
-        startedDate: parsed.startedDate ?? today,
-        elapsedMs: typeof parsed.elapsedMs === 'number' ? parsed.elapsedMs : 0,
-        fichesCount: typeof parsed.fichesCount === 'number' ? parsed.fichesCount : 0,
-        dayLog: parseDayLog((parsed as { dayLog?: unknown }).dayLog),
-        bookLog: parseBookLog((parsed as { bookLog?: unknown }).bookLog),
-      }
-    }
-    return empty
-  } catch {
-    return empty
-  }
+    const { data } = await supabase.from('gardens').select('started_date, elapsed_ms, day_log').eq('user_id', userId).maybeSingle()
+    const d = data as { started_date?: string; elapsed_ms?: number; day_log?: unknown } | null
+    return { startedDate: d?.started_date ?? undefined, elapsedMs: Number(d?.elapsed_ms ?? 0), dayLog: parseDayLog(d?.day_log) }
+  } catch { return { elapsedMs: 0, dayLog: {} } }
 }
-
-function saveDayBibliotheca(state: DayBibliothecaState, userId: string | null) {
-  if (typeof window === 'undefined') return
-  const key = bibKey(userId)
-  if (!key) return
-  try {
-    // On préserve un champ `elements: []` pour rester compatible avec l'ancien
-    // schéma localStorage (au cas où une autre version de l'app le lirait).
-    localStorage.setItem(key, JSON.stringify({ ...state, elements: [] }))
-  } catch {
-    // ignore quota errors
-  }
-}
-
-// ============ Sync cloud (Supabase, table `gardens`) ============
-// On garde la même table pour éviter une migration. La colonne `elements`
-// existe toujours en DB mais on ne la lit plus, et on écrit `[]` pour rester
-// compatible avec l'ancien schéma.
-
-type SbClient = ReturnType<typeof createClient>
-
-async function pullBibFromSupabase(supabase: SbClient, userId: string): Promise<DayBibliothecaState | null> {
-  try {
-    const { data, error } = await supabase
-      .from('gardens')
-      .select('started_date, elapsed_ms, fiches_count, day_log, book_log')
-      .eq('user_id', userId)
-      .maybeSingle()
-    if (error || !data) return null
-    return {
-      startedDate: (data as any).started_date ?? undefined,
-      elapsedMs: Number((data as any).elapsed_ms ?? 0),
-      fichesCount: Number((data as any).fiches_count ?? 0),
-      dayLog: parseDayLog((data as any).day_log),
-      bookLog: parseBookLog((data as any).book_log),
-    }
-  } catch {
-    return null
-  }
-}
-
-function pushBibToSupabase(supabase: SbClient, userId: string | null, state: DayBibliothecaState): void {
+function pushTime(supabase: SbClient, userId: string | null, s: TimeState) {
   if (!userId) return
-  void supabase
-    .from('gardens')
-    .upsert(
-      {
-        user_id: userId,
-        started_date: state.startedDate ?? null,
-        elapsed_ms: state.elapsedMs,
-        fiches_count: state.fichesCount,
-        day_log: pruneDayLog(state.dayLog),
-        book_log: state.bookLog,
-        elements: [],  // legacy, conservé vide pour compat
-      },
-      { onConflict: 'user_id' }
-    )
-    .then(() => { /* ok */ }, () => { /* swallow */ })
+  // Seules ces colonnes sont écrites : celles de l'ancienne bibliothèque restent intactes.
+  void supabase.from('gardens').upsert(
+    { user_id: userId, started_date: s.startedDate ?? todayStr(), elapsed_ms: s.elapsedMs, day_log: pruneDayLog(s.dayLog) },
+    { onConflict: 'user_id' },
+  ).then(() => {}, () => {})
 }
 
-function mergeBibStates(a: DayBibliothecaState, b: DayBibliothecaState): DayBibliothecaState {
-  // La bibliothèque ne décroît jamais : on garde le max des compteurs.
-  let startedDate: string | undefined
-  if (a.startedDate && b.startedDate) startedDate = a.startedDate < b.startedDate ? a.startedDate : b.startedDate
-  else startedDate = a.startedDate ?? b.startedDate
-  const dayLog: Record<string, number> = { ...a.dayLog }
-  for (const [k, v] of Object.entries(b.dayLog)) {
-    dayLog[k] = Math.max(dayLog[k] ?? 0, v)
-  }
-  return {
-    startedDate,
-    elapsedMs: Math.max(a.elapsedMs, b.elapsedMs),
-    fichesCount: Math.max(a.fichesCount, b.fichesCount),
-    dayLog,
-    bookLog: mergeBookLogs(a.bookLog, b.bookLog),
-  }
+// ===================== QCM : tirage pour l'entraînement =====================
+function pickTraining(qs: AiQuestion[]): number[] {
+  const idx = qs.map((_, i) => i)
+  const shuffle = (a: number[]) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [b[i], b[k]] = [b[k], b[i]] } return b }
+  const missed = shuffle(idx.filter(i => isMissed(qs[i])))
+  const fresh = shuffle(idx.filter(i => !isMissed(qs[i]) && !(qs[i].attempts || 0)))
+  const rest = shuffle(idx.filter(i => !isMissed(qs[i]) && (qs[i].attempts || 0) > 0))
+  return [...missed, ...fresh, ...rest].slice(0, TRAIN_SIZE)
 }
+function suggestGrade(ok: number, total: number): Score | null {
+  if (total === 0) return null
+  const r = ok / total
+  return r >= 0.9 ? 5 : r >= 0.75 ? 4 : r >= 0.55 ? 3 : r >= 0.35 ? 2 : 1
+}
+const stripLetter = (s: string) => s.replace(/^\s*[A-E][.)]\s*/, '')
 
-// ===================== EXPORT (Suspense wrapper requis pour useSearchParams en Next.js 14) =====================
+// ===================== PAGE =====================
 export default function FocusPage() {
   return (
-    <Suspense fallback={
-      <div className="focus-root">
-        <PageLoader label="Préparation de ta session…" />
-      </div>
-    }>
-      <FocusPageBody />
+    <Suspense fallback={<div className="se-root"><PageLoader label="Préparation de ta session…" /></div>}>
+      <SessionBody />
     </Suspense>
   )
 }
 
-// ===================== BODY =====================
-function FocusPageBody() {
-  const supabase = createClient()
+function SessionBody() {
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
   const searchParams = useSearchParams()
   const lessonParam = searchParams.get('lesson')
   const systemParam = searchParams.get('system')
   const lessonsParam = searchParams.get('lessons')
-  // ?vue=biblio : mode GALERIE — contempler la bibliothèque sans session
-  // (accessible depuis la carte Bibliothèque du dashboard).
-  const isGallery = searchParams.get('vue') === 'biblio'
+  const today = todayStr()
 
   const [userId, setUserId] = useState<string | null>(null)
   const [systems, setSystems] = useState<System[]>([])
+  const [allLessons, setAllLessons] = useState<Lesson[]>([])
   const [phase, setPhase] = useState<Phase>('loading')
   const [queue, setQueue] = useState<QueueItem[]>([])
-  const [currentIdx, setCurrentIdx] = useState(0)
+  const [idx, setIdx] = useState(0)
   const [results, setResults] = useState<(Result | null)[]>([])
-  const [loading, setLoading] = useState(false)
-  const [startedAt, setStartedAt] = useState<number>(0)
-  const [now, setNow] = useState<number>(0)
+  const [busy, setBusy] = useState(false)
 
-  // ============ MODE IMMERSIF (plein écran + wake lock) ============
-  // Le plein écran masque les notifs visuelles sur la plupart des OS modernes.
-  // Wake Lock empêche l'écran de se mettre en veille pendant la session.
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null)
+  // Chrono (avec pause)
+  const [startedAt, setStartedAt] = useState(0)
+  const [pausedMs, setPausedMs] = useState(0)
+  const [pauseFrom, setPauseFrom] = useState<number | null>(null)
+  const [now, setNow] = useState(Date.now())
+  const timeRef = useRef<TimeState>({ elapsedMs: 0, dayLog: {} })
 
-  // Acquiert un wake lock dès qu'on est en session, libère sinon.
-  // Le navigateur libère le lock quand l'onglet devient hidden — on ré-acquiert au visibilitychange.
-  useEffect(() => {
-    if (phase !== 'session') return
-    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return
-    let cancelled = false
-    const acquire = async () => {
-      try {
-        const lock = await (navigator as unknown as {
-          wakeLock: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> }
-        }).wakeLock.request('screen')
-        if (cancelled) { void lock.release(); return }
-        wakeLockRef.current = lock
-      } catch { /* swallow : feature non supportée ou refusée */ }
-    }
-    void acquire()
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && wakeLockRef.current === null) void acquire()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      cancelled = true
-      document.removeEventListener('visibilitychange', onVisible)
-      if (wakeLockRef.current) { void wakeLockRef.current.release(); wakeLockRef.current = null }
-    }
-  }, [phase])
+  // Étape de la fiche en cours + entraînement
+  const [step, setStep] = useState<Step>(0)
+  const [plan, setPlan] = useState<number[]>([])
+  const [qi, setQi] = useState(0)
+  const [sel, setSel] = useState<number[]>([])
+  const [checked, setChecked] = useState(false)
+  const [attempts, setAttempts] = useState<Attempt[]>([])
+  const [trainSaved, setTrainSaved] = useState<{ ok: number; total: number; cards: number } | null>(null)
+  const [grade, setGrade] = useState<Score | null>(null)
+  const [stats, setStats] = useState<{ qcmOk: number; qcmTotal: number }>({ qcmOk: 0, qcmTotal: 0 })
+  const [source, setSource] = useState<AiQuestionSourceRef | null>(null)
+  const [genSynth, setGenSynth] = useState<'idle' | 'running' | 'error'>('idle')
+  const [genSynthErr, setGenSynthErr] = useState<string | null>(null)
+  const [genQcmErr, setGenQcmErr] = useState<string | null>(null)
 
-  // Suit l'état plein écran (l'utilisateur peut sortir via Escape sans cliquer notre bouton)
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', onChange)
-    return () => document.removeEventListener('fullscreenchange', onChange)
-  }, [])
-
-  const toggleFullscreen = useCallback(async () => {
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen()
-      } else {
-        await document.documentElement.requestFullscreen()
-      }
-    } catch { /* swallow : refus utilisateur ou non supporté */ }
-  }, [])
-
-  // Burst de particules : ts incrémenté à chaque rate pour re-déclencher l'anim CSS.
-  // Position optionnelle (x, y) en coords viewBox jardin.
-  const [particleBurst, setParticleBurst] = useState<{ ts: number; x?: number; y?: number } | null>(null)
-
-  // Vol du livre refermé : du pupitre vers le compteur-bibliothèque de la
-  // topbar (la bibliothèque elle-même n'est plus visible pendant la session —
-  // modèle Forest). Ghost séparé du LiveBook : il survit au changement de fiche.
-  const [bookFly, setBookFly] = useState<{ x: number; y: number; ts: number; color: string } | null>(null)
-  const libChipRef = useRef<HTMLDivElement | null>(null)
-
-  // Chorégraphie de notation : l'empreinte de cire s'imprime sur la page,
-  // le livre se referme, PUIS il s'envole et la fiche suivante arrive.
-  // null = pas de cérémonie en cours.
-  const [sealStamp, setSealStamp] = useState<{ score: Score; ts: number } | null>(null)
-
-  // Registre : livre ouvert apres clic dans la bibliotheque (lobby/galerie).
-  const [openBook, setOpenBook] = useState<{ index: number; entry: BookLogEntry | null; x: number; y: number } | null>(null)
-
-  const handleGardenClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    // Inverse du mapping preserveAspectRatio="xMidYMid slice" du SVG.
-    const scale = Math.max(rect.width / BIB_VIEWBOX.w, rect.height / BIB_VIEWBOX.h)
-    const offX = (rect.width - BIB_VIEWBOX.w * scale) / 2
-    const offY = (rect.height - BIB_VIEWBOX.h * scale) / 2
-    const vx = (e.clientX - rect.left - offX) / scale + BIB_VIEWBOX.x
-    const vy = (e.clientY - rect.top - offY) / scale + BIB_VIEWBOX.y
-    const hit = bookAtPoint(vx, vy)
-    const count = Math.min(dayGardenRef.current.fichesCount, BIBLIOTHECA_TOTAL_CAPACITY)
-    if (!hit || hit.index >= count) {
-      // Clic dans le vide : referme le livre ouvert le cas echeant.
-      setOpenBook(prev => { if (prev) playBookClose(); return null })
-      return
-    }
-    const entry = dayGardenRef.current.bookLog.find(b => b.n === hit.index + 1) ?? null
-    playBookOpen()
-    setOpenBook({ index: hit.index, entry, x: e.clientX, y: e.clientY })
-  }, [])
-
-  // Cascade du bilan : on rejoue l'arrivée des livres de la session un par un
-  // (le compteur affiché monte de sessionStart → final, chaque pas déclenche
-  // le pop + burst du SVG). null = pas de cascade (affichage direct).
-  const [bilanReveal, setBilanReveal] = useState<number | null>(null)
-
-  const today = todayStr()
-
-  // ============ ÉTAT JARDIN PERSISTANT (annuel) ============
-  // Persisté en localStorage avec clé 'medrev-garden' (sans date). Cultivé toute l'année.
-  // elapsedMs cumulé sur l'ensemble de l'année. Jamais reset.
-  const [dayGarden, setDayGarden] = useState<DayBibliothecaState>({ startedDate: today, elapsedMs: 0, fichesCount: 0, dayLog: {}, bookLog: [] })
-  const [cumElapsedAtStart, setCumElapsedAtStart] = useState(0)
-  // Stocke le nombre de fiches CUMULÉES au DÉMARRAGE de la session courante.
-  // Utilisé pour le recap : permet de calculer combien de livres ont été ajoutés pendant cette session.
-  const [sessionStartFichesCount, setSessionStartFichesCount] = useState(0)
-  const dayGardenRef = useRef<DayBibliothecaState>(dayGarden)
-  useEffect(() => { dayGardenRef.current = dayGarden }, [dayGarden])
-
-  // Reset scroll au montage
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.scrollTo(0, 0)
-    const main = document.querySelector('main')
-    if (main) main.scrollTop = 0
-  }, [])
-
-  // Ref vers userId pour les saves dans des cleanups (besoin valeur courante)
   const userIdRef = useRef<string | null>(null)
-  useEffect(() => { userIdRef.current = userId }, [userId])
 
-  // Chargement initial : auth → puis jardin du user → puis data/queue
+  // ---------- Chargement ----------
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      // 1) Auth Supabase d'abord (pour avoir userId avant de charger le jardin)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       if (cancelled) return
-      setUserId(user.id)
-      userIdRef.current = user.id
-
-      // 2) Charger le jardin persisté DE CE USER :
-      //    - localStorage en premier (instant, hors-ligne friendly)
-      //    - puis Supabase (cloud), et on merge si la version cloud est différente.
-      //    Le merge prend le max des compteurs + l'union des éléments :
-      //    le jardin grandit toujours, jamais ne décroît.
-      const localGarden = loadDayBibliotheca(today, user.id)
-      if (!cancelled) {
-        setDayGarden(localGarden)
-        dayGardenRef.current = localGarden
-        setCumElapsedAtStart(localGarden.elapsedMs)
-        setSessionStartFichesCount(localGarden.fichesCount)
-      }
-      // Pull cloud (best-effort) + merge. Si pas de réseau ou pas encore de
-      // ligne en DB, on reste sur le localGarden (et on pushera plus tard).
-      const cloudGarden = await pullBibFromSupabase(supabase, user.id)
-      if (cancelled) return
-      if (cloudGarden) {
-        const merged = mergeBibStates(localGarden, cloudGarden)
-        setDayGarden(merged)
-        dayGardenRef.current = merged
-        setCumElapsedAtStart(merged.elapsedMs)
-        setSessionStartFichesCount(merged.fichesCount)
-        saveDayBibliotheca(merged, user.id)
-        // Si le merge diffère du cloud, on pousse pour que les autres devices voient
-        // tout de suite l'état le plus récent.
-        if (
-          merged.elapsedMs !== cloudGarden.elapsedMs ||
-          merged.fichesCount !== cloudGarden.fichesCount ||
-          merged.bookLog.length !== cloudGarden.bookLog.length
-        ) {
-          pushBibToSupabase(supabase, user.id, merged)
-        }
-      } else {
-        // Aucune ligne cloud : on initialise avec le state local
-        // (utile pour les comptes existants qui n'avaient que localStorage).
-        if (localGarden.elapsedMs > 0 || localGarden.fichesCount > 0) {
-          pushBibToSupabase(supabase, user.id, localGarden)
-        }
-      }
-
-      // 3) Données fiches/matières
-      const [{ data: sys }, { data: les }, { data: prof }] = await Promise.all([
+      setUserId(user.id); userIdRef.current = user.id
+      const [{ data: sys }, { data: les }, { data: prof }, time] = await Promise.all([
         supabase.from('systems').select('*').eq('user_id', user.id),
         supabase.from('lessons').select('*').eq('user_id', user.id),
         supabase.from('profiles').select('current_year').eq('id', user.id).single(),
+        pullTime(supabase, user.id),
       ])
       if (cancelled) return
-      // La file de révision ne pioche que dans l'année d'études en cours.
-      const year = normalizeYear((prof as { current_year?: string } | null)?.current_year)
-      const scopedFocus = scopeToYear(
-        (sys as System[] | null) ?? [],
-        (les as Lesson[] | null) ?? [],
-        year,
-      )
-      const sysList = scopedFocus.systems
-      const lesList = scopedFocus.lessons
-      setSystems(sysList)
-      const q = buildQueue(lesList, sysList, lessonParam, systemParam, lessonsParam, today)
+      timeRef.current = time
+      const scoped = scopeToYear((sys as System[] | null) ?? [], (les as Lesson[] | null) ?? [], normalizeYear((prof as { current_year?: string } | null)?.current_year))
+      setSystems(scoped.systems)
+      setAllLessons(scoped.lessons)
+      const q = buildQueue(scoped.lessons, scoped.systems, lessonParam, systemParam, lessonsParam, today)
       setQueue(q)
       setResults(new Array(q.length).fill(null))
-      // Lobby d'abord : la bibliothèque se contemple, la session se CHOISIT.
-      // startedAt reste à 0 jusqu'au clic "Commencer" (le cleanup de
-      // démontage ignore startedAt === 0, donc pas de temps fantôme).
-      // En mode galerie, on montre la bibliothèque même sans fiche due.
-      setPhase(isGallery ? 'lobby' : (q.length === 0 ? 'empty' : 'lobby'))
-      setCurrentIdx(0)
-      setNow(Date.now())
+      setIdx(0)
+      if (q.length === 0) { setPhase('empty'); return }
+      setStartedAt(Date.now()); setNow(Date.now())
+      setPhase('session')
     })()
     return () => { cancelled = true }
-  }, [supabase, router, lessonParam, systemParam, lessonsParam, today, isGallery])
+  }, [supabase, router, lessonParam, systemParam, lessonsParam, today])
 
-  // Sauvegarde périodique de l'elapsed cumul (toutes les 30s) pour ne pas perdre
-  // le temps écoulé si l'utilisateur ferme l'onglet. Push aussi Supabase.
+  const paused = pauseFrom !== null
+  const elapsedMs = startedAt ? Math.max(0, (paused ? pauseFrom! : now) - startedAt - pausedMs) : 0
+
+  // Tick d'affichage + temps de travail du jour (toutes les 30 s, hors pause)
   useEffect(() => {
     if (phase !== 'session') return
-    const intv = setInterval(() => {
-      const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const cur = dayGardenRef.current
-      const dk = todayStr()
-      const next: DayBibliothecaState = {
-        ...cur,
-        elapsedMs: totalElapsed,
-        // +30 s de révision sur la journée courante (règle des 10 min/jour)
-        dayLog: pruneDayLog({ ...cur.dayLog, [dk]: (cur.dayLog[dk] ?? 0) + 30000 }),
-      }
-      dayGardenRef.current = next
-      saveDayBibliotheca(next, userIdRef.current)
-      pushBibToSupabase(supabase, userIdRef.current, next)
-    }, 30000)
-    return () => clearInterval(intv)
-  }, [phase, cumElapsedAtStart, startedAt, supabase])
-
-  // Sauvegarde finale au démontage de la page (localStorage + push cloud best-effort)
-  useEffect(() => {
-    return () => {
-      if (startedAt === 0) return
-      const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const finalState: DayBibliothecaState = { ...dayGardenRef.current, elapsedMs: totalElapsed }
-      saveDayBibliotheca(finalState, userIdRef.current)
-      pushBibToSupabase(supabase, userIdRef.current, finalState)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Cascade du bilan : rejoue l'arrivée des livres de la session, un par un.
-  useEffect(() => {
-    if (phase !== 'done') { setBilanReveal(null); return }
-    const end = dayGardenRef.current.fichesCount
-    const start = Math.min(end, sessionStartFichesCount)
-    if (end <= start) return
-    setBilanReveal(start)
-    let v = start
-    const t = setInterval(() => {
-      v++
-      setBilanReveal(v)
-      if (v >= end) clearInterval(t)
-    }, 170)
-    return () => clearInterval(t)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase])
-
-  // Tick chrono en mode session
-  useEffect(() => {
-    if (phase !== 'session') return
-    // Tick 1s : suffit pour le compteur de durée affiché. La bibliothèque
-    // est statique (pas de cycle jour/nuit), donc pas besoin de 100ms.
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [phase])
+  useEffect(() => {
+    if (phase !== 'session' || paused) return
+    const t = setInterval(() => {
+      const cur = timeRef.current
+      const dk = todayStr()
+      const next = { ...cur, elapsedMs: cur.elapsedMs + 30000, dayLog: { ...cur.dayLog, [dk]: (cur.dayLog[dk] ?? 0) + 30000 } }
+      timeRef.current = next
+      pushTime(supabase, userIdRef.current, next)
+    }, 30000)
+    return () => clearInterval(t)
+  }, [phase, paused, supabase])
 
-  const current = queue[currentIdx]
-  const currentSystem = current ? systems.find(s => s.id === current.lesson.system_id) : undefined
-  const currentSystemName = currentSystem?.name ?? 'Matière'
-  const currentResult = results[currentIdx] ?? null
+  const current = queue[idx]
+  const sys = current ? systems.find(s => s.id === current.lesson.system_id) : undefined
+  const sysJ = scheduleOf(sys)
+  const qs: AiQuestion[] = useMemo(() => (Array.isArray(current?.lesson.ai_questions) ? current!.lesson.ai_questions : []), [current])
+  const media = (current?.lesson.media ?? {}) as LessonMedia
 
-  // Prochain trésor à débloquer (utilisé dans le recap de fin de session)
-  const upcomingTreasure = nextBibTreasure(dayGarden.fichesCount)
+  // Remise à zéro quand on change de fiche
+  const resetFiche = useCallback(() => {
+    setStep(0); setPlan([]); setQi(0); setSel([]); setChecked(false); setAttempts([]); setTrainSaved(null)
+    setGrade(null); setGenSynth('idle'); setGenSynthErr(null); setGenQcmErr(null)
+  }, [])
 
-  // ============ Helpers d'avancement ============
-  function findNextEmptyIdx(arr: (Result | null)[], fromIdx: number): number {
-    // Cherche d'abord en avant
-    for (let i = fromIdx + 1; i < arr.length; i++) if (arr[i] === null) return i
-    // Sinon en arrière
-    for (let i = 0; i < fromIdx; i++) if (arr[i] === null) return i
+  const replaceLesson = useCallback((l: Lesson) => {
+    setQueue(q => q.map(it => (it.lesson.id === l.id ? { ...it, lesson: l } : it)))
+    setAllLessons(a => a.map(x => (x.id === l.id ? l : x)))
+  }, [])
+
+  // La page défile dans .se-root (plein écran fixe) : on remonte en haut à chaque étape ou fiche.
+  useEffect(() => { document.querySelector('.se-root')?.scrollTo({ top: 0 }) }, [step, idx])
+
+  // ---------- Entraînement ----------
+  const startTraining = useCallback(() => {
+    setStep(1)
+    if (plan.length === 0 && !trainSaved) { setPlan(pickTraining(qs)); setQi(0); setSel([]); setChecked(false); setAttempts([]) }
+  }, [plan.length, trainSaved, qs])
+
+  // Enregistre les réponses (compteurs, dernière réussite) et crée les flashcards
+  const saveTraining = useCallback(async (list: Attempt[]) => {
+    if (!current || trainSaved) return
+    if (list.length === 0) { setTrainSaved({ ok: 0, total: 0, cards: 0 }); return }
+    const all = [...qs] as AiQuestion[]
+    for (const a of list) {
+      const q = all[a.origIdx]
+      all[a.origIdx] = { ...q, attempts: (q.attempts || 0) + 1, correct: (q.correct || 0) + (a.correct ? 1 : 0), last_correct: a.correct }
+    }
+    const prevCards = Array.isArray(current.lesson.flashcards) ? (current.lesson.flashcards as Flashcard[]) : []
+    const { cards, added } = addCardsFromMistakes(prevCards, list.filter(a => !a.correct).map(a => ({ q: qs[a.origIdx], selected: a.selected })))
+    const ok = list.filter(a => a.correct).length
+    setTrainSaved({ ok, total: list.length, cards: added })
+    setStats(s => ({ qcmOk: s.qcmOk + ok, qcmTotal: s.qcmTotal + list.length }))
+    setGrade(g => g ?? suggestGrade(ok, list.length))
+    replaceLesson({ ...current.lesson, ai_questions: all, flashcards: cards })
+    const update: { ai_questions: AiQuestion[]; flashcards?: Flashcard[] } = { ai_questions: all }
+    if (added > 0) update.flashcards = cards
+    const { error } = await supabase.from('lessons').update(update).eq('id', current.lesson.id)
+    if (error && added > 0) await supabase.from('lessons').update({ ai_questions: all }).eq('id', current.lesson.id)
+  }, [current, trainSaved, qs, supabase, replaceLesson])
+
+  const goRate = useCallback(() => { void saveTraining(attempts); setStep(2) }, [saveTraining, attempts])
+
+  const validate = useCallback(() => {
+    const q = qs[plan[qi]]
+    if (!q || sel.length === 0) return
+    const correct = (() => { const a = normalizeAnswer(q.answer); return a.length === sel.length && a.every(x => sel.includes(x)) })()
+    setAttempts(list => [...list, { origIdx: plan[qi], selected: sel, correct }])
+    setChecked(true)
+  }, [qs, plan, qi, sel])
+
+  const nextQuestion = useCallback(() => {
+    if (qi + 1 >= plan.length) { void saveTraining(attempts); setStep(2); return }
+    setQi(qi + 1); setSel([]); setChecked(false)
+  }, [qi, plan.length, saveTraining, attempts])
+
+  // ---------- Génération (QCM, synthèse) depuis la session ----------
+  const generateQcm = useCallback(async () => {
+    if (!current) return
+    setGenQcmErr(null)
+    startGen(current.lesson.id, current.lesson.name)
+    let ok = false
+    try {
+      const res = await fetch('/api/generate-qcm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id, nbQ: 30, format: 'mixed', difficulty: 'annales', mode: 'replace' }) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || `Erreur ${res.status}`)
+      const { data: fresh } = await supabase.from('lessons').select('*').eq('id', current.lesson.id).single()
+      if (fresh) { replaceLesson(fresh as Lesson); setPlan(pickTraining((fresh as Lesson).ai_questions || [])) }
+      ok = true
+    } catch (e) {
+      setGenQcmErr(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      finishGen(current.lesson.id, ok)
+    }
+  }, [current, supabase, replaceLesson])
+
+  const generateSynthese = useCallback(async () => {
+    if (!current) return
+    setGenSynth('running'); setGenSynthErr(null)
+    try {
+      const res = await fetch('/api/generate-synthese', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id }) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || `Erreur ${res.status}`)
+      replaceLesson({ ...current.lesson, media: { ...(current.lesson.media as LessonMedia), synthese: (data as { synthese: LessonMedia['synthese'] }).synthese } })
+      setGenSynth('idle')
+    } catch (e) {
+      setGenSynth('error'); setGenSynthErr(e instanceof Error ? e.message : 'Erreur inconnue')
+    }
+  }, [current, replaceLesson])
+
+  // ---------- Noter / reporter ----------
+  const findNextEmpty = (arr: (Result | null)[], from: number) => {
+    for (let i = from + 1; i < arr.length; i++) if (arr[i] === null) return i
+    for (let i = 0; i < from; i++) if (arr[i] === null) return i
     return -1
   }
+  const advance = useCallback((arr: (Result | null)[]) => {
+    const n = findNextEmpty(arr, idx)
+    if (n === -1) setPhase('done')
+    else { setIdx(n); resetFiche() }
+  }, [idx, resetFiche])
 
-  // ============ Actions : rate ============
   const rate = useCallback(async (score: Score) => {
-    if (!current || loading || phase !== 'session') return
-    setLoading(true)
-
-    const wasEmpty = results[currentIdx] === null
-    const atMs = Math.max(0, Date.now() - startedAt)
-
+    if (!current || busy) return
+    setBusy(true)
+    if (!trainSaved && attempts.length > 0) await saveTraining(attempts)
     const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-    const rateJ = scheduleOf(systems.find(s => s.id === current.lesson.system_id))
-    while (rateJ.length > newSteps.length) newSteps.push(null)
-    // Si le J n'est pas encore dû (status: 'fresh'), on écrit un score TEMPORAIRE
-    // qui ne touche ni le calendrier ni les helpers (stepScore ne lit que .score).
-    // Sinon (today/missed), c'est le score officiel : il remplace tout temp.
-    if (current.due.status === 'fresh') {
-      newSteps[current.due.stepIndex] = {
-        note: '',
-        temp_score: score,
-        temp_date: today,
-      } as unknown as StepEntry
-    } else {
-      newSteps[current.due.stepIndex] = { score, date: today, note: '' } as StepEntry
-    }
+    while (sysJ.length > newSteps.length) newSteps.push(null)
+    newSteps[current.due.stepIndex] = current.due.status === 'fresh'
+      ? ({ note: '', temp_score: score, temp_date: today } as unknown as StepEntry)
+      : ({ score, date: today, note: '' } as StepEntry)
     await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
+    replaceLesson({ ...current.lesson, steps: newSteps as Lesson['steps'] })
+    const arr = [...results]; arr[idx] = { kind: 'rated', score }
+    setResults(arr)
+    setBusy(false)
+    advance(arr)
+  }, [current, busy, trainSaved, attempts, saveTraining, sysJ.length, today, supabase, replaceLesson, results, idx, advance])
 
-    const newResults = [...results]
-    newResults[currentIdx] = {
-      lessonId: current.lesson.id,
-      lessonName: current.lesson.name,
-      systemName: currentSystemName,
-      outcome: { kind: 'rated', score, atMs },
-    }
-    setResults(newResults)
-
-    // Burst de particules gold à chaque rate — feedback générique de complétion.
-    // Position : centre du SVG bibliothèque (les particules survolent les livres).
-    // Le score n'a pas d'incidence visuelle ; seule l'action de noter compte.
-    if (wasEmpty) {
-      const totalElapsed = cumElapsedAtStart + Math.max(0, Date.now() - startedAt)
-      const newCount = dayGardenRef.current.fichesCount + 1
-      const updatedGarden: DayBibliothecaState = {
-        ...dayGardenRef.current,
-        elapsedMs: totalElapsed,
-        fichesCount: newCount,
-        // Registre : on consigne le livre qui vient d'être rangé.
-        bookLog: mergeBookLogs(dayGardenRef.current.bookLog, [{
-          n: newCount,
-          t: current.lesson.name,
-          s: score,
-          d: today,
-          m: Math.floor(atMs / 60000),
-        }]),
-      }
-      dayGardenRef.current = updatedGarden
-      setDayGarden(updatedGarden)
-      saveDayBibliotheca(updatedGarden, userIdRef.current)
-      // Push cloud immédiat : si l'utilisateur change d'appareil juste après,
-      // il retrouve son dernier livre tout de suite.
-      pushBibToSupabase(supabase, userIdRef.current, updatedGarden)
-    }
-
-    setParticleBurst({ ts: Date.now(), x: 800, y: 550 })
-
-    if (wasEmpty) {
-      // CHORÉGRAPHIE (visuel uniquement — la DB est déjà écrite ci-dessus) :
-      //   0-450 ms   l'empreinte de cire s'imprime sur la page
-      //   450-850 ms le livre se referme (page droite se rabat, puis compactage)
-      //   850 ms     le livre fermé s'envole vers le compteur-bibliothèque
-      //   980 ms     fiche suivante (nouveau livre vierge)
-      // loading reste true pendant la cérémonie : pas de double clic possible.
-      setSealStamp({ score, ts: Date.now() })
-      playStamp()
-      const sys = systems.find(s => s.id === current.lesson.system_id)
-      const flyColor = (sys as { color?: string } | undefined)?.color || '#2C415A'
-      const chip = libChipRef.current
-      const target = chip ? chip.getBoundingClientRect() : null
-      window.setTimeout(() => {
-        playBookClose()
-        playWhoosh()
-        if (target) {
-          setBookFly({
-            x: target.left + target.width / 2,
-            y: target.top + target.height / 2,
-            ts: Date.now(),
-            color: flyColor,
-          })
-        }
-      }, 850)
-      window.setTimeout(() => {
-        setSealStamp(null)
-        const next = findNextEmptyIdx(newResults, currentIdx)
-        if (next === -1) setPhase('done')
-        else setCurrentIdx(next)
-        setLoading(false)
-      }, 980)
-    } else {
-      // Re-rating : pas de cérémonie, on reste sur la fiche.
-      setLoading(false)
-    }
-  }, [current, loading, phase, currentIdx, results, supabase, today, currentSystemName, startedAt, cumElapsedAtStart, systems])
-
-  // ============ Actions : report ============
   const report = useCallback(async () => {
-    if (!current || loading || phase !== 'session') return
-    setLoading(true)
-
-    const wasEmpty = results[currentIdx] === null
-    const wasRated = results[currentIdx]?.outcome.kind === 'rated'
-    const atMs = Math.max(0, Date.now() - startedAt)
-
-    // Si on bascule rated → reported, on efface la note en DB pour rester cohérent
-    if (wasRated) {
+    if (!current || busy) return
+    setBusy(true)
+    if (results[idx]?.kind === 'rated') {
       const newSteps = [...((current.lesson.steps as StepEntry[]) || [])]
-      const reportJ = scheduleOf(systems.find(s => s.id === current.lesson.system_id))
-      while (reportJ.length > newSteps.length) newSteps.push(null)
       newSteps[current.due.stepIndex] = null
       await supabase.from('lessons').update({ steps: newSteps }).eq('id', current.lesson.id)
     }
+    const arr = [...results]; arr[idx] = { kind: 'reported' }
+    setResults(arr)
+    setBusy(false)
+    advance(arr)
+  }, [current, busy, results, idx, supabase, advance])
 
-    const newResults = [...results]
-    newResults[currentIdx] = {
-      lessonId: current.lesson.id,
-      lessonName: current.lesson.name,
-      systemName: currentSystemName,
-      outcome: { kind: 'reported', atMs },
-    }
-    setResults(newResults)
+  const goTo = useCallback((i: number) => { if (i !== idx) { setIdx(i); resetFiche() } }, [idx, resetFiche])
 
-    if (wasEmpty) {
-      const next = findNextEmptyIdx(newResults, currentIdx)
-      if (next === -1) setPhase('done')
-      else setCurrentIdx(next)
-    }
-
-    setLoading(false)
-  }, [current, loading, phase, currentIdx, results, supabase, currentSystemName, startedAt, systems])
-
-  // ============ Navigation ============
-  const goPrev = useCallback(() => {
-    if (phase !== 'session') return
-    setCurrentIdx(i => Math.max(0, i - 1))
-  }, [phase])
-
-  const goNext = useCallback(() => {
-    if (phase !== 'session') return
-    setCurrentIdx(i => Math.min(queue.length - 1, i + 1))
-  }, [phase, queue.length])
-
-  // ============ Raccourcis clavier ============
+  // Raccourcis : 1-5 noter (étape 3), flèches changer de fiche
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        if (openBook) { playBookClose(); setOpenBook(null); return }
-        router.push('/dashboard')
-        return
-      }
       if (phase !== 'session') return
-      if (e.key === 'ArrowLeft') { goPrev(); return }
-      if (e.key === 'ArrowRight') { goNext(); return }
-      if (e.key === 'r' || e.key === 'R') { report(); return }
-      const n = parseInt(e.key, 10)
-      if (n >= 1 && n <= 5) rate(n as Score)
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.key === 'ArrowLeft' && idx > 0) goTo(idx - 1)
+      else if (e.key === 'ArrowRight' && idx < queue.length - 1) goTo(idx + 1)
+      else if (step === 2 && /^[1-5]$/.test(e.key)) setGrade(Number(e.key) as Score)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [rate, report, router, phase, goPrev, goNext, openBook])
+  }, [phase, idx, queue.length, step, goTo])
 
-  // ===================== RENDERS =====================
-  // Popup du registre : carte flottante pres du clic, clampee a l'ecran.
-  const bookPop = (() => {
-    if (!openBook || typeof window === 'undefined') return null
-    const W = 268
-    const left = Math.max(12, Math.min(window.innerWidth - W - 12, openBook.x - W / 2))
-    const top = Math.max(70, Math.min(window.innerHeight - 200, openBook.y + 16))
-    const entry = openBook.entry
-    return (
-      <div className="focus-book-pop" style={{ left, top }} role="dialog" aria-label={`Ouvrage numéro ${openBook.index + 1}`}>
-        <button
-          type="button"
-          className="focus-book-pop-close"
-          aria-label="Fermer"
-          onClick={(ev) => { ev.stopPropagation(); playBookClose(); setOpenBook(null) }}
-        >
-          {'\u00d7'}
-        </button>
-        <div className="focus-book-pop-kicker">Ouvrage n{'\u00b0'} {openBook.index + 1}</div>
-        {entry ? (
-          <>
-            <div className="focus-book-pop-title">{entry.t}</div>
-            <div className="focus-book-pop-meta">
-              {entry.d ? <>{formatBookDate(entry.d)}<br /></> : null}
-              {entry.m < 1 ? "Noté dans la première minute" : `Noté après ${entry.m} min de session`}
-            </div>
-            <div className="focus-book-pop-seal" style={{ background: SCORE_COLORS[entry.s] }} title={`Note : ${entry.s}/5`}>
-              <span>{entry.s}</span>
-            </div>
-          </>
-        ) : (
-          <div className="focus-book-pop-old">
-            Écrit avant la tenue du registre. Son histoire reste entre ses pages.
-          </div>
-        )}
-      </div>
-    )
-  })()
+  // ===================== RENDUS =====================
+  if (phase === 'loading') return <div className="se-root"><PageLoader label="Préparation de ta session…" /></div>
 
-  if (!userId || phase === 'loading') {
-    return (
-      <div className="focus-root">
-        <PageLoader label="Préparation de ta session…" />
-      </div>
-    )
-  }
+  const mm = Math.floor(elapsedMs / 60000), ss = Math.floor(elapsedMs / 1000) % 60
+  const timer = `${mm}:${String(ss).padStart(2, '0')}`
+  const doneCount = results.filter(Boolean).length
+  const estMin = queue.length * 8
 
   if (phase === 'empty') {
     return (
-      <div className="focus-root">
-        <div className="focus-topbar">
-          <div className="focus-brand">MedRev <span className="focus-brand-mode">focus</span></div>
-          <div className="focus-topbar-right">
-            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
+      <div className="se-root">
+        <div className="se-center">
+          <div className="se-empty">
+            <h1>Rien à réviser</h1>
+            <p>{lessonParam ? "Cette fiche n'est pas disponible pour la révision." : systemParam ? "Aucune fiche de cette matière n'est due aujourd'hui." : 'Tu es à jour. Profite de ta journée.'}</p>
+            <Link href="/dashboard" className="se-btn se-btn-primary">Retour au tableau de bord</Link>
           </div>
-        </div>
-        <div className="focus-stage">
-          <div className="focus-card focus-empty-card">
-            <div className="focus-empty-mark" aria-hidden="true">{'✓'}</div>
-            <h2 className="focus-empty-title">Rien à réviser</h2>
-            <p className="focus-empty-sub">
-              {lessonParam
-                ? "Cette fiche n’est pas disponible pour la révision."
-                : systemParam
-                  ? "Aucune fiche de cette matière n’est due aujourd’hui."
-                  : "Tu es à jour. Profite de ta journée."}
-            </p>
-            <Link href="/dashboard" className="focus-empty-cta">Retour au tableau de bord</Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ============ phase === 'lobby' : la bibliothèque + "Commencer" ============
-  // Modèle Forest : on contemple le jardin, puis on choisit de planter.
-  if (phase === 'lobby') {
-    const treasures = unlockedTreasuresCount(dayGarden.fichesCount)
-    return (
-      <div className="focus-root">
-        <div className="focus-topbar">
-          <div className="focus-brand">
-            <span className="focus-brand-dot" aria-hidden="true" />
-            MedRev <span className="focus-brand-mode">focus</span>
-          </div>
-          <div className="focus-topbar-right">
-            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
-          </div>
-        </div>
-
-        <div className="focus-stage">
-          {/* La bibliothèque entière, sans rien devant. Cliquable : chaque
-              livre s'ouvre sur sa fiche (registre). */}
-          <div className="focus-garden focus-garden-clickable" onClick={handleGardenClick}>
-            <BibliothecaSvg
-              fichesCount={dayGarden.fichesCount}
-              className="focus-garden-svg"
-              preserveAspectRatio="xMidYMid slice"
-            />
-          </div>
-
-          {/* MODE GALERIE : une plaque de laiton en bas, comme dans un vrai
-              cabinet de lecture. Stats en chips, jalon avec barre, indice discret. */}
-          {isGallery && (
-            <div className="focus-gallery-caption">
-              <div className="fg-plaque">
-                <div className="fg-brand">Bibliotheca</div>
-                <div className="fg-chips">
-                  <div className="fg-chip">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13ZM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-2.5" />
-                    </svg>
-                    <strong>{dayGarden.fichesCount}</strong>
-                    <span>ouvrage{dayGarden.fichesCount > 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="fg-sep" aria-hidden="true" />
-                  <div className="fg-chip gold">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M6 3h12l4 6-10 12L2 9l4-6Z" /><path d="M2 9h20M12 21 8 9l4-6 4 6-4 12" />
-                    </svg>
-                    <strong>{treasures}/6</strong>
-                    <span>trésors</span>
-                  </div>
-                  {(() => {
-                    const goal = nextMilestone(dayGarden.fichesCount)
-                    if (!goal) return null
-                    const pct = Math.min(100, Math.max(0, ((dayGarden.fichesCount - goal.prevAt) / (goal.at - goal.prevAt)) * 100))
-                    const left = goal.at - dayGarden.fichesCount
-                    return (
-                      <>
-                        <div className="fg-sep" aria-hidden="true" />
-                        <div className="fg-chip fg-goal">
-                          <span className="fg-goal-name">{goal.label}</span>
-                          <div className="fg-goal-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
-                          <span className="fg-goal-left">dans {left} livre{left > 1 ? 's' : ''}</span>
-                        </div>
-                      </>
-                    )
-                  })()}
-                </div>
-              </div>
-              <Link href="/dashboard" className="focus-link">{'←'} Retour au tableau de bord</Link>
-            </div>
-          )}
-
-          {/* Invitation à la session, en bas au centre. Le prochain jalon est
-              intégré ICI — plus de panneau qui recouvre le meuble, les trésors
-              se découvrent sur les étagères elles-mêmes. */}
-          {!isGallery && (
-          <div className="focus-lobby-card">
-            <div className="focus-lobby-title">
-              {queue.length} fiche{queue.length > 1 ? 's' : ''} à réviser
-            </div>
-            {(() => {
-              const goal = nextMilestone(dayGarden.fichesCount)
-              if (!goal) return null
-              const pct = Math.min(100, Math.max(0, ((dayGarden.fichesCount - goal.prevAt) / (goal.at - goal.prevAt)) * 100))
-              const left = goal.at - dayGarden.fichesCount
-              return (
-                <div className="focus-lobby-goal">
-                  <div className="focus-lobby-goal-row">
-                    <span className="focus-lobby-goal-name">Prochain jalon : <strong>{goal.label}</strong></span>
-                    <span className="focus-lobby-goal-left">{left} livre{left > 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="focus-lobby-goal-bar" aria-hidden="true">
-                    <div className="focus-lobby-goal-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              )
-            })()}
-            <button
-              type="button"
-              className="focus-lobby-start"
-              onClick={() => {
-                setStartedAt(Date.now())
-                setNow(Date.now())
-                setPhase('session')
-              }}
-            >
-              Commencer la session →
-            </button>
-          </div>
-          )}
-
-          {bookPop}
         </div>
       </div>
     )
   }
 
   if (phase === 'done') {
-    const elapsedSec = Math.max(0, Math.round((now - startedAt) / 1000))
-    const min = Math.floor(elapsedSec / 60)
-    const sec = elapsedSec % 60
-    const filled = results.filter((r): r is Result => r !== null)
-    const rated = filled.filter(r => r.outcome.kind === 'rated')
-    const reported = filled.length - rated.length
-    const avg = rated.length === 0
-      ? null
-      : rated.reduce((s, r) => s + (r.outcome as { score: Score }).score, 0) / rated.length
-
-    // ============ Recap session ============
-    const sessionElapsedMs = Math.max(0, now - startedAt)
-    // Livres ajoutés à la bibliothèque pendant cette session : différence entre
-    // le nombre de fiches notées avant et après. 1 fiche notée = 1 livre.
-    const sessionBooks = Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)
-    // Trésors débloqués pendant cette session (paliers franchis)
-    const treasuresAtStart = unlockedTreasuresCount(sessionStartFichesCount)
-    const treasuresAtEnd = unlockedTreasuresCount(dayGarden.fichesCount)
-    const sessionTreasuresUnlocked = Math.max(0, treasuresAtEnd - treasuresAtStart)
-
+    const rated = results.filter((r): r is Extract<Result, { kind: 'rated' }> => r?.kind === 'rated').length
+    const tomorrow = dateStrFromOffset(today, 1)
+    const schedOf = makeScheduleResolver(systems)
+    const tomorrowCount = allLessons.filter(l => getDueOn(l, tomorrow, schedOf(l.system_id))).length
+    const weakCount = results.filter(r => r?.kind === 'rated' && r.score <= 2).length
+    const totalMin = Math.max(1, Math.round(elapsedMs / 60000))
+    const dur = totalMin >= 60 ? `${Math.floor(totalMin / 60)} h ${String(totalMin % 60).padStart(2, '0')}` : `${totalMin} min`
     return (
-      <div className="focus-root">
-        {/* TOP BAR (overlay glass sur le ciel) */}
-        <div className="focus-topbar">
-          <div className="focus-brand">
-            <span className="focus-brand-dot" aria-hidden="true" />
-            MedRev <span className="focus-brand-mode">focus</span>
-          </div>
-          <div className="focus-topbar-right">
-            <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-            <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter">{'×'}</Link>
-          </div>
-        </div>
-
-        <div className="focus-stage">
-
-          {/* BIBLIOTHÈQUE visible en fond — les livres de la session arrivent
-              en CASCADE (bilanReveal monte un par un, chaque pas déclenche le
-              pop + la bouffée de poussière du SVG). */}
-          <div className="focus-garden">
-            <BibliothecaSvg
-              fichesCount={bilanReveal ?? dayGarden.fichesCount}
-              className="focus-garden-svg"
-              preserveAspectRatio="xMidYMid slice"
-            />
-          </div>
-
-          {/* Voile central : assoit la lisibilité du bilan SANS pavé opaque,
-              le meuble reste visible tout autour. */}
-          <div className="focus-bilan-veil" aria-hidden="true" />
-
-          {/* BILAN CENTRÉ en typographie flottante (pas de carte qui coupe
-              l'écran, pas de panneau qui recouvre la bibliothèque). */}
-          <div className="focus-bilan">
-            <div className="focus-bilan-kicker">Session terminée</div>
-            <h2 className="focus-bilan-title">
-              {rated.length} fiche{rated.length > 1 ? 's' : ''} notée{rated.length > 1 ? 's' : ''}
-              {reported > 0 && (
-                <span className="focus-bilan-reported"> · {reported} reportée{reported > 1 ? 's' : ''}</span>
-              )}
-            </h2>
-            <div className="focus-bilan-meta">
-              en {min} min {sec.toString().padStart(2, '0')} s
-              {avg !== null && <> · moyenne <strong>{avg.toFixed(1)}/5</strong></>}
-              {sessionBooks > 0 && <> · <strong>+{sessionBooks}</strong> ouvrage{sessionBooks > 1 ? 's' : ''} rangé{sessionBooks > 1 ? 's' : ''}</>}
-            </div>
-            <div className="focus-bilan-next">
-              {sessionTreasuresUnlocked > 0
-                ? <>✦ {sessionTreasuresUnlocked > 1 ? `${sessionTreasuresUnlocked} nouveaux trésors débloqués` : 'Nouveau trésor débloqué'}. Regarde tes étagères</>
-                : upcomingTreasure
-                  ? <>Prochain trésor : <strong>{upcomingTreasure.name}</strong>, encore {upcomingTreasure.at - dayGarden.fichesCount} fiche{upcomingTreasure.at - dayGarden.fichesCount > 1 ? 's' : ''}</>
-                  : <>Tous les trésors sont débloqués, bravo !</>}
-            </div>
-
-            <div className="focus-bilan-list">
-              {filled.map((r, i) => (
-                <div key={`${r.lessonId}-${i}`} className="focus-bilan-row">
-                  <span className="focus-bilan-row-num">{i + 1}</span>
-                  <span className="focus-bilan-row-name">{r.lessonName}</span>
-                  <span className="focus-bilan-row-sys">{r.systemName}</span>
-                  {r.outcome.kind === 'rated'
-                    ? <span className={`focus-done-chip s${r.outcome.score}`}>{r.outcome.score}/5</span>
-                    : <span className="focus-done-chip reported">Reportée</span>}
+      <div className="se-root">
+        <div className="se-done">
+          <div className="se-kicker se-ok">Session terminée</div>
+          <h1 className="se-done-title">{rated} fiche{rated > 1 ? 's' : ''} revue{rated > 1 ? 's' : ''}.</h1>
+          <p className="se-done-sub">
+            {dur} de travail{stats.qcmTotal > 0 ? `, ${stats.qcmOk} QCM justes sur ${stats.qcmTotal}` : ''}.
+          </p>
+          <section className="se-card se-done-list">
+            {queue.map((it, i) => {
+              const r = results[i]
+              if (!r) return null
+              const j = scheduleOf(systems.find(s => s.id === it.lesson.system_id))
+              const nextI = it.due.stepIndex + 1
+              const next = r.kind === 'reported' ? 'demain' : nextI < j.length && it.lesson.learn_date ? shortDate(stepDate(it.lesson, nextI, j)) : 'fin du planning'
+              const color = (systems.find(s => s.id === it.lesson.system_id) as { color?: string } | undefined)?.color || '#3E6F9C'
+              return (
+                <div key={it.lesson.id} className="se-done-row">
+                  <span className="se-dot" style={{ background: color }} />
+                  <span className="se-done-name">{it.lesson.name}</span>
+                  {r.kind === 'rated'
+                    ? <span className={`se-pill s${r.score}`}>{r.score}/5</span>
+                    : <span className="se-pill se-pill-muted">Reportée</span>}
+                  <span className="se-done-next">{next}</span>
                 </div>
-              ))}
-            </div>
-
-            <Link href="/dashboard" className="focus-bilan-cta">Retour au tableau de bord</Link>
-          </div>
+              )
+            })}
+          </section>
+          <section className="se-card se-done-foot">
+            <p><b>Demain :</b> {tomorrowCount} fiche{tomorrowCount > 1 ? 's' : ''} prévue{tomorrowCount > 1 ? 's' : ''}{weakCount === 1 ? '. Pense à relire la fiche notée 1 ou 2.' : weakCount > 1 ? `. Pense à relire les ${weakCount} fiches notées 1 ou 2.` : '.'}</p>
+            <Link href="/dashboard" className="se-btn se-btn-primary">Retour au tableau de bord</Link>
+          </section>
         </div>
       </div>
     )
   }
 
-  // ============ phase === 'session' ============
+  // ---------- Session ----------
   if (!current) return null
-  const elapsedSec = Math.max(0, Math.round((now - startedAt) / 1000))
-  const min = Math.floor(elapsedSec / 60)
-  const sec = elapsedSec % 60
-  const total = queue.length
-  const completedCount = results.filter(r => r !== null).length
-  // (progression affichée via le chip Fiche x/y de la topbar)
-  const sysColor = (currentSystem as { color?: string } | undefined)?.color || '#2D6A4F'
-  const sysJ = scheduleOf(currentSystem)
-  const allFilled = completedCount === total
+  const color = (sys as { color?: string } | undefined)?.color || '#3E6F9C'
+  const statusLabel = current.due.status === 'missed'
+    ? `J+${sysJ[current.due.stepIndex]}, en retard de ${current.due.overdueDays} jour${current.due.overdueDays > 1 ? 's' : ''}`
+    : current.due.status === 'fresh'
+      ? `J+${sysJ[current.due.stepIndex]}, en avance`
+      : current.lastScore === null && current.due.stepIndex === 0 ? 'Nouvelle fiche, J+0' : `J+${sysJ[current.due.stepIndex]}, prévue aujourd'hui`
+  const synth = media.synthese
+  const missedQs = qs.map((q, i) => ({ q, i })).filter(x => isMissed(x.q)).slice(0, 3)
+  const hasSource = !!media.pdf_path || !!media.video_path
+  const nextI = current.due.stepIndex + 1
+  const nextDate = nextI < sysJ.length && current.lesson.learn_date ? stepDate(current.lesson, nextI, sysJ) : null
+  const tq = plan.length ? qs[plan[qi]] : undefined
+  const okSoFar = attempts.filter(a => a.correct).length
+  const suggested = trainSaved ? suggestGrade(trainSaved.ok, trainSaved.total) : null
 
-  let statusLabel = ''
-  let statusCls: 'missed' | 'today' | 'fresh' = 'today'
-  if (current.due.status === 'missed') {
-    statusLabel = `J+${sysJ[current.due.stepIndex]} manqué depuis ${current.due.overdueDays} j`
-    statusCls = 'missed'
-  } else if (current.due.status === 'fresh') {
-    statusLabel = `J+${sysJ[current.due.stepIndex]} · planification libre`
-    statusCls = 'fresh'
-  } else {
-    statusLabel = current.lastScore === null && current.due.stepIndex === 0
-      ? `J+0 · nouvelle fiche`
-      : `J+${sysJ[current.due.stepIndex]} dû aujourd’hui`
-    statusCls = 'today'
-  }
-
-  // Détection re-action : la fiche courante est déjà actionnée dans cette session
-  const alreadyRated = currentResult !== null && currentResult.outcome.kind === 'rated'
-  const alreadyReported = currentResult !== null && currentResult.outcome.kind === 'reported'
-  let ratedScore: Score | null = null
-  if (currentResult !== null && currentResult.outcome.kind === 'rated') {
-    ratedScore = currentResult.outcome.score
-  }
-
-  const canPrev = currentIdx > 0
-  const canNext = currentIdx + 1 !== queue.length
+  const steps: { label: string; sub: string }[] = [
+    { label: 'Relire', sub: synth ? 'Ta fiche de synthèse' : 'Ton cours' },
+    { label: "S'entraîner", sub: qs.length ? `${Math.min(TRAIN_SIZE, qs.length)} QCM sur ce cours` : 'QCM de la fiche' },
+    { label: 'Se noter', sub: 'Avec ton résultat' },
+  ]
 
   return (
-    <div className="focus-root">
-      {/* TOP BAR (overlay glass sur le ciel) */}
-      <div className="focus-topbar">
-        <div className="focus-brand">
-          <span className="focus-brand-dot" aria-hidden="true" />
-          MedRev <span className="focus-brand-mode">focus</span>
-        </div>
-        <div className="focus-topbar-right">
-          {/* Compteur-bibliothèque : cible du vol du livre refermé.
-              key = re-pop de l'anim à chaque livre rangé. */}
-          <div
-            className="focus-lib-chip"
-            ref={libChipRef}
-            title="Livres rangés dans ta bibliothèque cette session"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13ZM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-2.5" />
-            </svg>
-            <strong key={Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)} className="focus-lib-chip-num">
-              +{Math.max(0, dayGarden.fichesCount - sessionStartFichesCount)}
-            </strong>
+    <div className="se-root">
+      <header className="se-head">
+        <div className="se-head-title">
+          <Link href="/dashboard" className="se-logo" aria-label="Retour au tableau de bord">M</Link>
+          <div>
+            <div className="se-head-name">Session du jour</div>
+            <div className="se-head-sub">{queue.length} fiche{queue.length > 1 ? 's' : ''} prévue{queue.length > 1 ? 's' : ''}, environ {estMin >= 60 ? `${Math.floor(estMin / 60)} h ${String(estMin % 60).padStart(2, '0')}` : `${estMin} min`}</div>
           </div>
-          <div className="focus-progress-chip" aria-label={`Fiche ${currentIdx + 1} sur ${total}`}>
-            <span className="focus-progress-chip-lbl">Fiche</span>
-            <strong className="focus-progress-chip-num">{currentIdx + 1}</strong>
-            <span className="focus-progress-chip-slash">/</span>
-            <span className="focus-progress-chip-tot">{total}</span>
-            <span className="focus-progress-chip-divider" aria-hidden="true" />
-            <span className="focus-progress-chip-time">{min}:{sec.toString().padStart(2, '0')}</span>
-          </div>
-          {allFilled && (
-            <button
-              type="button"
-              className="focus-bilan-cta"
-              onClick={() => setPhase('done')}
-            >
-              Voir le bilan
-            </button>
-          )}
-          <button type="button" onClick={toggleFullscreen} className={`focus-immersive${isFullscreen ? ' active' : ''}`} aria-label={isFullscreen ? 'Sortir du plein écran' : 'Mode immersif'} title={isFullscreen ? 'Sortir du plein écran (Esc)' : 'Mode immersif (plein écran + écran allumé)'}>{isFullscreen ? '⊟' : '⊞'}</button>
-          <Link data-tour="focus-quit" href="/dashboard" className="focus-quit" aria-label="Quitter la session">{'×'}</Link>
         </div>
-      </div>
-
-      {/* STAGE de session : ÉPURÉ. Pas de bibliothèque, pas de panel —
-          seulement le livre qui s'écrit (hero) + la card de notation.
-          La bibliothèque se contemple au lobby et au bilan (modèle Forest). */}
-      <div className="focus-stage">
-
-        {/* SCÈNE : on est ASSIS dans la bibliothèque, la nuit. Les étagères
-            en silhouette au fond de la pièce, un bureau au premier plan,
-            la lampe de lecture qui éclaire le livre. */}
-        <div className="focus-garden focus-scene-shelves" aria-hidden="true">
-          <BibliothecaSvg
-            fichesCount={dayGarden.fichesCount}
-            className="focus-garden-svg"
-            preserveAspectRatio="xMidYMid slice"
-          />
-        </div>
-        <div className="focus-scene-veil" aria-hidden="true" />
-        <div className="focus-scene-desk" aria-hidden="true" />
-        <div className="focus-scene-glow" aria-hidden="true" />
-
-        {/* Lampe de lecture (banquier), posée sur le bureau à gauche du livre */}
-        <svg className="focus-scene-lamp" viewBox="0 0 220 260" aria-hidden="true">
-          <ellipse cx="110" cy="248" rx="52" ry="8" fill="#0C1828" />
-          <ellipse cx="110" cy="244" rx="44" ry="7" fill="#22384E" />
-          <rect x="105" y="160" width="10" height="84" rx="4" fill="#2C415A" />
-          <rect x="105" y="160" width="3.5" height="84" rx="1.6" fill="rgba(200,220,236,0.25)" />
-          {/* Bras incliné vers le livre */}
-          <path d="M 110 168 Q 138 130 172 122" stroke="#2C415A" strokeWidth="8" fill="none" strokeLinecap="round" />
-          <path d="M 110 168 Q 138 130 172 122" stroke="rgba(200,220,236,0.2)" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-          {/* Abat-jour marine, liseré argent */}
-          <path d="M 132 124 Q 172 96 212 124 L 198 146 Q 172 130 146 146 Z" fill="#1B3450" stroke="#0C1828" strokeWidth="1.2" />
-          <path d="M 132 124 Q 172 96 212 124" stroke="#7FB0D4" strokeWidth="1.6" fill="none" />
-          {/* Ampoule + lumière */}
-          <ellipse cx="172" cy="142" rx="17" ry="7" fill="#DFF0FC" opacity="0.95" />
-          <polygon points="150,146 194,146 236,252 112,252" fill="url(#lampCone)" />
-          <defs>
-            <linearGradient id="lampCone" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(207,230,248,0.30)" />
-              <stop offset="100%" stopColor="rgba(207,230,248,0)" />
-            </linearGradient>
-          </defs>
-        </svg>
-
-        {/* ZONE DE TRAVAIL centrée : infos de la fiche en typo flottante,
-            le livre qui s'écrit, puis les CIRES DE NOTATION posées sur le
-            bureau — noter = apposer son sceau. Plus aucune carte. */}
-        <div className="focus-deskzone">
-
-          <div className="focus-fiche-info">
-            <span className="focus-fiche-dot" style={{ background: sysColor }} aria-hidden="true" />
-            <span className="focus-fiche-sys">{currentSystemName}</span>
-            <span className={`focus-fiche-status ${statusCls}`}>{statusLabel}</span>
-            {current.lastScore !== null && !alreadyRated && !alreadyReported && (
-              <span className={`focus-last-pill s${current.lastScore}`}>dernière : {current.lastScore}/5</span>
-            )}
-            {alreadyRated && ratedScore !== null && (
-              <span className={`focus-last-pill s${ratedScore}`}>notée {ratedScore}/5 · modifiable</span>
-            )}
-            {alreadyReported && (
-              <span className="focus-fiche-reportee">reportée à demain</span>
-            )}
+        <div className="se-head-prog">
+          <div className="se-head-prog-lbl"><span>Fiche {idx + 1} sur {queue.length}</span><span>{doneCount} terminée{doneCount > 1 ? 's' : ''}</span></div>
+          <div className="se-segs" style={{ gridTemplateColumns: `repeat(${Math.min(queue.length, 40)}, minmax(0, 1fr))` }}>
+            {queue.slice(0, 40).map((_, i) => <i key={i} className={results[i] ? 'done' : i === idx ? 'cur' : ''} />)}
           </div>
+        </div>
+        <div className="se-head-acts">
+          <span className="se-timer" aria-label="Temps de travail">{timer}</span>
+          <button type="button" className="se-btn se-btn-ghost-dark" onClick={() => {
+            if (paused) { setPausedMs(p => p + (Date.now() - pauseFrom!)); setPauseFrom(null) } else setPauseFrom(Date.now())
+          }}>{paused ? 'Reprendre' : 'Pause'}</button>
+          <button type="button" className="se-btn se-btn-link-dark" onClick={() => { if (!trainSaved && attempts.length) void saveTraining(attempts); setPhase('done') }}>Terminer</button>
+        </div>
+      </header>
 
-          <LiveBook
-            key={`${current.lesson.id}-${currentIdx}`}
-            lessonName={current.lesson.name}
-            className="lb-hero"
-            coverColor={sysColor}
-            stamp={sealStamp ? { score: sealStamp.score, color: SCORE_COLORS[sealStamp.score] } : null}
-          />
+      {paused && (
+        <div className="se-pause" role="dialog" aria-label="Session en pause">
+          <div className="se-pause-card">
+            <h2>Session en pause</h2>
+            <p>Le temps ne compte plus. Reprends quand tu es prêt.</p>
+            <button type="button" className="se-btn se-btn-primary" onClick={() => { setPausedMs(p => p + (Date.now() - pauseFrom!)); setPauseFrom(null) }}>Reprendre</button>
+          </div>
+        </div>
+      )}
 
-          {/* LES CIRES : 1 À revoir … 5 Maîtrisé */}
-          <div className="focus-seals" role="group" aria-label="Noter la fiche">
-            {([1, 2, 3, 4, 5] as Score[]).map(n => (
-              <button
-                key={n}
-                type="button"
-                className={`focus-seal s${n}${alreadyRated && ratedScore === n ? ' sealed' : ''}`}
-                onClick={() => rate(n)}
-                disabled={loading}
-                title={`Note ${n}/5 (raccourci ${n})`}
-              >
-                <span className="focus-seal-wax" aria-hidden="true">
-                  <span className="focus-seal-num">{n}</span>
+      <div className="se-body">
+        <aside className="se-queue" aria-label="Au programme">
+          <div className="se-kicker">Au programme</div>
+          {queue.map((it, i) => {
+            const r = results[i]
+            const c = (systems.find(s => s.id === it.lesson.system_id) as { color?: string; name?: string } | undefined)
+            const j = scheduleOf(systems.find(s => s.id === it.lesson.system_id))
+            return (
+              <button key={it.lesson.id} type="button" onClick={() => goTo(i)} className={`se-qrow${i === idx ? ' cur' : ''}${r ? ' done' : ''}`}>
+                <span className="se-dot" style={{ background: c?.color || '#3E6F9C' }} />
+                <span className="se-qtxt">
+                  <span className="se-qname">{it.lesson.name}</span>
+                  <span className="se-qmeta">{c?.name ?? 'Matière'}, J+{j[it.due.stepIndex]}</span>
                 </span>
-                <span className="focus-seal-lbl">
-                  {n === 1 ? 'À revoir' : n === 2 ? 'Faible' : n === 3 ? 'Moyen' : n === 4 ? 'Bien' : 'Maîtrisé'}
-                </span>
+                {r?.kind === 'rated' && <span className={`se-pill s${r.score}`}>{r.score}/5</span>}
+                {r?.kind === 'reported' && <span className="se-pill se-pill-muted">Reportée</span>}
+                {!r && i === idx && <span className="se-pill se-pill-cur">En cours</span>}
+                {!r && i !== idx && it.due.stepIndex === 0 && it.lastScore === null && <span className="se-pill se-pill-new">Nouvelle</span>}
               </button>
-            ))}
+            )
+          })}
+        </aside>
+
+        <main className="se-main">
+          <section className="se-card se-fiche">
+            <div className="se-chips">
+              <span className="se-chip" style={{ color, background: `${color}1A` }}><span className="se-dot" style={{ background: color }} />{sys?.name ?? 'Matière'}</span>
+              <span className={`se-chip ${current.due.status === 'missed' ? 'se-chip-late' : 'se-chip-plain'}`}>{statusLabel}</span>
+              {current.lastScore !== null && <span className="se-chip-text">Dernière note : {current.lastScore}/5{current.lastDate ? `, le ${shortDate(current.lastDate)}` : ''}</span>}
+            </div>
+            <h1 className="se-title">{current.lesson.name}</h1>
+            <nav className="se-steps" aria-label="Étapes">
+              {steps.map((s, i) => {
+                const on = step === i, past = i < step
+                return (
+                  <button key={s.label} type="button" className={`se-step${on ? ' on' : ''}${past ? ' past' : ''}`} onClick={() => (i === 1 ? startTraining() : i === 2 ? goRate() : setStep(0))} aria-current={on ? 'step' : undefined}>
+                    <span className="se-step-n">{past ? '✓' : i + 1}</span>
+                    <span className="se-step-txt"><b>{s.label}</b><span>{s.sub}</span></span>
+                  </button>
+                )
+              })}
+            </nav>
+          </section>
+
+          {/* ===== 1. RELIRE ===== */}
+          {step === 0 && (
+            <section className="se-card se-panel se-split">
+              <div className="se-split-main">
+                {synth ? (
+                  <>
+                    <div className="se-panel-head"><h2>Ta fiche de synthèse</h2><span>Générée depuis ton cours</span></div>
+                    <ul className="se-ess">
+                      {synth.essentiel.map((e, i) => (
+                        <li key={i}>{e.texte}{e.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: e.page })}>p. {e.page}</button></> : null}</li>
+                      ))}
+                    </ul>
+                    {synth.tableau && (
+                      <div className="se-table-wrap">
+                        <table className="se-table">
+                          <thead><tr>{synth.tableau.colonnes.map(c => <th key={c}>{c}</th>)}</tr></thead>
+                          <tbody>{synth.tableau.lignes.map((l, i) => <tr key={i}>{l.map((c, k) => <td key={k}>{c}</td>)}</tr>)}</tbody>
+                        </table>
+                      </div>
+                    )}
+                    {synth.liste && (
+                      <dl className="se-list">
+                        {synth.liste.map((x, i) => <div key={i}><dt>{x.terme}</dt><dd>{x.detail}</dd></div>)}
+                      </dl>
+                    )}
+                  </>
+                ) : (
+                  <div className="se-nosynth">
+                    <h2>Relis ton cours</h2>
+                    {hasSource ? (
+                      <>
+                        <p>MedRev peut résumer ton cours en une fiche courte : les idées clés, les notions centrales et les pièges. Pour l&apos;avoir en tête avant de t&apos;entraîner.</p>
+                        <button type="button" className="se-btn se-btn-primary" onClick={generateSynthese} disabled={genSynth === 'running'}>
+                          {genSynth === 'running' ? 'Création de la fiche…' : 'Créer ma fiche de synthèse'}
+                        </button>
+                        {genSynth === 'running' && <p className="se-muted">Environ 20 secondes.</p>}
+                        {genSynthErr && <p className="se-err" role="alert">{genSynthErr}</p>}
+                      </>
+                    ) : (
+                      <p>Ajoute le poly ou la vidéo du cours à cette fiche pour avoir une fiche de synthèse et des QCM. En attendant, relis ton cours de ton côté.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="se-split-side">
+                {(synth?.pieges.length || missedQs.length) ? (
+                  <div className="se-traps">
+                    <div className="se-kicker se-late">Tes pièges sur ce cours</div>
+                    <ul>
+                      {missedQs.map(({ q, i }) => {
+                        const ref = q.source_ref && typeof q.source_ref === 'object' ? q.source_ref : null
+                        return (
+                          <li key={`m${i}`}>
+                            <b>Ratée la dernière fois :</b> {q.question}{' '}
+                            {ref?.pdf_page && media.pdf_path ? <button type="button" className="se-page" onClick={() => setSource({ pdf_page: ref.pdf_page })}>p. {ref.pdf_page}</button> : null}
+                          </li>
+                        )
+                      })}
+                      {(synth?.pieges ?? []).slice(0, Math.max(0, 3 - missedQs.length)).map((p, i) => (
+                        <li key={`p${i}`}>{p.texte}{p.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: p.page })}>p. {p.page}</button></> : null}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {hasSource && (
+                  <div className="se-box">
+                    <b>Le cours complet</b>
+                    {media.pdf_path && <button type="button" className="se-btn se-btn-ghost" onClick={() => setSource({ pdf_page: 1 })}>Ouvrir le poly{media.pdf_pages ? ` (${media.pdf_pages} pages)` : ''}</button>}
+                    {media.video_path && <button type="button" className="se-btn se-btn-ghost" onClick={() => setSource({ video_ts: 0 })}>Vidéo de l&apos;amphi</button>}
+                  </div>
+                )}
+                <button type="button" className="se-btn se-btn-primary se-push" onClick={qs.length || hasSource ? startTraining : goRate}>
+                  {qs.length || hasSource ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* ===== 2. S'ENTRAÎNER ===== */}
+          {step === 1 && (
+            <section className="se-card se-panel se-split">
+              <div className="se-split-main">
+                {qs.length === 0 ? (
+                  <div className="se-nosynth">
+                    <h2>Pas encore de QCM pour cette fiche</h2>
+                    {hasSource ? (
+                      <>
+                        <p>MedRev peut créer 30 QCM à partir de ton cours, en 30 à 60 secondes.</p>
+                        <button type="button" className="se-btn se-btn-primary" onClick={generateQcm}>Créer les QCM</button>
+                        <GenProgress lessonId={current.lesson.id} variant="fiche" />
+                        {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
+                      </>
+                    ) : <p>Ajoute le poly ou la vidéo du cours à la fiche pour pouvoir t&apos;entraîner. Tu peux passer directement à la note.</p>}
+                  </div>
+                ) : trainSaved ? (
+                  <div className="se-nosynth">
+                    <h2>Entraînement terminé</h2>
+                    <p>{trainSaved.ok} juste{trainSaved.ok > 1 ? 's' : ''} sur {trainSaved.total}.{trainSaved.cards > 0 ? ` ${trainSaved.cards} flashcard${trainSaved.cards > 1 ? 's' : ''} créée${trainSaved.cards > 1 ? 's' : ''} à partir de tes erreurs.` : ''}</p>
+                  </div>
+                ) : tq ? (
+                  <>
+                    <div className="se-qhead"><span>Question {qi + 1} sur {plan.length}{isMissed(tq) ? ', ratée la dernière fois' : ''}</span><span>{normalizeAnswer(tq.answer).length > 1 ? 'Plusieurs bonnes réponses' : 'Une seule bonne réponse'}</span></div>
+                    <div className="se-bar"><i style={{ width: `${((qi + (checked ? 1 : 0)) / plan.length) * 100}%` }} /></div>
+                    <h2 className="se-qtitle">{tq.question}</h2>
+                    {tq.visual && media.pdf_path && <QuestionFigure pdfPath={media.pdf_path} page={tq.visual.page} box={tq.visual.box} />}
+                    <div className="se-opts">
+                      {tq.options.map((opt, i) => {
+                        const answer = normalizeAnswer(tq.answer)
+                        const multi = answer.length > 1
+                        const on = sel.includes(i), ok = answer.includes(i)
+                        let cls = 'se-opt'
+                        if (checked) cls += ok && on ? ' good' : ok ? ' missed' : on ? ' bad' : ' dim'
+                        else if (on) cls += ' on'
+                        const mark = checked ? (on ? (ok ? '✓' : '✕') : '') : on ? '✓' : ''
+                        const why = checked ? whyFor(tq, i, tq.options.length) : ''
+                        return (
+                          <button key={i} type="button" className={cls} disabled={checked} aria-pressed={on}
+                            onClick={() => setSel(s => (multi ? (s.includes(i) ? s.filter(x => x !== i) : [...s, i]) : s.includes(i) ? [] : [i]))}>
+                            <span className="se-opt-box">{mark}</span>
+                            <span className="se-opt-txt">
+                              <span>{String.fromCharCode(65 + i)}. {stripLetter(opt)}</span>
+                              {checked && <span className="se-opt-mark">{ok ? (on ? 'Vrai, tu l\'as cochée' : 'Vrai, tu ne l\'as pas cochée') : on ? 'Faux, tu l\'as cochée' : 'Faux'}</span>}
+                              {why && <span className="se-opt-why">{why}</span>}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {checked && (() => {
+                      const expl = cleanExplanation(tq.explanation) || correctAnswersRecap(tq.options, normalizeAnswer(tq.answer))
+                      const ref = tq.source_ref && typeof tq.source_ref === 'object' ? tq.source_ref : null
+                      const last = attempts[attempts.length - 1]
+                      return (
+                        <div className={`se-feedback ${last?.correct ? 'ok' : 'ko'}`}>
+                          <b>{last?.correct ? 'Juste' : 'Faux : il fallait cocher exactement les bonnes propositions'}</b>
+                          {expl && <p>{expl}</p>}
+                          {ref?.pdf_page && media.pdf_path && <button type="button" className="se-page" onClick={() => setSource({ pdf_page: ref.pdf_page })}>Voir la page {ref.pdf_page}</button>}
+                          <ReportQuestion lessonId={current.lesson.id} source="session" questionIndex={plan[qi]} question={tq} />
+                        </div>
+                      )
+                    })()}
+                    <div className="se-actions">
+                      {!checked
+                        ? <button type="button" className="se-btn se-btn-primary" onClick={validate} disabled={sel.length === 0}>Valider</button>
+                        : <button type="button" className="se-btn se-btn-primary" onClick={nextQuestion}>{qi + 1 >= plan.length ? 'Passer à la note' : 'Question suivante'}</button>}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+              <div className="se-split-side">
+                {qs.length > 0 && !trainSaved && (
+                  <div className="se-box">
+                    <span className="se-muted">Pour l&apos;instant</span>
+                    <div className="se-mini-stats">
+                      <div><b className="se-ok">{okSoFar}</b><span>juste{okSoFar > 1 ? 's' : ''}</span></div>
+                      <div><b className="se-late">{attempts.length - okSoFar}</b><span>fausse{attempts.length - okSoFar > 1 ? 's' : ''}</span></div>
+                    </div>
+                  </div>
+                )}
+                <div className="se-info">Chaque erreur devient une flashcard et compte dans tes statistiques.</div>
+                <button type="button" className="se-btn se-btn-ghost se-push" onClick={goRate}>{attempts.length ? 'Arrêter et me noter' : 'Passer à la note'}</button>
+              </div>
+            </section>
+          )}
+
+          {/* ===== 3. SE NOTER ===== */}
+          {step === 2 && (
+            <section className="se-card se-panel se-rate">
+              {trainSaved && trainSaved.total > 0 && (
+                <div className="se-rate-stats">
+                  <div><b>{trainSaved.ok} / {trainSaved.total}</b><span>QCM justes</span></div>
+                  <div><b>{trainSaved.cards}</b><span>nouvelle{trainSaved.cards > 1 ? 's' : ''} flashcard{trainSaved.cards > 1 ? 's' : ''}</span></div>
+                  <div><b>{current.lastScore !== null ? `${current.lastScore}/5` : 'Aucune'}</b><span>note précédente</span></div>
+                </div>
+              )}
+              <div>
+                <h2 className="se-h2">Comment ça s&apos;est passé ?</h2>
+                <p className="se-p">{suggested ? <>Avec {trainSaved!.ok} sur {trainSaved!.total}, on te propose <b>{suggested}, {GRADE_LABELS[suggested][0]}</b>. Tu peux choisir une autre note.</> : 'Sois honnête : ta note sert à savoir où tu en es.'}</p>
+              </div>
+              <div className="se-grades" role="radiogroup" aria-label="Note de 1 à 5">
+                {([1, 2, 3, 4, 5] as Score[]).map(n => (
+                  <button key={n} type="button" role="radio" aria-checked={grade === n} className={`se-grade g${n}${grade === n ? ' on' : ''}`} onClick={() => setGrade(n)}>
+                    <b>{n}</b><span className="se-grade-l">{GRADE_LABELS[n][0]}</span><span className="se-grade-h">{GRADE_LABELS[n][1]}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="se-rate-foot">
+                <p>
+                  {current.due.status === 'fresh'
+                    ? <>Révision en avance : ta note est provisoire, la révision prévue le {shortDate(current.due.dueDate)} reste au planning.</>
+                    : nextDate ? <>Prochaine révision : J+{sysJ[nextI]}, {prettyDate(nextDate)}.</> : <>C&apos;était la dernière révision prévue pour cette fiche.</>}
+                </p>
+                <button type="button" className="se-btn se-btn-primary" disabled={!grade || busy} onClick={() => grade && rate(grade)}>
+                  {idx + 1 >= queue.length && results.filter(Boolean).length >= queue.length - 1 ? 'Valider et terminer' : 'Valider et fiche suivante'}
+                </button>
+              </div>
+            </section>
+          )}
+
+          <div className="se-under">
+            <span className="se-hint">Raccourcis : flèches pour changer de fiche, 1 à 5 pour choisir ta note</span>
+            <button type="button" className="se-btn se-btn-link" onClick={report} disabled={busy}>Reporter cette fiche à demain</button>
           </div>
-
-          {/* Actions secondaires : liens discrets sous le bureau */}
-          <div className="focus-underbook">
-            <button
-              type="button"
-              className="focus-link"
-              onClick={report}
-              disabled={loading || alreadyReported}
-              title={alreadyReported ? 'Déjà reportée' : 'Reporter à demain (raccourci R)'}
-            >
-              {alreadyReported ? 'Déjà reportée' : 'Reporter à demain'}
-            </button>
-            <span className="focus-underbook-sep" aria-hidden="true">{'·'}</span>
-            <button type="button" className="focus-link" onClick={goPrev} disabled={!canPrev} title="Fiche précédente (←)">
-              {'‹'} précédente
-            </button>
-            <button type="button" className="focus-link" onClick={goNext} disabled={!canNext} title="Fiche suivante (→)">
-              suivante {'›'}
-            </button>
-          </div>
-        </div>
-
-        {/* GHOST : livre refermé qui vole du pupitre vers le compteur-
-            bibliothèque. Séparé du pupitre pour survivre au changement de fiche. */}
-        {bookFly && (
-          <div
-            key={bookFly.ts}
-            className="lb-ghost"
-            style={{
-              ['--tx' as never]: `${bookFly.x.toFixed(0)}px`,
-              ['--ty' as never]: `${bookFly.y.toFixed(0)}px`,
-              background: bookFly.color,
-            }}
-            onAnimationEnd={() => setBookFly(null)}
-            aria-hidden="true"
-          />
-        )}
-
-        {/* HINT clavier — flotte sur le ciel, bas-droite, non-intrusif */}
-        <div className="focus-hint">
-          <span><kbd>1</kbd>–<kbd>5</kbd> noter</span>
-          <span className="focus-hint-sep">{'·'}</span>
-          <span><kbd>R</kbd> reporter</span>
-          <span className="focus-hint-sep">{'·'}</span>
-          <span><kbd>←</kbd><kbd>→</kbd> naviguer</span>
-        </div>
+        </main>
       </div>
+
+      {source && (
+        <SourceLightbox media={media} sourceRef={source} lessonName={current.lesson.name} onClose={() => setSource(null)} />
+      )}
     </div>
   )
 }
+
+// DEFAULT_J reste importé pour les fiches sans matière (scheduleOf s'en sert).
+void DEFAULT_J

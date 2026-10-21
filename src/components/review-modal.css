@@ -572,3 +572,7 @@
 .gp-fiche.gp-done .gp-fiche-top b { color: var(--success, #4F8A45); }
 .gp-fiche.gp-error .gp-fiche-bar i { background: var(--danger, #C75050); }
 .gp-fiche-hint { margin-top: 6px; font-size: 11.5px; color: var(--text-secondary); }
+
+/* Nom d'origine du fichier : coupé proprement s'il est long */
+.rmod-cours-fname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rmod-cours-nom em { flex: none; }
