@@ -1372,3 +1372,35 @@
     padding: 16px 12px 40px;
   }
 }
+
+/* ============================================================
+   CONFIG : entraînement (gauche) + concours blanc et classement (droite)
+   ============================================================ */
+.sim-cfg-wrap { width: 100%; max-width: 1180px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; }
+.sim-cfg-wrap .sim-cfg { max-width: none; }
+.sim-kick { font-family: var(--font-hanken), sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gray); margin-bottom: 4px; }
+.sim-cfg-sub { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: var(--gray); max-width: 620px; }
+.sim-rank { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.sim-cb { background: #15304E; color: #fff; border-radius: 14px; padding: 20px; }
+.sim-kick-light { color: #9CC2E4; }
+.sim-cb-t { font-family: var(--font-bricolage), sans-serif; font-size: 21px; font-weight: 600; margin: 0 0 8px; letter-spacing: -.01em; }
+.sim-cb-p { margin: 0; font-size: 13.5px; line-height: 1.5; color: #C8DCEC; }
+.sim-cb-p b { color: #fff; }
+.sim-lb { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 18px; }
+.sim-lb-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.sim-lb-h h2 { font-family: var(--font-bricolage), sans-serif; font-size: 18px; font-weight: 600; margin: 0; color: var(--dark); }
+.sim-lb-h span { font-size: 12px; color: var(--gray); text-align: right; }
+.sim-lb-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 10px; background: var(--soft); margin-bottom: 12px; }
+.sim-lb-tabs span { text-align: center; font-size: 12.5px; font-weight: 600; padding: 8px 4px; border-radius: 7px; color: var(--gray); }
+.sim-lb-tabs span.on { background: var(--card); color: var(--dark); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.sim-lb-ghost { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.sim-lb-ghost div { display: grid; grid-template-columns: 22px minmax(0, 1fr) 36px; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; background: var(--soft); }
+.sim-lb-ghost b { font-size: 13px; color: var(--dim); }
+.sim-lb-ghost i { display: block; height: 8px; border-radius: 4px; background: var(--border); }
+.sim-lb-ghost div:nth-child(2) i { width: 70%; } .sim-lb-ghost div:nth-child(3) i { width: 85%; } .sim-lb-ghost div:nth-child(4) i { width: 60%; } .sim-lb-ghost div:nth-child(5) i { width: 75%; }
+.sim-lb-ghost em { display: block; height: 8px; border-radius: 4px; background: var(--border); }
+.sim-lb-empty p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--gray); }
+@media (max-width: 1080px) {
+  .sim-cfg-wrap { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+  .sim-rank { padding-top: 0; }
+}

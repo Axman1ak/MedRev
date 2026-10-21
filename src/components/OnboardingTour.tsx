@@ -37,8 +37,8 @@
 //    15. Calendrier — J auto
 //    16. Clic Tableau de bord (nav)
 //    17. Tableau de bord — centralise quotidien
-//    18. Clic zone Bibliothèque
-//    19. Bibliothèque — 2000 livres
+//    18. Clic zone Progression
+//    19. La session de travail
 //    20. Clic Simulateur (nav)
 //    21. Simulateur — utilise les QCM générés + Premium
 //    22. Clic Statistiques (nav)
@@ -377,29 +377,27 @@ const STEPS: Step[] = [
         <br />
         · tes <strong>TD du jour</strong> (l&apos;emploi du temps réel d&apos;abord),
         <br />
-        · ta <strong>to-do</strong> et ta <strong>bibliothèque</strong> qui grandit.
+        · ta <strong>to-do</strong> et ta <strong>progression</strong> semaine après semaine.
       </>
     ),
   },
-  // Bibliothèque + session focus : un seul tooltip explicatif au lieu de
+  // Session de travail : un seul tooltip explicatif au lieu de
   // forcer l'user à lancer puis quitter la session focus pendant le tour
   // (3 étapes économisées). L'user découvrira la session focus lui-même
   // depuis le dashboard quand il aura quelques fiches notées.
   {
     kind: 'tooltip-only',
     route: '/dashboard',
-    title: () => 'La bibliothèque : 2000 livres',
+    title: () => 'La session de travail',
     body: (
       <>
-        La <strong>session Focus</strong> est ton rituel de révision : un{' '}
-        <strong>livre s&apos;écrit</strong> pendant que tu travailles, tu
-        notes la fiche en apposant un <strong>sceau de cire</strong>, et le
-        livre vole se ranger dans ta <strong>bibliothèque de nuit</strong>.
-        Chaque fiche notée = 1 livre, <strong>6 trésors</strong> à débloquer,
-        et un bouton pour <strong>contempler</strong> ta collection depuis le
-        dashboard. <strong>Clique un livre</strong> de tes étagères pour le
-        rouvrir : titre de la fiche, date, et son sceau de cire. Objectif :
-        2000 livres sur l&apos;année.
+        Le bouton <strong>Démarrer la session</strong> enchaîne tes fiches du
+        jour, chacune en trois étapes : <strong>relire</strong> une fiche de
+        synthèse courte et tes pièges, <strong>t&apos;entraîner</strong> sur 10
+        QCM du cours, puis <strong>te noter</strong> avec ton résultat sous les
+        yeux. Chaque erreur devient une flashcard. Ton temps de travail et ta
+        maîtrise par matière s&apos;affichent dans la carte{' '}
+        <strong>Ta progression</strong>.
       </>
     ),
   },
@@ -482,8 +480,8 @@ const STEPS: Step[] = [
       <>
         Tu as fait le tour de MedRev. Maintenant, à toi de jouer : crée tes
         matières, ajoute tes fiches, note tes révisions au fil des paliers J,
-        et regarde ta <strong>bibliothèque se remplir</strong> jour après
-        jour.
+        et regarde ta <strong>progression</strong> monter semaine après
+        semaine.
         <br /><br />
         Tu peux revoir ce tutoriel à tout moment depuis tes Réglages.
         <br /><br />

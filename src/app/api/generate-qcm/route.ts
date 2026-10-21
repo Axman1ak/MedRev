@@ -627,6 +627,11 @@ ${existingQuestions.slice(0, 100).map((q, i) => `${i + 1}. ${String(q.question |
 
 CONTEXTE : tu reçois ${sourcesStr} pour le sujet "${lesson.name}".
 ${existingBlock}
+VÉRIFICATION PRÉALABLE, AVANT TOUTE QUESTION :
+Regarde d'abord ce que contiennent réellement les sources. Si ce n'est PAS un support de cours en santé ou en sciences (médecine, biologie, chimie, physique, anatomie, etc.) — par exemple un CV, une facture, un contrat, un document administratif, un texte sans rapport, un fichier vide ou illisible — tu ne génères AUCUNE question. Tu réponds alors uniquement :
+[{"hors_sujet": true, "raison": "<ce que contient le document, en une courte phrase>"}]
+Ne complète jamais avec tes propres connaissances : chaque question doit pouvoir être vérifiée dans les sources fournies.
+
 CONSIGNE :
 Génère exactement ${nbQ} ${existingQuestions.length > 0 ? 'NOUVELLES ' : ''}questions de type : ${FORMAT_DESC[format] || FORMAT_DESC.mixed}.
 Niveau requis : ${DIFF_DESC[difficulty] || DIFF_DESC.annales}.
@@ -774,6 +779,22 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
 
     // 7. Parse JSON — tolère les troncatures (Gemini peut couper en plein milieu)
     const parsed: unknown[] = parseQuestionsJson(rawText)
+
+    // 7b. Document qui n'est pas un cours (CV, facture…) : l'IA a refusé.
+    // On s'arrête là, sans compter de génération dans le quota.
+    const refus = Array.isArray(parsed)
+      ? parsed.find(q => !!q && typeof q === 'object' && (q as { hors_sujet?: unknown }).hors_sujet === true) as { raison?: unknown } | undefined
+      : undefined
+    if (refus) {
+      const raison = typeof refus.raison === 'string' && refus.raison.trim() ? refus.raison.trim() : ''
+      return NextResponse.json(
+        {
+          error: `Ce document ne ressemble pas à un cours${raison ? ` (${raison.replace(/\.$/, '')})` : ''}. Dépose le poly ou la vidéo du cours pour générer des QCM.`,
+          code: 'not_a_course',
+        },
+        { status: 422 },
+      )
+    }
     if (!Array.isArray(parsed) || parsed.length === 0) {
       throw new Error('Réponse Gemini : aucune question parsable')
     }

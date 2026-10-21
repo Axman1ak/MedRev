@@ -162,6 +162,23 @@ export interface LessonMedia {
   pdf_pages?: number
   pdf_size?: number
   pdf_uploaded_at?: string
+  // Nom d'origine des fichiers déposés (2026-10). Le stockage garde un nom
+  // fixe (poly.pdf, cours.mp4) attendu par les routes API ; on n'affiche
+  // que ces noms-ci. Absents sur les anciens dépôts.
+  pdf_name?: string
+  video_name?: string
+  // Fiche de synthèse courte générée depuis le cours (/api/generate-synthese).
+  synthese?: LessonSynthese
+}
+
+// Rappel court du cours, lu à l'étape « Relire » de la session de travail.
+// 3 ou 4 idées, un tableau OU une liste, 2 ou 3 pièges. page = page du PDF.
+export interface LessonSynthese {
+  essentiel: { texte: string; page?: number }[]
+  tableau?: { colonnes: string[]; lignes: string[][] }
+  liste?: { terme: string; detail: string; page?: number }[]
+  pieges: { texte: string; page?: number }[]
+  generated_at: string
 }
 export interface Lesson {
   id: string
