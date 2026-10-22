@@ -27,6 +27,8 @@ export const metadata: Metadata = {
   title: 'Comment organiser sa P1 (PASS, LAS) : la méthode jour par jour',
   description: DESCRIPTION,
   alternates: { canonical: URL },
+  // Hors de Google pour l'instant : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
   openGraph: { type: 'article', url: URL, title: TITLE, description: DESCRIPTION },
 }
 
