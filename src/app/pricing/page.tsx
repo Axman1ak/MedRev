@@ -24,6 +24,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'Tarifs',
   description: 'Choisis le plan qui te porte jusqu\'aux examens. Gratuit pour démarrer, Premium à 69 €/an.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function PricingPublicPage() {

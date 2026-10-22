@@ -21,6 +21,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'Mentions légales',
   description: 'Mentions légales de MedRev : éditeur, directeur de la publication, hébergeurs, contact.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function MentionsLegalesPage() {

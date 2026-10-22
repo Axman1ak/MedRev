@@ -12,6 +12,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'Manifesto',
   description: 'La médecine devrait être méritocratique. Pourquoi MedRev existe.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function ManifestoPage() {
