@@ -13,6 +13,7 @@ import './styles.css'
 import { normalizeYear, scopeToYear, DEFAULT_YEAR, YEARS, yearLabel } from '@/lib/year'
 import PageLoader from '@/components/PageLoader'
 import GenProgress from '@/components/GenProgress'
+import ImportFiches from '@/components/ImportFiches'
 import { currentSemestre } from '@/lib/semestre'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
@@ -182,6 +183,7 @@ export default function FichesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState('')
   const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
+  const [showImport, setShowImport] = useState(false)
 
   // Create modals
   const [showNewSystem, setShowNewSystem] = useState(false)
@@ -794,6 +796,9 @@ export default function FichesPage() {
               </button>
             )}
             <div className="fi-add-group">
+              <button type="button" className="fi-btn-o" onClick={() => setShowImport(true)}>
+                Importer
+              </button>
               <button
                 data-tour="add-system"
                 className="fi-btn-o"
@@ -1225,6 +1230,22 @@ export default function FichesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImport && userId && yearLoaded && (
+        <ImportFiches
+          userId={userId}
+          systems={systems}
+          lessons={lessons}
+          year={currentYear}
+          semestre={semester === 'year' ? 1 : semester}
+          onDone={(newSystems, newLessons) => {
+            if (newSystems.length) setSystems(prev => [...prev, ...newSystems])
+            if (newLessons.length) setLessons(prev => [...prev, ...newLessons])
+            if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('medrev-lesson-created'))
+          }}
+          onClose={() => setShowImport(false)}
+        />
       )}
 
       {/* ---- MODAL : Nouvelle fiche ---- */}
