@@ -76,7 +76,7 @@ const items = (v: unknown, max: number): Item[] =>
     .slice(0, max)
 
 function sanitize(raw: Record<string, unknown>): Synthese | null {
-  const essentiel = items(raw.essentiel, 4)
+  const essentiel = items(raw.essentiel, 5)
   const pieges = items(raw.pieges, 3)
   let tableau: Synthese['tableau']
   const t = raw.tableau as Record<string, unknown> | undefined
@@ -148,14 +148,16 @@ export async function POST(req: NextRequest) {
 VÉRIFICATION PRÉALABLE : si les sources ne sont PAS un support de cours en santé ou en sciences (CV, facture, document administratif, texte sans rapport, fichier vide ou illisible), réponds uniquement :
 {"hors_sujet": true, "raison": "<ce que contient le document, en une courte phrase>"}
 
-BUT : un rappel qu'on lit en deux minutes AVANT de s'entraîner, pour avoir le cours en tête. Ce n'est PAS un résumé complet. Même si le poly fait 80 pages, la fiche reste petite.
+BUT : un rappel qu'on lit en deux minutes AVANT de s'entraîner, pour avoir la STRUCTURE du cours en tête. C'est une vue d'ensemble, pas un résumé détaillé : on doit voir de quoi parle tout le poly, du début à la fin.
+
+MÉTHODE : repère d'abord les grandes parties du poly (les grands titres, dans l'ordre), puis écris UNE idée par grande partie. Ne t'arrête pas sur les premières pages : couvre le poly en entier.
 
 CONTENU (uniquement tiré des sources, rien de tes connaissances propres) :
-- "essentiel" : 3 idées clés, 4 au grand maximum. Une phrase courte chacune.
+- "essentiel" : 3 à 5 idées, une par grande partie du cours, dans l'ordre du poly. Une phrase courte et générale chacune : le message principal de la partie, PAS de chiffres, de valeurs, de doses ou d'exceptions.
 - Puis UN SEUL des deux :
-  - "tableau" : si le cours se prête à une comparaison (structures et leurs caractéristiques, classifications…). 2 à 4 colonnes courtes, 3 à 6 lignes.
-  - "liste" : sinon, 3 à 6 notions centrales, chacune avec un "terme" et un "detail" d'une phrase.
-- "pieges" : 2 ou 3 confusions classiques que ce cours permet de piéger aux QCM. Formule la bonne version de façon nette (ex : « Canal carpien = nerf médian, pas ulnaire »).
+  - "tableau" : seulement si tout le cours s'organise autour d'une comparaison centrale (les grandes catégories du cours et ce qui les distingue). 2 ou 3 colonnes courtes, 3 à 6 lignes, des mots-clés plutôt que des phrases.
+  - "liste" : sinon, les 3 à 6 notions centrales du cours entier, chacune avec un "terme" et un "detail" d'une phrase simple.
+- "pieges" : 2 ou 3 confusions classiques sur les notions centrales du cours (pas sur un détail isolé). Formule la bonne version de façon nette.
 - "page" : numéro de page DANS LE FICHIER PDF (1 = première page) d'où vient l'information, quand c'est clair. Sinon omets-le.
 - Français rigoureux, phrases courtes, pas de tiret cadratin, pas de point médian.
 

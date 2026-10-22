@@ -169,6 +169,9 @@ export interface LessonMedia {
   video_name?: string
   // Fiche de synthèse courte générée depuis le cours (/api/generate-synthese).
   synthese?: LessonSynthese
+  // Vidéo supprimée du stockage après transcription : seul le transcript reste.
+  video_removed_at?: string
+  transcript?: { start: number; end: number; text: string }[]
 }
 
 // Rappel court du cours, lu à l'étape « Relire » de la session de travail.

@@ -5,11 +5,11 @@
 // 3 phases : question / feedback / end.
 // Lance la lightbox SourceLightbox quand l'élève clique "Voir la source ↗".
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, AiQuestion, AiQuestionSourceRef, LessonMedia, System, Flashcard } from '@/types'
-import { missedIndices, addCardsFromMistakes } from '@/lib/qcmMissed'
+import { missedIndices, addCardsFromMistakes, isMissed } from '@/lib/qcmMissed'
 import Link from 'next/link'
 import QuestionFigure from '@/components/QuestionFigure'
 import { normalizeAnswer, isMultiAnswer } from '@/types'
@@ -54,6 +54,21 @@ function shuffleArr<T>(arr: T[]): T[] {
   return a
 }
 
+// Ordre de passage : d'abord les ratées, puis les jamais faites, puis les
+// autres de la moins bien réussie à la mieux réussie (hasard dans chaque groupe).
+type QStat = AiQuestion & { attempts?: number; correct?: number }
+function sessionOrder(qs: QStat[], exclude: Set<number> = new Set()): number[] {
+  const idx = qs.map((_, i) => i).filter(i => !exclude.has(i))
+  const missed = shuffleArr(idx.filter(i => isMissed(qs[i])))
+  const fresh = shuffleArr(idx.filter(i => !isMissed(qs[i]) && !(qs[i].attempts || 0)))
+  const ratio = (q: QStat) => (q.attempts ? (q.correct || 0) / q.attempts : 1)
+  const rest = shuffleArr(idx.filter(i => !isMissed(qs[i]) && (qs[i].attempts || 0) > 0)).sort((a, b) => ratio(qs[a]) - ratio(qs[b]))
+  return [...missed, ...fresh, ...rest]
+}
+type SizeChoice = 10 | 20 | 'all'
+const SIZE_KEY = 'medrev-qcm-taille'
+const resumeKey = (lessonId: string) => `medrev-qcm-reprise-${lessonId}`
+
 // Normalise un source_ref qui peut être objet, string legacy, ou null
 function normalizeSourceRef(raw: AiQuestion['source_ref']): AiQuestionSourceRef | null {
   if (!raw) return null
@@ -88,6 +103,27 @@ export default function QcmSessionPage() {
   const [onlyMissed, setOnlyMissed] = useState(false)
   // Flashcards créées à partir des erreurs de la session qui vient de finir
   const [cardsAdded, setCardsAdded] = useState(0)
+  // Taille de session (10 par défaut) et file complète, dans l'ordre de passage
+  const [size, setSize] = useState<SizeChoice>(10)
+  const [fullOrder, setFullOrder] = useState<number[]>([])
+  const [resumed, setResumed] = useState(false)
+  // Questions déjà répondues pendant cette visite (pour « Encore 10 questions »)
+  const doneRef = useRef<Set<number>>(new Set())
+  // Dernière version de la fiche, pour enchaîner les sauvegardes question par question
+  const lessonRef = useRef<Lesson | null>(null)
+  useEffect(() => { lessonRef.current = lesson }, [lesson])
+
+  function startWith(order: number[], all: AiQuestion[], n: SizeChoice) {
+    const take = n === 'all' ? order : order.slice(0, n)
+    setFullOrder(order)
+    setQuestions(take.map(i => all[i]))
+    setOrigIndices(take)
+    setAnswers(take.map(() => ({ selected: [], isCorrect: null })))
+    setCurrentIdx(0)
+    setCardsAdded(0)
+    setStartTime(Date.now())
+    setPhase('question')
+  }
 
   // Reset scroll au montage
   useEffect(() => {
@@ -137,21 +173,32 @@ export default function QcmSessionPage() {
         return
       }
 
-      // Mélange les questions à chaque ouverture (ordre différent par session)
-      // tout en conservant l'index d'origine pour reporter les compteurs.
       // « Refaire les ratées » depuis la fiche : ?ratees=1. S'il n'y a plus
       // aucune ratée (tout a été réussi entre-temps), on propose tout.
+      // Sinon : reprise de la session interrompue s'il y en a une, ou nouvelle
+      // session de 10 questions (ratées d'abord, puis jamais faites).
       const wantMissed = new URLSearchParams(window.location.search).has('ratees')
       const missed = wantMissed ? missedIndices(aiQs) : []
-      const pool = missed.length > 0 ? missed : aiQs.map((_, i) => i)
-      setOnlyMissed(missed.length > 0)
-      const indexed = pool.map(i => ({ q: aiQs[i], idx: i }))
-      const shuffledIndexed = shuffleArr(indexed)
-      setQuestions(shuffledIndexed.map(x => x.q))
-      setOrigIndices(shuffledIndexed.map(x => x.idx))
-      setAnswers(shuffledIndexed.map(() => ({ selected: [], isCorrect: null })))
-      setStartTime(Date.now())
-      setPhase('question')
+      let pref: SizeChoice = 10
+      try { const v = localStorage.getItem(SIZE_KEY); pref = v === '20' ? 20 : v === 'all' ? 'all' : 10 } catch {}
+      setSize(pref)
+      if (missed.length > 0) {
+        setOnlyMissed(true)
+        startWith(shuffleArr(missed), aiQs, 'all')
+        return
+      }
+      try {
+        const raw = localStorage.getItem(resumeKey(String(lessonId)))
+        const saved = raw ? (JSON.parse(raw) as { left: number[]; at: number }) : null
+        const ok = saved && Array.isArray(saved.left) && saved.left.length > 0 && Date.now() - saved.at < 7 * 86400000
+          && saved.left.every(i => Number.isInteger(i) && i >= 0 && i < aiQs.length)
+        if (ok) {
+          setResumed(true)
+          startWith(saved!.left, aiQs, 'all')
+          return
+        }
+      } catch {}
+      startWith(sessionOrder(aiQs as QStat[]), aiQs, pref)
     }
     load()
     return () => { cancelled = true }
@@ -193,6 +240,14 @@ export default function QcmSessionPage() {
     next[currentIdx] = { selected: ans.selected, isCorrect }
     setAnswers(next)
     setPhase('feedback')
+    // Sauvegarde immédiate : si on quitte au milieu, rien n'est perdu.
+    void persistAnswer(origIndices[currentIdx], q, ans.selected, isCorrect)
+    // File restante, pour reprendre là où on s'est arrêté
+    try {
+      const left = origIndices.slice(currentIdx + 1)
+      if (left.length) localStorage.setItem(resumeKey(String(lessonId)), JSON.stringify({ left, at: Date.now() }))
+      else localStorage.removeItem(resumeKey(String(lessonId)))
+    } catch {}
   }
 
   function goNext() {
@@ -200,64 +255,57 @@ export default function QcmSessionPage() {
       setCurrentIdx(currentIdx + 1)
       setPhase('question')
     } else {
-      // Fin de session : on persiste les compteurs (attempts / correct) sur
-      // les questions concernées AVANT d'afficher l'écran de fin, pour que
-      // les stats cumulées soient à jour.
-      void persistSessionResults()
+      // Chaque réponse est déjà enregistrée au moment où elle est validée.
+      try { localStorage.removeItem(resumeKey(String(lessonId))) } catch {}
       setPhase('end')
     }
   }
 
-  // Met à jour attempts/correct sur les questions répondues, sauve en DB,
-  // et met à jour le state local pour que l'écran de fin voie les nouveaux
-  // chiffres immédiatement.
-  async function persistSessionResults() {
-    if (!lesson) return
-    // Type local étendu : AiQuestion + compteurs optionnels. Évite que
-    // TypeScript râle sur les champs `attempts`/`correct` non déclarés
-    // dans l'interface AiQuestion d'origine.
-    type QWithStats = AiQuestion & { attempts?: number; correct?: number }
-    const allQs: QWithStats[] = Array.isArray(lesson.ai_questions)
-      ? ([...(lesson.ai_questions as QWithStats[])])
-      : []
-
-    answers.forEach((ans, sessIdx) => {
-      if (!ans || ans.selected.length === 0) return
-      const origIdx = origIndices[sessIdx]
-      if (origIdx === undefined || origIdx < 0 || origIdx >= allQs.length) return
-      const cur = allQs[origIdx]
-      const newAttempts = (cur.attempts || 0) + 1
-      const newCorrect = (cur.correct || 0) + (ans.isCorrect ? 1 : 0)
-      allQs[origIdx] = { ...cur, attempts: newAttempts, correct: newCorrect, last_correct: !!ans.isCorrect }
-    })
-
-    // Flashcards automatiques : une carte par proposition mal jugée dans
-    // les questions ratées de cette session (voir src/lib/qcmMissed.ts).
-    const mistakes = answers
-      .map((ans, i) => ({ ans, q: questions[i] }))
-      .filter(x => x.q && x.ans && x.ans.selected.length > 0 && x.ans.isCorrect === false)
-      .map(x => ({ q: x.q, selected: x.ans.selected }))
-    const prevCards = Array.isArray(lesson.flashcards) ? (lesson.flashcards as Flashcard[]) : []
-    const { cards, added } = addCardsFromMistakes(prevCards, mistakes)
-    setCardsAdded(added)
-
-    // Update local d'abord pour rendu instantané
-    setLesson(prev => (prev ? { ...prev, ai_questions: allQs as AiQuestion[], flashcards: cards } : prev))
-
-    // Puis persistance DB (best-effort). Les cartes partent dans la même
-    // requête ; si elle échoue, on retente au moins les compteurs seuls.
+  // Enregistre UNE réponse : compteurs de la question (tentatives, réussites,
+  // dernière réponse juste ou fausse) et, si elle est fausse, sa flashcard.
+  // Appelé à chaque validation, pour que quitter en cours de route ne perde rien.
+  async function persistAnswer(origIdx: number | undefined, q: AiQuestion, selected: number[], isCorrect: boolean) {
+    const cur = lessonRef.current
+    if (!cur || origIdx === undefined) return
+    doneRef.current.add(origIdx)
+    const allQs: QStat[] = Array.isArray(cur.ai_questions) ? [...(cur.ai_questions as QStat[])] : []
+    if (origIdx < 0 || origIdx >= allQs.length) return
+    const prevQ = allQs[origIdx]
+    allQs[origIdx] = { ...prevQ, attempts: (prevQ.attempts || 0) + 1, correct: (prevQ.correct || 0) + (isCorrect ? 1 : 0), last_correct: isCorrect }
+    const prevCards = Array.isArray(cur.flashcards) ? (cur.flashcards as Flashcard[]) : []
+    const { cards, added } = isCorrect ? { cards: prevCards, added: 0 } : addCardsFromMistakes(prevCards, [{ q, selected }])
+    const nextLesson = { ...cur, ai_questions: allQs as AiQuestion[], flashcards: cards }
+    lessonRef.current = nextLesson
+    setLesson(nextLesson)
+    if (added > 0) setCardsAdded(n => n + added)
     try {
       const update: { ai_questions: AiQuestion[]; flashcards?: Flashcard[] } = { ai_questions: allQs as AiQuestion[] }
       if (added > 0) update.flashcards = cards
-      const { error } = await supabase.from('lessons').update(update).eq('id', lesson.id)
-      if (error && added > 0) {
-        console.error('[qcm] persist with cards failed, retry without:', error)
-        setCardsAdded(0)
-        await supabase.from('lessons').update({ ai_questions: allQs as AiQuestion[] }).eq('id', lesson.id)
-      }
+      const { error } = await supabase.from('lessons').update(update).eq('id', cur.id)
+      if (error && added > 0) await supabase.from('lessons').update({ ai_questions: allQs as AiQuestion[] }).eq('id', cur.id)
     } catch (e) {
-      console.error('[qcm] persist results failed:', e)
+      console.error('[qcm] sauvegarde de la réponse impossible :', e)
     }
+  }
+
+  // Change la taille de la session tant qu'aucune question n'est validée
+  function chooseSize(n: SizeChoice) {
+    if (!lesson || onlyMissed || resumed) return
+    setSize(n)
+    try { localStorage.setItem(SIZE_KEY, String(n)) } catch {}
+    const all = Array.isArray(lesson.ai_questions) ? (lesson.ai_questions as AiQuestion[]) : []
+    startWith(fullOrder.length ? fullOrder : sessionOrder(all as QStat[]), all, n)
+  }
+
+  // Après une session : les questions suivantes, sans reprendre celles déjà faites aujourd'hui
+  function continueMore() {
+    const cur = lessonRef.current
+    if (!cur) return
+    const all = Array.isArray(cur.ai_questions) ? (cur.ai_questions as AiQuestion[]) : []
+    const order = sessionOrder(all as QStat[], doneRef.current)
+    if (order.length === 0) return
+    setOnlyMissed(false); setResumed(false)
+    startWith(order, all, size)
   }
 
   // Démarre une mini-session ciblée sur les questions où l'élève rate
@@ -514,6 +562,17 @@ export default function QcmSessionPage() {
             </Link>
           )}
 
+          {(() => {
+            const left = lessonRef.current && Array.isArray(lessonRef.current.ai_questions)
+              ? (lessonRef.current.ai_questions as AiQuestion[]).length - doneRef.current.size : 0
+            const n = size === 'all' ? left : Math.min(size, left)
+            return left > 0 ? (
+              <button type="button" className="qcm-end-more" onClick={continueMore}>
+                Encore {n} question{n > 1 ? 's' : ''} <span>({left} pas encore faite{left > 1 ? 's' : ''} aujourd&apos;hui)</span>
+              </button>
+            ) : null
+          })()}
+
           <div className="qcm-end-actions">
             <button className="qcm-end-btn ghost" onClick={quitToFiches}>Retour à la fiche</button>
             {chronicallyFailed.length > 0 ? (
@@ -567,8 +626,17 @@ export default function QcmSessionPage() {
       <div className="qcm-topbar">
         <button className="qcm-topback" onClick={quitToFiches}>←</button>
         <span className="qcm-ctx">
-          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
+          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : resumed ? <>reprise, <em>{questions.length} question{questions.length > 1 ? 's' : ''} restante{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
         </span>
+        {!onlyMissed && !resumed && currentIdx === 0 && phase === 'question' && fullOrder.length > 10 && (
+          <div className="qcm-size" role="group" aria-label="Nombre de questions">
+            {([10, 20, 'all'] as SizeChoice[]).filter(n => n === 'all' || n < fullOrder.length).map(n => (
+              <button key={String(n)} type="button" className={size === n ? 'on' : ''} onClick={() => chooseSize(n)}>
+                {n === 'all' ? `Toutes (${fullOrder.length})` : n}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="qcm-content">

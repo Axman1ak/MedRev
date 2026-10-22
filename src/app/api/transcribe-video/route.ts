@@ -281,11 +281,19 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (pas de markdown, pas de backtic
       throw new Error('Transcript vide ou non parsable')
     }
 
-    // Update lesson.media with transcript
-    const updatedMedia = {
+    // Update lesson.media with transcript. Une fois transcrite, la vidéo
+    // n'est plus conservée : seul le texte sert ensuite (QCM, synthèse), et
+    // les vidéos pèsent l'essentiel du stockage. On garde son nom et sa durée.
+    const videoPath = media.video_path
+    const dropVideo = transcript.length >= 3
+    const updatedMedia: Record<string, unknown> = {
       ...media,
       transcript,
       transcript_generated_at: new Date().toISOString(),
+    }
+    if (dropVideo) {
+      delete updatedMedia.video_path
+      updatedMedia.video_removed_at = new Date().toISOString()
     }
 
     const { error: updErr } = await supabase
@@ -296,6 +304,10 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (pas de markdown, pas de backtic
 
     if (updErr) {
       throw new Error(`Sauvegarde échouée : ${updErr.message}`)
+    }
+    if (dropVideo && videoPath) {
+      // Best-effort : si la suppression échoue, la fiche reste valide.
+      await supabase.storage.from('lesson-media').remove([videoPath]).then(() => {}, () => {})
     }
 
     return NextResponse.json({

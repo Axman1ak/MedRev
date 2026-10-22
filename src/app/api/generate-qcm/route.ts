@@ -512,7 +512,7 @@ export async function POST(req: NextRequest) {
       pdf_path?: string
       transcript?: TranscriptSegment[]
     }
-    if (!media.video_path && !media.pdf_path) {
+    if (!media.video_path && !media.pdf_path && !(Array.isArray(media.transcript) && media.transcript.length > 0)) {
       return NextResponse.json(
         { error: "Aucune source uploadée. Ajoute une vidéo ou un PDF avant de générer." },
         { status: 400 }

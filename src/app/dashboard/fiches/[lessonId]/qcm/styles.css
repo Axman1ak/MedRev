@@ -658,3 +658,12 @@
 @media (max-width: 560px) {
   .qcm-end-cards { flex-direction: column; align-items: flex-start; gap: 6px; }
 }
+
+/* Taille de session : 10, 20 ou toutes */
+.qcm-size { margin-left: auto; display: inline-flex; gap: 3px; padding: 3px; border-radius: 9px; background: var(--bg-soft, #F2EFE8); }
+.qcm-size button { border: none; background: none; padding: 5px 11px; border-radius: 7px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-secondary, #6B6F6A); cursor: pointer; }
+.qcm-size button.on { background: var(--bg-card, #fff); color: var(--text-primary, #15304E); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.qcm-end-more { display: block; margin: 22px auto 0; padding: 12px 20px; border-radius: 11px; border: 1.5px solid var(--accent-medium, #22507E); background: var(--bg-card, #fff); color: var(--accent-medium, #22507E); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.qcm-end-more span { font-weight: 500; opacity: .75; }
+.qcm-end-more:hover { background: var(--accent-soft, #E9F0F7); }
+@media (max-width: 640px) { .qcm-topbar { flex-wrap: wrap; } .qcm-size { margin: 4px 0 0; } }
