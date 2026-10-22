@@ -669,7 +669,7 @@ export default function ReviewModal({
         <div className="rmod-header">
           <div>
             <div className="rmod-kicker">
-              {stepIdx === null ? 'Fiche' : 'Session de révision'}
+              {stepIdx === null ? 'Choisis un J à noter' : 'Session de révision'}
             </div>
             <div className="rmod-title">{lesson.name}</div>
             <div className="rmod-meta">
@@ -699,20 +699,16 @@ export default function ReviewModal({
                 const isFuture = s.kind === 'future' && ds !== '' && ds > today
                 const isLocked = isFuture || !lesson.learn_date
 
-                // Libellé complet en infobulle ; sous la pastille, seulement
-                // pour ce qui compte maintenant (aujourd'hui, manqué, prochain).
-                let fullText = ''
-                if (s.kind === 'score') fullText = `Note ${s.score}/5`
-                else if (s.kind === 'today') fullText = "Aujourd'hui"
-                else if (s.kind === 'missed') fullText = 'Manqué'
+                let statusText = ''
+                if (s.kind === 'score') statusText = `Note ${s.score}/5`
+                else if (s.kind === 'today') statusText = "Aujourd'hui"
+                else if (s.kind === 'missed') statusText = 'Manqué'
                 else if (ds) {
                   const diff = Math.round((new Date(ds).getTime() - new Date(today).getTime()) / 86400000)
-                  fullText = diff === 1 ? 'Demain' : `Dans ${diff} j`
+                  statusText = diff === 1 ? 'Demain' : `Dans ${diff} j`
                 } else {
-                  fullText = 'À planifier'
+                  statusText = 'À planifier'
                 }
-                const isNextFuture = s.kind === 'future' && i === j.findIndex((_, k) => getStampState(lesson, k, today, j).kind === 'future')
-                const statusText = s.kind === 'today' || s.kind === 'missed' || isNextFuture ? fullText : ''
 
                 const stampCls =
                   s.kind === 'score' ? `s${s.score}` :
@@ -725,7 +721,7 @@ export default function ReviewModal({
                     className={`rmod-jstep${isLocked ? ' locked' : ''}`}
                     disabled={isLocked}
                     onClick={() => selectStep(i)}
-                    title={`J+${jVal} : ${fullText}`}
+                    title={isLocked ? 'Révision future (verrouillée)' : `Noter J+${jVal}`}
                   >
                     <span className="rmod-jlbl">J+{jVal}</span>
                     <span className={`rmod-jbig rmod-stamp ${stampCls}`}>
@@ -927,7 +923,7 @@ export default function ReviewModal({
                         onClick={() => generateQcms('append')}
                         disabled={generating}
                         title="Ajouter 30 questions de plus, sur d'autres aspects du cours"
-                      >Générer 30 questions de plus</button>
+                      >+ 30 questions</button>
                     )}
                   </>
                 ) : hasAnySource ? (

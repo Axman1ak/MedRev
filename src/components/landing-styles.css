@@ -429,13 +429,3 @@
   .legal-wrap, .manifesto-wrap { padding: 50px 18px; }
 }
 
-
-/* Inscription : la colonne gauche dit ce qu'on obtient, au lieu de rester vide */
-.auth-side { align-self: center; display: flex; flex-direction: column; gap: 24px; max-width: 440px; }
-.auth-what { display: flex; flex-direction: column; gap: 10px; }
-.auth-what-h { font-family: var(--lp-fk); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--lp-text-dim); margin-bottom: 4px; }
-.auth-what-row { display: flex; gap: 14px; align-items: flex-start; background: var(--lp-bg-card); border: 1px solid var(--lp-border); border-radius: 14px; padding: 14px 16px; }
-.auth-what-row > b { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--lp-accent-soft); color: var(--lp-accent); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; margin-top: 1px; }
-.auth-what-row span { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; line-height: 1.45; color: var(--lp-text-soft); }
-.auth-what-row strong { font-family: var(--lp-fh); font-size: 15px; font-weight: 600; color: var(--lp-text); }
-@media (max-width: 860px) { .auth-what { display: none; } }

@@ -1162,7 +1162,3 @@
   .cal-day-num { font-size: 19px; }
   .cal-week .cal-day-list { padding: 6px 6px 8px; gap: 3px; }
 }
-
-/* Semaine : le nom de la fiche s'affiche en entier (2 lignes max), sans couper les mots */
-.cal-week .cal-fiche { height: auto; min-height: 30px; padding: 6px 9px; }
-.cal-week .cal-fiche-name { -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: normal; word-break: normal; white-space: normal; }

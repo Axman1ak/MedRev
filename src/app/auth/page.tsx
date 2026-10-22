@@ -477,13 +477,7 @@ function AuthContent() {
       <div className="auth-page">
 
         <div className="auth-grid">
-          <div className="auth-side">
-            <div className="auth-what">
-              <div className="auth-what-h">Ce que tu auras dès ce soir</div>
-              <div className="auth-what-row"><b>1</b><span><strong>Tes matières de P1</strong>Proposées selon ta fac, à cocher.</span></div>
-              <div className="auth-what-row"><b>2</b><span><strong>Tes fiches et leur planning</strong>Chaque cours revient à J+1, J+3, J+7, jusqu&apos;au concours.</span></div>
-              <div className="auth-what-row"><b>3</b><span><strong>Des QCM tirés de tes polys</strong>Corrigés, avec la page du cours.</span></div>
-            </div>
+          <div>
             <div className="auth-trust">
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit, fiches illimitées</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données hébergées en Europe</div>
