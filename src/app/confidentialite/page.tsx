@@ -25,7 +25,7 @@ export default function ConfidentialitePage() {
         <div className="legal-header ln-subhero">
           <span className="ln-kicker">Confidentialité</span>
           <h1 className="ln-subhero-h1">Politique de <em>Confidentialité</em></h1>
-          <p className="ln-subhero-meta">Conforme RGPD · En vigueur depuis le 8 mai 2026</p>
+          <p className="ln-subhero-meta">Conforme RGPD, en vigueur depuis le 8 mai 2026</p>
         </div>
 
         <section className="legal-section">

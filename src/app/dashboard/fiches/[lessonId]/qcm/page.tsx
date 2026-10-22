@@ -455,7 +455,7 @@ export default function QcmSessionPage() {
         <div className="qcm-topbar">
           <button className="qcm-topback" onClick={quitToFiches}>←</button>
           <span className="qcm-ctx">
-            <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · session terminée
+            <strong>{system?.name || 'Fiche'}, {lesson?.name || ''}</strong>, session terminée
           </span>
         </div>
 
@@ -558,7 +558,7 @@ export default function QcmSessionPage() {
           {cardsAdded > 0 && lesson && (
             <Link href={`/dashboard/fiches/${lesson.id}/cartes`} className="qcm-end-cards">
               <em><strong>{cardsAdded} flashcard{cardsAdded > 1 ? 's' : ''}</strong> créée{cardsAdded > 1 ? 's' : ''} à partir de tes erreurs</em>
-              <span>Les réviser →</span>
+              <span>Les réviser</span>
             </Link>
           )}
 
@@ -580,14 +580,14 @@ export default function QcmSessionPage() {
                 className="qcm-end-btn primary"
                 onClick={restartChronicallyMissed}
               >
-                Refaire ces {chronicallyFailed.length} question{chronicallyFailed.length > 1 ? 's' : ''} →
+                Refaire ces {chronicallyFailed.length} question{chronicallyFailed.length > 1 ? 's' : ''}
               </button>
             ) : wrongCount > 0 ? (
               <button
                 className="qcm-end-btn primary"
                 onClick={restartMissed}
               >
-                Refaire les {wrongCount} ratée{wrongCount > 1 ? 's' : ''} →
+                Refaire les {wrongCount} ratée{wrongCount > 1 ? 's' : ''}
               </button>
             ) : (
               <button className="qcm-end-btn primary" disabled>Aucune ratée</button>
@@ -626,7 +626,7 @@ export default function QcmSessionPage() {
       <div className="qcm-topbar">
         <button className="qcm-topback" onClick={quitToFiches}>←</button>
         <span className="qcm-ctx">
-          <strong>{system?.name || 'Fiche'} · {lesson?.name || ''}</strong> · {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : resumed ? <>reprise, <em>{questions.length} question{questions.length > 1 ? 's' : ''} restante{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
+          <strong>{system?.name || 'Fiche'}, {lesson?.name || ''}</strong>, {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : resumed ? <>reprise, <em>{questions.length} question{questions.length > 1 ? 's' : ''} restante{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
         </span>
         {!onlyMissed && !resumed && currentIdx === 0 && phase === 'question' && fullOrder.length > 10 && (
           <div className="qcm-size" role="group" aria-label="Nombre de questions">
@@ -651,7 +651,7 @@ export default function QcmSessionPage() {
         <div className="qcm-q-kicker">
           Question {currentIdx + 1}
           <span className={`qcm-q-type${multi ? ' multi' : ''}`}>
-            {multi ? 'QCM · plusieurs bonnes réponses' : 'QCS · une seule bonne réponse'}
+            {multi ? 'Plusieurs bonnes réponses' : 'Une seule bonne réponse'}
           </span>
           {isFeedback && (
             <span className={`qcm-verdict ${ans?.isCorrect ? 'ok' : 'ko'}`}>
@@ -692,9 +692,9 @@ export default function QcmSessionPage() {
             // la même ligne.
             let mark = ''
             if (isFeedback) {
-              if (isCorrect && isSelected) mark = 'Vrai · tu l\'as cochée'
-              else if (isCorrect && !isSelected) mark = 'Vrai · tu ne l\'as pas cochée'
-              else if (isSelected) mark = 'Faux · tu l\'as cochée'
+              if (isCorrect && isSelected) mark = 'Vrai, tu l\'as cochée'
+              else if (isCorrect && !isSelected) mark = 'Vrai, tu ne l\'as pas cochée'
+              else if (isSelected) mark = 'Faux, tu l\'as cochée'
               else mark = 'Faux'
             }
             const why = isFeedback ? whyFor(q, i, q.options.length) : ''
@@ -768,11 +768,11 @@ export default function QcmSessionPage() {
               onClick={validate}
               disabled={!ans || ans.selected.length === 0}
             >
-              Valider {multi && ans?.selected.length ? `(${ans.selected.length} coché${ans.selected.length > 1 ? 'es' : 'e'})` : ''} →
+              Valider {multi && ans?.selected.length ? `(${ans.selected.length} coché${ans.selected.length > 1 ? 'es' : 'e'})` : ''}
             </button>
           ) : (
             <button className="qcm-next" onClick={goNext}>
-              {currentIdx < questions.length - 1 ? 'Question suivante →' : 'Terminer la session →'}
+              {currentIdx < questions.length - 1 ? 'Question suivante' : 'Terminer la session'}
             </button>
           )}
         </div>

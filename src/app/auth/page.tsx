@@ -35,9 +35,9 @@ const FACS = [
   { id: 'lyon', name: 'Université de Lyon', badge: 'Lyon', hasOptions: false },
   { id: 'montpellier', name: 'Université de Montpellier', badge: 'Montpellier', hasOptions: false },
   // Île-de-France (matières par défaut)
-  { id: 'upec', name: 'UPEC · Paris-Est Créteil', badge: 'Créteil', hasOptions: false },
+  { id: 'upec', name: 'UPEC (Paris-Est Créteil)', badge: 'Créteil', hasOptions: false },
   { id: 'paris-saclay', name: 'Université Paris-Saclay', badge: 'Saclay', hasOptions: false },
-  { id: 'uvsq', name: 'UVSQ · Simone Veil (Paris-Saclay)', badge: 'Versailles', hasOptions: false },
+  { id: 'uvsq', name: 'UVSQ, Simone Veil (Paris-Saclay)', badge: 'Versailles', hasOptions: false },
   // Autres facs (matières par défaut, personnalisables ensuite dans l'app)
   { id: 'aix-marseille', name: "Aix-Marseille Université", badge: 'Marseille', hasOptions: false },
   { id: 'amiens', name: "Université de Picardie Jules Verne", badge: 'Amiens', hasOptions: false },
@@ -205,9 +205,9 @@ const FAC_SYSTEMS: Record<string, Record<string, Matiere[]>> = {
 type FacOption = { id: string; name: string; desc: string; tags: string[] }
 const FAC_OPTIONS: Record<string, FacOption[]> = {
   sorbonne: [
-    { id: 'ueds', name: 'UEDS · Sciences', desc: 'UE disciplinaire sciences',
+    { id: 'ueds', name: 'UEDS (sciences)', desc: 'UE disciplinaire sciences',
       tags: ['UEDS Chimie', 'UEDS Physique'] },
-    { id: 'uedl', name: 'UEDL · Lettres', desc: 'UE disciplinaire lettres',
+    { id: 'uedl', name: 'UEDL (lettres)', desc: 'UE disciplinaire lettres',
       tags: ['UEDL ILCS', 'UEDL ISP'] },
   ],
   'paris-cite': [
@@ -466,8 +466,8 @@ function AuthContent() {
       <MarketingNav />
 
       <section className="ln-subhero ln-subhero-auth">
-        <span className="ln-kicker">Inscription · 2 minutes</span>
-        <h1 className="ln-subhero-h1">Commence à retenir<span className="ln-line2"><em>pour de bon.</em></span></h1>
+        <span className="ln-kicker">Inscription en 2 minutes</span>
+        <h1 className="ln-subhero-h1">Ta P1 organisée<span className="ln-line2"><em>dès ce soir.</em></span></h1>
         <p className="ln-subhero-sub">
           Tu choisis tes matières à l'inscription, en une étape.
           Pas de carte bleue, pas d&apos;engagement.
@@ -479,7 +479,7 @@ function AuthContent() {
         <div className="auth-grid">
           <div>
             <div className="auth-trust">
-              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit pour démarrer · fiches illimitées</div>
+              <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Gratuit, fiches illimitées</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Données hébergées en Europe</div>
               <div className="auth-trust-row"><span className="auth-trust-check">✓</span>Sans publicité ni tracking</div>
             </div>
@@ -524,7 +524,7 @@ function AuthContent() {
                   <label className="auth-label">Mot de passe</label>
                   <input type="password" className="auth-input" placeholder="Min. 8 caractères" value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
-                <button className="auth-submit" onClick={handleContinueForm}>Continuer →</button>
+                <button className="auth-submit" onClick={handleContinueForm}>Continuer</button>
                 <p className="auth-terms">
                   En créant un compte, tu acceptes nos <Link href="/cgu">CGU</Link> et notre <Link href="/confidentialite">politique de confidentialité</Link>.
                 </p>
@@ -541,7 +541,7 @@ function AuthContent() {
                 </div>
                 <button type="button" className="auth-back-btn" onClick={() => setStep('form')}>← Retour</button>
                 <div className="auth-step-title">Quelle est ta fac ?</div>
-                <div className="auth-step-sub">Elle sert à te proposer une liste de matières · tu la valides à l&apos;étape suivante.</div>
+                <div className="auth-step-sub">Elle sert à te proposer une liste de matières, que tu valides à l&apos;étape suivante.</div>
                 <input
                   type="text"
                   className="auth-input auth-search"
@@ -569,7 +569,7 @@ function AuthContent() {
                   Je ne sais pas encore / autre fac
                 </button>
                 <button className="auth-submit" onClick={handleContinueFac} disabled={!fac || loading}>
-                  {loading ? 'Création en cours…' : 'Continuer →'}
+                  {loading ? 'Création en cours…' : 'Continuer'}
                 </button>
               </div>
             )}
@@ -619,7 +619,7 @@ function AuthContent() {
                   )}
                 </div>
                 <button className="auth-submit" onClick={() => ouvrirMatieres(fac, option)} disabled={!option}>
-                  Continuer →
+                  Continuer
                 </button>
               </div>
             )}
@@ -687,7 +687,7 @@ function AuthContent() {
                 >
                   {loading
                     ? 'Création en cours…'
-                    : `Créer mon compte gratuit · ${matieresGardees.length} matière${matieresGardees.length > 1 ? 's' : ''} →`}
+                    : `Créer mon compte avec ${matieresGardees.length} matière${matieresGardees.length > 1 ? 's' : ''}`}
                 </button>
               </div>
             )}
@@ -703,7 +703,7 @@ function AuthContent() {
                   <input type="password" className="auth-input" placeholder="Ton mot de passe" value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 <button className="auth-submit" onClick={handleLogin} disabled={loading}>
-                  {loading ? 'Connexion…' : 'Se connecter →'}
+                  {loading ? 'Connexion…' : 'Se connecter'}
                 </button>
                 <button type="button" className="auth-forgot" onClick={() => { setForgotMode(true); setError(null); setForgotMsg(null) }}>
                   Mot de passe oublié ?

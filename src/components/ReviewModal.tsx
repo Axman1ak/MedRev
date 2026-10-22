@@ -603,7 +603,7 @@ export default function ReviewModal({
       if (data.videoSkipReason) {
         setGenInfo(`Note : la vidéo n'a pas pu être utilisée (${data.videoSkipReason}). Les QCM viennent du PDF.`)
       } else if (mode === 'append' && typeof data.total === 'number') {
-        setGenInfo(`+${data.count} questions ajoutées · total : ${data.total} QCM sur cette fiche.`)
+        setGenInfo(`+${data.count} questions ajoutées, total : ${data.total} QCM sur cette fiche.`)
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erreur inconnue'
@@ -647,11 +647,11 @@ export default function ReviewModal({
   // et son seul bouton n'apparaît que s'il y a quelque chose à faire.
   const nbSegments = Array.isArray(media.transcript) ? media.transcript.length : 0
   const transcriptNote =
-    transcribing ? ' · transcription en cours (1-2 min)'
-    : !videoKept && nbSegments > 0 ? ' · transcrite, vidéo non conservée'
-    : nbSegments > 0 ? ' · transcript prêt'
-    : transcribeError ? ' · transcript en erreur'
-    : ' · pas encore de transcript'
+    transcribing ? ', transcription en cours (1-2 min)'
+    : !videoKept && nbSegments > 0 ? ', transcrite, vidéo non conservée'
+    : nbSegments > 0 ? ', transcript prêt'
+    : transcribeError ? ', transcript en erreur'
+    : ', pas encore de transcript'
   const transcriptAction = (transcribing || !videoKept) ? null : (
     <button
       type="button"
@@ -674,7 +674,7 @@ export default function ReviewModal({
             <div className="rmod-title">{lesson.name}</div>
             <div className="rmod-meta">
               {systemName}
-              {lesson.learn_date && <> · appris le {frenchDate(lesson.learn_date)}</>}
+              {lesson.learn_date && <>, appris le {frenchDate(lesson.learn_date)}</>}
             </div>
           </div>
           <button data-tour="rmod-close" className="rmod-close" onClick={onClose} aria-label="Fermer">{'×'}</button>
@@ -700,7 +700,7 @@ export default function ReviewModal({
                 const isLocked = isFuture || !lesson.learn_date
 
                 let statusText = ''
-                if (s.kind === 'score') statusText = `Fait · ${s.score}/5`
+                if (s.kind === 'score') statusText = `Note ${s.score}/5`
                 else if (s.kind === 'today') statusText = "Aujourd'hui"
                 else if (s.kind === 'missed') statusText = 'Manqué'
                 else if (ds) {
@@ -824,7 +824,7 @@ export default function ReviewModal({
                       : hasAnySource ? (hasPdf ? 'Ajouter la vidéo du cours' : 'Ajouter le polycopié')
                       : 'Ajouter mon cours'}
                   </span>
-                  {!hasAnySource && <em>PDF ou vidéo · plusieurs fichiers acceptés</em>}
+                  {!hasAnySource && <em>PDF ou vidéo, plusieurs fichiers acceptés</em>}
                 </button>
               )}
             </div>
@@ -991,8 +991,8 @@ export default function ReviewModal({
               <div className="rmod-lesson-meta">
                 {systemName}
                 {lesson.learn_date
-                  ? <> · prévue le {frenchDate(stepDate(lesson, stepIdx, j))}</>
-                  : ' · date non planifiée'}
+                  ? <>, prévue le {frenchDate(stepDate(lesson, stepIdx, j))}</>
+                  : ', date non planifiée'}
               </div>
             </div>
 

@@ -372,12 +372,9 @@ const STEPS: Step[] = [
     body: (
       <>
         Tout ton travail quotidien est <strong>centralisé ici</strong> :
-        <br />
-        · les <strong>fiches du jour</strong> (dues, triées par urgence),
-        <br />
-        · tes <strong>TD du jour</strong> (l&apos;emploi du temps réel d&apos;abord),
-        <br />
-        · ta <strong>to-do</strong> et ta <strong>progression</strong> semaine après semaine.
+        les <strong>fiches du jour</strong> (triées par urgence), tes{' '}
+        <strong>TD du jour</strong>, ta <strong>to-do</strong> et ta{' '}
+        <strong>progression</strong> semaine après semaine.
       </>
     ),
   },
@@ -847,7 +844,7 @@ export default function OnboardingTour({
                 <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
               )}
               <button className="ont-btn-primary" onClick={next}>
-                {stepIdx === STEPS.length - 1 ? 'Terminer' : 'Suivant →'}
+                {stepIdx === STEPS.length - 1 ? 'Terminer' : 'Suivant'}
               </button>
             </div>
           </div>
@@ -912,7 +909,7 @@ export default function OnboardingTour({
                     geste attendu n'est plus une visite, c'est un formulaire.
                     L'étape reste là, elle propose, elle n'impose plus. */}
                 <button className="ont-btn-primary" onClick={next}>
-                  {shouldForceCreate ? 'Plus tard, continuer →' : 'Suivant →'}
+                  {shouldForceCreate ? 'Plus tard, continuer' : 'Suivant'}
                 </button>
               </div>
             </div>
@@ -943,7 +940,7 @@ export default function OnboardingTour({
               trouveras une fois que tu en auras créé une :
               <br /><br />
               <strong>Carte fiche</strong> : 14 cases représentent les 14
-              paliers J0 → J120. Notation de <strong>1</strong> (à revoir) à{' '}
+              paliers de J0 à J120. Notation de <strong>1</strong> (à revoir) à{' '}
               <strong>5</strong> (acquis) à chaque échéance.
               <br /><br />
               <strong>Modale détaillée</strong> (clic sur une fiche) :
@@ -969,7 +966,7 @@ export default function OnboardingTour({
                   className="ont-btn-primary"
                   onClick={() => setStepIdx(APRES_FICHES)}
                 >
-                  Continuer le tour →
+                  Continuer le tour
                 </button>
               </div>
             </div>
@@ -1011,7 +1008,7 @@ export default function OnboardingTour({
                 <button className="ont-btn-ghost" onClick={prev}>← Préc.</button>
               )}
               <button className="ont-btn-primary" onClick={next}>
-                {stepIdx === STEPS.length - 1 ? 'Terminer' : 'Suivant →'}
+                {stepIdx === STEPS.length - 1 ? 'Terminer' : 'Suivant'}
               </button>
             </div>
           </div>
@@ -1143,7 +1140,7 @@ export default function OnboardingTour({
               </button>
             )}
             <button className="ont-btn-primary" onClick={next}>
-              {isLast ? 'Terminer' : 'Suivant →'}
+              {isLast ? 'Terminer' : 'Suivant'}
             </button>
           </div>
         </div>

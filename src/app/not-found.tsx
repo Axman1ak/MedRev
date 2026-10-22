@@ -6,7 +6,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Page introuvable · MedRev',
+  title: 'Page introuvable | MedRev',
 }
 
 export default function NotFound() {
@@ -91,7 +91,7 @@ export default function NotFound() {
               fontWeight: 600,
             }}
           >
-            Retour au tableau de bord →
+            Retour au tableau de bord
           </Link>
           <Link
             href="/"

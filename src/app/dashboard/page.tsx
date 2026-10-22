@@ -401,7 +401,7 @@ function buildMetaForDue(due: DueInfo, systemName: string, lastScore: Score | nu
   }
   parts.push(systemName)
   if (lastScore !== null) parts.push(`dernière ${lastScore}/5`)
-  return { text: parts.join(' · '), withOverdue: due.status === 'missed' }
+  return { text: parts.join(', '), withOverdue: due.status === 'missed' }
 }
 
 // ======================= CARTE PROGRESSION =======================
@@ -794,7 +794,7 @@ export default function DashboardPage() {
               <div className="ptitle">Fiches du jour</div>
               <div className="psub"><b>{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''}</b> à réviser</div>
             </div>
-            {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer →</Link>}
+            {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer</Link>}
           </div>
 
           {/* TD du jour — l'emploi du temps réel passe avant les révisions */}
@@ -840,7 +840,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   {overdue
-                    ? <span className="badge-late">en retard · {p.due.overdueDays} j</span>
+                    ? <span className="badge-late">{p.due.overdueDays} j de retard</span>
                     : <span className="fdue">aujourd&apos;hui</span>}
                 </div>
               )
@@ -850,7 +850,7 @@ export default function DashboardPage() {
                 type="button"
                 className="flist-more"
                 onClick={() => setShowTodayModal(true)}
-              >Voir {hiddenCount} fiche{hiddenCount > 1 ? 's' : ''} de plus →</button>
+              >Voir {hiddenCount} fiche{hiddenCount > 1 ? 's' : ''} de plus</button>
             )}
             </>)}
           </div>
@@ -1006,13 +1006,13 @@ function TodayModal({
                     {late ? `+${p.due.overdueDays} j` : "aujourd'hui"}
                   </span>
                   <span className={p.lastScore ? `full-row-score s${p.lastScore}` : 'full-row-score none'}>
-                    {p.lastScore ?? '·'}
+                    {p.lastScore ?? '-'}
                   </span>
                   <Link
                     href={`/dashboard/focus?lesson=${p.lesson.id}`}
                     className="full-row-go"
                     onClick={onClose}
-                  >Faire →</Link>
+                  >Faire</Link>
                 </div>
               )
             })}
@@ -1051,7 +1051,7 @@ function WeakModal({
 
         {stats.length > 0 && (
           <div className="full-weak-chart">
-            <div className="chart-label">Vue d&apos;ensemble · moyenne par matière</div>
+            <div className="chart-label">Vue d&apos;ensemble : moyenne par matière</div>
             <div className="chart-bars" style={{ gridTemplateColumns: `repeat(${chartCols}, 1fr)` }}>
               {stats.map(m => {
                 const avg = m.avgScore ?? 0
@@ -1088,16 +1088,16 @@ function WeakModal({
                         <div className="mat-counts">
                           <strong>{m.totalFiches}</strong> fiche{m.totalFiches > 1 ? 's' : ''}
                           {m.fragile.length > 0 ? (
-                            <> · <strong className={cls === 's1' ? 's1' : 's2'}>{m.fragile.length} fragile{m.fragile.length > 1 ? 's' : ''}</strong></>
+                            <>, <strong className={cls === 's1' ? 's1' : 's2'}>{m.fragile.length} fragile{m.fragile.length > 1 ? 's' : ''}</strong></>
                           ) : (
-                            <> · <strong className="s4">0 fragile</strong></>
+                            <>, <strong className="s4">0 fragile</strong></>
                           )}
-                          {' · '}{m.okCount} OK
+                          {', '}{m.okCount} OK
                         </div>
                       </div>
                     </div>
                     <div className={`mat-avg ${cls}`}>
-                      <span className="mat-avg-n">{m.avgScore !== null ? m.avgScore.toFixed(1) : '·'}</span>
+                      <span className="mat-avg-n">{m.avgScore !== null ? m.avgScore.toFixed(1) : '-'}</span>
                       <span className="mat-avg-x">/ 5</span>
                     </div>
                   </div>
@@ -1117,8 +1117,8 @@ function WeakModal({
                             <div>
                               <div className="mat-fiche-name">{f.lesson.name}</div>
                               <div className="mat-fiche-meta">
-                                {f.last3.length > 0 ? `3 dernières · ${f.last3.join(' · ')}` : 'Pas encore notée'}
-                                {nextLabel ? ` · ${nextLabel}` : ''}
+                                {f.last3.length > 0 ? `3 dernières notes : ${f.last3.join(', ')}` : 'Pas encore notée'}
+                                {nextLabel ? `, ${nextLabel}` : ''}
                               </div>
                             </div>
                             <div className={`mat-fiche-avg ${fCls}`}>{f.avg.toFixed(1)}</div>

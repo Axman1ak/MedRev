@@ -154,7 +154,7 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
                 Plus tard
               </button>
               <Link href="/dashboard/pricing" className="pw-btn pw-btn-primary" onClick={onClose}>
-                Découvrir Premium →
+                Découvrir Premium
               </Link>
             </div>
           </>
@@ -171,11 +171,11 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
                 Fermer
               </button>
               <a
-                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('MedRev · limite atteinte')}`}
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('MedRev : limite atteinte')}`}
                 className="pw-btn pw-btn-primary"
                 onClick={onClose}
               >
-                Écrire →
+                Écrire
               </a>
             </div>
           </>

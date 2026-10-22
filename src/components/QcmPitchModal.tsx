@@ -120,9 +120,9 @@ export default function QcmPitchModal({
   }, [onClose])
 
   const libelleAction =
-    kind === 'avec-qcm' ? `M’entraîner sur ${nbQcm} questions →`
-    : kind === 'cours-sans-qcm' ? (enCours ? 'Génération… (30-60s)' : 'Générer mes QCM →')
-    : 'Ajouter mon cours →'
+    kind === 'avec-qcm' ? `M’entraîner sur ${nbQcm} questions`
+    : kind === 'cours-sans-qcm' ? (enCours ? 'Génération… (30-60s)' : 'Générer mes QCM')
+    : 'Ajouter mon cours'
 
   const titre =
     kind === 'avec-qcm' ? 'Teste-toi plutôt que de relire'

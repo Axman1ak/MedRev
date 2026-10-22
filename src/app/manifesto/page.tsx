@@ -37,7 +37,7 @@ export default function ManifestoPage() {
       <div className="manifesto-wrap">
 
         <section className="manifesto-section">
-          <div className="manifesto-num">01 · Le constat</div>
+          <div className="manifesto-num">Le constat</div>
           <h2 className="manifesto-h2">Une <em>barrière financière</em> qui ne devrait pas exister.</h2>
           <p className="manifesto-p">
             Aujourd&apos;hui, beaucoup d&apos;étudiants en P1 investissent entre
@@ -62,12 +62,12 @@ export default function ManifestoPage() {
         </section>
 
         <section className="manifesto-section">
-          <div className="manifesto-num">02 · Notre réponse</div>
+          <div className="manifesto-num">Notre réponse</div>
           <h2 className="manifesto-h2">Un outil <em>accessible</em>, en complément ou en alternative.</h2>
           <p className="manifesto-p">
             MedRev est gratuit pour démarrer. <strong>Vraiment gratuit</strong> :
-            matières et fiches illimitées, courbe J, calendrier, sessions
-            Focus, bibliothèque virtuelle. Pas de version « démo » dégradée
+            matières et fiches illimitées, révisions en J, calendrier,
+            sessions de travail, QCM et flashcards. Pas de version « démo » dégradée
             pour pousser à payer.
           </p>
           <p className="manifesto-p">
@@ -85,7 +85,7 @@ export default function ManifestoPage() {
         </section>
 
         <section className="manifesto-section">
-          <div className="manifesto-num">03 · Nos engagements</div>
+          <div className="manifesto-num">Nos engagements</div>
           <h2 className="manifesto-h2">Pas de pub. Pas de tracking. <em>Pas de revente.</em></h2>
           <p className="manifesto-p">
             Tes données d&apos;apprentissage sont parmi les plus intimes que
@@ -109,11 +109,11 @@ export default function ManifestoPage() {
         </section>
 
         <section className="manifesto-section">
-          <div className="manifesto-num">04 · Pourquoi maintenant ?</div>
+          <div className="manifesto-num">Pourquoi maintenant ?</div>
           <h2 className="manifesto-h2">Parce que <em>l&apos;IA bien faite</em>, ça change tout.</h2>
           <p className="manifesto-p">
             Il y a 5 ans, on n&apos;aurait pas pu te générer 30 QCM en 90
-            secondes depuis ta vidéo de cours pour 1 centime de coût.
+            secondes depuis ta vidéo de cours, pour presque rien.
             Aujourd&apos;hui, oui. Et ce qui demandait des moyens conséquents
             (banques de QCM, tuteurs disponibles, planning personnalisé)
             devient <strong>accessible plus largement</strong>.
@@ -153,7 +153,7 @@ export default function ManifestoPage() {
           réviser autrement.
         </p>
         <div className="lp-cta-buttons">
-          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
+          <Link href="/auth" className="lp-btn-primary">Créer mon compte</Link>
           <Link href="/methode" className="lp-btn-secondary">Voir la méthode</Link>
         </div>
       </section>

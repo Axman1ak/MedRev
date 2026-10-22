@@ -556,9 +556,9 @@ export default function CalendarPage() {
           </h1>
           <div className="cal-sub">
             {view === 'week' && weekTotal > 0
-              ? <>{weekTotal} révision{weekTotal > 1 ? 's' : ''} cette semaine{weekDone > 0 ? ` · ${weekDone} déjà notée${weekDone > 1 ? 's' : ''}` : ''}</>
+              ? <>{weekTotal} révision{weekTotal > 1 ? 's' : ''} cette semaine{weekDone > 0 ? `, ${weekDone} déjà notée${weekDone > 1 ? 's' : ''}` : ''}</>
               : view === 'week' ? 'Aucune révision planifiée cette semaine'
-              : 'Vue mensuelle · clique sur un jour pour y aller'}
+              : 'Vue mensuelle : clique sur un jour pour y aller'}
           </div>
         </div>
         <div className="cal-controls">
@@ -609,10 +609,10 @@ export default function CalendarPage() {
           <p className="cal-empty-text">
             Le calendrier se remplit automatiquement à mesure que tu crées
             des fiches et les notes au jour J. La courbe J replanifie les 14
-            paliers (J0 → J+120) pour chacune.
+            paliers (de J0 à J+120) pour chacune.
           </p>
           <Link href="/dashboard/fiches" className="cal-empty-btn">
-            Créer ma première fiche →
+            Créer ma première fiche
           </Link>
         </div>
       )}
@@ -664,7 +664,7 @@ export default function CalendarPage() {
                           // sur la couleur de la matière.
                           style={c && !isEb ? { borderLeftColor: c } : undefined}
                           onClick={() => openTdEdit(td)}
-                          title={`${isEb ? 'Examen blanc · ' : ''}${td.title}${sys ? ' · ' + sys.name : ''}${td.location ? ' · ' + td.location : ''}`}
+                          title={`${isEb ? 'Examen blanc, ' : ''}${td.title}${sys ? ', ' + sys.name : ''}${td.location ? ', ' + td.location : ''}`}
                         >
                           {tdTimeRange(td) && <span className="cal-td-time">{tdTimeRange(td)}</span>}
                           <span className="cal-td-title">{td.title}</span>
@@ -676,7 +676,7 @@ export default function CalendarPage() {
                 )}
 
                 {occs.length === 0 ? (
-                  dayTds.length === 0 ? <div className="cal-day-empty">{'·'}</div> : <div style={{ flex: 1 }} />
+                  dayTds.length === 0 ? <div className="cal-day-empty">{''}</div> : <div style={{ flex: 1 }} />
                 ) : (
                   <>
                     <div className="cal-day-list">
@@ -690,7 +690,7 @@ export default function CalendarPage() {
                             key={`${occ.lesson.id}-${occ.stepIndex}`}
                             className={`cal-fiche${done ? ' cal-done' : ''}`}
                             onClick={() => openReview(occ)}
-                            title={`${sysName ? sysName + ' · ' : ''}${occ.lesson.name} · J+${scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}`}
+                            title={`${sysName ? sysName + ', ' : ''}${occ.lesson.name}, J+${scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}`}
                           >
                             <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
                             <span className="cal-fiche-body">
@@ -706,7 +706,7 @@ export default function CalendarPage() {
                         className="cal-day-more"
                         onClick={() => setShowAllForDay(dateStr)}
                       >
-                        voir plus · +{overflow}
+                        +{overflow} de plus
                       </button>
                     )}
                   </>
@@ -764,7 +764,7 @@ export default function CalendarPage() {
                           key={td.id}
                           className={`cal-month-td${td.kind === 'examen_blanc' ? ' is-eb' : ''}`}
                           onClick={(e) => { e.stopPropagation(); openTdEdit(td) }}
-                          title={`${td.kind === 'examen_blanc' ? 'Examen blanc · ' : ''}${td.title}${td.location ? ' · ' + td.location : ''}`}
+                          title={`${td.kind === 'examen_blanc' ? 'Examen blanc, ' : ''}${td.title}${td.location ? ', ' + td.location : ''}`}
                         >
                           {tdTimeRange(td) && <strong>{tdTimeRange(td)}</strong>} {td.title}
                         </button>
@@ -871,8 +871,8 @@ export default function CalendarPage() {
             <span className="cal-print-title">Semaine du {weekLabel}</span>
             <span className="cal-print-meta">
               {weekTotal} révision{weekTotal > 1 ? 's' : ''}
-              {' · '}{semester === 'year' ? 'Année' : `Semestre ${semester}`}
-              {' · '}imprimé le {new Date().toLocaleDateString('fr-FR')}
+              {', '}{semester === 'year' ? 'Année' : `Semestre ${semester}`}
+              {', '}imprimé le {new Date().toLocaleDateString('fr-FR')}
             </span>
           </div>
           <div className="cal-print-grid">
@@ -898,11 +898,11 @@ export default function CalendarPage() {
                   {/* TD du jour — avant les révisions */}
                   {dayTds.map(td => (
                     <div key={td.id} className="cal-print-tdrow">
-                      <span className="cal-print-td-time">{tdTimeRange(td) || '·'}</span>
+                      <span className="cal-print-td-time">{tdTimeRange(td) || ''}</span>
                       <span className="cal-print-td-title">
-                        {td.kind === 'examen_blanc' ? 'Examen blanc · ' : ''}
+                        {td.kind === 'examen_blanc' ? 'Examen blanc, ' : ''}
                         {td.title}
-                        {td.location ? ` · ${td.location}` : ''}
+                        {td.location ? `, ${td.location}` : ''}
                       </span>
                     </div>
                   ))}

@@ -564,7 +564,7 @@ export default function StatsPage() {
             Apprenti, et chaque jour de travail te rapprochera du rang Maître.
           </p>
           <Link href="/dashboard/fiches" className="stats-empty-global-btn">
-            Créer ma première fiche →
+            Créer ma première fiche
           </Link>
         </div>
       </div>
@@ -575,7 +575,7 @@ export default function StatsPage() {
     <div className="stats-page">
       <div className="stats-header st6-header">
         <h1 className="stats-title">
-          Suis-je <em>prêt</em> ? <span className="st5-header-sem">· {semLabel(semestre)}</span>
+          Suis-je <em>prêt</em> ? <span className="st5-header-sem">{semLabel(semestre)}</span>
         </h1>
         {isPro && (
           <label className="st6-examdate">
@@ -613,18 +613,12 @@ export default function StatsPage() {
               <div className={`st4-delta ${delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : ''}`}>
                 {delta7 > 0 ? `▲ +${delta7} pts cette semaine` : delta7 < 0 ? `▼ ${delta7} pts cette semaine` : '= stable cette semaine'}
               </div>
-              {isPro ? (
-                <div className="st6-forecast">
-                  prévision : <strong>{perWeek >= 0 ? `+${perWeek}` : perWeek} pts</strong> la semaine prochaine
-                  {daysToExam !== null && projected !== null && (
-                    <> · <strong style={{ color: rankFor(projected).color }}>{projected}/100</strong> le jour J</>
-                  )}
-                </div>
-              ) : (
-                <Link href="/dashboard/pricing" className="st6-forecast-teaser">
-                  Projette ton score jusqu&apos;aux examens (Premium) →
-                </Link>
-              )}
+              <div className="st6-forecast">
+                prévision : <strong>{perWeek >= 0 ? `+${perWeek}` : perWeek} pts</strong> la semaine prochaine
+                {daysToExam !== null && projected !== null && (
+                  <>, <strong style={{ color: rankFor(projected).color }}>{projected}/100</strong> le jour J</>
+                )}
+              </div>
             </div>
 
             {rank.next && (
@@ -646,7 +640,7 @@ export default function StatsPage() {
               <span className="st4-streak-num">{currentStreak}</span>
               <span className="st4-streak-lbl">
                 jour{currentStreak > 1 ? 's' : ''} d&apos;affilée
-                {recordStreak > currentStreak && <> · record {recordStreak}</>}
+                {recordStreak > currentStreak && <>, record {recordStreak}</>}
               </span>
             </div>
           </div>
@@ -680,7 +674,7 @@ export default function StatsPage() {
             </div>
             {weakFiches.length > 0 && (
               <Link href={weakHref} className="st-act st5-lever-cta">
-                Retravailler ces {weakFiches.length} fiche{weakFiches.length > 1 ? 's' : ''} →
+                Retravailler ces {weakFiches.length} fiche{weakFiches.length > 1 ? 's' : ''}
               </Link>
             )}
           </div>
@@ -707,7 +701,7 @@ export default function StatsPage() {
               )}
             </div>
             <Link href="/dashboard/focus" className="st-act st5-lever-cta">
-              Faire les révisions du jour →
+              Faire les révisions du jour
             </Link>
           </div>
 
@@ -734,7 +728,7 @@ export default function StatsPage() {
                           cell.inFuture ? 'future' : intensityClass(cell.count, heatmapMax),
                           cell.isToday ? 'today' : '',
                         ].filter(Boolean).join(' ')
-                        return <div key={di} className={cls} title={`${cell.date} · ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
+                        return <div key={di} className={cls} title={`${cell.date}, ${cell.count} révision${cell.count > 1 ? 's' : ''}`} />
                       })}
                     </div>
                   ))}
@@ -744,7 +738,7 @@ export default function StatsPage() {
             </div>
             {!dayValidated && (
               <Link href="/dashboard/focus" className="st-act st5-lever-cta">
-                {doneToday === 0 ? 'Allumer la flamme du jour →' : 'Valider ta journée →'}
+                {doneToday === 0 ? 'Allumer la flamme du jour' : 'Valider ta journée'}
               </Link>
             )}
           </div>

@@ -368,9 +368,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="db-lbl" style={{ minWidth: 0, flex: 1 }}>
               <div className="db-user-name">{profile?.name || '...'}</div>
               <div className="db-user-meta">
-                {profile?.current_year ? `${yearLabel(profile.current_year)} · ` : ''}
+                {profile?.current_year ? `${yearLabel(profile.current_year)}, ` : ''}
                 {profile ? (profile.plan === 'pro' ? 'Premium' : 'Gratuit') : ''}
-                {profile?.fac ? ` · ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
+                {profile?.fac ? `, ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
               </div>
             </div>
             <span className="db-user-chev db-lbl">{menuOuvert ? '⌄' : '›'}</span>

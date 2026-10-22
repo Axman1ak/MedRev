@@ -225,7 +225,7 @@ export default function CartesPage() {
           <Link href="/dashboard/fiches" className="fc-back">{'←'} Fiches</Link>
           <h1 className="fc-title">{lesson.name}</h1>
           <div className="fc-sub">
-            {sysName && <>{sysName} · </>}
+            {sysName && <>{sysName}, </>}
             {cards.length} carte{cards.length > 1 ? 's' : ''} recto/verso
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function CartesPage() {
           <div className="fc-add">
             <div className="fc-add-fields">
               <label className="fc-field">
-                <span className="fc-field-label">Recto · question</span>
+                <span className="fc-field-label">Question</span>
                 <textarea
                   className="fc-ta"
                   rows={2}
@@ -257,7 +257,7 @@ export default function CartesPage() {
                 />
               </label>
               <label className="fc-field">
-                <span className="fc-field-label">Verso · réponse</span>
+                <span className="fc-field-label">Réponse</span>
                 <textarea
                   className="fc-ta"
                   rows={2}
@@ -393,7 +393,7 @@ export default function CartesPage() {
               )
             ) : (
               <>
-                <span className="fc-card-side">{flipped ? 'Verso · réponse' : 'Recto · question'}</span>
+                <span className="fc-card-side">{flipped ? 'Réponse' : 'Question'}</span>
                 <span className="fc-card-text">{flipped ? current.back : current.front}</span>
                 <span className="fc-card-hint">
                   {flipped ? 'Clique pour revoir la question' : 'Clique pour révéler la réponse'}

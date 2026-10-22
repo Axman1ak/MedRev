@@ -106,7 +106,7 @@ function PricingContent() {
           <header className="pri-head">
             <div className="pri-kicker">Ton plan</div>
             <h1 className="pri-h1">
-              {isPro ? <>Ton accès <em>Premium</em> est actif</> : <>Tout est <em>gratuit</em> pour l&apos;instant</>}
+              {isPro ? <>Ton accès <em>Premium</em> est actif</> : <>Tout est <em>gratuit</em></>}
             </h1>
             <p className="pri-sub">
               {isPro
@@ -229,7 +229,7 @@ function PricingContent() {
                   onClick={() => handleUpgrade('yearly')}
                   disabled={checkoutLoading !== null}
                 >
-                  {checkoutLoading === 'yearly' ? 'Redirection…' : 'Passer Annuel →'}
+                  {checkoutLoading === 'yearly' ? 'Redirection…' : 'Passer Annuel'}
                 </button>
               )}
             </div>
@@ -271,7 +271,7 @@ function PricingContent() {
                   onClick={() => handleUpgrade('monthly')}
                   disabled={checkoutLoading !== null}
                 >
-                  {checkoutLoading === 'monthly' ? 'Redirection…' : 'Passer Mensuel →'}
+                  {checkoutLoading === 'monthly' ? 'Redirection…' : 'Passer Mensuel'}
                 </button>
               )}
             </div>
