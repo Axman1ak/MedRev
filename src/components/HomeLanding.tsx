@@ -682,13 +682,13 @@ export default function HomeLanding() {
                   <span className="hl-qz-n">1 / 30</span>
                 </div>
                 <div className="hl-qz-kick">
-                  Question 1<span>QCM · plusieurs bonnes réponses</span>
+                  Question 1<span>Plusieurs bonnes réponses</span>
                 </div>
                 <div className="hl-qz-stem">À propos du nerf radial :</div>
                 <div className="hl-qz-opts">
                   <div className="hl-qz-o hl-ok" style={{ '--a': '49.8%', '--b': '53.6%' } as CSSProperties}>
                     <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
-                    <span className="hl-qz-t">A. Il innerve le muscle triceps brachial.<em>Vrai · tu l'as cochée</em></span>
+                    <span className="hl-qz-t">A. Il innerve le muscle triceps brachial.<em>Vrai, tu l'as cochée</em></span>
                   </div>
                   <div className="hl-qz-o hl-no">
                     <span className="hl-qz-ck"></span>
@@ -696,7 +696,7 @@ export default function HomeLanding() {
                   </div>
                   <div className="hl-qz-o hl-ok" style={{ '--a': '57.5%', '--b': '61.3%' } as CSSProperties}>
                     <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
-                    <span className="hl-qz-t">C. Sa paralysie donne une main tombante.<em>Vrai · tu l'as cochée</em></span>
+                    <span className="hl-qz-t">C. Sa paralysie donne une main tombante.<em>Vrai, tu l'as cochée</em></span>
                   </div>
                   <div className="hl-qz-o hl-no">
                     <span className="hl-qz-ck"></span>
@@ -704,7 +704,7 @@ export default function HomeLanding() {
                   </div>
                   <div className="hl-qz-o hl-ok" style={{ '--a': '65.1%', '--b': '68.9%' } as CSSProperties}>
                     <span className="hl-qz-ck"><i>✓</i><b>✓</b></span>
-                    <span className="hl-qz-t">E. Il innerve les extenseurs de l'avant-bras.<em>Vrai · tu l'as cochée</em></span>
+                    <span className="hl-qz-t">E. Il innerve les extenseurs de l'avant-bras.<em>Vrai, tu l'as cochée</em></span>
                   </div>
                 </div>
                 <div className="hl-qz-end">
@@ -715,7 +715,7 @@ export default function HomeLanding() {
                       <i className="hl-v">vidéo 34:10</i>
                     </span>
                   </div>
-                  <span className="hl-qz-val" style={{ opacity: 0 }}>Valider (3 cochées) →</span>
+                  <span className="hl-qz-val" style={{ opacity: 0 }}>Valider (3 cochées)</span>
                 </div>
               </div>
             </div>

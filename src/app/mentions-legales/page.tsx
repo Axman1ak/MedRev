@@ -98,9 +98,9 @@ export default function MentionsLegalesPage() {
           <h2 className="legal-h2">7. Textes liés</h2>
           <p>
             <Link href="/cgu">Conditions générales d&apos;utilisation</Link>
-            {' · '}
+            {', '}
             <Link href="/confidentialite">Politique de confidentialité</Link>
-            {' · '}
+            {', '}
             <Link href="/contact">Contact</Link>
           </p>
         </section>

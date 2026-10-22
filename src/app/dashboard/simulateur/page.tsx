@@ -961,14 +961,14 @@ export default function SimulateurPage() {
                     <span className="sim-mat-txt">
                       <span className="sim-mat-nm">{sys.name}</span>
                       <span className="sim-mat-meta">
-                        {nbFichesTotal} fiche{nbFichesTotal > 1 ? 's' : ''} · aucun QCM
+                        {nbFichesTotal} fiche{nbFichesTotal > 1 ? 's' : ''}, aucun QCM
                       </span>
                     </span>
                     <button
                       type="button"
                       className="sim-mat-gen"
                       onClick={() => router.push('/dashboard/fiches')}
-                    >Générer des QCM →</button>
+                    >Générer des QCM</button>
                     <span className="sim-mat-chev" aria-hidden="true" />
                   </div>
                 )
@@ -999,7 +999,7 @@ export default function SimulateurPage() {
                   <span className="sim-mat-txt">
                     <span className="sim-mat-nm">{sys.name}</span>
                     <span className="sim-mat-meta">
-                      {fiches.length} fiche{fiches.length > 1 ? 's' : ''} · {nbQcm} QCM
+                      {fiches.length} fiche{fiches.length > 1 ? 's' : ''}, {nbQcm} QCM
                     </span>
                   </span>
                   <span className={`sim-mat-etat${ciblees ? ' cible' : ''}`}>
@@ -1174,7 +1174,7 @@ export default function SimulateurPage() {
                         </button>
                         <span className="sim-ann-nm">
                           {a.name}
-                          {sys?.name ? <em> · {sys.name}</em> : null}
+                          {sys?.name ? <em>, {sys.name}</em> : null}
                         </span>
                         {isExtracting ? (
                           <span className="sim-badge busy">Extraction… (~1 min)</span>
@@ -1256,12 +1256,12 @@ export default function SimulateurPage() {
                   ? 'Lancement…'
                   : !canLaunch
                     ? (totalAvailable === 0 ? 'Aucune question disponible' : 'Retiens au moins une matière')
-                    : `Lancer · ${launchableCount} question${launchableCount > 1 ? 's' : ''}`}
+                    : `Lancer ${launchableCount} question${launchableCount > 1 ? 's' : ''}`}
               </button>
               <div className="sim-go-sub">
                 {!canLaunch
                   ? 'Retiens une matière qui a des QCM, ou dépose un cours pour en générer.'
-                  : `${mode === 'examen' ? `${examDurationMin} min de chrono` : 'Sans chrono'} · barème ${scoring.label.toLowerCase()}`}
+                  : `${mode === 'examen' ? `${examDurationMin} min de chrono` : 'Sans chrono'}, barème ${scoring.label.toLowerCase()}`}
               </div>
             </div>
 
@@ -1326,7 +1326,7 @@ export default function SimulateurPage() {
             <span className="sim-ses-tag-sub">
               {mode === 'apprentissage'
                 ? 'Réponse révélée + explication à chaque question'
-                : `Aucun feedback avant la fin · scoring "${scoring.label}"`}
+                : `Aucun feedback avant la fin, scoring "${scoring.label}"`}
             </span>
           </div>
           <div className="sim-ses-stats">
@@ -1365,7 +1365,7 @@ export default function SimulateurPage() {
           <div className="sim-ses-q">
             <div className="sim-ses-q-meta">
               <em>Question {currentIdx + 1} / {sessionQuestions.length}</em>
-              {q.systemName && <span className="sim-ses-q-source">{q.systemName}{q.lessonName ? ` · ${q.lessonName}` : ''}</span>}
+              {q.systemName && <span className="sim-ses-q-source">{q.systemName}{q.lessonName ? `, ${q.lessonName}` : ''}</span>}
               <span className="sim-ses-q-type multi">
                 Une ou plusieurs bonnes réponses
               </span>
@@ -1396,9 +1396,9 @@ export default function SimulateurPage() {
                 // l'étudiante en a fait.
                 let mark = ''
                 if (isRevealed) {
-                  if (isCorrect && isSelected) mark = 'vrai · cochée'
-                  else if (isCorrect) mark = 'vrai · non cochée'
-                  else if (isSelected) mark = 'faux · cochée'
+                  if (isCorrect && isSelected) mark = 'vrai, cochée'
+                  else if (isCorrect) mark = 'vrai, non cochée'
+                  else if (isSelected) mark = 'faux, cochée'
                   else mark = 'faux'
                 }
                 const why = isRevealed ? whyFor(q, i, q.options.length) : ''
@@ -1438,7 +1438,7 @@ export default function SimulateurPage() {
                   onClick={validateCurrent}
                   disabled={selectedAnswer.length === 0}
                 >
-                  Valider ma réponse {selectedAnswer.length > 0 ? `(${selectedAnswer.length} coché${selectedAnswer.length > 1 ? 'es' : 'e'})` : ''} →
+                  Valider ma réponse {selectedAnswer.length > 0 ? `(${selectedAnswer.length} coché${selectedAnswer.length > 1 ? 'es' : 'e'})` : ''}
                 </button>
               </div>
             )}
@@ -1462,7 +1462,7 @@ export default function SimulateurPage() {
                       <>
                         Bonne{correctIdxs.length > 1 ? 's' : ''} réponse{correctIdxs.length > 1 ? 's' : ''} :{' '}
                         <strong>
-                          {correctIdxs.map(idx => `${letterFor(idx)}. ${q.options[idx]}`).join(' · ')}
+                          {correctIdxs.map(idx => `${letterFor(idx)}. ${q.options[idx]}`).join(', ')}
                         </strong>.
                       </>
                     )}
@@ -1506,7 +1506,7 @@ export default function SimulateurPage() {
             <div className="sim-ses-nav">
               <button className="sim-ses-nav-btn" onClick={gotoPrev} disabled={currentIdx === 0}>← Précédente</button>
               <button className="sim-ses-nav-btn primary" onClick={gotoNext}>
-                {currentIdx === sessionQuestions.length - 1 ? 'Terminer →' : 'Suivante →'}
+                {currentIdx === sessionQuestions.length - 1 ? 'Terminer' : 'Suivante'}
               </button>
             </div>
           </div>
@@ -1515,7 +1515,7 @@ export default function SimulateurPage() {
             <div className="sim-ses-sheet-h">
               Grille de réponses
               <span className="sim-meta">
-                {mode === 'apprentissage' ? 'vert = correct · rouge = raté' : 'clique pour répondre · navigation par ligne'}
+                {mode === 'apprentissage' ? 'vert : correct, rouge : raté' : 'clique pour répondre, une ligne par question'}
               </span>
             </div>
             <SheetGrid
@@ -1536,7 +1536,7 @@ export default function SimulateurPage() {
               </span>
               <span className="sim-ses-sheet-progress-v">
                 {mode === 'apprentissage'
-                  ? <>{correctCount}<em>/ {answeredCount} répondues{wrongCount > 0 ? ` · ${wrongCount} ratée${wrongCount > 1 ? 's' : ''}` : ''}</em></>
+                  ? <>{correctCount}<em>/ {answeredCount} répondues{wrongCount > 0 ? `, ${wrongCount} ratée${wrongCount > 1 ? 's' : ''}` : ''}</em></>
                   : <>{answeredCount}<em>/ {sessionQuestions.length} répondues</em></>
                 }
               </span>
@@ -1553,7 +1553,7 @@ export default function SimulateurPage() {
     const scoreCls = score >= 70 ? 'ok' : score >= 50 ? 'amber' : 'rose'
     const totalSeconds = duration !== null ? duration * 60 - timeLeft : 0
     const tu = formatTime(totalSeconds)
-    const matieres = Array.from(new Set(sessionQuestions.map(q => q.systemName).filter(Boolean))).join(' · ')
+    const matieres = Array.from(new Set(sessionQuestions.map(q => q.systemName).filter(Boolean))).join(', ')
 
     const r1 = selfRatings.filter(r => r === 'reprendre').length
     const r2 = selfRatings.filter(r => r === 'difficile').length
@@ -1567,7 +1567,7 @@ export default function SimulateurPage() {
         <div className="sim-header">
           <div>
             <h1 className="sim-title">Session <em>terminée</em></h1>
-            <div className="sim-sub">{matieres || 'Toutes matières'} · {sessionQuestions.length} questions · {tu}</div>
+            <div className="sim-sub">{matieres || 'Toutes matières'}, {sessionQuestions.length} questions, {tu}</div>
           </div>
         </div>
 
@@ -1592,7 +1592,7 @@ export default function SimulateurPage() {
             <div className="sim-res-stat">
               <div className="sim-res-stat-lbl">Ratées</div>
               <div className="sim-res-stat-num ko">{wrongCount}</div>
-              <div className="sim-res-stat-sub">{wrongCount > 0 ? 'à refaire en révision ciblée' : 'aucune ratée · solide'}</div>
+              <div className="sim-res-stat-sub">{wrongCount > 0 ? 'à refaire en révision ciblée' : 'aucune ratée, solide'}</div>
             </div>
             <div className="sim-res-stat">
               <div className="sim-res-stat-lbl">Temps utilisé</div>
@@ -1605,7 +1605,7 @@ export default function SimulateurPage() {
 
           {hasRatings && (
             <div className="sim-res-rates">
-              <div className="sim-res-rates-h">Ressenti · répartition de tes réponses</div>
+              <div className="sim-res-rates-h">Ressenti : répartition de tes réponses</div>
               <div className="sim-res-rates-bar">
                 {r1 > 0 && <div className="sim-res-rates-segment r1" style={{ width: `${(r1 / rTotal) * 100}%` }} />}
                 {r2 > 0 && <div className="sim-res-rates-segment r2" style={{ width: `${(r2 / rTotal) * 100}%` }} />}
@@ -1624,7 +1624,7 @@ export default function SimulateurPage() {
           <div className="sim-res-actions">
             <button className="sim-res-btn sim-res-btn-secondary" onClick={newSession}>Nouvelle session</button>
             <button className="sim-res-btn sim-res-btn-primary" onClick={replayMissed} disabled={wrongCount === 0}>
-              {wrongCount > 0 ? `Refaire les ${wrongCount} ratée${wrongCount > 1 ? 's' : ''} →` : 'Aucune ratée'}
+              {wrongCount > 0 ? `Refaire les ${wrongCount} ratée${wrongCount > 1 ? 's' : ''}` : 'Aucune ratée'}
             </button>
           </div>
         </div>

@@ -277,8 +277,8 @@ export default function BulkPolyUpload({
             <>
               <span className="bulk-count">
                 {aEnvoyer.length} fichier{aEnvoyer.length > 1 ? 's' : ''} à rattacher
-                {doublons.size > 0 && ' · corrige les doublons pour continuer'}
-                {plan !== 'pro' && lignes.some(l => l.tropGros) && ` · limite ${FREE_PDF_SIZE_MB} Mo par fichier`}
+                {doublons.size > 0 && ', corrige les doublons pour continuer'}
+                {plan !== 'pro' && lignes.some(l => l.tropGros) && `, limite ${FREE_PDF_SIZE_MB} Mo par fichier`}
               </span>
               <button
                 type="button"
@@ -286,7 +286,7 @@ export default function BulkPolyUpload({
                 disabled={aEnvoyer.length === 0 || doublons.size > 0}
                 onClick={envoyer}
               >
-                Rattacher →
+                Rattacher
               </button>
             </>
           )}
@@ -294,7 +294,7 @@ export default function BulkPolyUpload({
             <>
               <span className="bulk-count">
                 {reussis} rattaché{reussis > 1 ? 's' : ''}
-                {echoues > 0 && ` · ${echoues} en échec`}
+                {echoues > 0 && `, ${echoues} en échec`}
               </span>
               <button type="button" className="bulk-btn" onClick={onClose}>Fermer</button>
             </>

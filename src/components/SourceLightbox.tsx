@@ -124,7 +124,7 @@ export default function SourceLightbox({ media, sourceRef, lessonName, onClose }
 
         <div className="srcl-head">
           <h3 className="srcl-title">
-            Cours · <em>{lessonName}</em>
+            Cours, <em>{lessonName}</em>
           </h3>
           {showTabs && (
             <div className="srcl-tabs">

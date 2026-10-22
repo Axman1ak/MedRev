@@ -42,7 +42,7 @@ export default function MethodePage() {
       <section className="lp-section" style={{ paddingTop: 64 }}>
         <div className="lp-method-block">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">01 · Le problème</div>
+            <div className="lp-section-kicker">Le problème</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
               La courbe d&apos;<em>Ebbinghaus.</em>
             </h2>
@@ -100,7 +100,7 @@ export default function MethodePage() {
       <section className="lp-section" style={{ paddingTop: 40 }}>
         <div className="lp-method-block reverse">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">02 · La solution</div>
+            <div className="lp-section-kicker">La solution</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
               <em>14 paliers</em> de J0 à J+120.
             </h2>
@@ -130,13 +130,13 @@ export default function MethodePage() {
                 { j: 'J+105', s: 0 }, { j: 'J+120', s: 0 },
               ].map((p, i) => (
                 <div key={i} className="lp-method-stamp-col">
-                  <div className={`lp-method-stamp s${p.s}`}>{p.s > 0 ? p.s : '·'}</div>
+                  <div className={`lp-method-stamp s${p.s}`}>{p.s > 0 ? p.s : ''}</div>
                   <div className="lp-method-stamp-lbl">{p.j}</div>
                 </div>
               ))}
             </div>
             <div className="lp-method-stamps-note">
-              9 paliers déjà notés sur cette fiche · les 5 derniers attendent leur tour
+              9 paliers déjà notés sur cette fiche, les 5 derniers attendent leur tour
             </div>
           </div>
         </div>
@@ -146,15 +146,15 @@ export default function MethodePage() {
       <section className="lp-section" style={{ paddingTop: 40 }}>
         <div className="lp-method-block">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">03 · L&apos;IA</div>
+            <div className="lp-section-kicker">L&apos;IA</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
               <em>30 QCM</em> en 90 secondes.
             </h2>
             <p className="lp-method-p">
               Tu charges la <strong>vidéo de la rediffusion</strong> du cours
-              et le <strong>poly PDF</strong>. MedRev les envoie à Gemini
-              (Google), qui transcrit l&apos;audio puis génère 30 QCM type
-              examen.
+              et le <strong>poly PDF</strong>. MedRev transcrit l&apos;audio,
+              lit le poly, puis génère 30 QCM type examen. Tu les fais par
+              sessions de 10, en commençant par ceux que tu as ratés.
             </p>
             <p className="lp-method-p">
               Chaque question vient avec un <strong>retour direct vers la
@@ -168,16 +168,12 @@ export default function MethodePage() {
               génération pour casser le biais des LLM (qui placent souvent
               la bonne en B/C).
             </p>
-            <p className="lp-method-p" style={{ fontFamily: 'var(--lp-fi)', fontStyle: 'italic', color: 'var(--lp-text-soft)' }}>
-              Coût pour nous : environ 1 centime par génération.
-              Transparent.
-            </p>
           </div>
           <div className="lp-method-visual">
             <div className="lp-method-qcm">
               <div className="lp-method-qcm-source">
                 <span className="lp-method-source-icon">▶</span>
-                cours-glycolyse.mp4 · 47 min
+                cours-glycolyse.mp4, 47 min
               </div>
               <div className="lp-method-qcm-arrow">↓</div>
               <div className="lp-method-qcm-card">
@@ -195,7 +191,7 @@ export default function MethodePage() {
                 </div>
                 <div className="lp-method-qcm-source-ref">
                   <span className="lp-method-source-icon" style={{ fontSize: 9 }}>▶</span>
-                  Source : Vidéo · 18:42
+                  Source : vidéo à 18:42
                 </div>
               </div>
             </div>
@@ -207,7 +203,7 @@ export default function MethodePage() {
       <section className="lp-section" style={{ paddingTop: 40 }}>
         <div className="lp-method-block reverse">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">04 · Le mode « Ce que j&apos;ai raté »</div>
+            <div className="lp-section-kicker">Le mode « Ce que j&apos;ai raté »</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
               <em>80 % du temps</em> sur 20 % du programme.
             </h2>
@@ -263,7 +259,7 @@ export default function MethodePage() {
               </div>
             </div>
             <div className="lp-method-stamps-note">
-              Mode « Ce que j&apos;ai raté » · les fiches faibles tirées 3× plus souvent
+              Mode « Ce que j&apos;ai raté » : les fiches faibles tirées 3 fois plus souvent
             </div>
           </div>
         </div>
@@ -273,17 +269,16 @@ export default function MethodePage() {
       <section className="lp-section" style={{ paddingTop: 40 }}>
         <div className="lp-method-block">
           <div className="lp-method-text">
-            <div className="lp-section-kicker">05 · Le rituel</div>
+            <div className="lp-section-kicker">Le rituel</div>
             <h2 className="lp-section-h2" style={{ textAlign: 'left', margin: '0 0 18px' }}>
-              Un livre s&apos;écrit, <em>un sceau le ferme.</em>
+              Relire, s&apos;entraîner, <em>se noter.</em>
             </h2>
             <p className="lp-method-p">
-              En session Focus, un <strong>livre s&apos;écrit en temps
-              réel</strong> pendant que tu révises. Tu notes la fiche en
-              apposant un <strong>sceau de cire</strong> de 1 à 5, et le livre
-              vole se ranger dans ta bibliothèque de nuit : <strong>2000
-              livres</strong> sur l&apos;année, <strong>6 trésors</strong> à
-              débloquer en chemin.
+              Chaque fiche du jour passe par trois étapes. Tu <strong>relis</strong>{' '}
+              une fiche de synthèse courte et tes pièges, tu{' '}
+              <strong>t&apos;entraînes</strong> sur les QCM et les flashcards du
+              cours, puis tu <strong>te notes</strong> de 1 à 5 avec ton résultat
+              sous les yeux. Chaque fiche notée rejoint ta bibliothèque.
             </p>
             <p className="lp-method-p">
               Ton travail se mesure dans un <strong>indice de préparation</strong>
@@ -321,7 +316,7 @@ export default function MethodePage() {
                 ))}
               </div>
               <div className="lp-method-biblio-meta">
-                <span><strong>96</strong> ouvrages · 2000 max</span>
+                <span><strong>96</strong> ouvrages, 2000 max</span>
                 <span style={{ color: 'var(--lp-gold)' }}>Prochain trésor : 100 livres</span>
               </div>
             </div>
@@ -332,14 +327,14 @@ export default function MethodePage() {
       {/* CTA final */}
       <section className="lp-cta">
         <h2 className="lp-cta-h2">
-          Prêt·e à tester <em>la méthode ?</em>
+          Envie de tester <em>la méthode ?</em>
         </h2>
         <p className="lp-cta-sub">
           Crée ton compte gratuit, charge ton premier cours, et regarde MedRev
-          générer 30 QCM en 90 secondes.
+          générer tes 30 premiers QCM.
         </p>
         <div className="lp-cta-buttons">
-          <Link href="/auth" className="lp-btn-primary">Commencer gratuit →</Link>
+          <Link href="/auth" className="lp-btn-primary">Commencer gratuit</Link>
           <Link href="/pricing" className="lp-btn-secondary">Voir les tarifs</Link>
         </div>
       </section>

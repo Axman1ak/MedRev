@@ -143,7 +143,7 @@ export default function QuestionFigure({ pdfPath, page, box }: Props) {
   return (
     <figure className={`qfig${etat === 'charge' ? ' qfig-attente' : ''}`} ref={boiteRef}>
       <canvas ref={canvasRef} className="qfig-canvas" aria-label={`Figure du cours, page ${page}`} />
-      <figcaption className="qfig-cap">Figure du cours · page {page}</figcaption>
+      <figcaption className="qfig-cap">Figure du cours, page {page}</figcaption>
     </figure>
   )
 }

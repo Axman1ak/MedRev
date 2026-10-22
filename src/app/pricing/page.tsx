@@ -67,18 +67,18 @@ export default function PricingPublicPage() {
             <ul className="lp-pt-list">
               <li>Matières et fiches illimitées</li>
               <li>Courbe J + notation 1-5</li>
-              <li>Bibliothèque + Focus illimités</li>
+              <li>Sessions de travail et flashcards</li>
               <li>{FREE_AI_GENERATIONS_LIMIT} générations QCM IA</li>
               <li>{FREE_SIMULATOR_SESSIONS_LIMIT} sessions simulateur</li>
               <li>Vidéos jusqu&apos;à {FREE_VIDEO_SIZE_MB} Mo, PDF jusqu&apos;à {FREE_PDF_SIZE_MB} Mo</li>
             </ul>
             <Link href="/auth" className="lp-btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
-              Commencer gratuit →
+              Commencer gratuit
             </Link>
           </div>
 
           <div className="lp-pt-card featured">
-            <div className="lp-pt-tag">Recommandé · Économise ~5 mois</div>
+            <div className="lp-pt-tag">Recommandé, environ 5 mois offerts</div>
             <h3 className="lp-pt-name">Annuel</h3>
             <div className="lp-pt-price">69<em>€/an</em></div>
             <div className="lp-pt-period">soit 5,75 € par mois</div>
@@ -95,7 +95,7 @@ export default function PricingPublicPage() {
               <li>Économise ~51 € vs Mensuel</li>
             </ul>
             <Link href="/auth" className="lp-btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-              Passer Annuel →
+              Passer Annuel
             </Link>
           </div>
 
@@ -117,7 +117,7 @@ export default function PricingPublicPage() {
               <li>Sans engagement</li>
             </ul>
             <Link href="/auth" className="lp-btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
-              Passer Mensuel →
+              Passer Mensuel
             </Link>
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function PricingPublicPage() {
           selon ta fac.
         </p>
         <div className="lp-cta-buttons">
-          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
+          <Link href="/auth" className="lp-btn-primary">Créer mon compte</Link>
           <Link href="/methode" className="lp-btn-secondary">Voir la méthode</Link>
         </div>
       </section>
@@ -259,12 +259,12 @@ function PricingGratuit() {
       <section className="ln-subhero">
         <span className="ln-kicker">Tarifs</span>
         <h1 className="ln-subhero-h1">
-          Pour l&apos;instant,
-          <span className="ln-line2"><em>tout est gratuit.</em></span>
+          MedRev est
+          <span className="ln-line2"><em>gratuit.</em></span>
         </h1>
         <p className="ln-subhero-sub">
-          MedRev est développé par un étudiant, seul. Tant que c&apos;est le cas,
-          l&apos;app reste gratuite et sans publicité.
+          Développé par un étudiant, seul. Sans publicité, sans carte
+          bancaire.
         </p>
       </section>
 
@@ -285,12 +285,12 @@ function PricingGratuit() {
               <li>Matières et fiches illimitées</li>
               <li>Courbe J + notation 1-5</li>
               <li>Calendrier et TD de fac</li>
-              <li>Bibliothèque + Focus illimités</li>
+              <li>Sessions de travail et flashcards</li>
               <li>QCM générés depuis tes cours</li>
               <li>Simulateur d&apos;examen</li>
             </ul>
             <Link href="/auth" className="lp-btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-              Créer mon compte →
+              Créer mon compte
             </Link>
           </div>
         </div>
@@ -336,10 +336,10 @@ function PricingGratuit() {
       </section>
 
       <section className="lp-cta">
-        <h2 className="lp-cta-h2">Commence maintenant.</h2>
-        <p className="lp-cta-sub">Deux minutes pour créer ton compte et poser tes premières fiches.</p>
+        <h2 className="lp-cta-h2">Pose tes premières fiches ce soir.</h2>
+        <p className="lp-cta-sub">Deux minutes pour créer ton compte et choisir tes matières.</p>
         <div className="lp-cta-buttons">
-          <Link href="/auth" className="lp-btn-primary">Créer mon compte →</Link>
+          <Link href="/auth" className="lp-btn-primary">Créer mon compte</Link>
           <Link href="/methode" className="lp-btn-secondary">Voir la méthode</Link>
         </div>
       </section>

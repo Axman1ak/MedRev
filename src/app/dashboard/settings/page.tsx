@@ -598,7 +598,7 @@ export default function SettingsPage() {
                 {OFFRES_PAYANTES_OUVERTES ? (
                   <>
                     <Link href="/dashboard/pricing" className="set-abo-cta">
-                      Passer à Premium →
+                      Passer à Premium
                     </Link>
                     <span className="set-abo-cta-note">Sans engagement, résiliable en deux clics.</span>
                   </>
@@ -643,7 +643,7 @@ export default function SettingsPage() {
                     onClick={openCustomerPortal}
                     disabled={portalLoading}
                   >
-                    {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement →'}
+                    {portalLoading ? 'Ouverture…' : 'Gérer mon abonnement'}
                   </button>
                   <span className="set-abo-cta-note">
                     Factures, carte bancaire et résiliation via le portail sécurisé Stripe.
@@ -670,8 +670,8 @@ export default function SettingsPage() {
             <span className="set-year-current-txt">
               Année en cours
               {yearCounts[currentYear]?.systems
-                ? ` · ${plural(yearCounts[currentYear].systems, 'matière')}, ${plural(yearCounts[currentYear].lessons, 'fiche')}`
-                : ' · aucune matière pour l\'instant'}
+                ? `, ${plural(yearCounts[currentYear].systems, 'matière')}, ${plural(yearCounts[currentYear].lessons, 'fiche')}`
+                : ', aucune matière pour l\'instant'}
               {profile?.year_changed_at && (
                 <><br />Tu es passé en {yearLabel(currentYear)} le {formatDay(profile.year_changed_at)}.</>
               )}
@@ -741,7 +741,7 @@ export default function SettingsPage() {
               value={fac}
               onChange={e => setFac(e.target.value)}
             >
-              <option value="">· Choisir ·</option>
+              <option value="">Choisir</option>
               {FACS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>

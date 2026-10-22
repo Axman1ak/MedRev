@@ -770,7 +770,7 @@ export default function FichesPage() {
           <div>
             <h1 className="fi-h1">Mes matières</h1>
             <div className="fi-sub">
-              {semester === 'year' ? 'Année complète' : `Semestre ${semester}`} · {semSystems.length} matière{semSystems.length > 1 ? 's' : ''} · {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
+              {semester === 'year' ? 'Année complète' : `Semestre ${semester}`}, {semSystems.length} matière{semSystems.length > 1 ? 's' : ''}, {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
             </div>
           </div>
           <div className="fi-actions">
@@ -922,11 +922,11 @@ export default function FichesPage() {
                     onChange={e => setFilterNote(e.target.value as FilterNote)}
                   >
                     <option value="all">Toutes</option>
-                    <option value="s1">Rouge · à revoir</option>
-                    <option value="s2">Orange · faible</option>
-                    <option value="s3">Jaune · moyen</option>
-                    <option value="s4">Vert clair · bien</option>
-                    <option value="s5">Vert foncé · maîtrisée</option>
+                    <option value="s1">Rouge, à revoir</option>
+                    <option value="s2">Orange, faible</option>
+                    <option value="s3">Jaune, moyen</option>
+                    <option value="s4">Vert clair, bien</option>
+                    <option value="s5">Vert foncé, maîtrisée</option>
                   </select>
                 </div>
               </label>
@@ -962,7 +962,7 @@ export default function FichesPage() {
             <div className="filter-stats">
               <strong>{visibleLessons.length}</strong> fiche{visibleLessons.length > 1 ? 's' : ''}
               {!showDueOnly && dueTodayCount > 0 && (
-                <> · <strong>{dueTodayCount}</strong> à réviser aujourd'hui</>
+                <>, <strong>{dueTodayCount}</strong> à réviser aujourd'hui</>
               )}
             </div>
           </div>
@@ -1011,7 +1011,7 @@ export default function FichesPage() {
                             entrées finissaient tout en bas, hors de vue. Ne pas les
                             renvoyer après les chapitres. */}
                         <button type="button" className="fi-menu-item" onClick={() => openEdit('lesson', lesson.id, lesson.name)}>
-                          Modifier · nom, J+0
+                          Modifier le nom ou le J+0
                         </button>
                         <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => openDelete('lesson', lesson.id, lesson.name)}>
                           Supprimer la fiche
@@ -1038,21 +1038,21 @@ export default function FichesPage() {
                         const s = getStampState(lesson, i, today, lessonJ)
                         if (s.kind === 'score') {
                           return (
-                            <span key={i} className={`stamp s${s.score}`} title={`J+${lessonJ[i]} · note ${s.score}/5`}>
+                            <span key={i} className={`stamp s${s.score}`} title={`J+${lessonJ[i]}, note ${s.score}/5`}>
                               {s.score === 5 && <span className="stamp-star" aria-hidden="true">★</span>}
                             </span>
                           )
                         }
                         if (s.kind === 'temp') {
                           return (
-                            <span key={i} className={`stamp temp s${s.score}`} title={`J+${lessonJ[i]} · retravaillé en avance · note ${s.score}/5 (temporaire jusqu'au vrai J)`}>
+                            <span key={i} className={`stamp temp s${s.score}`} title={`J+${lessonJ[i]}, retravaillé en avance, note ${s.score}/5 (temporaire jusqu'au vrai J)`}>
                               {s.score}
                             </span>
                           )
                         }
-                        if (s.kind === 'today') return <span key={i} className="stamp today" title={`J+${lessonJ[i]} · aujourd'hui`} />
-                        if (s.kind === 'missed') return <span key={i} className="stamp missed" title={`J+${lessonJ[i]} · manqué`} />
-                        return <span key={i} className="stamp future" title={`J+${lessonJ[i]} · à venir`} />
+                        if (s.kind === 'today') return <span key={i} className="stamp today" title={`J+${lessonJ[i]}, aujourd'hui`} />
+                        if (s.kind === 'missed') return <span key={i} className="stamp missed" title={`J+${lessonJ[i]}, manqué`} />
+                        return <span key={i} className="stamp future" title={`J+${lessonJ[i]}, à venir`} />
                       })}
                     </div>
                     <div className="card-foot">
@@ -1262,7 +1262,7 @@ export default function FichesPage() {
               <label className="fi-label">Matière</label>
               <select className="fi-select" value={newLesSysId} onChange={e => setNewLesSysId(e.target.value)}>
                 {systems.map(sys => <option key={sys.id} value={sys.id}>
-                  {sys.name} · S{(sys as any).semestre}
+                  {sys.name} (S{(sys as any).semestre})
                 </option>)}
               </select>
             </div>
@@ -1346,7 +1346,7 @@ export default function FichesPage() {
               const changed = editDate !== (editing.learnDate ?? '')
               return (
                 <div style={{ marginBottom: 14 }}>
-                  <label className="fi-label">Date du cours · J+0</label>
+                  <label className="fi-label">Date du cours (J+0)</label>
                   {/* Pas de borne haute : la création accepte déjà une date future
                       (fiche planifiée pour un cours à venir), l'édition doit
                       accepter la même chose sinon on ne peut plus la corriger. */}
@@ -1420,7 +1420,7 @@ export default function FichesPage() {
                   onChange={e => setEditYear(e.target.value)}
                 >
                   {YEARS.map(y => (
-                    <option key={y.id} value={y.id}>{y.label} · {y.hint}</option>
+                    <option key={y.id} value={y.id}>{y.label} ({y.hint})</option>
                   ))}
                 </select>
                 {normalizeYear(editYear) !== currentYear && (
@@ -1599,10 +1599,10 @@ export default function FichesPage() {
             <p style={{ fontSize: 13, color: 'var(--gray)', lineHeight: 1.5, marginBottom: 14 }}>
               <strong style={{ color: 'var(--dark)' }}>{deleting.name}</strong>
               {deleting.type === 'system' && deleting.childCount !== undefined && deleting.childCount > 0 && (
-                <> · {deleting.childCount} fiche{deleting.childCount > 1 ? 's' : ''} et leurs révisions seront aussi supprimées.</>
+                <> : {deleting.childCount} fiche{deleting.childCount > 1 ? 's' : ''} et leurs révisions seront aussi supprimées.</>
               )}
               {deleting.type === 'lesson' && (
-                <> · toutes les notes et révisions enregistrées seront perdues.</>
+                <> : toutes les notes et révisions enregistrées seront perdues.</>
               )}
             </p>
             <p style={{ fontSize: 12, color: 'var(--gray)', fontStyle: 'italic' }}>
