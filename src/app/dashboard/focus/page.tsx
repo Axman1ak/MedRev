@@ -705,9 +705,9 @@ function SessionBody() {
         <h2>Ajoute ton cours pour réviser cette fiche</h2>
         <p className="se-setup-sub">MedRev a besoin du poly ou de la vidéo de l&apos;amphi. À partir du fichier, il prépare tout le reste.</p>
         <ol className="se-howto">
-          <li><b>1</b><span><strong>Dépose ton cours</strong>Le poly en PDF ou la vidéo de l&apos;amphi.</span></li>
-          <li><b>2</b><span><strong>MedRev prépare ta révision</strong>Une fiche de synthèse, 30 QCM et des flashcards.</span></li>
-          <li><b>3</b><span><strong>Tu révises ici</strong>Relire, t&apos;entraîner, te noter, à chaque palier.</span></li>
+          <li><b>1</b><span><strong>Dépose ton cours</strong>Le poly ou la vidéo de l&apos;amphi.</span></li>
+          <li><b>2</b><span><strong>MedRev prépare tout</strong>Synthèse, 30 QCM, flashcards.</span></li>
+          <li><b>3</b><span><strong>Tu révises ici</strong>À chaque palier, au même endroit.</span></li>
         </ol>
         <div
           className={`se-drop${dragOver ? ' over' : ''}${uploading ? ' busy' : ''}`}
@@ -722,8 +722,6 @@ function SessionBody() {
             <button type="button" className="se-btn se-btn-primary" disabled={!!uploading} onClick={() => pdfInput.current?.click()}>Choisir le poly (PDF)</button>
             <button type="button" className="se-btn se-btn-ghost" disabled={!!uploading} onClick={() => videoInput.current?.click()}>Ajouter la vidéo</button>
           </div>
-          <input ref={pdfInput} type="file" accept="application/pdf" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
-          <input ref={videoInput} type="file" accept="video/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
         </div>
         {uploadErr && <p className="se-err" role="alert">{uploadErr}</p>}
       </div>
@@ -746,6 +744,46 @@ function SessionBody() {
         {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
       </div>
     )
+  )
+
+  // S'entraîner sans QCM : un aperçu d'entraînement grisé, et une seule action
+  // (ajouter le cours, ou créer les QCM). Volontairement différent de « Relire ».
+  const trainSetup = (
+    <div className="se-tset">
+      <div className="se-tset-preview" aria-hidden="true">
+        <div className="se-qhead"><span>Question 1 sur 10</span><span>Plusieurs bonnes réponses</span></div>
+        <div className="se-bar"><i style={{ width: '10%' }} /></div>
+        <div className="se-tset-q" />
+        <div className="se-tset-q short" />
+        {[0, 1, 2, 3].map(i => <div key={i} className="se-tset-opt"><span /><i style={{ width: `${[72, 58, 80, 46][i]}%` }} /></div>)}
+      </div>
+      <div className="se-tset-over">
+        <div className="se-tset-card">
+          <span className="se-tset-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="3" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
+          </span>
+          <h2>{hasSource ? 'Tes QCM ne sont pas encore créés' : 'Pas de QCM sans ton cours'}</h2>
+          <p>{hasSource
+            ? '30 questions corrigées, tirées de ton cours, en 30 à 60 secondes. Chaque erreur deviendra une flashcard.'
+            : 'Les QCM et les flashcards sont créés à partir de ton poly ou de la vidéo de l\'amphi. Ajoute-le, MedRev s\'occupe du reste.'}</p>
+          {hasSource ? (
+            <>
+              <button type="button" className="se-btn se-btn-primary" onClick={generateQcm} disabled={qcmRunning}>{qcmRunning ? 'Création des QCM…' : 'Créer les 30 QCM'}</button>
+              {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
+              {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
+            </>
+          ) : (
+            <>
+              <div className="se-drop-btns">
+                <button type="button" className="se-btn se-btn-primary" disabled={!!uploading} onClick={() => pdfInput.current?.click()}>{uploading === 'pdf' ? 'Envoi du poly…' : 'Ajouter le poly (PDF)'}</button>
+                <button type="button" className="se-btn se-btn-ghost" disabled={!!uploading} onClick={() => videoInput.current?.click()}>{uploading === 'video' ? 'Envoi…' : 'La vidéo'}</button>
+              </div>
+              {uploadErr && <p className="se-err" role="alert">{uploadErr}</p>}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 
   const steps: { label: string; sub: string }[] = [
@@ -964,7 +1002,7 @@ function SessionBody() {
                     </>
                   ) : null
                 ) : qs.length === 0 ? (
-                  courseSetup
+                  trainSetup
                 ) : trainSaved ? (
                   <div className="se-nosynth">
                     <h2>QCM terminés</h2>
@@ -1039,11 +1077,11 @@ function SessionBody() {
                     </div>
                   </div>
                 )}
-                <div className="se-info">
+                {(mode === 'cards' || qs.length > 0) && <div className="se-info">
                   {mode === 'qcm'
                     ? 'Chaque erreur devient une flashcard. Après les QCM, tu passes aux flashcards.'
                     : 'Les nouvelles cartes viennent de tes erreurs de QCM, puis celles que tu sais le moins.'}
-                </div>
+                </div>}
                 <button type="button" className="se-btn se-btn-ghost se-push" onClick={goRate}>{attempts.length || cardSeen ? 'Arrêter et me noter' : 'Passer à la note'}</button>
               </div>
             </section>
@@ -1092,6 +1130,8 @@ function SessionBody() {
         </main>
       </div>
 
+      <input ref={pdfInput} type="file" accept="application/pdf" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
+      <input ref={videoInput} type="file" accept="video/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
       {source && (
         <SourceLightbox media={media} sourceRef={source} lessonName={current.lesson.name} onClose={() => setSource(null)} />
       )}
