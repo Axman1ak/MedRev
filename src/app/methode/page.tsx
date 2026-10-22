@@ -15,6 +15,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'La méthode',
   description: 'Comment MedRev organise ta P1 de médecine : révisions espacées de J+0 à J+120, fiche de synthèse, QCM et flashcards tirés de tes cours.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function MethodePage() {

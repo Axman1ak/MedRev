@@ -13,6 +13,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'Conditions Générales d\'Utilisation',
   description: 'CGU de MedRev : éditeur, objet, inscription, tarifs, résiliation, propriété intellectuelle, responsabilité, droit applicable.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function CguPage() {

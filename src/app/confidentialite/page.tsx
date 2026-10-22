@@ -12,6 +12,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'Politique de Confidentialité',
   description: 'Politique de confidentialité de MedRev, conforme RGPD. Données collectées, finalités, sous-traitants, droits de l\'utilisateur.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function ConfidentialitePage() {

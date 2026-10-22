@@ -17,6 +17,8 @@ import '@/components/landing-night.css'
 export const metadata = {
   title: 'Contact',
   description: 'Écrire à MedRev : questions des étudiants, tutorats et associations, signalement d\'une erreur dans un QCM.',
+  // Hors de Google : seul l'accueil doit sortir quand on cherche MedRev.
+  robots: { index: false, follow: true },
 }
 
 export default function ContactPage() {

@@ -5,7 +5,8 @@ import { SITE_URL } from '@/lib/site'
 const BASE = SITE_URL
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ['', '/guides/organiser-sa-p1', '/methode', '/manifesto', '/contact', '/mentions-legales', '/cgu', '/confidentialite']
+  // Seules ces pages sont proposées à Google ; les autres sont en noindex.
+  const pages = ['', '/guides/organiser-sa-p1']
   const now = new Date()
   return pages.map(p => ({
     url: `${BASE}${p}`,
