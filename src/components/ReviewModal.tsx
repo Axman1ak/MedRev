@@ -277,7 +277,7 @@ export default function ReviewModal({
     if (score <= 3 && peutProposerPitch()) {
       const m = (updated.media ?? {}) as LessonMedia
       const aDesQcm = Array.isArray(updated.ai_questions) && updated.ai_questions.length > 0
-      const aUnCours = !!m.pdf_path || !!m.video_path
+      const aUnCours = !!m.pdf_path || !!m.video_path || (Array.isArray(m.transcript) && m.transcript.length > 0)
       setPitch({
         kind: aDesQcm ? 'avec-qcm' : aUnCours ? 'cours-sans-qcm' : 'sans-cours',
         note: score,
@@ -469,14 +469,18 @@ export default function ReviewModal({
   async function removeMedia(kind: 'video' | 'pdf') {
     const existingMedia = (lesson.media ?? {}) as LessonMedia
     const targetPath = kind === 'video' ? existingMedia.video_path : existingMedia.pdf_path
-    if (!targetPath) return
+    // Vidéo déjà retirée du stockage après transcription : il ne reste que le texte.
+    const transcriptOnly = kind === 'video' && !targetPath && Array.isArray(existingMedia.transcript) && existingMedia.transcript.length > 0
+    if (!targetPath && !transcriptOnly) return
 
     if (!confirm(`Supprimer ${kind === 'video' ? 'la vidéo' : 'le PDF'} ?`)) return
 
-    try {
-      await supabase.storage.from('lesson-media').remove([targetPath])
-    } catch {
-      // on continue même si le fichier physique a déjà été supprimé manuellement
+    if (targetPath) {
+      try {
+        await supabase.storage.from('lesson-media').remove([targetPath])
+      } catch {
+        // on continue même si le fichier physique a déjà été supprimé manuellement
+      }
     }
 
     const newMedia: LessonMedia & {
@@ -489,6 +493,7 @@ export default function ReviewModal({
       delete newMedia.video_duration_s
       delete newMedia.video_size
       delete newMedia.video_uploaded_at
+      delete newMedia.video_removed_at
       // Le transcript est lié à la vidéo : on l'invalide aussi
       delete newMedia.transcript
       delete newMedia.transcript_generated_at
@@ -621,7 +626,9 @@ export default function ReviewModal({
     transcript_generated_at?: string
   }
   const media = (lesson.media ?? {}) as LessonMediaExt
-  const hasVideo = !!media.video_path
+  // Une vidéo transcrite n'est plus stockée : son transcript compte comme cours.
+  const videoKept = !!media.video_path
+  const hasVideo = videoKept || (Array.isArray(media.transcript) && media.transcript.length > 0)
   const hasPdf = !!media.pdf_path
   const hasAnySource = hasVideo || hasPdf
 
@@ -641,10 +648,11 @@ export default function ReviewModal({
   const nbSegments = Array.isArray(media.transcript) ? media.transcript.length : 0
   const transcriptNote =
     transcribing ? ' · transcription en cours (1-2 min)'
+    : !videoKept && nbSegments > 0 ? ' · transcrite, vidéo non conservée'
     : nbSegments > 0 ? ' · transcript prêt'
     : transcribeError ? ' · transcript en erreur'
     : ' · pas encore de transcript'
-  const transcriptAction = (transcribing || !hasVideo) ? null : (
+  const transcriptAction = (transcribing || !videoKept) ? null : (
     <button
       type="button"
       className="rmod-cours-act"

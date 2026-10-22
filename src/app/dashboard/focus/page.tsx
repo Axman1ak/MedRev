@@ -685,7 +685,7 @@ function SessionBody() {
       : current.lastScore === null && current.due.stepIndex === 0 ? 'Nouvelle fiche, J+0' : `J+${sysJ[current.due.stepIndex]}, prévue aujourd'hui`
   const synth = media.synthese
   const missedQs = qs.map((q, i) => ({ q, i })).filter(x => isMissed(x.q)).slice(0, 3)
-  const hasSource = !!media.pdf_path || !!media.video_path
+  const hasSource = !!media.pdf_path || !!media.video_path || (Array.isArray(media.transcript) && media.transcript.length > 0)
   const nextI = current.due.stepIndex + 1
   const nextDate = nextI < sysJ.length && current.lesson.learn_date ? stepDate(current.lesson, nextI, sysJ) : null
   const tq = plan.length ? qs[plan[qi]] : undefined
@@ -877,7 +877,9 @@ function SessionBody() {
               <div className="se-split-main">
                 {synth ? (
                   <>
-                    <div className="se-panel-head"><h2>Ta fiche de synthèse</h2><span>Générée depuis ton cours</span></div>
+                    <div className="se-panel-head"><h2>Ta fiche de synthèse</h2>
+                      <button type="button" className="se-btn se-btn-link se-redo" onClick={generateSynthese} disabled={genSynth === 'running'}>{genSynth === 'running' ? 'Nouvelle version en cours…' : 'Refaire la synthèse'}</button></div>
+                    {genSynthErr && <p className="se-err" role="alert">{genSynthErr}</p>}
                     <ul className="se-ess">
                       {synth.essentiel.map((e, i) => (
                         <li key={i}>{e.texte}{e.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: e.page })}>p. {e.page}</button></> : null}</li>

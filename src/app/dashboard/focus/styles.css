@@ -452,3 +452,5 @@
 [data-theme="dark"] .se-grade.on { box-shadow: 0 0 0 3px #18243A, 0 0 0 5px #9CC2E4; }
 .se-pill.s1 { background: #F5DADA; color: #C75050; } .se-pill.s2 { background: #F5E5D2; color: #B5651D; } .se-pill.s3 { background: #F5EDCE; color: #8A6D17; }
 .se-pill.s4 { background: #E4EDDE; color: #4E7A41; } .se-pill.s5 { background: #D8EAE0; color: #1B4332; }
+.se-redo { font-size: 12.5px; padding: 2px 0; }
+@media (max-width: 720px) { .se-redo { display: none; } }
