@@ -29,6 +29,7 @@ import { toDateStr, todayStr, normalizeAnswer } from '@/types'
 import { DEFAULT_J, scheduleOf, makeScheduleResolver } from '@/lib/schedule'
 import { normalizeYear, scopeToYear } from '@/lib/year'
 import { isMissed, addCardsFromMistakes } from '@/lib/qcmMissed'
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 import { cleanExplanation, whyFor, correctAnswersRecap } from '@/lib/qcmText'
 import { startGen, finishGen, useGenJobs } from '@/lib/qcmGenStore'
 import { countPdfPages } from '@/lib/pdf'
@@ -295,6 +296,8 @@ function SessionBody() {
   const pdfInput = useRef<HTMLInputElement>(null)
   const videoInput = useRef<HTMLInputElement>(null)
   const genJobs = useGenJobs()
+  // Mêmes couleurs de matière que les pages Fiches et Tableau de bord
+  const colorMap = useMemo(() => buildSubjectColorMap(systems), [systems])
 
   // ---------- Chargement ----------
   useEffect(() => {
@@ -650,7 +653,7 @@ function SessionBody() {
               const j = scheduleOf(systems.find(s => s.id === it.lesson.system_id))
               const nextI = it.due.stepIndex + 1
               const next = r.kind === 'reported' ? 'demain' : nextI < j.length && it.lesson.learn_date ? shortDate(stepDate(it.lesson, nextI, j)) : 'fin du planning'
-              const color = (systems.find(s => s.id === it.lesson.system_id) as { color?: string } | undefined)?.color || '#3E6F9C'
+              const color = colorMap.get(it.lesson.system_id) || '#3E6F9C'
               return (
                 <div key={it.lesson.id} className="se-done-row">
                   <span className="se-dot" style={{ background: color }} />
@@ -674,7 +677,7 @@ function SessionBody() {
 
   // ---------- Session ----------
   if (!current) return null
-  const color = (sys as { color?: string } | undefined)?.color || '#3E6F9C'
+  const color = (current && colorMap.get(current.lesson.system_id)) || '#3E6F9C'
   const statusLabel = current.due.status === 'missed'
     ? `J+${sysJ[current.due.stepIndex]}, en retard de ${current.due.overdueDays} jour${current.due.overdueDays > 1 ? 's' : ''}`
     : current.due.status === 'fresh'
@@ -795,7 +798,7 @@ function SessionBody() {
             const j = scheduleOf(systems.find(s => s.id === it.lesson.system_id))
             return (
               <button key={it.lesson.id} type="button" onClick={() => goTo(i)} className={`se-qrow${i === idx ? ' cur' : ''}${r ? ' done' : ''}`}>
-                <span className="se-dot" style={{ background: c?.color || '#3E6F9C' }} />
+                <span className="se-dot" style={{ background: colorMap.get(it.lesson.system_id) || '#3E6F9C' }} />
                 <span className="se-qtxt">
                   <span className="se-qname">{it.lesson.name}</span>
                   <span className="se-qmeta">{c?.name ?? 'Matière'}, J+{j[it.due.stepIndex]}</span>

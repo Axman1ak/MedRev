@@ -425,7 +425,9 @@ function fmtHours(ms: number): string {
 }
 
 const SUBS_SHOWN = 8 // 4 lignes de 2 : au-delà, petit lien « Voir les N autres »
-function DashProgress({ userId, lessons, systems }: { userId: string | null; lessons: Lesson[]; systems: System[] }) {
+// lessons / systems : ceux du semestre choisi (S1, S2 ou Année), comme Fiches du jour.
+// colorOf : les couleurs de matière partagées avec la page Fiches.
+function DashProgress({ userId, lessons, systems, colorOf }: { userId: string | null; lessons: Lesson[]; systems: System[]; colorOf: Map<string, string> }) {
   const supabase = createClient()
   const [dayLog, setDayLog] = useState<Record<string, number>>({})
   const [allSubs, setAllSubs] = useState(false)
@@ -474,17 +476,16 @@ function DashProgress({ userId, lessons, systems }: { userId: string | null; les
     }
     // Maîtrise
     const mastered = lessons.filter(l => (lastEffectiveScore(l) ?? 0) >= 4).length
-    const colorMap = buildSubjectColorMap(systems)
     const subjects = systems
       .map(s => {
         const ls = lessons.filter(l => l.system_id === s.id)
         const m = ls.filter(l => (lastEffectiveScore(l) ?? 0) >= 4).length
-        return { id: s.id, name: s.name, total: ls.length, pct: ls.length ? Math.round((m / ls.length) * 100) : 0, color: (s as { color?: string | null }).color || colorMap.get(s.id) || '#3E6F9C' }
+        return { id: s.id, name: s.name, total: ls.length, pct: ls.length ? Math.round((m / ls.length) * 100) : 0, color: colorOf.get(s.id) || '#3E6F9C' }
       })
       .filter(s => s.total > 0)
       .sort((a, b) => b.total - a.total)
     return { streak, weekMs, weeks, mastered, subjects }
-  }, [dayLog, lessons, systems])
+  }, [dayLog, lessons, systems, colorOf])
 
   return (
     <div className="panel bib dpg reveal d3">
@@ -858,7 +859,7 @@ export default function DashboardPage() {
 
         <div className="col-r">
           <DashTodo userId={userId} />
-          <DashProgress userId={userId} lessons={lessons} systems={systems} />
+          <DashProgress userId={userId} lessons={semLessons} systems={semSystems} colorOf={colorOf} />
         </div>
       </div>
 
