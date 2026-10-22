@@ -840,7 +840,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   {overdue
-                    ? <span className="badge-late">{p.due.overdueDays} j de retard</span>
+                    ? <span className={`badge-late${p.due.overdueDays <= 1 ? ' soft' : ''}`}>{p.due.overdueDays <= 1 ? 'prévue hier' : `${p.due.overdueDays} j de retard`}</span>
                     : <span className="fdue">aujourd&apos;hui</span>}
                 </div>
               )
