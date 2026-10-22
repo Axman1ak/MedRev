@@ -295,3 +295,6 @@
 .dvx .dpg-subgrid .dpg-bar{display:block;width:100%}
 .dvx .dpg-more{display:block;margin:10px auto 0;padding:2px 6px;border:none;background:none;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--gray);cursor:pointer}
 .dvx .dpg-more:hover{color:var(--marine2);text-decoration:underline;text-underline-offset:3px}
+
+.dvx .badge-late.soft{background:#F7E6D3;color:#9A5A1E}
+[data-theme="dark"] .dvx .badge-late.soft{background:#3D2D1A;color:#E8B07A}

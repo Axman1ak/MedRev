@@ -576,3 +576,10 @@
 /* Nom d'origine du fichier : coupé proprement s'il est long */
 .rmod-cours-fname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rmod-cours-nom em { flex: none; }
+
+/* Paliers sur une seule ligne : la fiche reste lisible sans faire défiler */
+.rmod-jpicker { grid-template-columns: repeat(auto-fit, minmax(34px, 1fr)); gap: 4px; }
+.rmod-jstep { padding: 8px 2px 6px; gap: 5px; border-radius: 8px; }
+.rmod-jlbl { font-size: 9.5px; letter-spacing: 0; }
+.rmod-jstatus { font-size: 9px; white-space: nowrap; min-height: 11px; }
+@media (max-width: 640px) { .rmod-jpicker { grid-template-columns: repeat(7, 1fr); } }
