@@ -290,3 +290,35 @@ aside div.group:hover > span:nth-child(3) {
 [data-theme="dark"] .sim-ses-nav-btn.primary:hover:not(:disabled) {
   color: #0E1726;
 }
+
+/* ============ BULLE AU SURVOL (boutons en icône seule) ============
+   <button class="mr-tip" data-tip="Fiche" aria-label="Nouvelle fiche">…</button>
+   Une petite bulle sombre apparaît sous le bouton après un court délai,
+   comme dans les apps Apple ou Teams. aria-label reste le nom lu par les
+   lecteurs d'écran ; data-tip n'est que visuel. */
+.mr-tip { position: relative; }
+.mr-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translate(-50%, -3px);
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #1E2228;
+  color: #fff;
+  font: 500 12px/1.2 var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease, transform .12s ease;
+  z-index: 60;
+}
+@media (hover: hover) {
+  .mr-tip:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .35s; }
+}
+.mr-tip:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+[data-theme="dark"] .mr-tip::after { background: #E9EDF2; color: #12161C; }

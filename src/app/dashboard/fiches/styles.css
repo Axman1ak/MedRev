@@ -152,6 +152,9 @@
 }
 .fi-btn-icon:hover { border-color: var(--border-strong); color: var(--dark); background: var(--soft, var(--bg-soft)); }
 
+.fi-btn-icon-main { background: var(--green, #1B3A5B); border-color: var(--green, #1B3A5B); color: #fff; }
+.fi-btn-icon-main:hover { background: var(--gm, #2C5F8A); border-color: var(--gm, #2C5F8A); color: #fff; }
+
 /* Groupe des actions d'ajout : matière · chapitre · fiche */
 .fi-add-group { display: inline-flex; align-items: center; gap: 8px; }
 
