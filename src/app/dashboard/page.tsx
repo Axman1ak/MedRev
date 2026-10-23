@@ -574,6 +574,8 @@ export default function DashboardPage() {
   // Sur téléphone la page défile : tronquer la liste pour tenir dans un cadre
   // cacherait douze fiches derrière un bouton alors qu'un coup de pouce suffit.
   const isNarrow = useIsNarrow(900)
+  // Téléphone (même seuil que la barre d'onglets) : en-tête « carte », liste façon iOS
+  const isPhone = useIsNarrow(768)
 
   const today = todayStr()
 
@@ -756,10 +758,11 @@ export default function DashboardPage() {
   const fitAll = Math.max(1, Math.floor((flistM.h + flistM.gap) / flistM.stride))
   // Téléphone : les 5 premières (les retards d'abord), le reste derrière
   // « Voir N fiches de plus », pour ne pas faire défiler toute la liste.
-  const PHONE_MAX = 5
+  const PHONE_MAX = 6
   const moreThanFit = isNarrow ? sortedQueue.length > PHONE_MAX : sortedQueue.length > fitAll
   // Avec bouton : n lignes + n gaps + le coût mesuré du bouton.
   const fitWithBtn = isNarrow ? PHONE_MAX : Math.max(1, Math.floor((flistM.h - flistM.btnCost) / flistM.stride))
+  const lateCount = sortedQueue.filter(p => p.due.status === 'missed').length
   const visibleQueue = moreThanFit ? sortedQueue.slice(0, fitWithBtn) : sortedQueue
   const hiddenCount = sortedQueue.length - visibleQueue.length
 
@@ -786,8 +789,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* TÉLÉPHONE : la carte du jour, avec le bouton à portée de pouce */}
+      {isPhone && (
+        <div className="m-hero reveal d2">
+          <div className="m-hero-top">
+            <div>
+              <b>{todayQueue.length === 0 ? 'Rien à réviser' : `${todayQueue.length} fiche${todayQueue.length > 1 ? 's' : ''}`}</b>
+              <span>{todayQueue.length === 0 ? "Profite de ta journée." : "à réviser aujourd'hui"}</span>
+            </div>
+            {lateCount > 0 && <span className="m-hero-late">{lateCount} en retard</span>}
+          </div>
+          {todayQueue.length > 0 && <Link href={startSessionHref} className="m-hero-go">Commencer la session</Link>}
+        </div>
+      )}
+
       <div className="grid">
         <div className="panel reveal d2">
+          {isPhone && todayQueue.length > 0 && <h2 className="m-sec">Fiches du jour</h2>}
           <div className="phead">
             <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 6v14M5 8v11a1 1 0 0 0 1 1h6M19 8v11a1 1 0 0 1-1 1h-6M5 8a3 3 0 0 1 3-3 4 4 0 0 1 4 3 4 4 0 0 1 4-3 3 3 0 0 1 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             <div>
@@ -839,9 +857,14 @@ export default function DashboardPage() {
                       <span className="fj">J+{sysJ[p.due.stepIndex]}</span>
                     </div>
                   </div>
-                  {overdue
-                    ? <span className={`badge-late${p.due.overdueDays <= 1 ? ' soft' : ''}`}>{p.due.overdueDays <= 1 ? 'prévue hier' : `${p.due.overdueDays} j de retard`}</span>
-                    : <span className="fdue">aujourd&apos;hui</span>}
+                  {isPhone
+                    ? <>
+                        {overdue && <span className={`m-late${p.due.overdueDays <= 1 ? ' soft' : ''}`}>{p.due.overdueDays <= 1 ? 'hier' : `${p.due.overdueDays} j`}</span>}
+                        <svg className="m-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </>
+                    : overdue
+                      ? <span className={`badge-late${p.due.overdueDays <= 1 ? ' soft' : ''}`}>{p.due.overdueDays <= 1 ? 'prévue hier' : `${p.due.overdueDays} j de retard`}</span>
+                      : <span className="fdue">aujourd&apos;hui</span>}
                 </div>
               )
             })}
@@ -850,7 +873,7 @@ export default function DashboardPage() {
                 type="button"
                 className="flist-more"
                 onClick={() => setShowTodayModal(true)}
-              >Voir {hiddenCount} fiche{hiddenCount > 1 ? 's' : ''} de plus</button>
+              >{isPhone ? `Voir les ${hiddenCount} autres` : `Voir ${hiddenCount} fiche${hiddenCount > 1 ? 's' : ''} de plus`}</button>
             )}
             </>)}
           </div>

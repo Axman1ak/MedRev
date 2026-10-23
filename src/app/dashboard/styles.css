@@ -298,3 +298,59 @@
 
 .dvx .badge-late.soft{background:#F7E6D3;color:#9A5A1E}
 [data-theme="dark"] .dvx .badge-late.soft{background:#3D2D1A;color:#E8B07A}
+
+/* ================== TÉLÉPHONE : AUJOURD'HUI façon iOS ==================
+   Une carte marine en haut (le nombre du jour + le bouton), puis des listes
+   groupées sur le fond : plus de cartes dans des cartes. */
+.dvx .m-hero, .dvx .m-sec, .dvx .m-late, .dvx .m-chev { display: none; }
+@media (max-width: 768px) {
+  .dvx { padding: 8px 8px 24px; }
+  .dvx .topbar { margin-bottom: 14px; padding: 0 4px; }
+  .dvx .kick { font-size: 12.5px; letter-spacing: .04em; margin-bottom: 2px; }
+  .dvx .hi { font-size: 32px; font-weight: 700; letter-spacing: -.02em; }
+
+  .dvx .m-hero { display: flex; flex-direction: column; gap: 14px; background: #15304E; color: #fff; border-radius: 22px; padding: 18px 18px 16px; margin-bottom: 20px; }
+  .dvx .m-hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .dvx .m-hero-top b { display: block; font-family: var(--serif); font-weight: 700; font-size: 28px; line-height: 1; }
+  .dvx .m-hero-top span { display: block; font-size: 14px; color: #B9CDE2; margin-top: 5px; }
+  .dvx .m-hero-top .m-hero-late { flex: none; margin: 0; padding: 5px 10px; border-radius: 99px; background: rgba(255,255,255,.12); color: #FFD3AE; font-size: 12.5px; font-weight: 600; }
+  .dvx .m-hero-go { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 14px; background: #fff; color: #15304E; font-weight: 700; font-size: 16px; text-decoration: none; }
+  [data-theme="dark"] .dvx .m-hero { background: #1C2B45; }
+
+  .dvx .m-sec, .dvx .grid .panel .ptitle { display: block; margin: 0 0 8px 6px; font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--gray); line-height: 1.2; }
+  .dvx .grid { gap: 22px; }
+  .dvx .grid .panel { background: transparent; border: 0; padding: 0; border-radius: 0; box-shadow: none; }
+  .dvx .grid .panel > .phead { display: none; }
+  .dvx .grid .col-r .panel > .phead { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 8px; margin: 0; }
+  .dvx .col-r .picon, .dvx .col-r .psub { display: none; }
+  .dvx .col-r .ptitle { margin-bottom: 8px; }
+  .dvx .col-r .dpg-link { margin-left: auto; padding: 0 6px 8px 0; font-size: 14px; }
+
+  /* Fiches du jour : une liste groupée blanche, une ligne par fiche */
+  .dvx .flist { margin-top: 0; gap: 0; background: var(--card); border-radius: 16px; overflow: hidden; }
+  .dvx .fiche { border: 0; border-radius: 0; background: transparent; padding: 0 12px 0 14px; min-height: 58px; gap: 12px; position: relative; }
+  .dvx .fiche + .fiche::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 1px; background: var(--line); }
+  .dvx .fiche:active { background: var(--bg); }
+  .dvx .fnm { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dvx .fsub { font-size: 13px; margin-top: 1px; }
+  .dvx .fmid { min-width: 0; flex: 1 1 auto; }
+  .dvx .m-late { display: block; flex: none; font-size: 13px; font-weight: 600; color: #B3423B; }
+  .dvx .m-late.soft { color: #B35A1C; }
+  .dvx .m-chev { display: block; flex: none; width: 14px; height: 14px; color: #B5B3AC; stroke-width: 2.4; }
+  .dvx .flist-more { margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; height: 48px; font-size: 15px; font-weight: 600; color: var(--marine2); }
+  .dvx .td-today { border-radius: 16px; margin: 0 0 12px; }
+
+  /* À faire : même liste groupée */
+  .dvx .todo-scroll { margin-top: 0 !important; background: var(--card); border-radius: 16px; padding: 0 14px; }
+  .dvx .todo { border-bottom: 1px solid var(--line); min-height: 50px; box-sizing: border-box; }
+  .dvx .todo .txt { font-size: 16px; }
+  .dvx .todo-scroll .add { min-height: 50px; border: 0; }
+  .dvx .todo-scroll .add input { font-size: 16px; }
+
+  /* Progression : les trois chiffres seulement ; le détail est dans l'onglet Progrès */
+  .dvx .dpg-sec { display: none; }
+  .dvx .dpg-kpis { margin-top: 0; gap: 8px; }
+  .dvx .dpg-kpis div { background: var(--card); border-radius: 16px; padding: 12px 12px; }
+  .dvx .dpg-kpis b { font-size: 20px; }
+  .dvx .dpg-kpis span { font-size: 12px; }
+}
