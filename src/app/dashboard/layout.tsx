@@ -46,6 +46,23 @@ const NAV = [
   ) },
 ]
 
+// Onglets du téléphone. « Progrès » couvre Statistiques et Bibliothèque ;
+// Simulateur et Réglages sont dans la feuille « Plus ».
+const TABS = [
+  { href: '/dashboard', label: "Aujourd'hui", match: ['/dashboard'], tour: 'nav-dashboard',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7V20a.8.8 0 0 1-.8.8H14.5v-6h-5v6H4.3a.8.8 0 0 1-.8-.8z"/></svg>,
+    iconOn: <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7V20a.8.8 0 0 1-.8.8H14.5v-6h-5v6H4.3a.8.8 0 0 1-.8-.8z"/></svg> },
+  { href: '/dashboard/fiches', label: 'Fiches', match: ['/dashboard/fiches', '/dashboard/focus'], tour: 'nav-fiches',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>,
+    iconOn: <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4" stroke="var(--db-tab-cut)"/></svg> },
+  { href: '/dashboard/calendar', label: 'Calendrier', match: ['/dashboard/calendar'], tour: 'nav-calendar',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>,
+    iconOn: <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17" stroke="var(--db-tab-cut)"/><path d="M8 3v4M16 3v4"/></svg> },
+  { href: '/dashboard/stats', label: 'Progrès', match: ['/dashboard/stats', '/dashboard/bibliotheque'], tour: 'nav-stats',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden="true"><path d="M5 20V12M12 20V5M19 20v-8"/></svg>,
+    iconOn: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M5 20V12M12 20V5M19 20v-8"/></svg> },
+]
+
 const FAC_NAMES: Record<string, string> = {
   'sorbonne': 'Sorbonne',
   'paris-cite': 'Paris Cité',
@@ -111,6 +128,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   useEffect(() => { setMobileNavOpen(false) }, [pathname])
+
+  // TÉLÉPHONE : barre d'onglets en bas (façon iOS) au lieu du menu ☰.
+  // isPhone sert surtout au tutoriel : les data-tour ne doivent exister qu'une
+  // fois, sur la barre visible (latérale sur ordinateur, onglets sur téléphone).
+  const [isPhone, setIsPhone] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  useEffect(() => { setMoreOpen(false) }, [pathname])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 768px)')
+    const sync = () => setIsPhone(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+  useEffect(() => {
+    if (!moreOpen) return
+    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') setMoreOpen(false) }
+    document.addEventListener('keydown', echap)
+    return () => document.removeEventListener('keydown', echap)
+  }, [moreOpen])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -265,31 +303,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="db-shell">
 
-      {/* TÉLÉPHONE : barre marine en haut (logo + menu), comme le téléphone
-          montré sur la page d'accueil. Le menu s'ouvre sous la barre. */}
-      <header className="db-mtop">
-        <Link href="/dashboard" className="db-mtop-logo" onClick={() => setMobileNavOpen(false)}>
-          <MedRevMark size={30} bg="#fff" fg="#15304E" />
-          <span>MedRev</span>
-        </Link>
-        <button
-          type="button"
-          className="db-mtop-btn"
-          onClick={() => setMobileNavOpen(o => !o)}
-          aria-label={mobileNavOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={mobileNavOpen}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            {mobileNavOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
-        </button>
-      </header>
-      <div
-        className={`db-sidebar-overlay${mobileNavOpen ? ' open' : ''}`}
-        onClick={() => setMobileNavOpen(false)}
-        aria-hidden="true"
-      />
-
       {/* SIDEBAR */}
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert ? ' menu-open' : ''}`} data-tour="sidebar">
         {/* Logo */}
@@ -314,7 +327,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={n.href}
               href={n.href}
               className={`db-nav-item${isActive(n.href, n.exact) ? ' active' : ''}`}
-              data-tour={`nav-${n.href.split('/').pop() || 'dashboard'}`}
+              data-tour={isPhone ? undefined : `nav-${n.href.split('/').pop() || 'dashboard'}`}
             >
               <span className="ic">{n.icon}</span>
               <span className="db-lbl">{n.label}</span>
@@ -383,8 +396,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* MAIN CONTENT */}
       <main className="db-main" data-tour="page-main">
+        {/* Téléphone : Statistiques et Bibliothèque partagent l'onglet Progrès */}
+        {isPhone && (pathname.startsWith('/dashboard/stats') || pathname.startsWith('/dashboard/bibliotheque')) && (
+          <div className="db-seg" role="tablist" aria-label="Progrès">
+            <Link href="/dashboard/stats" role="tab" aria-selected={pathname.startsWith('/dashboard/stats')} className={pathname.startsWith('/dashboard/stats') ? 'on' : ''}>Statistiques</Link>
+            <Link href="/dashboard/bibliotheque" role="tab" aria-selected={pathname.startsWith('/dashboard/bibliotheque')} className={pathname.startsWith('/dashboard/bibliotheque') ? 'on' : ''}>Bibliothèque</Link>
+          </div>
+        )}
         {children}
       </main>
+
+      {/* TÉLÉPHONE : barre d'onglets */}
+      <nav className="db-tabbar" aria-label="Navigation principale">
+        {TABS.map(t => {
+          const on = t.match.some(m => (m === '/dashboard' ? pathname === m : pathname.startsWith(m)))
+          return (
+            <Link key={t.href} href={t.href} className={`db-tab${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}
+              data-tour={isPhone ? t.tour : undefined}>
+              <span className="db-tab-ic">{on ? t.iconOn : t.icon}</span>
+              <span>{t.label}</span>
+              {t.href === '/dashboard/calendar' && todayCount > 0 && <span className="db-tab-badge">{todayCount}</span>}
+            </Link>
+          )
+        })}
+        <button type="button" className={`db-tab${moreOpen || pathname.startsWith('/dashboard/simulateur') || pathname.startsWith('/dashboard/settings') ? ' on' : ''}`}
+          onClick={() => setMoreOpen(true)} aria-haspopup="dialog" aria-expanded={moreOpen}
+          data-tour={isPhone ? 'nav-simulateur' : undefined}>
+          <span className="db-tab-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18.5" cy="12" r="1.8"/></svg></span>
+          <span>Plus</span>
+        </button>
+      </nav>
+
+      {/* TÉLÉPHONE : feuille « Plus » (compte, semestre, simulateur, réglages) */}
+      {moreOpen && (
+        <div className="db-sheet-wrap" onClick={() => setMoreOpen(false)}>
+          <div className="db-sheet" role="dialog" aria-modal="true" aria-label="Plus" onClick={e => e.stopPropagation()}>
+            <div className="db-sheet-grab" aria-hidden="true" />
+            <div className="db-sheet-head">
+              <div className="db-user-avatar">{initials}</div>
+              <div style={{ minWidth: 0 }}>
+                <div className="db-sheet-name">{profile?.name || '...'}</div>
+                <div className="db-sheet-meta">
+                  {profile?.current_year ? `${yearLabel(profile.current_year)}` : ''}
+                  {profile?.fac ? `, ${FAC_NAMES[profile.fac] || profile.fac}` : ''}
+                </div>
+              </div>
+              <button type="button" className="db-sheet-ok" onClick={() => setMoreOpen(false)}>OK</button>
+            </div>
+            <div className="db-sheet-lbl">Semestre affiché</div>
+            <div className="db-sheet-sem" role="group" aria-label="Semestre affiché">
+              <button type="button" className={semester === 1 ? 'on' : ''} onClick={() => chooseSemester(1)}>S1</button>
+              <button type="button" className={semester === 2 ? 'on' : ''} onClick={() => chooseSemester(2)}>S2</button>
+              <button type="button" className={semester === 'year' ? 'on' : ''} onClick={() => chooseSemester('year')}>Année</button>
+            </div>
+            <div className="db-sheet-list">
+              <Link href="/dashboard/simulateur" className="db-sheet-row">
+                <span className="db-sheet-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span>
+                Simulateur
+                <svg className="db-sheet-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+              <button type="button" className="db-sheet-row" onClick={() => { setMoreOpen(false); allerReglages('reglages') }}>
+                <span className="db-sheet-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+                Réglages
+                <svg className="db-sheet-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+            <div className="db-sheet-list">
+              <button type="button" className="db-sheet-row danger" onClick={() => { setMoreOpen(false); void seDeconnecter() }}>Se déconnecter</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ONBOARDING TOUR */}
       {tourOpen && profile && (

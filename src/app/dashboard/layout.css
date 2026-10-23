@@ -272,88 +272,103 @@
   background: var(--bg-app);
 }
 
-/* ================ MOBILE BURGER + OVERLAY ================ */
-.db-burger {
-  display: none; position: fixed; top: 14px; left: 14px; z-index: 200;
-  width: 40px; height: 40px; background: var(--bg-card);
-  border: 1px solid var(--border-subtle); border-radius: 8px; cursor: pointer;
-  padding: 0; font-size: 18px; color: var(--text-primary);
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
-}
-.db-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(10,16,26,.5); z-index: 90; }
+/* ================ TÉLÉPHONE : BARRE D'ONGLETS (façon iOS) ================
+   Sur téléphone, la barre latérale disparaît : 4 onglets + « Plus » en bas,
+   à portée de pouce. Les marges env(safe-area-inset-*) gardent le contenu
+   hors de l'encoche et de la barre de Safari (viewportFit: 'cover'). */
+.db-tabbar, .db-seg, .db-sheet-wrap, .db-mtop, .db-burger, .db-sidebar-overlay { display: none; }
 
 @media (max-width: 768px) {
-  .db-sidebar {
-    position: fixed; top: 0; left: 0; width: 264px; max-width: 82vw; height: 100vh;
-    transform: translateX(-100%); transition: transform .25s ease;
-    z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,.18);
+  .db-sidebar { display: none !important; }
+  .db-main {
+    margin-left: 0; width: 100%;
+    padding: max(env(safe-area-inset-top), 10px) 8px calc(72px + env(safe-area-inset-bottom));
+    min-height: 100dvh; box-sizing: border-box;
   }
-.db-sidebar:hover { width: 264px; box-shadow: 4px 0 20px rgba(0,0,0,.18); }
-  .db-sidebar.open { transform: translateX(0); }
-  /* en mobile la sidebar est pleine : on montre tout */
-  .db-sidebar .db-lbl, .db-sidebar .db-nav-label { opacity: 1; }
-  .db-sidebar .db-sem { opacity: 1; max-height: 60px; }
-  .db-sidebar .db-user-card {
-    padding: 9px; background: rgba(255,255,255,.06); justify-content: flex-start;
-  }
-  .db-sidebar .db-user-card > .db-lbl,
-  .db-sidebar .db-user-card .db-user-chev { display: block; }
 
-  .db-main { margin-left: 0; width: 100%; padding-top: 50px; }
-  .db-burger { display: flex; align-items: center; justify-content: center; }
-  .db-sidebar-overlay.open { display: block; }
-}
+  .db-tabbar {
+    --db-tab-cut: #FAFAF7;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+    padding: 6px 4px env(safe-area-inset-bottom);
+    background: rgba(250, 250, 247, .88);
+    -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+    border-top: 1px solid rgba(0, 0, 0, .08);
+  }
+  .db-tab {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    min-height: 50px; padding: 2px 0 4px; border: 0; background: none; cursor: pointer;
+    font: 500 10.5px/1.2 var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+    color: #8A8984; text-decoration: none; -webkit-tap-highlight-color: transparent;
+  }
+  .db-tab.on { color: #15304E; font-weight: 600; }
+  .db-tab-ic { display: flex; }
+  .db-tab-ic svg { width: 26px; height: 26px; stroke-width: 1.6; }
+  .db-tab:active .db-tab-ic { transform: scale(.92); }
+  .db-tab-badge {
+    position: absolute; top: 0; left: calc(50% + 6px);
+    min-width: 17px; height: 17px; padding: 0 5px; box-sizing: border-box; border-radius: 9px;
+    background: #C0453E; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center;
+  }
 
-/* ================ TÉLÉPHONE : BARRE DU HAUT ================
-   Barre marine fixe avec le logo et le menu, à la place du bouton qui
-   flottait seul. Le menu latéral s'ouvre sous la barre, qui reste visible
-   pour le refermer. */
-.db-mtop { display: none; }
-@media (max-width: 768px) {
-  .db-mtop {
-    display: flex; align-items: center; justify-content: space-between;
-    position: fixed; top: 0; left: 0; right: 0; z-index: 120;
-    height: 58px; padding: 0 12px 0 20px;
-    background: #15304E; color: #fff;
-    box-shadow: 0 1px 0 rgba(255,255,255,.06);
+  /* Statistiques / Bibliothèque : contrôle segmenté en haut de l'onglet Progrès */
+  .db-seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    margin: 6px 8px 0; padding: 2px; border-radius: 9px; background: #E8E6E0;
   }
-  .db-mtop-logo {
-    display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none;
-    font-family: var(--font-bricolage), 'Bricolage Grotesque', system-ui, sans-serif;
-    font-weight: 700; font-size: 19px; letter-spacing: -.03em;
+  .db-seg a {
+    display: flex; align-items: center; justify-content: center; height: 32px; border-radius: 7px;
+    font: 600 13.5px var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif; color: #3D3D38; text-decoration: none;
   }
-  .db-mtop-logo svg { display: block; flex: none; }
-  .db-mtop-btn {
-    width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent;
-    color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
-  }
-  .db-mtop-btn:active { background: rgba(255,255,255,.1); }
-  .db-burger { display: none !important; }
-  .db-main { padding-top: 58px; padding-left: 8px; padding-right: 8px; }
-  .db-sidebar { top: 58px; height: calc(100% - 58px); }
-  .db-sidebar-overlay { top: 58px; }
-}
+  .db-seg a.on { background: #fff; color: #15304E; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 
-/* ================ TÉLÉPHONE : MENU DÉROULANT ================
-   Le menu descend de la barre du haut, sous le bouton qu'on vient de toucher,
-   sur toute la largeur. Plus de panneau qui sort par la gauche, et pas de
-   second logo : le logo est déjà dans la barre. */
-@media (max-width: 768px) {
-  .db-sidebar,
-  .db-sidebar:hover {
-    top: 58px; left: 0; right: 0; width: 100%; max-width: none;
-    height: auto; max-height: calc(100% - 58px); overflow-y: auto;
-    padding: 10px 0 14px;
-    border-radius: 0 0 22px 22px;
-    box-shadow: 0 24px 48px -12px rgba(10, 20, 35, .45);
-    transform: translateY(-12px); opacity: 0; visibility: hidden; pointer-events: none;
-    transition: transform .2s ease, opacity .2s ease, visibility 0s linear .2s;
+  /* Feuille « Plus » */
+  .db-sheet-wrap {
+    display: block; position: fixed; inset: 0; z-index: 300;
+    background: rgba(14, 20, 28, .38); animation: db-fade .2s ease both;
   }
-  .db-sidebar.open {
-    transform: none; opacity: 1; visibility: visible; pointer-events: auto;
-    transition: transform .2s ease, opacity .2s ease;
+  .db-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: #F4F3EF; border-radius: 16px 16px 0 0;
+    padding: 7px 16px calc(20px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 12px;
+    animation: db-up .32s cubic-bezier(.2, .9, .25, 1) both;
+    color: var(--text-primary, #17181B);
+    font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
   }
-  .db-sidebar .db-logo { display: none; }
-  .db-sidebar .db-sep { margin-top: 4px; }
-  .db-sidebar .db-user-wrap { margin-top: 6px; padding: 0 14px; }
+  .db-sheet-grab { align-self: center; width: 38px; height: 5px; border-radius: 3px; background: #C9C6BE; }
+  .db-sheet-head { display: flex; align-items: center; gap: 12px; padding: 4px 4px 2px; }
+  .db-sheet-head .db-user-avatar { flex: none; width: 44px; height: 44px; font-size: 15px; }
+  .db-sheet-name { font-size: 17px; font-weight: 700; }
+  .db-sheet-meta { font-size: 13px; color: #6B6A63; }
+  .db-sheet-ok { margin-left: auto; border: 0; background: none; padding: 10px 4px; font: 600 17px var(--font-hanken), 'Hanken Grotesk', sans-serif; color: #2C5F8A; cursor: pointer; }
+  .db-sheet-lbl { margin: 4px 4px -6px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #6B6A63; }
+  .db-sheet-sem { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; border-radius: 9px; background: #E8E6E0; }
+  .db-sheet-sem button { height: 34px; border: 0; border-radius: 7px; background: none; font: 600 14px var(--font-hanken), 'Hanken Grotesk', sans-serif; color: #3D3D38; cursor: pointer; }
+  .db-sheet-sem button.on { background: #fff; color: #15304E; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .db-sheet-list { background: #fff; border-radius: 14px; overflow: hidden; }
+  .db-sheet-row {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 0 14px;
+    border: 0; border-bottom: 1px solid #EEECE6; background: none; text-align: left; cursor: pointer;
+    font: 500 16px var(--font-hanken), 'Hanken Grotesk', sans-serif; color: inherit; text-decoration: none;
+  }
+  .db-sheet-row:last-child { border-bottom: 0; }
+  .db-sheet-row:active { background: #F1EFEA; }
+  .db-sheet-row.danger { color: #B3423B; justify-content: center; }
+  .db-sheet-ic { width: 30px; height: 30px; border-radius: 8px; background: #15304E; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+  .db-sheet-ic svg { width: 17px; height: 17px; stroke-width: 2; }
+  .db-sheet-chev { width: 15px; height: 15px; margin-left: auto; color: #B5B3AC; stroke-width: 2.4; }
+
+  [data-theme="dark"] .db-tabbar { --db-tab-cut: #0A111E; background: rgba(10, 17, 30, .86); border-top-color: rgba(255,255,255,.08); }
+  [data-theme="dark"] .db-tab { color: #7F8FA6; }
+  [data-theme="dark"] .db-tab.on { color: #9CC9EE; }
+  [data-theme="dark"] .db-seg, [data-theme="dark"] .db-sheet-sem { background: #1C2B45; }
+  [data-theme="dark"] .db-seg a, [data-theme="dark"] .db-sheet-sem button { color: #C9D3E0; }
+  [data-theme="dark"] .db-seg a.on, [data-theme="dark"] .db-sheet-sem button.on { background: #2A3B59; color: #fff; }
+  [data-theme="dark"] .db-sheet { background: #0F1925; }
+  [data-theme="dark"] .db-sheet-list { background: #1C2B45; }
+  [data-theme="dark"] .db-sheet-row { border-bottom-color: #2A3B59; }
+  [data-theme="dark"] .db-sheet-meta, [data-theme="dark"] .db-sheet-lbl { color: #9AA8BC; }
 }
+@keyframes db-fade { from { opacity: 0; } }
+@keyframes db-up { from { transform: translateY(100%); } }
