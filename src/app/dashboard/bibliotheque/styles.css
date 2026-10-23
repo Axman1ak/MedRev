@@ -1,0 +1,71 @@
+/* src/app/dashboard/bibliotheque/styles.css : classes préfixées bib- */
+.bib-page { padding: 30px 36px 32px; display: flex; flex-direction: column; gap: 22px; min-height: 100%; box-sizing: border-box; color: var(--text-primary); font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; }
+.bib-head h1 { margin: 0; font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; }
+.bib-head p { margin: 6px 0 0; font-size: 14.5px; color: var(--text-secondary); }
+
+.bib-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+
+.bib-case { background: linear-gradient(180deg, #1B3A5B 0%, #12293F 100%); border-radius: 18px; padding: 22px 26px 16px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 20px 40px -24px rgba(13, 33, 56, .55); min-width: 0; }
+.bib-case-empty { color: #D5E3F0; font-size: 14.5px; padding: 30px 0; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.bib-case-empty a { color: #fff; font-weight: 600; }
+.bib-shelf { display: flex; align-items: flex-end; gap: 18px; }
+.bib-shelf-lbl { flex: 0 0 140px; padding-bottom: 13px; min-width: 0; }
+.bib-shelf-name { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #EAF1F8; }
+.bib-shelf-name span, .bib-shelf-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bib-shelf-name i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.bib-shelf-n { font-size: 12px; color: #A9C2DA; margin: 3px 0 0 16px; }
+.bib-shelf-rows { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.bib-books { display: flex; align-items: flex-end; gap: 2px; height: 68px; padding: 0 6px; overflow: hidden; }
+.bib-book { flex: 0 1 auto; min-width: 3px; display: block; border-radius: 2px 2px 1px 1px; box-shadow: inset -2px 0 0 rgba(0,0,0,.22), inset 1px 0 0 rgba(255,255,255,.18); padding-top: 7px; box-sizing: border-box; animation: bib-rise .5s cubic-bezier(.2,.8,.2,1) both; transition: transform .15s; }
+.bib-book:hover { transform: translateY(-4px); }
+.bib-gold { display: block; height: 3px; margin: 0 1px; background: #E9C46A; }
+.bib-board { height: 9px; border-radius: 2px; background: linear-gradient(180deg, #3A5878 0%, #243F5E 60%, #1A324D 100%); box-shadow: 0 6px 10px -4px rgba(0,0,0,.45); }
+.bib-legend { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); font-size: 12px; color: #A9C2DA; }
+.bib-legend span { display: flex; align-items: center; gap: 6px; }
+.bib-legend-gold { display: inline-block; width: 14px; height: 3px; background: #E9C46A; }
+@keyframes bib-rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.bib-side { display: flex; flex-direction: column; gap: 22px; }
+.bib-kicker { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.bib-rank { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 18px; padding: 22px 22px 20px; }
+.bib-rank-top { display: flex; align-items: center; gap: 16px; }
+.bib-seal { flex: none; width: 64px; height: 64px; border-radius: 50%; background: #FBF4E0; border: 2px solid #D9B24A; color: #9A7A1E; display: flex; align-items: center; justify-content: center; }
+.bib-rank-name { font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 28px; line-height: 1.1; color: var(--accent-primary); }
+.bib-rank-n { font-size: 13.5px; color: var(--text-secondary); }
+.bib-bar { margin-top: 18px; height: 8px; background: var(--bg-muted); border-radius: 99px; overflow: hidden; }
+.bib-bar i { display: block; height: 100%; background: #D9B24A; border-radius: 99px; animation: bib-fill 1.1s cubic-bezier(.2,.8,.2,1) both .3s; }
+@keyframes bib-fill { from { width: 0; } }
+.bib-bar-lbl { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
+.bib-bar-lbl strong { color: var(--text-primary); }
+
+.bib-ranks { list-style: none; margin: 12px 0 0; padding: 0; }
+.bib-r { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
+.bib-r.todo { opacity: .6; }
+.bib-r-dot { flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; border: 1.5px solid var(--border-strong); box-sizing: border-box; }
+.bib-r.done .bib-r-dot { background: var(--accent-primary); border-color: var(--accent-primary); }
+.bib-r.cur .bib-r-dot { background: #D9B24A; border-color: #D9B24A; }
+.bib-r-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.bib-r-txt b { font-size: 14.5px; font-weight: 600; }
+.bib-r.cur .bib-r-txt b { color: var(--accent-primary); }
+.bib-r-txt small { font-size: 12.5px; color: var(--text-secondary); }
+.bib-r-at { font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+.bib-week { display: flex; gap: 12px; }
+.bib-week > div { flex: 1 1 0; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; }
+.bib-week b { font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 24px; color: var(--accent-primary); }
+.bib-week span { font-size: 12.5px; color: var(--text-secondary); }
+
+[data-theme="dark"] .bib-seal { background: #3A3018; color: #E9C46A; }
+[data-theme="dark"] .bib-case { background: linear-gradient(180deg, #13243A 0%, #0B1626 100%); }
+
+@media (max-width: 1100px) {
+  .bib-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .bib-page { padding: 20px 16px 28px; }
+  .bib-case { padding: 16px 14px 12px; }
+  .bib-shelf { flex-direction: column; align-items: stretch; gap: 4px; }
+  .bib-shelf-lbl { flex: none; padding-bottom: 0; display: flex; align-items: baseline; gap: 10px; }
+  .bib-shelf-n { margin: 0; }
+  .bib-books { height: 56px; }
+}
