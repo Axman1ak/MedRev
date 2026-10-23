@@ -177,6 +177,7 @@ export default function FichesPage() {
   const [systems, setSystems] = useState<System[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null)
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [filterNote, setFilterNote] = useState<FilterNote>('all')
   const [filterProgress, setFilterProgress] = useState<FilterProgress>('all')
   const [showDueOnly, setShowDueOnly] = useState(false)
@@ -795,6 +796,34 @@ export default function FichesPage() {
               {semester === 'year' ? 'Année complète' : `Semestre ${semester}`}, {semSystems.length} matière{semSystems.length > 1 ? 's' : ''}, {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
             </div>
           </div>
+          {/* TÉLÉPHONE : un seul + qui ouvre le menu d'ajout (façon iOS) */}
+          <div className="fi-m-plus-wrap">
+            <button type="button" className="fi-m-plus" aria-label="Ajouter" aria-haspopup="menu" aria-expanded={addMenuOpen}
+              onClick={e => { e.stopPropagation(); setAddMenuOpen(v => !v) }}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+            {addMenuOpen && (
+              <>
+                <button type="button" className="fi-m-scrim" aria-label="Fermer le menu" onClick={() => setAddMenuOpen(false)} />
+                <div className="fi-m-menu" role="menu">
+                  <button type="button" role="menuitem" onClick={() => { setAddMenuOpen(false); setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? '')); setNewLesDate(today); setShowNewLesson(true) }}>
+                    Fiche<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M12 11v6M9 14h6" /></svg>
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => { setAddMenuOpen(false); setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}>
+                    Matière<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><rect x="5" y="3" width="15" height="18" rx="2" /><path d="M9 3v18M3 7h4M3 12h4M3 17h4" /></svg>
+                  </button>
+                  {selectedSystem && !showDueOnly && (
+                    <button type="button" role="menuitem" onClick={() => { setAddMenuOpen(false); setChapModal({ lessonId: null }); setNewChapInput('') }}>
+                      Chapitre<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z" /></svg>
+                    </button>
+                  )}
+                  <button type="button" role="menuitem" onClick={() => { setAddMenuOpen(false); setShowImport(true) }}>
+                    Importer<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></svg>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <div className="fi-actions">
             <input
               type="text"
@@ -884,7 +913,7 @@ export default function FichesPage() {
                   </span>
                   <span className="mtab-txt">
                     <span className="nm">{sys.name}</span>
-                    <span className="ct">{counts.total} fiche{counts.total > 1 ? 's' : ''}</span>
+                    <span className="ct">{counts.total}<span className="ct-w"> fiche{counts.total > 1 ? 's' : ''}</span></span>
                   </span>
                   {counts.due > 0 && <span className="urg" />}
                   <button
@@ -1024,6 +1053,7 @@ export default function FichesPage() {
                   <div className="card-body">
                     <div className="card-head">
                       <div className="card-name">{lesson.name}</div>
+                      <span className={`card-when${nr.urgent ? ' urgent' : ''}`}>{nr.text.charAt(0).toUpperCase() + nr.text.slice(1)}</span>
                       <span className={`card-status ${st.cls}`}>{st.label}</span>
                     </div>
                     <button

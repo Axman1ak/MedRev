@@ -1066,3 +1066,90 @@
 .gp-card i { display: block; height: 100%; background: var(--accent-primary); transform-origin: left; transition: transform .4s linear; }
 .gp-card.gp-done i { background: var(--success, #4F8A45); }
 .gp-card.gp-error i { background: var(--danger, #C75050); }
+
+/* ================== TÉLÉPHONE : FICHES façon iOS ==================
+   Un seul + (menu d'ajout), les matières en pastilles qui défilent de côté,
+   les fiches en liste groupée : une ligne, le statut à droite, une fine barre
+   de 14 segments à la place des 14 cercles. Les menus ⋯ deviennent une
+   feuille d'actions en bas de l'écran. */
+.fi-m-plus-wrap, .card-when { display: none; }
+@media (max-width: 768px) {
+  .fi-main { padding: 6px 8px 24px; }
+  .fi-topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-bottom: 12px; padding: 0 4px; }
+  .fi-h1 { font-size: 32px; font-weight: 700; letter-spacing: -.02em; }
+  .fi-sub { font-size: 13px; }
+  .fi-actions { grid-column: 1 / -1; }
+  .fi-actions > .fi-btn-icon, .fi-add-group { display: none !important; }
+  .fi-search { flex: 1 1 100%; min-height: 38px; border: 0; background: #E8E6E0; border-radius: 11px; font-size: 16px; }
+  [data-theme="dark"] .fi-search { background: var(--bg-muted); }
+
+  .fi-m-plus-wrap { display: block; position: relative; }
+  .fi-m-plus { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--green, #15304E); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .fi-m-scrim { position: fixed; inset: 0; z-index: 150; border: 0; background: rgba(20, 24, 30, .12); }
+  .fi-m-menu { position: absolute; right: 0; top: 44px; z-index: 151; width: 230px; border-radius: 14px; overflow: hidden; background: rgba(250, 250, 248, .97); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 18px 48px rgba(0,0,0,.2); animation: fi-pop .18s cubic-bezier(.2,.8,.2,1) both; transform-origin: top right; }
+  .fi-m-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 46px; padding: 0 16px; border: 0; border-bottom: 1px solid rgba(0,0,0,.08); background: none; font: 400 16px var(--font-hanken), 'Hanken Grotesk', sans-serif; color: var(--dark, #17181B); cursor: pointer; }
+  .fi-m-menu button:last-child { border-bottom: 0; }
+  .fi-m-menu button:active { background: rgba(0,0,0,.05); }
+  .fi-m-menu svg { width: 20px; height: 20px; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--green, #15304E); }
+  [data-theme="dark"] .fi-m-menu { background: rgba(28, 43, 69, .97); }
+
+  /* Matières : pastilles horizontales */
+  .mtabs { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; margin: 0 -8px; padding: 2px 12px 14px; scrollbar-width: none; }
+  .mtabs::-webkit-scrollbar { display: none; }
+  .mtab, .mtab-review { flex: none; display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 99px; box-shadow: none; }
+  .mtab:hover { transform: none; box-shadow: none; }
+  .mtab .micon { width: 8px; height: 8px; border-radius: 50%; background: currentColor !important; flex: none; }
+  .mtab.active .micon { background: #fff !important; }
+  .mtab .micon svg { display: none; }
+  .mtab-txt { flex-direction: row; align-items: baseline; gap: 6px; }
+  .mtab .nm { font-size: 14px; white-space: nowrap; }
+  .mtab .ct { font-size: 12.5px; }
+  .mtab .ct-w { display: none; }
+  .mtab .urg { display: none; }
+  .mtab .fi-menu-btn { display: none; }
+  .mtab.active { padding-right: 4px; }
+  .mtab.active .fi-menu-btn { display: flex; position: static; width: 28px; height: 28px; color: #fff; }
+
+  /* Menus ⋯ : feuille d'actions en bas */
+  .card:has(.fi-menu), .mtab:has(.fi-menu) { z-index: 300; }
+  .fi-menu { position: fixed !important; left: 8px !important; right: 8px !important; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom)) !important; width: auto !important; max-height: 60vh; overflow-y: auto; z-index: 400; border-radius: 14px; padding: 6px; box-shadow: 0 0 0 100vmax rgba(14, 20, 28, .38); animation: fi-sheet .28s cubic-bezier(.2,.9,.25,1) both; }
+  .fi-menu-item { font-size: 16px; padding: 13px 14px; text-align: center; justify-content: center; }
+  .fi-menu-label { text-align: center; }
+
+  .filter-row { margin: 0 4px 10px; }
+
+  /* Fiches : liste groupée */
+  .fi-grid { display: flex; flex-direction: column; gap: 0; background: var(--card, #fff); border-radius: 16px; overflow: visible; }
+  .fi-chap-sections { gap: 20px; }
+  .fi-chap-head { margin: 0 0 8px 6px; font-family: var(--font-hanken), sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--gray); }
+  .fi-chap-count, .fi-chap-rule { display: none; }
+  .fi-chap-del { width: 30px; height: 30px; margin-left: auto; border: 0; }
+  .card { border: 0; border-radius: 0; box-shadow: none !important; background: transparent; position: relative; }
+  .card + .card::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--border, #EEECE6); }
+  .card:first-child { border-radius: 16px 16px 0 0; }
+  .card:last-child { border-radius: 0 0 16px 16px; }
+  .card.clickable:active { transform: none; background: var(--soft, #F4F3EF); }
+  .card-accent, .card-status, .card-foot { display: none !important; }
+  .card-body { padding: 12px 44px 12px 14px; gap: 8px; }
+  .card .card-head { padding-right: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .card-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .card-when { display: block; flex: none; font-size: 13px; font-weight: 600; color: var(--gray); }
+  .card-when.urgent { color: #B35A1C; }
+  .fi-menu-btn-card { top: 50% !important; right: 4px !important; transform: translateY(-50%); width: 36px; height: 36px; color: var(--dim, #9A988F); }
+
+  .stamps { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 2px; padding: 0; background: none; border-radius: 0; }
+  .stamp { aspect-ratio: auto; width: auto !important; height: 4px !important; min-width: 0; border-radius: 2px !important; border: 0 !important; box-shadow: none !important; font-size: 0 !important; background: #E6E3DC; }
+  .stamp .stamp-star { display: none; }
+  .stamp.s1 { background: var(--s1, #B3423B); }
+  .stamp.s2 { background: var(--s2, #D9792F); }
+  .stamp.s3 { background: var(--s3, #D9A92E); }
+  .stamp.s4 { background: var(--s4, #6E9E5E); }
+  .stamp.s5 { background: var(--s5, #2F6A28); }
+  .stamp.temp { opacity: .55; }
+  .stamp.future { background: #E6E3DC; }
+  .stamp.today { background: #9FB8D0; }
+  .stamp.missed { background: #E8B07A; }
+  [data-theme="dark"] .stamp.future { background: var(--bg-muted); }
+}
+@keyframes fi-pop { from { opacity: 0; transform: scale(.9) translateY(-6px); } }
+@keyframes fi-sheet { from { transform: translateY(100%); } }
