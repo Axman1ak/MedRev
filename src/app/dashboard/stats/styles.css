@@ -103,3 +103,21 @@
   .st6-row > svg { grid-area: go; }
   .st6-legend-r { margin-left: 0; }
 }
+
+/* ===== TÉLÉPHONE : les 4 chiffres en bande qu'on fait glisser (façon Santé) ===== */
+@media (max-width: 768px) {
+  .st6 { padding: 14px 8px 24px; gap: 18px; }
+  .st6-head { padding: 0 4px; }
+  .st6-head h1 { font-size: 28px; font-weight: 700; }
+  .st6-head p { font-size: 13.5px; }
+  .st6-kpis { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; border: 0; margin: 0 -8px; padding: 0 8px; scrollbar-width: none; }
+  .st6-kpis::-webkit-scrollbar { display: none; }
+  .st6-kpi, .st6-kpi:nth-child(2), .st6-kpi:nth-child(-n+2) { flex: 0 0 44%; scroll-snap-align: start; margin: 0; border: 0; border-radius: 16px; background: var(--bg-card); padding: 14px; }
+  .st6-kpi-v b { font-size: 28px; }
+  .st6-kpi-s { white-space: normal; font-size: 12.5px; }
+  .st6-subs { border: 0; border-radius: 16px; padding: 14px 4px 10px; }
+  .st6-side { gap: 22px; }
+  .st6-weak { background: var(--bg-card); border-radius: 16px; padding: 0 12px; }
+  .st6-weak li:last-child { border-bottom: 0; }
+  .st6-sec-head { padding: 0 6px; }
+}

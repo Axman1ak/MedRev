@@ -576,3 +576,14 @@
 /* Nom d'origine du fichier : coupé proprement s'il est long */
 .rmod-cours-fname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rmod-cours-nom em { flex: none; }
+
+/* ===== TÉLÉPHONE : paliers compacts, 7 par ligne, le statut en toutes lettres
+   seulement pour aujourd'hui et le prochain (le reste se lit à la couleur) ===== */
+@media (max-width: 768px) {
+  .rmod-card { padding-left: 16px !important; padding-right: 16px !important; }
+  .rmod-jpicker { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .rmod-jstep { padding: 7px 0 6px; gap: 4px; border-radius: 8px; }
+  .rmod-jlbl { font-size: 9.5px; letter-spacing: 0; }
+  .rmod-jbig { width: 20px; height: 20px; }
+  .rmod-jstatus { font-size: 0; min-height: 0; }
+}

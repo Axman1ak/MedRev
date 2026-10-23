@@ -322,3 +322,29 @@ aside div.group:hover > span:nth-child(3) {
 }
 .mr-tip:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 [data-theme="dark"] .mr-tip::after { background: #E9EDF2; color: #12161C; }
+
+/* ============ TÉLÉPHONE : LES FENÊTRES DEVIENNENT DES FEUILLES ============
+   Sur téléphone, toute fenêtre (fiche, nouvelle fiche, matière, cours, import,
+   « voir tout ») monte du bas de l'écran, pleine largeur, avec une poignée.
+   On la ferme en touchant le fond ou en la tirant vers le bas (layout). */
+@media (max-width: 768px) {
+  .rmod-overlay, .fi-overlay, .cal-overflow, .imp-ov, .set-modal-overlay, .dvx .modal-overlay {
+    align-items: flex-end !important; justify-content: stretch !important; padding: 0 !important;
+  }
+  .rmod-card, .fi-modal, .cal-overflow-card, .imp-mod, .set-modal, .dvx .modal-content {
+    width: 100% !important; max-width: none !important; margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: calc(100dvh - 44px) !important; overflow-y: auto;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+    animation: mr-sheet .32s cubic-bezier(.2, .9, .25, 1) both !important;
+    overscroll-behavior: contain;
+    transition: transform .2s ease;
+  }
+  .rmod-card::before, .fi-modal::before, .cal-overflow-card::before, .imp-mod::before, .set-modal::before, .dvx .modal-content::before {
+    content: ''; display: block; flex: none; align-self: center;
+    width: 38px; height: 5px; border-radius: 3px; background: #C9C6BE;
+    margin: -10px auto 12px;
+  }
+  .dvx .modal-content::before { margin: 8px auto 0; }
+}
+@keyframes mr-sheet { from { transform: translateY(100%); } }

@@ -968,7 +968,7 @@ export default function SimulateurPage() {
                       type="button"
                       className="sim-mat-gen"
                       onClick={() => router.push('/dashboard/fiches')}
-                    >Générer des QCM</button>
+                    >Générer<span className="sim-gen-w"> des QCM</span></button>
                     <span className="sim-mat-chev" aria-hidden="true" />
                   </div>
                 )
