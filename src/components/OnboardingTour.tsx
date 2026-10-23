@@ -454,17 +454,13 @@ const STEPS: Step[] = [
     title: () => 'Les Statistiques',
     body: (
       <>
-        Ton <strong>Indice de préparation</strong> sur 100 et ton{' '}
-        <strong>rang</strong> (d&apos;Apprenti à Maître), avec les trois
-        leviers pour les faire monter : <strong>Maîtrise</strong>,{' '}
-        <strong>Couverture</strong>, <strong>Assiduité</strong>. Un jour
-        compte à partir de <strong>10 minutes</strong> de révision. Tiens
-        ta série.
+        Où tu en es, matière par matière : tes fiches{' '}
+        <strong>maîtrisées</strong>, celles <strong>en retard</strong>, ta
+        réussite aux <strong>QCM</strong> et ton temps de travail. Les fiches
+        les plus faibles sont listées pour les retravailler en un clic.
         <br /><br />
-        <em className="ont-premium-note">
-          <strong>Premium</strong> : fixe ta date d&apos;examens et vois ton
-          score projeté le jour J.
-        </em>
+        Juste en dessous, la <strong>Bibliothèque</strong> : chaque révision
+        notée y ajoute un livre, et ton <strong>rang</strong> monte avec.
       </>
     ),
   },

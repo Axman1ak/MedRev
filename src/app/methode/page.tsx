@@ -281,10 +281,11 @@ export default function MethodePage() {
               sous les yeux. Chaque fiche notée rejoint ta bibliothèque.
             </p>
             <p className="lp-method-p">
-              Ton travail se mesure dans un <strong>indice de préparation</strong>
-              sur 100 et un rang d&apos;érudit, d&apos;<strong>Apprenti</strong> à
-              <strong> Maître</strong>. Trois leviers le font monter : la
-              maîtrise, la couverture des paliers, et l&apos;assiduité.
+              Chaque révision notée ajoute un livre à ta bibliothèque, sur
+              l&apos;étagère de sa matière. Ton rang d&apos;érudit monte avec, de{' '}
+              <strong>Apprenti</strong> à <strong>Maître</strong>, et ne redescend
+              jamais. Les statistiques, elles, te disent honnêtement où tu en es
+              dans chaque matière.
             </p>
             <p className="lp-method-p">
               Un jour compte à partir de <strong>10 minutes de révision

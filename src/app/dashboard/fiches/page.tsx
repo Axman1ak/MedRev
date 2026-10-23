@@ -1,7 +1,7 @@
 'use client'
 // src/app/dashboard/fiches/page.tsx
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { System, Lesson } from '@/types'
@@ -322,8 +322,30 @@ export default function FichesPage() {
     [systems, semester]
   )
 
+  // Lien depuis les Statistiques : /dashboard/fiches?matiere=<id> ouvre cette matière.
+  // La sélection elle-même se fait dans l'effet suivant (sinon il la remplace).
+  const matiereFromUrl = useRef(false)
+  const wantedSystem = useRef<string | null>(null)
+  useEffect(() => {
+    if (matiereFromUrl.current || systems.length === 0 || typeof window === 'undefined') return
+    matiereFromUrl.current = true
+    const id = new URLSearchParams(window.location.search).get('matiere')
+    const sys = id ? systems.find(s => s.id === id) : null
+    if (!sys) return
+    wantedSystem.current = sys.id
+    const sem = (sys as any).semestre
+    if (semester !== 'year' && (sem === 1 || sem === 2) && sem !== semester) setSemester(sem)
+    setShowDueOnly(false)
+  }, [systems, semester])
+
   useEffect(() => {
     if (semSystems.length === 0) { setSelectedSystemId(null); return }
+    const wanted = wantedSystem.current
+    if (wanted && semSystems.find(s => s.id === wanted)) {
+      wantedSystem.current = null
+      setSelectedSystemId(wanted)
+      return
+    }
     if (!selectedSystemId || !semSystems.find(s => s.id === selectedSystemId)) {
       setSelectedSystemId(semSystems[0].id)
     }

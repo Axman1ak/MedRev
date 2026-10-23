@@ -38,6 +38,9 @@ const NAV = [
   { href: '/dashboard/stats', label: 'Statistiques', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 20V10M12 20V4M19 20v-7" strokeLinecap="round"/></svg>
   ) },
+  { href: '/dashboard/bibliotheque', label: 'Bibliothèque', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 4v16M9 4v16M13.5 4.5l4.5 15M3 20h18" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ) },
   { href: '/dashboard/simulateur', label: 'Simulateur', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
   ) },
