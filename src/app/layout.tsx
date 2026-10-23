@@ -80,6 +80,9 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
+  // Le contenu passe sous l'encoche et la barre du bas de l'iPhone ; les
+  // marges env(safe-area-inset-*) le gardent lisible (barre d'onglets).
+  viewportFit: 'cover',
 }
 
 // ============================================================
