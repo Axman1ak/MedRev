@@ -143,6 +143,47 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
+  // Tirer une feuille vers le bas pour la fermer (téléphone). On ne suit le
+  // doigt que s'il part du haut de la feuille, pour ne pas gêner le défilement.
+  useEffect(() => {
+    if (!isPhone) return
+    const SHEETS = '.rmod-card, .fi-modal, .cal-overflow-card, .imp-mod, .set-modal, .dvx .modal-content, .db-sheet'
+    let card: HTMLElement | null = null, y0 = 0, dy = 0
+    const start = (e: TouchEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest(SHEETS) as HTMLElement | null
+      if (!el || el.scrollTop > 0) return
+      const top = el.getBoundingClientRect().top
+      if (e.touches[0].clientY - top > 64) return
+      card = el; y0 = e.touches[0].clientY; dy = 0
+      card.style.transition = 'none'
+    }
+    const move = (e: TouchEvent) => {
+      if (!card) return
+      dy = Math.max(0, e.touches[0].clientY - y0)
+      card.style.transform = `translateY(${dy}px)`
+    }
+    const end = () => {
+      if (!card) return
+      const el = card; card = null
+      el.style.transition = ''
+      if (dy > 90) {
+        // Le fond (parent) ferme la fenêtre au clic ; la carte arrête la propagation.
+        el.style.transform = 'translateY(100%)'
+        setTimeout(() => { (el.parentElement as HTMLElement | null)?.click(); el.style.transform = '' }, 160)
+      } else {
+        el.style.transform = ''
+      }
+    }
+    document.addEventListener('touchstart', start, { passive: true })
+    document.addEventListener('touchmove', move, { passive: true })
+    document.addEventListener('touchend', end)
+    return () => {
+      document.removeEventListener('touchstart', start)
+      document.removeEventListener('touchmove', move)
+      document.removeEventListener('touchend', end)
+    }
+  }, [isPhone])
+
   useEffect(() => {
     if (!moreOpen) return
     const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') setMoreOpen(false) }

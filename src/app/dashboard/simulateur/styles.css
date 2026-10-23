@@ -1404,3 +1404,13 @@
   .sim-cfg-wrap { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
   .sim-rank { padding-top: 0; }
 }
+
+/* ===== TÉLÉPHONE : une ligne par matière, comme les Réglages d'iOS ===== */
+@media (max-width: 768px) {
+  .sim-mat { min-height: 52px; gap: 11px; }
+  .sim-box { width: 22px; height: 22px; border-radius: 6px; }
+  .sim-mat-nm { font-size: 15.5px; }
+  .sim-mat-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+  .sim-gen-w { display: none; }
+  .sim-mat-gen { font-size: 14px; font-weight: 600; padding: 8px 4px; }
+}

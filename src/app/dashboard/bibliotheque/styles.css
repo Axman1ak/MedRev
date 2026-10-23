@@ -69,3 +69,27 @@
   .bib-shelf-n { margin: 0; }
   .bib-books { height: 56px; }
 }
+
+/* ===== TÉLÉPHONE : le rang d'abord, puis les étagères, puis la liste des rangs ===== */
+@media (max-width: 768px) {
+  .bib-page { padding: 14px 8px 24px; gap: 14px; }
+  .bib-head { padding: 0 4px; }
+  .bib-head h1 { font-size: 28px; font-weight: 700; }
+  .bib-head p { font-size: 13.5px; }
+  .bib-grid { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+  .bib-grid > *, .bib-side > * { min-width: 0; max-width: none; }
+  .bib-side { display: contents; }
+  .bib-rank { order: 1; border: 0; border-radius: 16px; padding: 16px; }
+  .bib-week { order: 2; }
+  .bib-week > div { border: 0; border-radius: 16px; }
+  .bib-case { order: 3; border-radius: 16px; padding: 14px 12px 10px; }
+  .bib-side > div:not(.bib-rank):not(.bib-week) { order: 4; padding: 0 6px; }
+  .bib-seal { width: 52px; height: 52px; }
+  .bib-rank-name { font-size: 24px; }
+  .bib-books { height: 50px; }
+  .bib-book { max-height: 48px; }
+  .bib-shelf-lbl { flex: none; padding-bottom: 0; display: flex; align-items: baseline; gap: 10px; }
+  .bib-shelf { flex-direction: column; align-items: stretch; gap: 4px; }
+  .bib-shelf-n { margin: 0; }
+  .bib-legend span:last-child { display: none; }
+}
