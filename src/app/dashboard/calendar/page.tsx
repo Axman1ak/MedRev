@@ -16,6 +16,7 @@ import type { TdKind } from '@/types'
 import { useIsNarrow } from '@/lib/useNarrow'
 import PageLoader from '@/components/PageLoader'
 import { currentSemestre } from '@/lib/semestre'
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 
 const J = DEFAULT_J  // fallback ; planning réel lu par matière (scheduleOf)
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -171,6 +172,10 @@ export default function CalendarPage() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [monthOffset, setMonthOffset] = useState(0)
   const [view, setView] = useState<'week' | 'month'>('week')
+  // TÉLÉPHONE : bande de 7 jours + le détail du jour choisi (façon Calendrier d'Apple)
+  const isPhone = useIsNarrow(768)
+  const [selIdx, setSelIdx] = useState(() => (new Date().getDay() + 6) % 7)
+  const touchX = useRef<number | null>(null)
   const [showAllForDay, setShowAllForDay] = useState<string | null>(null)
   const [reviewing, setReviewing] = useState<{ lesson: Lesson; stepIdx: number } | null>(null)
 
@@ -396,7 +401,8 @@ export default function CalendarPage() {
   }
 
   function goToday() {
-    if (view === 'week') setWeekOffset(0)
+    setSelIdx((new Date().getDay() + 6) % 7)
+    if (view === 'week' || isPhone) setWeekOffset(0)
     else setMonthOffset(0)
   }
 
@@ -546,8 +552,120 @@ export default function CalendarPage() {
   return (
     <div className="cal-page">
 
+      {isPhone && (() => {
+        const colorOf = buildSubjectColorMap(semSystems)
+        const sel = weekDays[selIdx]
+        const selStr = toDateStr(sel)
+        const selOccs = byDate.get(selStr) ?? []
+        const selTds = tdsByDate.get(selStr) ?? []
+        const mid = weekDays[3]
+        const monthName = MONTH_FULL_FR[mid.getMonth()]
+        const isTodaySel = selStr === today
+        const parts: string[] = []
+        if (selOccs.length) parts.push(`${selOccs.length} révision${selOccs.length > 1 ? 's' : ''}`)
+        if (selTds.length) parts.push(`${selTds.length} au programme`)
+        return (
+          <div className="calm">
+            <div className="calm-head">
+              <h1 className="calm-title">{monthName.charAt(0).toUpperCase() + monthName.slice(1)} <span>{mid.getFullYear()}</span></h1>
+              <div className="calm-actions">
+                <button type="button" className="calm-today" onClick={goToday}>Aujourd&apos;hui</button>
+                <button type="button" className="calm-plus" aria-label="Ajouter un cours, un TD ou un examen blanc" onClick={() => openTdNew(selStr)}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="calm-strip"
+              onTouchStart={e => { touchX.current = e.touches[0].clientX }}
+              onTouchEnd={e => {
+                const s = touchX.current; touchX.current = null
+                if (s === null) return
+                const dx = e.changedTouches[0].clientX - s
+                if (dx < -50) setWeekOffset(w => w + 1)
+                else if (dx > 50) setWeekOffset(w => w - 1)
+              }}>
+              <button type="button" className="calm-arrow" aria-label="Semaine précédente" onClick={() => setWeekOffset(w => w - 1)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <div className="calm-days">
+                {weekDays.map((d, i) => {
+                  const ds = toDateStr(d)
+                  const occs = byDate.get(ds) ?? []
+                  const dots: string[] = []
+                  occs.forEach(o => { const c = colorOf.get(o.lesson.system_id) || '#3E6F9C'; if (!dots.includes(c) && dots.length < 3) dots.push(c) })
+                  if ((tdsByDate.get(ds) ?? []).length > 0 && dots.length < 3) dots.push('#8A8984')
+                  const on = i === selIdx
+                  const isT = ds === today
+                  return (
+                    <button key={ds} type="button" className={`calm-day${on ? ' on' : ''}${isT ? ' today' : ''}${ds < today ? ' past' : ''}`}
+                      aria-pressed={on} aria-label={`${DAY_LABELS_LONG[i]} ${d.getDate()} ${MONTH_FULL_FR[d.getMonth()]}`}
+                      onClick={() => setSelIdx(i)}>
+                      <span className="calm-dl">{DAY_LABELS_LONG[i].charAt(0)}</span>
+                      <span className="calm-dn">{d.getDate()}</span>
+                      <span className="calm-dots">{dots.map(c => <i key={c} style={{ background: c }} />)}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <button type="button" className="calm-arrow" aria-label="Semaine suivante" onClick={() => setWeekOffset(w => w + 1)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
+
+            <div className="calm-dayhead" key={selStr}>
+              <h2>{isTodaySel ? "Aujourd'hui, " : ''}{isTodaySel ? DAY_LABELS_LONG[selIdx].toLowerCase() : DAY_LABELS_LONG[selIdx]} {sel.getDate()}</h2>
+              <span>{parts.join(', ')}</span>
+            </div>
+
+            {selTds.length > 0 && (
+              <section className="calm-sec">
+                <h3>Emploi du temps</h3>
+                <div className="calm-list">
+                  {selTds.map(td => {
+                    const sys = td.system_id ? systemsById.get(td.system_id) : undefined
+                    const isEb = td.kind === 'examen_blanc'
+                    const c = isEb ? '#B3423B' : (td.system_id ? colorOf.get(td.system_id) : undefined) || '#8A8984'
+                    return (
+                      <button key={td.id} type="button" className="calm-row calm-ev" onClick={() => openTdEdit(td)}>
+                        <span className="calm-time">{td.start_time ? fmtTdTime(td.start_time) : 'Journée'}{td.end_time && <small>{fmtTdTime(td.end_time)}</small>}</span>
+                        <span className="calm-bar" style={{ background: c }} />
+                        <span className="calm-txt"><b>{td.title}</b><small>{[isEb ? 'Examen blanc' : sys?.name, td.location].filter(Boolean).join(', ')}</small></span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            <section className="calm-sec">
+              <h3>Révisions</h3>
+              {selOccs.length === 0 ? (
+                <div className="calm-empty">Rien de prévu ce jour-là.</div>
+              ) : (
+                <div className="calm-list">
+                  {selOccs.map(occ => {
+                    const sys = systemsById.get(occ.lesson.system_id)
+                    const c = colorOf.get(occ.lesson.system_id) || '#3E6F9C'
+                    const done = occ.scoreForThisJ !== null
+                    const late = !done && selStr < today
+                    return (
+                      <button key={`${occ.lesson.id}-${occ.stepIndex}`} type="button" className="calm-row" onClick={() => openReview(occ)}>
+                        <span className="calm-ico" style={{ color: c, background: `${c}1A` }}><SubjectIcon name={sys?.name ?? ''} /></span>
+                        <span className="calm-txt"><b>{occ.lesson.name}</b><small>{sys?.name ?? 'Matière'}, J+{scheduleOf(sys)[occ.stepIndex]}{late ? ', pas notée' : ''}</small></span>
+                        {done && <span className={`calm-note s${occ.scoreForThisJ}`}>{occ.scoreForThisJ}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        )
+      })()}
+
       {/* HEADER */}
-      <div className="cal-head">
+      {!isPhone && <div className="cal-head">
         <div>
           <h1 className="cal-title">
             {view === 'week'
@@ -601,10 +719,10 @@ export default function CalendarPage() {
             </button>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* EMPTY STATE */}
-      {!hasAnyLesson && semTds.length === 0 && (
+      {!isPhone && !hasAnyLesson && semTds.length === 0 && (
         <div className="cal-empty-state">
           <div className="cal-empty-icon" aria-hidden>▦</div>
           <div className="cal-empty-title">
@@ -622,7 +740,7 @@ export default function CalendarPage() {
       )}
 
       {/* WEEK VIEW */}
-      {(hasAnyLesson || semTds.length > 0) && view === 'week' && (
+      {!isPhone && (hasAnyLesson || semTds.length > 0) && view === 'week' && (
         <div className="cal-week" ref={weekRef}>
           {weekDays.map((day, i) => {
             const dateStr = toDateStr(day)
@@ -722,7 +840,7 @@ export default function CalendarPage() {
       )}
 
       {/* MONTH VIEW */}
-      {(hasAnyLesson || semTds.length > 0) && view === 'month' && (
+      {!isPhone && (hasAnyLesson || semTds.length > 0) && view === 'month' && (
         <div className="cal-month">
           <div className="cal-month-head">
             {DAY_LABELS.map(d => (
