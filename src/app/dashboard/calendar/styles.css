@@ -772,6 +772,7 @@
   font-family: inherit;
   transition: all .15s;
 }
+.cal-td-trigger.mr-tip, .cal-print-trigger.mr-tip { width: 32px; padding: 0; justify-content: center; }
 .cal-td-trigger:hover { border-color: var(--cal-gm); background: var(--cal-gl); }
 
 /* =========== TD — VUE SEMAINE =========== */

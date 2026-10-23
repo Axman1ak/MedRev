@@ -148,7 +148,7 @@ const STEPS: Step[] = [
     title: () => 'Crée une matière',
     body: (
       <>
-        Clique sur <strong>+ Ajouter une matière</strong> pour ouvrir le formulaire.
+        Clique sur l&apos;icône <strong>Matière</strong> (le classeur) pour ouvrir le formulaire.
       </>
     ),
     tipPos: 'bottom',
@@ -184,8 +184,8 @@ const STEPS: Step[] = [
     title: () => 'Ajoute une fiche',
     body: (
       <>
-        Clique sur <strong>+ Ajouter une fiche</strong> pour découvrir le
-        formulaire d&apos;ajout.
+        Clique sur l&apos;icône <strong>Fiche</strong> (la feuille, en bleu)
+        pour découvrir le formulaire d&apos;ajout.
       </>
     ),
     tipPos: 'bottom',
@@ -856,7 +856,7 @@ export default function OnboardingTour({
     // - sinon (user a déjà des fiches) : Suivant disponible pour skipper.
     if (cur.waitForCreate) {
       const itemLabel = cur.waitForCreate === 'system' ? 'matière' : 'fiche'
-      const buttonLabel = cur.waitForCreate === 'system' ? '+ Ajouter une matière' : '+ Ajouter une fiche'
+      const buttonLabel = cur.waitForCreate === 'system' ? 'Matière' : 'Fiche'
       return (
         <div className="ont-root" role="dialog" aria-modal="true">
           <div
@@ -870,13 +870,13 @@ export default function OnboardingTour({
               Tu as fermé le formulaire sans créer de {itemLabel}.
               {shouldForceCreate ? (
                 <>
-                  {' '}Tu peux le rouvrir avec <strong>{buttonLabel}</strong> en
+                  {' '}Tu peux le rouvrir avec l&apos;icône <strong>{buttonLabel}</strong> en
                   haut à droite, ou passer cette étape : le tour continue dans
                   les deux cas.
                 </>
               ) : (
                 <>
-                  {' '}Tu peux soit cliquer à nouveau sur{' '}
+                  {' '}Tu peux soit cliquer à nouveau sur l&apos;icône{' '}
                   <strong>{buttonLabel}</strong> pour le rouvrir, soit passer
                   cette étape (tu as déjà des fiches existantes).
                 </>

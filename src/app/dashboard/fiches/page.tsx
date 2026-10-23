@@ -806,9 +806,9 @@ export default function FichesPage() {
             {semSystems.length > 0 && (
               <button
                 type="button"
-                className="fi-btn-icon"
+                className="fi-btn-icon mr-tip"
                 aria-label="Rythme de révision (paliers J)"
-                title="Rythme de révision (paliers J)"
+                data-tip="Rythme de révision"
                 onClick={() => openSchedModal()}
               >
                 <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -818,35 +818,44 @@ export default function FichesPage() {
               </button>
             )}
             <div className="fi-add-group">
-              <button type="button" className="fi-btn-o" onClick={() => setShowImport(true)}>
-                Importer
+              {/* Icônes seules : le nom apparaît dans une bulle au survol (mr-tip). */}
+              <button type="button" className="fi-btn-icon mr-tip" aria-label="Importer des fiches" data-tip="Importer" onClick={() => setShowImport(true)}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></svg>
               </button>
               <button
+                type="button"
                 data-tour="add-system"
-                className="fi-btn-o"
+                className="fi-btn-icon mr-tip"
+                aria-label="Nouvelle matière"
+                data-tip="Matière"
                 onClick={() => { setNewSysSemestre(semester === 'year' ? 2 : semester); setShowNewSystem(true) }}
               >
-                + Matière
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3" width="15" height="18" rx="2" /><path d="M9 3v18" /><path d="M3 7h4M3 12h4M3 17h4" /></svg>
               </button>
               {selectedSystem && !showDueOnly && (
                 <button
                   type="button"
-                  className="fi-btn-o"
+                  className="fi-btn-icon mr-tip"
+                  aria-label="Nouveau chapitre"
+                  data-tip="Chapitre"
                   onClick={() => { setChapModal({ lessonId: null }); setNewChapInput('') }}
                 >
-                  + Chapitre
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z" /></svg>
                 </button>
               )}
               <button
+                type="button"
                 data-tour="add-lesson"
-                className="fi-btn-g"
+                className="fi-btn-icon fi-btn-icon-main mr-tip"
+                aria-label="Nouvelle fiche"
+                data-tip="Fiche"
                 onClick={() => {
                   setNewLesSysId(selectedSystemId || (semSystems[0]?.id ?? ''))
                   setNewLesDate(today)
                   setShowNewLesson(true)
                 }}
               >
-                + Fiche
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M12 11v6M9 14h6" /></svg>
               </button>
             </div>
           </div>

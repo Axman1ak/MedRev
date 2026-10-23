@@ -578,17 +578,21 @@ export default function CalendarPage() {
             <button onClick={next} aria-label="Suivant">{'›'}</button>
           </div>
           <button
-            className="cal-td-trigger"
+            type="button"
+            className="cal-td-trigger mr-tip"
             onClick={() => openTdNew()}
-            title="Ajouter un cours, un TD ou un examen blanc"
+            aria-label="Ajouter un cours, un TD ou un examen blanc"
+            data-tip="Ajouter"
           >
-            + Ajouter
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           {view === 'week' && (hasAnyLesson || semTds.length > 0) && (
             <button
-              className="cal-print-trigger"
+              type="button"
+              className="cal-print-trigger mr-tip"
               onClick={() => window.print()}
-              title="Imprimer la semaine affichée"
+              aria-label="Imprimer la semaine affichée"
+              data-tip="Imprimer"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
                 <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" strokeLinecap="round" strokeLinejoin="round"/>
