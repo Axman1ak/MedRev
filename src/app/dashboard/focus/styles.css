@@ -201,7 +201,7 @@
 .se-feedback.ok b { color: #2F6A28; }
 .se-feedback.ko { background: #F6F4EF; }
 .se-feedback.ko b { color: #8E3434; }
-.se-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+.se-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
 /* Se noter */
 .se-rate { display: flex; flex-direction: column; gap: 20px; }
@@ -458,8 +458,30 @@
 /* Étape 2 verrouillée tant qu'il n'y a ni QCM ni flashcards */
 .se-step.locked { opacity: .5; cursor: not-allowed; }
 .se-step.locked .se-step-n { background: transparent; border: 1.5px dashed currentColor; }
-.se-unlock { gap: 8px; }
-.se-nbpanel { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--bg-card, #fff); border: 1px solid var(--border-subtle, #E8E6E0); box-shadow: 0 12px 30px -16px rgba(21,48,78,.35); animation: se-pop .18s ease-out; }
-.se-nbpanel-h { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px; }
-.se-nbpanel-h button { border: 0; background: none; font-size: 18px; color: var(--text-secondary, #6B6A63); cursor: pointer; width: 30px; height: 30px; }
 @keyframes se-pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+
+/* Synthèse : blocs choisis selon le cours */
+.se-block { margin: 0 0 18px; }
+.se-block:last-child { margin-bottom: 0; }
+.se-block-h { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6B6A63; }
+.se-steps-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: none; }
+.se-steps-list li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14.5px; line-height: 1.45; }
+.se-steps-list li b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #EAF1F8; color: #15304E; font-size: 12px; }
+.se-nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.se-nums > div { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border: 1px solid #E2DDD2; border-radius: 12px; }
+.se-nums b { font-size: 18px; color: #15304E; }
+.se-nums span { font-size: 13px; line-height: 1.4; color: #4A4943; }
+[data-theme="dark"] .se-block-h { color: #9AA7B6; }
+[data-theme="dark"] .se-steps-list li b { background: #1C2C42; color: #E6EDF5; }
+[data-theme="dark"] .se-nums > div { border-color: #28384F; }
+[data-theme="dark"] .se-nums b { color: #F2F4F7; }
+[data-theme="dark"] .se-nums span { color: #C3CCD7; }
+
+/* « Pas sûr » et « Créer d'autres questions » pendant l'entraînement */
+.se-unsure { background: #FFF6E0; border: 1px solid #E8C877; color: #7A5A12; }
+.se-unsure:hover { background: #FCEBC0; }
+.se-unsure.on { background: #E2B23F; border-color: #E2B23F; color: #2E2205; }
+.se-more { align-self: flex-start; padding-left: 0; padding-right: 0; }
+.se-unsure-n { color: #B8891F; }
+[data-theme="dark"] .se-unsure { background: rgba(226,178,63,.12); border-color: rgba(226,178,63,.45); color: #F1D58C; }
+[data-theme="dark"] .se-unsure.on { background: #E2B23F; color: #2E2205; }

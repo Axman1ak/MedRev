@@ -139,5 +139,5 @@ export function correctAnswersRecap(options: string[], correctIdxs: number[]): s
     .filter(Boolean)
   if (texts.length === 0) return ''
   const head = texts.length > 1 ? 'Propositions exactes' : 'Proposition exacte'
-  return `${head} · ${texts.join(' · ')}`
+  return `${head} : ${texts.join(', ')}.`.replace(/\.\.$/, '.')
 }
