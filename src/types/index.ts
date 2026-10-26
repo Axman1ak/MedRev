@@ -66,6 +66,8 @@ export interface AiQuestion {
   // Résultat de la DERNIÈRE tentative (2026-10). Sert à « Refaire les
   // ratées » depuis la fiche. Absent = jamais répondu depuis cet ajout.
   last_correct?: boolean
+  // Réponse juste mais « au hasard » (bouton Pas sûr) : la question est à revoir.
+  unsure?: boolean
   // Champs rétro-compat (legacy AVANT la refonte 2026-05) — toujours typés
   // optionnels. Utilisés par d'anciens chemins de code (ex : page /dashboard/lesson/[id])
   // qui n'a pas encore été migrée vers les nouveaux noms. NE PAS supprimer
@@ -101,6 +103,8 @@ export interface Flashcard {
   reviews?: number      // nb de fois vue en session
   known?: number        // nb de fois marquée "je savais"
   last_reviewed_at?: string
+  // Dernière révision : sue (true) ou ratée (false). Sert à « Refaire les ratées ».
+  last_known?: boolean
   // Cartes créées automatiquement à partir d'une erreur de QCM (2026-10).
   // front/back restent remplis (texte brut) pour tout code qui ne connaît
   // que ces deux champs ; les champs ci-dessous servent à un affichage
@@ -227,6 +231,7 @@ export interface Profile {
   current_year?: string
   // Horodatage du dernier changement d'année, pour l'afficher dans les Réglages.
   year_changed_at?: string | null
+  rest_days?: number[] | null
 }
 
 // Quotas Free centralisés — partagés entre l'API (route.ts) et l'UI (Settings).

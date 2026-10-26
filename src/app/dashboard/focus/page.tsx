@@ -20,8 +20,9 @@
 // carte Progression du tableau de bord). Les colonnes de l'ancienne
 // bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
-import QcmCountPicker from '@/components/QcmCountPicker'
-import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
+import { reviewDate } from '@/lib/restDays'
+import '@/components/review-modal.css'
+import { QCM_COUNTS, getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -91,7 +92,7 @@ function effectiveStepScore(s: StepEntry): Score | null {
   return typeof t === 'number' && t >= 1 && t <= 5 ? (t as Score) : null
 }
 function stepDate(lesson: Lesson, i: number, j: number[]): string {
-  return lesson.learn_date ? dateStrFromOffset(lesson.learn_date, j[i]) : ''
+  return lesson.learn_date ? reviewDate(lesson.learn_date, j[i]) : ''
 }
 function getLast(lesson: Lesson, j: number[]): { score: Score | null; date: string | null } {
   const steps = (lesson.steps as StepEntry[]) || []
@@ -473,6 +474,7 @@ function SessionBody() {
   const [qcmNb, setQcmNbState] = useState<QcmCount>(10)
   useEffect(() => { setQcmNbState(getQcmCount()) }, [])
   const chooseQcmNb = (n: QcmCount) => { setQcmNbState(n); setQcmCount(n) }
+  const [qcmPick, setQcmPick] = useState(false)
 
   const generateQcm = useCallback(async () => {
     if (!current) return
@@ -740,9 +742,7 @@ function SessionBody() {
           <li className={synth ? 'ok' : genSynth === 'running' ? 'run' : ''}><i>{synth ? '✓' : '2'}</i><span><strong>Fiche de synthèse</strong>{synth ? 'Prête' : genSynth === 'running' ? 'En cours, environ 20 secondes' : 'Les idées clés, un tableau et les pièges'}</span></li>
           <li className={!missingQcm ? 'ok' : qcmRunning ? 'run' : ''}><i>{!missingQcm ? '✓' : '3'}</i><span><strong>QCM et flashcards</strong>{!missingQcm ? `${qs.length} QCM prêts` : qcmRunning ? 'En cours, 30 à 60 secondes' : `${qcmNb} QCM, et une flashcard par erreur`}</span></li>
         </ul>
-        {missingQcm && !qcmRunning && (
-          <div className="qnb-row"><span>Combien de QCM créer ?</span><QcmCountPicker value={qcmNb} onChange={chooseQcmNb} /></div>
-        )}
+
         {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
         {(missingSynth || missingQcm) && (
           <button type="button" className="se-btn se-btn-primary se-setup-go" onClick={createAll} disabled={genSynth === 'running' || qcmRunning}>
@@ -777,8 +777,18 @@ function SessionBody() {
             : 'Les QCM et les flashcards sont créés à partir de ton poly ou de la vidéo de l\'amphi. Ajoute-le, MedRev s\'occupe du reste.'}</p>
           {hasSource ? (
             <>
-              {!qcmRunning && <div className="qnb-row" style={{ justifyContent: 'center' }}><QcmCountPicker value={qcmNb} onChange={chooseQcmNb} /></div>}
-              <button type="button" className="se-btn se-btn-primary" onClick={generateQcm} disabled={qcmRunning}>{qcmRunning ? 'Création des QCM…' : `Créer ${qcmNb} QCM`}</button>
+              {qcmPick && !qcmRunning ? (
+                <div className="se-nbpanel">
+                  <div className="se-nbpanel-h">Combien de QCM&nbsp;?<button type="button" aria-label="Annuler" onClick={() => setQcmPick(false)}>×</button></div>
+                  <div className="rmod-nb big" role="group" aria-label="Combien de questions ?">
+                    {QCM_COUNTS.map(n => (
+                      <button key={n} type="button" onClick={() => { chooseQcmNb(n); setQcmPick(false); setTimeout(() => void generateQcm(), 0) }}><b>{n}</b>questions</button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button type="button" className="se-btn se-btn-primary" onClick={() => setQcmPick(true)} disabled={qcmRunning}>{qcmRunning ? 'Création des QCM…' : 'Créer les QCM'}</button>
+              )}
               {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
               {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
             </>
@@ -796,9 +806,12 @@ function SessionBody() {
     </div>
   )
 
+  // L'entraînement n'existe qu'avec des QCM ou des flashcards : sinon l'étape 2
+  // est grisée, et c'est dans l'étape 1 qu'on crée les QCM.
+  const trainLocked = qs.length === 0 && lessonCards.length === 0
   const steps: { label: string; sub: string }[] = [
     { label: 'Relire', sub: synth ? 'Ta fiche de synthèse' : 'Ton cours' },
-    { label: "S'entraîner", sub: qs.length && lessonCards.length ? 'QCM et flashcards' : qs.length ? `${Math.min(TRAIN_SIZE, qs.length)} QCM sur ce cours` : lessonCards.length ? 'Tes flashcards' : 'QCM et flashcards' },
+    { label: "S'entraîner", sub: trainLocked ? (qcmRunning ? 'QCM en cours de création' : hasSource ? "Crée d'abord les QCM" : "Ajoute d'abord ton cours") : qs.length && lessonCards.length ? 'QCM et flashcards' : qs.length ? `${Math.min(TRAIN_SIZE, qs.length)} QCM sur ce cours` : lessonCards.length ? 'Tes flashcards' : 'QCM et flashcards' },
     { label: 'Se noter', sub: 'Avec ton résultat' },
   ]
 
@@ -871,9 +884,12 @@ function SessionBody() {
             <nav className="se-steps" aria-label="Étapes">
               {steps.map((s, i) => {
                 const on = step === i, past = i < step
+                const locked = i === 1 && trainLocked
                 return (
-                  <button key={s.label} type="button" className={`se-step${on ? ' on' : ''}${past ? ' past' : ''}`} onClick={() => (i === 1 ? startTraining() : i === 2 ? goRate() : setStep(0))} aria-current={on ? 'step' : undefined}>
-                    <span className="se-step-n">{past ? '✓' : i + 1}</span>
+                  <button key={s.label} type="button" className={`se-step${on ? ' on' : ''}${past && !locked ? ' past' : ''}${locked ? ' locked' : ''}`} disabled={locked} aria-disabled={locked} onClick={() => (i === 1 ? startTraining() : i === 2 ? goRate() : setStep(0))} aria-current={on ? 'step' : undefined}>
+                    <span className="se-step-n">{locked
+                      ? <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                      : past ? '✓' : i + 1}</span>
                     <span className="se-step-txt"><b>{s.label}</b><span>{s.sub}</span></span>
                   </button>
                 )
@@ -944,8 +960,29 @@ function SessionBody() {
                     <span className="se-muted">Relis ton cours de ton côté, puis note-toi. Tu pourras ajouter le poly plus tard.</span>
                   </div>
                 )}
-                <button type="button" className={`se-btn se-push ${hasSource ? 'se-btn-primary' : 'se-btn-ghost'}`} onClick={qs.length || hasSource ? startTraining : goRate}>
-                  {qs.length || hasSource ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
+                {trainLocked && hasSource && (
+                  <div className="se-box se-unlock">
+                    <b>Débloque l&apos;entraînement</b>
+                    <span className="se-muted">Crée les QCM de ce cours pour passer à l&apos;étape 2.</span>
+                    {qcmRunning ? (
+                      <GenProgress lessonId={current.lesson.id} variant="fiche" />
+                    ) : qcmPick ? (
+                      <div className="se-nbpanel">
+                        <div className="se-nbpanel-h">Combien de QCM&nbsp;?<button type="button" aria-label="Annuler" onClick={() => setQcmPick(false)}>×</button></div>
+                        <div className="rmod-nb big" role="group" aria-label="Combien de questions ?">
+                          {QCM_COUNTS.map(n => (
+                            <button key={n} type="button" onClick={() => { chooseQcmNb(n); setQcmPick(false); setTimeout(() => void generateQcm(), 0) }}><b>{n}</b>questions</button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" className="se-btn se-btn-primary" onClick={() => setQcmPick(true)}>Créer les QCM</button>
+                    )}
+                    {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
+                  </div>
+                )}
+                <button type="button" className={`se-btn se-push ${!trainLocked ? 'se-btn-primary' : 'se-btn-ghost'}`} onClick={!trainLocked ? startTraining : goRate}>
+                  {!trainLocked ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
                 </button>
               </div>
             </section>

@@ -9,6 +9,7 @@
 //   - le temps de travail des 8 dernières semaines (gardens.day_log)
 // Une fiche est « maîtrisée » quand sa dernière note (officielle ou temporaire) vaut 4 ou 5.
 
+import { reviewDate } from '@/lib/restDays'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -61,7 +62,7 @@ function isLate(l: Lesson, today: string, j: number[]): boolean {
   const post = raw.postpones && typeof raw.postpones === 'object' ? (raw.postpones as Record<string, string>) : {}
   for (let i = 0; i < j.length; i++) {
     if (stepScore(steps[i]) || skips.includes(i)) continue
-    const due = post[String(i)] ?? addDays(l.learn_date, j[i])
+    const due = post[String(i)] ?? reviewDate(l.learn_date, j[i])
     return due < today
   }
   return false

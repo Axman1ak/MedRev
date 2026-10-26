@@ -587,3 +587,15 @@
   .rmod-jbig { width: 20px; height: 20px; }
   .rmod-jstatus { font-size: 0; min-height: 0; }
 }
+
+/* Choix 10 / 20 / 30 : n'apparaît qu'après un clic sur « Créer » */
+.rmod-nb { display: flex; gap: 6px; align-items: center; animation: rmod-up .18s ease-out; }
+.rmod-nb button { flex: 1; height: 36px; border: 1.5px solid var(--accent-medium, #2C5F8A); border-radius: 10px; background: var(--bg-card); color: var(--accent-primary, #15304E); font: 700 14px var(--font-hanken), sans-serif; cursor: pointer; }
+.rmod-nb button:hover { background: var(--accent-soft, #E2ECF5); }
+.rmod-nb .rmod-nb-x { flex: none; width: 36px; border-color: transparent; color: var(--text-secondary); font-size: 18px; }
+.rmod-nb.big button { height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-weight: 500; font-size: 12px; color: var(--text-secondary); }
+.rmod-nb.big button b { font-family: var(--font-bricolage), sans-serif; font-size: 20px; font-weight: 600; color: var(--accent-primary, #15304E); line-height: 1.1; }
+
+.rmod-nbpanel { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: 0 12px 30px -16px rgba(21,48,78,.35); animation: rmod-up .18s ease-out; }
+.rmod-nbpanel-h { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-hanken), sans-serif; font-weight: 700; font-size: 13.5px; color: var(--text-primary); }
+.rmod-nbpanel-h button { border: 0; background: none; width: 28px; height: 28px; font-size: 18px; color: var(--text-secondary); cursor: pointer; }

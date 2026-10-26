@@ -1,6 +1,7 @@
 'use client'
 // src/app/dashboard/fiches/page.tsx
 
+import { reviewDate } from '@/lib/restDays'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -54,9 +55,7 @@ function effectiveStepScore(s: StepEntry): Score | null {
 
 function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
-  const d = new Date(lesson.learn_date + 'T12:00:00')
-  d.setDate(d.getDate() + j[i])
-  return toDateStr(d)
+  return reviewDate(lesson.learn_date, j[i])
 }
 
 type StampState =

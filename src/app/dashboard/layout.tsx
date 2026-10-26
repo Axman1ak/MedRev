@@ -1,4 +1,5 @@
 'use client'
+import { reviewDate, setRestDaysLocal } from '@/lib/restDays'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -223,6 +224,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             user.email?.split('@')[0] ||
             '...'
           setProfile({ ...data, name: displayName })
+          // Jours sans révision : toutes les dates de révision en dépendent.
+          // Si ce navigateur ne les connaissait pas encore, on recharge une fois.
+          if (setRestDaysLocal((data as { rest_days?: unknown }).rest_days ?? [])) {
+            try {
+              if (!sessionStorage.getItem('medrev-rest-sync')) {
+                sessionStorage.setItem('medrev-rest-sync', '1')
+                window.location.reload()
+              }
+            } catch { /* rien */ }
+          }
 
           const lsStep = typeof window !== 'undefined'
             ? localStorage.getItem('medrev-onboarding-step')
@@ -322,10 +333,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         scheduleFor(sid).forEach((off, i) => {
           if (skips.includes(i)) return              // palier annulé
           if (hasOfficialScore(steps[i])) return     // déjà noté ce jour J
-          const d = new Date(l.learn_date + 'T12:00:00')
-          d.setDate(d.getDate() + off)
           // Un palier reporté est dû à sa nouvelle date, pas à la date théorique.
-          const due = postpones[String(i)] ?? toDateStr(d)
+          const due = postpones[String(i)] ?? reviewDate(l.learn_date, off)
           if (due === today) cnt++
         })
       })

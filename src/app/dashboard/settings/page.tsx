@@ -14,6 +14,7 @@ import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTH
 import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import { getStoredTheme, setTheme as setStoredTheme } from '@/lib/theme'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
+import { DAY_NAMES, getRestDays, setRestDaysLocal } from '@/lib/restDays'
 import './styles.css'
 import PageLoader from '@/components/PageLoader'
 import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
@@ -24,8 +25,14 @@ import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 // sous-onglets, plus de carte posée sous une autre.
 type Vue =
   | 'profil' | 'securite' | 'abonnement'
-  | 'annee' | 'bareme'
+  | 'annee' | 'jours' | 'bareme'
   | 'apparence' | 'aide' | 'contact'
+
+function restLabel(days: number[]): string {
+  if (days.length === 0) return 'Tous les jours'
+  if (days.length === 1) return `Sauf le ${DAY_NAMES[days[0]].toLowerCase()}`
+  return `${7 - days.length} jours sur 7`
+}
 
 // Le titre affiché en haut d'un écran, une fois qu'on y est entré.
 const TITRES: Record<Vue, string> = {
@@ -33,6 +40,7 @@ const TITRES: Record<Vue, string> = {
   securite: 'Connexion et sécurité',
   abonnement: 'Abonnement',
   annee: "Année d'études",
+  jours: 'Jours de révision',
   bareme: 'Barème du simulateur',
   apparence: 'Apparence',
   aide: 'Aide et tutoriel',
@@ -48,6 +56,7 @@ const DEPUIS_MENU: Record<string, Vue | null> = {
   contact: 'contact',
   abonnement: 'abonnement',
   profil: 'profil',
+  jours: 'jours',
 }
 
 // Icônes au trait, dessinées au même gabarit (24, trait 1.7) pour que la
@@ -71,6 +80,11 @@ const ICONES: Record<Vue, ReactNode> = {
   annee: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 10 12 5 2 10l10 5 10-5Z" /><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
+    </svg>
+  ),
+  jours: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="m10 14 4 4M14 14l-4 4" />
     </svg>
   ),
   bareme: (
@@ -217,6 +231,20 @@ export default function SettingsPage() {
     setSoundsEnabled(next)
   }
 
+  // Jours sans révision : enregistrés dans le profil et gardés dans ce
+  // navigateur pour que tous les écrans calculent les mêmes dates.
+  const [restDays, setRestDays] = useState<number[]>([])
+  async function toggleRestDay(d: number) {
+    const next = restDays.includes(d) ? restDays.filter(x => x !== d) : [...restDays, d].sort()
+    if (next.length >= 7) return // il faut au moins un jour de révision
+    setRestDays(next)
+    setRestDaysLocal(next)
+    if (profile) {
+      await supabase.from('profiles').update({ rest_days: next }).eq('id', profile.id)
+      setProfile({ ...profile, rest_days: next })
+    }
+  }
+
   function chooseScoring(v: string) {
     setScoringPref(v)
     if (typeof window === 'undefined') return
@@ -239,6 +267,11 @@ export default function SettingsPage() {
       if (cancelled) return
       if (data) {
         setProfile(data as Profile)
+        {
+          const rd = (data as Profile).rest_days
+          setRestDaysLocal(Array.isArray(rd) ? rd : getRestDays())
+          setRestDays(getRestDays())
+        }
         setName(data.name || '')
         setUsername(data.username || '')
         setFac(data.fac || '')
@@ -478,6 +511,7 @@ export default function SettingsPage() {
       titre: 'Mes études',
       lignes: [
         { id: 'annee', valeur: yearLabel(currentYear), teinte: 'bleu' },
+        { id: 'jours', valeur: restLabel(restDays), teinte: 'vert' },
         {
           id: 'bareme',
           valeur: scoringPref ? SCORING_SYSTEMS[scoringPref as ScoringSystemId].label : 'Automatique',
@@ -948,6 +982,31 @@ export default function SettingsPage() {
         )}
 
         {/* ============ SUPPRIMER (RGPD) ============ */}
+        {vue === 'jours' && (
+        <section className="set-card" id="set-jours">
+          <p className="set-card-sub">Décoche les jours où tu ne révises pas. Une révision qui tombe ce jour-là passe au jour suivant.</p>
+          <div className="set-days">
+            {[1, 2, 3, 4, 5, 6, 0].map(d => {
+              const off = restDays.includes(d)
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  className={`set-day${off ? '' : ' on'}`}
+                  aria-pressed={!off}
+                  title={DAY_NAMES[d]}
+                  onClick={() => toggleRestDay(d)}
+                >
+                  <span className="set-day-l">{DAY_NAMES[d].slice(0, 3)}</span>
+                  <span className="set-day-s">{off ? 'Repos' : 'Révision'}</span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="set-hint">Le jour où tu apprends un cours (J0) ne bouge jamais. Les révisions déjà reportées à la main restent à leur date.</p>
+        </section>
+        )}
+
         {vue === 'bareme' && (
         <section className="set-card" id="set-bareme">
           <p className="set-card-sub">Par défaut, le barème standard. Change-le si ta fac en utilise un autre.</p>

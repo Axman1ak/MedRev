@@ -19,7 +19,7 @@ import ReportQuestion from '@/components/ReportQuestion'
 import './styles.css'
 import PageLoader from '@/components/PageLoader'
 
-type Phase = 'loading' | 'question' | 'feedback' | 'end' | 'empty'
+type Phase = 'loading' | 'intro' | 'question' | 'feedback' | 'end' | 'empty'
 
 // Depuis 2026-05-15 : `selected` est TOUJOURS un tableau d'index choisis.
 //   - QCS  → [3]
@@ -114,14 +114,21 @@ export default function QcmSessionPage() {
   const lessonRef = useRef<Lesson | null>(null)
   useEffect(() => { lessonRef.current = lesson }, [lesson])
 
+  // Écran de départ : choix du nombre de questions, reprise, ratées
+  const [intro, setIntro] = useState<{ all: AiQuestion[]; order: number[]; resumeLeft: number[] | null; missed: number[] } | null>(null)
+  // Questions justes mais répondues au hasard (« Pas sûr »), par position dans la session
+  const [unsure, setUnsure] = useState<Set<number>>(new Set())
+
   function startWith(order: number[], all: AiQuestion[], n: SizeChoice) {
-    const take = n === 'all' ? order : order.slice(0, n)
+    // Les questions retenues sont mélangées : l'ordre change à chaque session.
+    const take = shuffleArr(n === 'all' ? order : order.slice(0, n))
     setFullOrder(order)
     setQuestions(take.map(i => all[i]))
     setOrigIndices(take)
     setAnswers(take.map(() => ({ selected: [], isCorrect: null })))
     setCurrentIdx(0)
     setCardsAdded(0)
+    setUnsure(new Set())
     setStartTime(Date.now())
     setPhase('question')
   }
@@ -188,18 +195,16 @@ export default function QcmSessionPage() {
         startWith(shuffleArr(missed), aiQs, 'all')
         return
       }
+      let resumeLeft: number[] | null = null
       try {
         const raw = localStorage.getItem(resumeKey(String(lessonId)))
         const saved = raw ? (JSON.parse(raw) as { left: number[]; at: number }) : null
         const ok = saved && Array.isArray(saved.left) && saved.left.length > 0 && Date.now() - saved.at < 7 * 86400000
           && saved.left.every(i => Number.isInteger(i) && i >= 0 && i < aiQs.length)
-        if (ok) {
-          setResumed(true)
-          startWith(saved!.left, aiQs, 'all')
-          return
-        }
+        if (ok) resumeLeft = saved!.left
       } catch {}
-      startWith(sessionOrder(aiQs as QStat[]), aiQs, pref)
+      setIntro({ all: aiQs, order: sessionOrder(aiQs as QStat[]), resumeLeft, missed: missedIndices(aiQs) })
+      setPhase('intro')
     }
     load()
     return () => { cancelled = true }
@@ -272,7 +277,7 @@ export default function QcmSessionPage() {
     const allQs: QStat[] = Array.isArray(cur.ai_questions) ? [...(cur.ai_questions as QStat[])] : []
     if (origIdx < 0 || origIdx >= allQs.length) return
     const prevQ = allQs[origIdx]
-    allQs[origIdx] = { ...prevQ, attempts: (prevQ.attempts || 0) + 1, correct: (prevQ.correct || 0) + (isCorrect ? 1 : 0), last_correct: isCorrect }
+    allQs[origIdx] = { ...prevQ, attempts: (prevQ.attempts || 0) + 1, correct: (prevQ.correct || 0) + (isCorrect ? 1 : 0), last_correct: isCorrect, unsure: false }
     const prevCards = Array.isArray(cur.flashcards) ? (cur.flashcards as Flashcard[]) : []
     const { cards, added } = isCorrect ? { cards: prevCards, added: 0 } : addCardsFromMistakes(prevCards, [{ q, selected }])
     const nextLesson = { ...cur, ai_questions: allQs as AiQuestion[], flashcards: cards }
@@ -417,6 +422,75 @@ export default function QcmSessionPage() {
   }
 
   // Phase end
+  // « Pas sûr » : la réponse était juste, mais au hasard. La question passe
+  // dans les ratées (à refaire) et ne compte pas comme réussie.
+  async function toggleUnsure(pos: number) {
+    const cur = lessonRef.current
+    const origIdx = origIndices[pos]
+    if (!cur || origIdx === undefined) return
+    const on = !unsure.has(pos)
+    setUnsure(prev => { const n = new Set(prev); if (on) n.add(pos); else n.delete(pos); return n })
+    const allQs: QStat[] = Array.isArray(cur.ai_questions) ? [...(cur.ai_questions as QStat[])] : []
+    const prevQ = allQs[origIdx]
+    if (!prevQ) return
+    allQs[origIdx] = on
+      ? { ...prevQ, last_correct: false, unsure: true, correct: Math.max(0, (prevQ.correct || 0) - 1) }
+      : { ...prevQ, last_correct: true, unsure: false, correct: (prevQ.correct || 0) + 1 }
+    const nextLesson = { ...cur, ai_questions: allQs as AiQuestion[] }
+    lessonRef.current = nextLesson
+    setLesson(nextLesson)
+    try { await supabase.from('lessons').update({ ai_questions: allQs as AiQuestion[] }).eq('id', cur.id) } catch (e) { console.error('[qcm] pas sûr :', e) }
+  }
+
+  if (phase === 'intro' && intro) {
+    const total = intro.all.length
+    const fresh = intro.all.filter(q => !((q as QStat).attempts || 0)).length
+    const choices = ([10, 20, 'all'] as SizeChoice[]).filter(n => n === 'all' || n < total)
+    const nFor = (n: SizeChoice) => (n === 'all' ? total : n)
+    return (
+      <div className="qcm-page">
+        <div className="qcm-topbar">
+          <button className="qcm-topback mr-tip" onClick={quitToFiches} aria-label="Retour aux fiches" data-tip="Retour aux fiches">←</button>
+        </div>
+        <div className="qcm-intro">
+          <div className="qcm-intro-kick">{system?.name || 'Fiche'}</div>
+          <h1 className="qcm-intro-title">{lesson?.name}</h1>
+          <div className="qcm-intro-stats">
+            <span><b>{total}</b> question{total > 1 ? 's' : ''}</span>
+            {intro.missed.length > 0 && <span><b>{intro.missed.length}</b> à refaire</span>}
+            {fresh > 0 && <span><b>{fresh}</b> jamais faite{fresh > 1 ? 's' : ''}</span>}
+          </div>
+
+          {intro.resumeLeft && (
+            <div className="qcm-intro-resume">
+              <div><strong>Tu t&apos;es arrêté en cours de route.</strong> Il te reste {intro.resumeLeft.length} question{intro.resumeLeft.length > 1 ? 's' : ''}.</div>
+              <button type="button" className="qcm-intro-go" onClick={() => { setResumed(true); startWith(intro.resumeLeft!, intro.all, 'all') }}>Reprendre</button>
+            </div>
+          )}
+
+          <div className="qcm-intro-lbl">{intro.resumeLeft ? 'Ou une nouvelle session' : 'Combien de questions ?'}</div>
+          <div className="qcm-intro-sizes" role="radiogroup" aria-label="Nombre de questions">
+            {choices.map(n => (
+              <button key={String(n)} type="button" role="radio" aria-checked={size === n} className={size === n ? 'on' : ''}
+                onClick={() => { setSize(n); try { localStorage.setItem(SIZE_KEY, String(n)) } catch {} }}>
+                <b>{nFor(n)}</b><span>{n === 'all' ? 'toutes' : `${Math.round(nFor(n) * 1.5)} min`}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className={`qcm-intro-go${intro.resumeLeft ? ' ghost' : ''}`} onClick={() => { try { localStorage.removeItem(resumeKey(String(lessonId))) } catch {}; startWith(intro.order, intro.all, choices.includes(size) ? size : 'all') }}>
+            Commencer {nFor(choices.includes(size) ? size : 'all')} questions
+          </button>
+          {intro.missed.length > 0 && (
+            <button type="button" className="qcm-intro-alt" onClick={() => { setOnlyMissed(true); startWith(intro.missed, intro.all, 'all') }}>
+              Refaire seulement les {intro.missed.length} à revoir
+            </button>
+          )}
+          <p className="qcm-intro-note">Tu peux t&apos;arrêter quand tu veux : chaque réponse est enregistrée.</p>
+        </div>
+      </div>
+    )
+  }
+
   if (phase === 'end') {
     const correctCount = answers.filter(a => a.isCorrect).length
     const totalCount = questions.length
@@ -645,15 +719,6 @@ export default function QcmSessionPage() {
         <span className="qcm-ctx">
           <strong>{system?.name || 'Fiche'}, {lesson?.name || ''}</strong>, {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : resumed ? <>reprise, <em>{questions.length} question{questions.length > 1 ? 's' : ''} restante{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
         </span>
-        {!onlyMissed && !resumed && currentIdx === 0 && phase === 'question' && fullOrder.length > 10 && (
-          <div className="qcm-size" role="group" aria-label="Nombre de questions">
-            {([10, 20, 'all'] as SizeChoice[]).filter(n => n === 'all' || n < fullOrder.length).map(n => (
-              <button key={String(n)} type="button" className={size === n ? 'on' : ''} onClick={() => chooseSize(n)}>
-                {n === 'all' ? `Toutes (${fullOrder.length})` : n}
-              </button>
-            ))}
-          </div>
-        )}
         {(currentIdx > 0 || phase === 'feedback') && currentIdx < questions.length - 1 && (
           <button type="button" className="qcm-stop" onClick={stopHere}>Terminer ici</button>
         )}
@@ -674,8 +739,8 @@ export default function QcmSessionPage() {
             {multi ? 'Plusieurs bonnes réponses' : 'Une seule bonne réponse'}
           </span>
           {isFeedback && (
-            <span className={`qcm-verdict ${ans?.isCorrect ? 'ok' : 'ko'}`}>
-              {ans?.isCorrect ? 'Juste' : 'Faux'}
+            <span className={`qcm-verdict ${ans?.isCorrect ? (unsure.has(currentIdx) ? 'unsure' : 'ok') : 'ko'}`}>
+              {ans?.isCorrect ? (unsure.has(currentIdx) ? 'Juste, à revoir' : 'Juste') : 'Faux'}
             </span>
           )}
         </div>
@@ -791,9 +856,16 @@ export default function QcmSessionPage() {
               Valider {multi && ans?.selected.length ? `(${ans.selected.length} coché${ans.selected.length > 1 ? 'es' : 'e'})` : ''}
             </button>
           ) : (
+            <>
+            {ans?.isCorrect && (
+              <button type="button" className={`qcm-unsure${unsure.has(currentIdx) ? ' on' : ''}`} onClick={() => void toggleUnsure(currentIdx)} aria-pressed={unsure.has(currentIdx)}>
+                {unsure.has(currentIdx) ? 'Marquée à revoir' : 'Pas sûr, à revoir'}
+              </button>
+            )}
             <button className="qcm-next" onClick={goNext}>
               {currentIdx < questions.length - 1 ? 'Question suivante' : 'Terminer la session'}
             </button>
+            </>
           )}
         </div>
 
