@@ -65,9 +65,30 @@ function mondayOf(today: string): string {
 type Book = { key: string; w: number; h: number; c: string; gold: boolean; tip: string; date: string | null; score: number }
 
 // Tous les livres ont la même largeur : une étagère pleine passe sur une
-// planche de plus, au lieu de serrer ses livres. Un semestre ou une année
-// entière tient donc sans que les livres rétrécissent.
+// planche de plus, au lieu de serrer ses livres.
+// Sur ordinateur la bibliothèque ne défile jamais : elle occupe la hauteur de
+// l'écran et, quand de nouvelles planches arrivent, l'ensemble « dézoome »
+// (échelle < 1). En dézoomant, la largeur utile augmente, donc chaque planche
+// porte plus de livres : on cherche la plus grande échelle où tout tient.
 const BOOK_GAP = 2
+const D = { padX: 52, padY: 38, label: 158, rowsPad: 12, book: 8, rowH: 77, rowGap: 6, shelfPad: 8, shelfGap: 6, legend: 40, minLabelH: 40 }
+
+function fitScale(cw: number, ch: number, counts: number[]): number {
+  if (cw <= 0 || ch <= 0) return 1
+  const heightAt = (s: number) => {
+    const perRow = Math.max(10, Math.floor((cw / s - D.label - D.rowsPad + BOOK_GAP) / (D.book + BOOK_GAP)))
+    let h = D.legend
+    counts.forEach((n, i) => {
+      const rows = Math.max(1, Math.ceil(n / perRow))
+      h += Math.max(rows * D.rowH + (rows - 1) * D.rowGap, D.minLabelH) + D.shelfPad + (i ? D.shelfGap : 0)
+    })
+    return h * s
+  }
+  if (heightAt(1) <= ch) return 1
+  let lo = 0.15, hi = 1
+  for (let k = 0; k < 24; k++) { const m = (lo + hi) / 2; if (heightAt(m) <= ch) lo = m; else hi = m }
+  return lo
+}
 
 export default function BibliothequePage() {
   const supabase = createClient()
@@ -78,18 +99,13 @@ export default function BibliothequePage() {
   const [semestre, setSemestre] = useState<Semestre>(currentSemestre)
   const today = useMemo(() => todayStr(), [])
 
-  // Largeur disponible pour une rangée de livres : on la mesure pour savoir
-  // combien de livres tiennent sur une planche.
-  const [rowW, setRowW] = useState(0)
-  const [bookW, setBookW] = useState(10)
+  // Taille de la bibliothèque à l'écran (ordinateur : hauteur fixe ; téléphone : défile)
+  const [box, setBox] = useState({ w: 0, h: 0, phone: false })
   const roRef = useRef<ResizeObserver | null>(null)
-  const measureRef = useCallback((el: HTMLDivElement | null) => {
+  const caseRef = useCallback((el: HTMLElement | null) => {
     if (!el) return
     roRef.current?.disconnect()
-    const sync = () => {
-      setRowW(el.clientWidth)
-      setBookW(window.matchMedia('(max-width: 768px)').matches ? 5 : 10)
-    }
+    const sync = () => setBox({ w: el.clientWidth, h: el.clientHeight, phone: window.matchMedia('(max-width: 768px)').matches })
     sync()
     roRef.current = new ResizeObserver(sync)
     roRef.current.observe(el)
@@ -181,6 +197,14 @@ export default function BibliothequePage() {
   const next = RANKS[rankIdx + 1] ?? null
   const progress = next ? (total - rank.at) / (next.at - rank.at) : 1
 
+  // Mise en page des étagères
+  const bookW = box.phone ? 5 : D.book
+  const gap = box.phone ? 1 : BOOK_GAP
+  const scale = box.phone ? 1 : fitScale(box.w - D.padX, box.h - D.padY, shelves.map(s => s.books.length))
+  const innerW = box.phone ? box.w - 24 : (box.w - D.padX) / scale
+  const perRow = Math.max(10, Math.floor((innerW - (box.phone ? 0 : D.label) - D.rowsPad + gap) / (bookW + gap)))
+  const fitStyle: React.CSSProperties = box.phone || !box.w ? {} : { width: innerW, transform: `scale(${scale})`, transformOrigin: 'top left' }
+
   if (loading) return <div className="bib-page"><PageLoader label="Ouverture de ta bibliothèque…" /></div>
 
   let delay = 0
@@ -192,7 +216,8 @@ export default function BibliothequePage() {
       </header>
 
       <div className="bib-grid">
-        <section className="bib-case" aria-label="Étagères">
+        <section className="bib-case" aria-label="Étagères" ref={caseRef}>
+          <div className="bib-fit" style={fitStyle}>
           {shelves.length === 0 && (
             <div className="bib-case-empty">
               Crée tes matières et tes fiches : chaque révision notée posera un livre ici.
@@ -200,8 +225,6 @@ export default function BibliothequePage() {
             </div>
           )}
           {shelves.map(({ sys, color, books }) => {
-            const gap = bookW < 10 ? 1 : BOOK_GAP
-            const perRow = Math.max(10, Math.floor((rowW - 12 + gap) / (bookW + gap)))
             const rows: Book[][] = []
             for (let i = 0; i < books.length; i += perRow) rows.push(books.slice(i, i + perRow))
             if (rows.length === 0) rows.push([])
@@ -211,7 +234,7 @@ export default function BibliothequePage() {
                   <div className="bib-shelf-name"><i style={{ background: color }} />{sys.name}</div>
                   <div className="bib-shelf-n">{books.length === 0 ? 'aucun livre' : `${books.length} livre${books.length > 1 ? 's' : ''}`}</div>
                 </div>
-                <div className="bib-shelf-rows" ref={measureRef}>
+                <div className="bib-shelf-rows">
                   {rows.map((row, ri) => (
                     <div key={ri}>
                       <div className="bib-books">
@@ -219,7 +242,7 @@ export default function BibliothequePage() {
                           const d = Math.min(delay, 1400); delay += 3
                           return (
                             <span key={b.key} className="bib-book" title={b.tip}
-                              style={{ width: bookW, height: bookW < 10 ? Math.round(b.h * .66) : b.h, background: b.c, animationDelay: `${d}ms` }}>
+                              style={{ width: bookW, height: box.phone ? Math.round(b.h * .66) : b.h, background: b.c, animationDelay: `${d}ms` }}>
                               {b.gold && <span className="bib-gold" />}
                             </span>
                           )
@@ -235,6 +258,7 @@ export default function BibliothequePage() {
           <div className="bib-legend">
             <span><i className="bib-legend-gold" />Révision notée 5/5</span>
             <span>Survole un livre pour voir la fiche et la date</span>
+          </div>
           </div>
         </section>
 

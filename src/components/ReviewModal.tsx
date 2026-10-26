@@ -4,6 +4,8 @@
 // + extension 2026-05 : Sources (vidéo + PDF) + QCM générés.
 // Utilisé par Mes matières (fiches) et Calendrier.
 
+import QcmCountPicker from '@/components/QcmCountPicker'
+import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -533,6 +535,11 @@ export default function ReviewModal({
     router.push(`/dashboard/fiches/${lesson.id}/cartes`)
   }
 
+  // Combien de QCM créer (10 par défaut : en début de cours, c'est assez)
+  const [qcmNb, setQcmNbState] = useState<QcmCount>(10)
+  useEffect(() => { setQcmNbState(getQcmCount()) }, [])
+  const chooseQcmNb = (n: QcmCount) => { setQcmNbState(n); setQcmCount(n) }
+
   async function generateQcms(mode: 'replace' | 'append' = 'replace') {
     if (isGenerating(lesson.id)) return
     setGenError(null)
@@ -548,7 +555,7 @@ export default function ReviewModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonId: lesson.id,
-          nbQ: 30,
+          nbQ: qcmNb,
           format: 'mixed',
           difficulty: 'annales',
           mode,
@@ -917,23 +924,29 @@ export default function ReviewModal({
                     {hasGenJob ? (
                       <GenProgress lessonId={lesson.id} variant="fiche" />
                     ) : (
-                      <button
-                        type="button"
-                        className="rmod-feat-2nd"
-                        onClick={() => generateQcms('append')}
-                        disabled={generating}
-                        title="Ajouter 30 questions de plus, sur d'autres aspects du cours"
-                      >+ 30 questions</button>
+                      <div className="qnb-row">
+                        <button
+                          type="button"
+                          className="rmod-feat-2nd"
+                          onClick={() => generateQcms('append')}
+                          disabled={generating}
+                          title="Créer d'autres questions, sur d'autres aspects du cours"
+                        >+ {qcmNb} questions</button>
+                        <QcmCountPicker value={qcmNb} onChange={chooseQcmNb} disabled={generating} />
+                      </div>
                     )}
                   </>
                 ) : hasAnySource ? (
                   <>
+                    {!generating && (
+                      <div className="qnb-row"><span>Combien de questions ?</span><QcmCountPicker value={qcmNb} onChange={chooseQcmNb} /></div>
+                    )}
                     <button
                       type="button"
                       className="rmod-feat-cta"
                       onClick={() => generateQcms('replace')}
                       disabled={generating}
-                    >{generating ? 'Génération en cours' : 'Générer 30 QCM'}</button>
+                    >{generating ? 'Génération en cours' : `Générer ${qcmNb} QCM`}</button>
                     <GenProgress lessonId={lesson.id} variant="fiche" />
                   </>
                 ) : (

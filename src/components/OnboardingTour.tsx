@@ -304,8 +304,8 @@ const STEPS: Step[] = [
     title: () => 'QCM générés par IA',
     body: (
       <>
-        MedRev génère automatiquement <strong>30 QCM</strong> par fiche dès
-        qu&apos;une source est uploadée. Lance des sessions de révision ici.
+        MedRev crée des QCM à partir de ton cours : <strong>10, 20 ou 30</strong>,
+        tu choisis combien. Lance des sessions de révision ici.
         <br /><br />
         Important : <strong>ces QCM alimentent aussi le Simulateur</strong>.
         Sans QCM générés, pas d&apos;examen blanc possible.

@@ -103,6 +103,7 @@ export default function QcmSessionPage() {
   const [onlyMissed, setOnlyMissed] = useState(false)
   // Flashcards créées à partir des erreurs de la session qui vient de finir
   const [cardsAdded, setCardsAdded] = useState(0)
+  const [stoppedEarly, setStoppedEarly] = useState(false)
   // Taille de session (10 par défaut) et file complète, dans l'ordre de passage
   const [size, setSize] = useState<SizeChoice>(10)
   const [fullOrder, setFullOrder] = useState<number[]>([])
@@ -355,6 +356,19 @@ export default function QcmSessionPage() {
     router.push('/dashboard/fiches')
   }
 
+  // Arrêter au milieu : chaque réponse est déjà enregistrée (compteurs,
+  // questions ratées, flashcards des erreurs). On affiche le bilan des
+  // questions faites ; les autres restent à reprendre la prochaine fois.
+  function stopHere() {
+    const n = currentIdx + (phase === 'feedback' ? 1 : 0)
+    if (n === 0) { quitToFiches(); return }
+    setQuestions(qs => qs.slice(0, n))
+    setAnswers(a => a.slice(0, n))
+    setOrigIndices(o => o.slice(0, n))
+    setStoppedEarly(true)
+    setPhase('end')
+  }
+
   function restartMissed() {
     const missedIndices = answers
       .map((a, i) => (a.selected.length > 0 && !a.isCorrect ? i : -1))
@@ -462,6 +476,9 @@ export default function QcmSessionPage() {
         <div className="qcm-end">
           <div className={`qcm-end-score ${haloCls}`}>{score}<span className="qcm-end-pct">%</span></div>
           <div className="qcm-end-message"><strong>{message}</strong>, {submessage}</div>
+          {stoppedEarly && (
+            <div className="qcm-end-saved">Tes réponses et tes erreurs sont enregistrées. Les questions restantes t&apos;attendent la prochaine fois.</div>
+          )}
 
           <div className="qcm-end-stats">
             <div className="qcm-end-stat">
@@ -624,7 +641,7 @@ export default function QcmSessionPage() {
     <div className="qcm-page">
 
       <div className="qcm-topbar">
-        <button className="qcm-topback" onClick={quitToFiches}>←</button>
+        <button className="qcm-topback mr-tip" onClick={quitToFiches} aria-label="Quitter, tes réponses sont gardées" data-tip="Quitter, tes réponses sont gardées">←</button>
         <span className="qcm-ctx">
           <strong>{system?.name || 'Fiche'}, {lesson?.name || ''}</strong>, {onlyMissed ? <><em>{questions.length} question{questions.length > 1 ? 's' : ''} ratée{questions.length > 1 ? 's' : ''}</em></> : resumed ? <>reprise, <em>{questions.length} question{questions.length > 1 ? 's' : ''} restante{questions.length > 1 ? 's' : ''}</em></> : <>session de <em>{questions.length} questions</em></>}
         </span>
@@ -636,6 +653,9 @@ export default function QcmSessionPage() {
               </button>
             ))}
           </div>
+        )}
+        {(currentIdx > 0 || phase === 'feedback') && currentIdx < questions.length - 1 && (
+          <button type="button" className="qcm-stop" onClick={stopHere}>Terminer ici</button>
         )}
       </div>
 

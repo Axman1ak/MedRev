@@ -486,6 +486,8 @@ export async function POST(req: NextRequest) {
     if (!lessonId) {
       return NextResponse.json({ error: 'lessonId requis' }, { status: 400 })
     }
+    // L'étudiant choisit 10, 20 ou 30 questions ; on borne quoi qu'il arrive.
+    nbQ = Math.max(5, Math.min(30, Math.round(Number(nbQ) || 30)))
 
     // En mode replace : on ne génère jamais plus que le cap par fiche, point.
     if (mode === 'replace' && nbQ > MAX_QUESTIONS_PER_LESSON) {
