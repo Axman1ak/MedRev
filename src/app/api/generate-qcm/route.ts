@@ -623,12 +623,12 @@ ${existingQuestions.slice(0, 100).map((q, i) => `${i + 1}. ${String(q.question |
 `
       : ''
 
-    const prompt = `Tu es un enseignant expert en médecine, spécialisé dans la préparation aux EDN (Épreuves Dématérialisées Nationales) français.
+    const prompt = `Tu es un enseignant expert de la matière du cours fourni, spécialisé dans la préparation aux examens de première année des études de santé (PASS/LAS).
 
 CONTEXTE : tu reçois ${sourcesStr} pour le sujet "${lesson.name}".
 ${existingBlock}
 VÉRIFICATION PRÉALABLE, AVANT TOUTE QUESTION :
-Regarde d'abord ce que contiennent réellement les sources. Si ce n'est PAS un support de cours en santé ou en sciences (médecine, biologie, chimie, physique, anatomie, etc.) — par exemple un CV, une facture, un contrat, un document administratif, un texte sans rapport, un fichier vide ou illisible — tu ne génères AUCUNE question. Tu réponds alors uniquement :
+Tous les cours sont acceptés, quelle que soit la matière : santé, sciences, mais aussi droit, économie, sciences humaines, langues… (en LAS, une partie des cours n'a rien à voir avec la médecine). Tu ne refuses QUE si les sources sont vides ou illisibles (aucun texte exploitable). Dans ce seul cas, tu réponds uniquement :
 [{"hors_sujet": true, "raison": "<ce que contient le document, en une courte phrase>"}]
 Ne complète jamais avec tes propres connaissances : chaque question doit pouvoir être vérifiée dans les sources fournies.
 
@@ -789,7 +789,7 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
       const raison = typeof refus.raison === 'string' && refus.raison.trim() ? refus.raison.trim() : ''
       return NextResponse.json(
         {
-          error: `Ce document ne ressemble pas à un cours${raison ? ` (${raison.replace(/\.$/, '')})` : ''}. Dépose le poly ou la vidéo du cours pour générer des QCM.`,
+          error: `Impossible de lire ce document${raison ? ` (${raison.replace(/\.$/, '')})` : ''}. Vérifie qu'il contient bien du texte, ou dépose une autre version du poly.`,
           code: 'not_a_course',
         },
         { status: 422 },

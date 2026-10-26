@@ -93,3 +93,17 @@
   .bib-shelf-n { margin: 0; }
   .bib-legend span:last-child { display: none; }
 }
+
+/* Livres de taille fixe (ils ne rétrécissent plus quand l'étagère se remplit),
+   rangées supplémentaires si besoin, et nom de matière centré sur son étagère. */
+.bib-shelf { align-items: center; padding: 4px 0; }
+.bib-shelf-lbl { padding-bottom: 8px; }
+.bib-books { gap: 2px; overflow: visible; flex-wrap: nowrap; }
+.bib-book { flex: none !important; min-width: 0; }
+@media (max-width: 768px) {
+  .bib-shelf { align-items: stretch; }
+  .bib-shelf-lbl { padding-bottom: 0; }
+  .bib-books { height: 42px; gap: 1px; }
+  .bib-book { max-height: none; border-radius: 1px; }
+  .bib-gold { height: 2px; margin: 0; }
+}
