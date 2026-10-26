@@ -2,8 +2,9 @@
 //
 // Fiche de synthèse d'une fiche : un rappel COURT du cours, à lire en début de
 // révision (étape « Relire » de la session de travail). Même pour un poly de
-// 80 pages, elle reste petite : 3 ou 4 idées essentielles, un tableau OU une
-// liste des notions centrales, et les pièges classiques, chaque élément
+// 80 pages, elle reste petite. Sa forme s'adapte au cours : les idées
+// essentielles, puis les blocs qui conviennent (étapes d'un mécanisme,
+// tableau comparatif, notions, valeurs à connaître, pièges), chaque élément
 // renvoyant à sa page. Le reste, c'est le poly.
 //
 // Sources : le PDF (inline ou Files API) et/ou le transcript de la vidéo.
@@ -67,7 +68,16 @@ function formatTs(s: number): string {
 type Item = { texte: string; page?: number }
 type Synthese = LessonSynthese
 
-const str = (v: unknown, max = 220) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '')
+// On ne coupe jamais au milieu d'une phrase : la limite est large, et si elle
+// est dépassée on s'arrête à la dernière fin de phrase (ou au dernier mot).
+function clip(t: string, max: number): string {
+  if (t.length <= max) return t
+  const cut = t.slice(0, max)
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '))
+  if (end > max * 0.5) return cut.slice(0, end + 1)
+  return cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:]$/, '') + '…'
+}
+const str = (v: unknown, max = 600) => (typeof v === 'string' ? clip(v.replace(/\s+/g, ' ').trim(), max) : '')
 const page = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 1 && v < 2000 ? Math.round(v) : undefined)
 const items = (v: unknown, max: number): Item[] =>
   (Array.isArray(v) ? v : [])
@@ -76,30 +86,45 @@ const items = (v: unknown, max: number): Item[] =>
     .slice(0, max)
 
 function sanitize(raw: Record<string, unknown>): Synthese | null {
-  const essentiel = items(raw.essentiel, 5)
-  const pieges = items(raw.pieges, 3)
+  const essentiel = items(raw.essentiel, 7)
+  const pieges = items(raw.pieges, 4)
   let tableau: Synthese['tableau']
   const t = raw.tableau as Record<string, unknown> | undefined
   if (t && Array.isArray(t.colonnes) && Array.isArray(t.lignes)) {
-    const colonnes = t.colonnes.map(c => str(c, 40)).filter(Boolean).slice(0, 4)
+    const colonnes = t.colonnes.map(c => str(c, 60)).filter(Boolean).slice(0, 4)
     const lignes = t.lignes
       .filter(Array.isArray)
-      .map(l => (l as unknown[]).slice(0, colonnes.length).map(c => str(c, 120)))
+      .map(l => (l as unknown[]).slice(0, colonnes.length).map(c => str(c, 240)))
       .filter(l => l.length === colonnes.length && l.every(Boolean))
-      .slice(0, 6)
-    if (colonnes.length >= 2 && lignes.length >= 2) tableau = { colonnes, lignes }
+      .slice(0, 8)
+    if (colonnes.length >= 2 && lignes.length >= 2) tableau = { titre: str(t.titre, 80) || undefined, colonnes, lignes }
   }
   let liste: Synthese['liste']
-  if (!tableau && Array.isArray(raw.liste)) {
+  if (Array.isArray(raw.liste)) {
     liste = (raw.liste as unknown[])
       .map(x => (x && typeof x === 'object' ? x as Record<string, unknown> : {}))
-      .map(x => ({ terme: str(x.terme, 60), detail: str(x.detail, 160), page: page(x.page) }))
+      .map(x => ({ terme: str(x.terme, 80), detail: str(x.detail, 320), page: page(x.page) }))
       .filter(x => x.terme && x.detail)
-      .slice(0, 6)
+      .slice(0, 8)
     if (liste.length === 0) liste = undefined
   }
+  let etapes: Synthese['etapes']
+  const e = raw.etapes as Record<string, unknown> | undefined
+  if (e && typeof e === 'object') {
+    const its = items(e.items, 8)
+    if (its.length >= 2) etapes = { titre: str(e.titre, 80) || undefined, items: its }
+  }
+  let chiffres: Synthese['chiffres']
+  if (Array.isArray(raw.chiffres)) {
+    chiffres = (raw.chiffres as unknown[])
+      .map(x => (x && typeof x === 'object' ? x as Record<string, unknown> : {}))
+      .map(x => ({ valeur: str(x.valeur, 40), sens: str(x.sens, 200), page: page(x.page) }))
+      .filter(x => x.valeur && x.sens)
+      .slice(0, 6)
+    if (chiffres.length === 0) chiffres = undefined
+  }
   if (essentiel.length === 0) return null
-  return { essentiel, tableau, liste, pieges, generated_at: new Date().toISOString() }
+  return { essentiel, tableau, liste, listeTitre: str(raw.listeTitre, 80) || undefined, etapes, chiffres, pieges, generated_at: new Date().toISOString() }
 }
 
 export async function POST(req: NextRequest) {
@@ -148,30 +173,37 @@ export async function POST(req: NextRequest) {
 Tous les cours sont acceptés, quelle que soit la matière (santé, sciences, droit, économie, sciences humaines…). Ne refuse QUE si les sources sont vides ou illisibles ; dans ce seul cas, réponds uniquement :
 {"hors_sujet": true, "raison": "<ce que contient le document, en une courte phrase>"}
 
-BUT : un rappel qu'on lit en deux minutes AVANT de s'entraîner, pour avoir la STRUCTURE du cours en tête. C'est une vue d'ensemble, pas un résumé détaillé : on doit voir de quoi parle tout le poly, du début à la fin.
+BUT : un rappel qu'on lit en deux minutes AVANT de s'entraîner, pour avoir la STRUCTURE du cours en tête. Couvre tout le poly, du début à la fin.
 
-MÉTHODE : repère d'abord les grandes parties du poly (les grands titres, dans l'ordre), puis écris UNE idée par grande partie. Ne t'arrête pas sur les premières pages : couvre le poly en entier.
+ADAPTE LA FORME AU COURS. Chaque cours est différent : choisis les blocs qui le rendent le plus clair, et seulement ceux-là. Deux cours différents ne doivent pas forcément avoir la même forme.
+- "essentiel" (toujours) : les grandes idées, dans l'ordre du poly. De 2 idées pour un cours court à 6 pour un cours long. Chaque idée est une phrase COMPLÈTE et courte (25 mots maximum), qui se termine par un point.
+- "etapes" : si le cours décrit un mécanisme, une voie, un déroulé ou une démarche dans l'ordre (ex. glycolyse, potentiel d'action, embryologie, démarche diagnostique). Un titre court et 3 à 8 étapes courtes.
+- "tableau" : si le cours compare des catégories (ex. types de tissus, classes de médicaments, nerfs et leurs territoires). Un titre court, 2 à 4 colonnes, 3 à 8 lignes, des mots-clés plutôt que des phrases.
+- "liste" : si le cours repose sur des définitions ou des notions clés. 3 à 8 notions, chacune avec un "terme" et un "detail" d'une phrase complète. Un "listeTitre" court si utile (ex. "Les notions à connaître").
+- "chiffres" : seulement si le cours contient des valeurs à connaître par cœur (normes, constantes, seuils, dates). 2 à 6 valeurs, chacune avec sa "valeur" (ex. "70 mV") et son "sens" (ce qu'elle représente).
+- "pieges" : 1 à 3 confusions classiques, chacune en une ou deux phrases complètes qui donnent la bonne version. Omets-les s'il n'y en a pas de vraies.
+En général 2 ou 3 blocs en plus de "essentiel" suffisent. Ne remplis jamais un bloc pour le principe.
 
-CONTENU (uniquement tiré des sources, rien de tes connaissances propres) :
-- "essentiel" : 3 à 5 idées, une par grande partie du cours, dans l'ordre du poly. Une phrase courte et générale chacune : le message principal de la partie, PAS de chiffres, de valeurs, de doses ou d'exceptions.
-- Puis UN SEUL des deux :
-  - "tableau" : seulement si tout le cours s'organise autour d'une comparaison centrale (les grandes catégories du cours et ce qui les distingue). 2 ou 3 colonnes courtes, 3 à 6 lignes, des mots-clés plutôt que des phrases.
-  - "liste" : sinon, les 3 à 6 notions centrales du cours entier, chacune avec un "terme" et un "detail" d'une phrase simple.
-- "pieges" : 2 ou 3 confusions classiques sur les notions centrales du cours (pas sur un détail isolé). Formule la bonne version de façon nette.
+RÈGLES :
+- Uniquement tiré des sources, rien de tes connaissances propres.
+- Ne coupe jamais une phrase : chaque texte est une phrase entière et finie.
 - "page" : numéro de page DANS LE FICHIER PDF (1 = première page) d'où vient l'information, quand c'est clair. Sinon omets-le.
 - Français rigoureux, phrases courtes, pas de tiret cadratin, pas de point médian.
 
-RÉPONDS UNIQUEMENT en JSON valide, sans markdown :
+RÉPONDS UNIQUEMENT en JSON valide, sans markdown, avec seulement les blocs choisis :
 {
   "essentiel": [{"texte": "...", "page": 4}],
-  "tableau": {"colonnes": ["...", "..."], "lignes": [["...", "..."]]},
+  "etapes": {"titre": "...", "items": [{"texte": "...", "page": 5}]},
+  "tableau": {"titre": "...", "colonnes": ["...", "..."], "lignes": [["...", "..."]]},
+  "listeTitre": "...",
+  "liste": [{"terme": "...", "detail": "...", "page": 8}],
+  "chiffres": [{"valeur": "...", "sens": "...", "page": 9}],
   "pieges": [{"texte": "...", "page": 12}]
-}
-(ou "liste": [{"terme": "...", "detail": "...", "page": 8}] à la place de "tableau")` })
+}` })
 
     const body = JSON.stringify({
       contents: [{ parts }],
-      generationConfig: { maxOutputTokens: 4000, temperature: 0.2, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 1024 } },
+      generationConfig: { maxOutputTokens: 8000, temperature: 0.3, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 1024 } },
     })
     let resp: Response | null = null
     for (let attempt = 0; attempt < 2 && !resp; attempt++) {

@@ -6,6 +6,7 @@
 // - bug 3 : les options A-E à gauche ne sont plus cliquables (réponse via la grille de droite uniquement)
 // - bug 4 : header A-E aligné par colonne dans la SheetGrid
 
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -411,22 +412,7 @@ export default function SimulateurPage() {
   // Map ID matière → couleur effective. Si toutes les matières ont la même
   // couleur en base (signe que le picker n'a jamais été utilisé consciemment),
   // on bascule sur PALETTE[idx] pour avoir des couleurs distinctes.
-  const colorOfSystem = useMemo(() => {
-    const map = new Map<string, string>()
-    const distinctColors = new Set(
-      systems.map(s => (s as unknown as { color?: string }).color).filter(Boolean)
-    )
-    const allSameColor = distinctColors.size <= 1 && systems.length > 1
-
-    systems.forEach((s, idx) => {
-      const baseColor = (s as unknown as { color?: string }).color
-      const c = allSameColor
-        ? PALETTE[idx % PALETTE.length]
-        : (baseColor || PALETTE[idx % PALETTE.length])
-      map.set(s.id, c)
-    })
-    return map
-  }, [systems])
+  const colorOfSystem = useMemo(() => buildSubjectColorMap(systems as unknown as { id: string; color?: string | null; semestre?: number | null; created_at?: string | null }[]), [systems])
 
   // On repart d'une sélection neuve quand la LISTE des matières change
   // réellement — changement de semestre, matière créée ou supprimée.

@@ -4,8 +4,9 @@
 // + extension 2026-05 : Sources (vidéo + PDF) + QCM générés.
 // Utilisé par Mes matières (fiches) et Calendrier.
 
+import QcmPick from '@/components/QcmPick'
 import { reviewDate } from '@/lib/restDays'
-import { QCM_COUNTS, setQcmCount, type QcmCount } from '@/lib/qcmCount'
+import { setQcmCount, type QcmCount } from '@/lib/qcmCount'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -929,44 +930,29 @@ export default function ReviewModal({
                     {hasGenJob ? (
                       <GenProgress lessonId={lesson.id} variant="fiche" />
                     ) : (
-                      genPick === 'append' ? (
-                        <div className="rmod-nbpanel">
-                          <div className="rmod-nbpanel-h">Combien de nouvelles questions&nbsp;?<button type="button" aria-label="Annuler" onClick={() => setGenPick(null)}>×</button></div>
-                          <div className="rmod-nb big" role="group" aria-label="Combien de nouvelles questions ?">
-                            {QCM_COUNTS.map(n => (
-                              <button key={n} type="button" onClick={() => generateQcms('append', n)}><b>+{n}</b>questions</button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="rmod-feat-2nd"
-                          onClick={() => setGenPick('append')}
-                          disabled={generating}
-                        >Créer d&apos;autres questions</button>
-                      )
+                      <QcmPick
+                        open={genPick === 'append'}
+                        onOpen={() => setGenPick('append')}
+                        onClose={() => setGenPick(null)}
+                        onPick={n => generateQcms('append', n)}
+                        label="Créer d'autres questions"
+                        className="rmod-feat-2nd"
+                        plus
+                        disabled={generating}
+                      />
                     )}
                   </>
                 ) : hasAnySource ? (
                   <>
-                    {genPick === 'replace' && !generating ? (
-                      <div className="rmod-nbpanel">
-                        <div className="rmod-nbpanel-h">Combien de QCM&nbsp;?<button type="button" aria-label="Annuler" onClick={() => setGenPick(null)}>×</button></div>
-                        <div className="rmod-nb big" role="group" aria-label="Combien de questions ?">
-                          {QCM_COUNTS.map(n => (
-                            <button key={n} type="button" onClick={() => generateQcms('replace', n)}><b>{n}</b>questions</button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="rmod-feat-cta"
-                        onClick={() => setGenPick('replace')}
-                        disabled={generating}
-                      >{generating ? 'Génération en cours' : 'Créer les QCM'}</button>
-                    )}
+                    <QcmPick
+                      open={genPick === 'replace'}
+                      onOpen={() => setGenPick('replace')}
+                      onClose={() => setGenPick(null)}
+                      onPick={n => generateQcms('replace', n)}
+                      label={generating ? 'Génération en cours' : 'Créer les QCM'}
+                      className="rmod-feat-cta"
+                      disabled={generating}
+                    />
                     <GenProgress lessonId={lesson.id} variant="fiche" />
                   </>
                 ) : (

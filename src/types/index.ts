@@ -182,8 +182,14 @@ export interface LessonMedia {
 // 3 ou 4 idées, un tableau OU une liste, 2 ou 3 pièges. page = page du PDF.
 export interface LessonSynthese {
   essentiel: { texte: string; page?: number }[]
-  tableau?: { colonnes: string[]; lignes: string[][] }
+  // Les blocs suivants sont tous facultatifs : l'IA choisit ceux qui
+  // conviennent au cours (un mécanisme appelle des étapes, une classification
+  // un tableau, un cours chiffré des valeurs à retenir...).
+  tableau?: { titre?: string; colonnes: string[]; lignes: string[][] }
   liste?: { terme: string; detail: string; page?: number }[]
+  listeTitre?: string
+  etapes?: { titre?: string; items: { texte: string; page?: number }[] }
+  chiffres?: { valeur: string; sens: string; page?: number }[]
   pieges: { texte: string; page?: number }[]
   generated_at: string
 }

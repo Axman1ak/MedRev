@@ -21,8 +21,8 @@
 // bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
 import { reviewDate } from '@/lib/restDays'
-import '@/components/review-modal.css'
-import { QCM_COUNTS, getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
+import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
+import QcmPick from '@/components/QcmPick'
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -52,7 +52,7 @@ type QueueItem = { lesson: Lesson; due: DueInfo; lastScore: Score | null; lastDa
 type Result = { kind: 'rated'; score: Score } | { kind: 'reported' }
 type Phase = 'loading' | 'empty' | 'session' | 'done'
 type Step = 0 | 1 | 2
-type Attempt = { origIdx: number; selected: number[]; correct: boolean }
+type Attempt = { origIdx: number; selected: number[]; correct: boolean; unsure?: boolean }
 
 const TRAIN_SIZE = 10
 const CARDS_SIZE = 10
@@ -391,11 +391,13 @@ function SessionBody() {
     const all = [...qs] as AiQuestion[]
     for (const a of list) {
       const q = all[a.origIdx]
-      all[a.origIdx] = { ...q, attempts: (q.attempts || 0) + 1, correct: (q.correct || 0) + (a.correct ? 1 : 0), last_correct: a.correct }
+      // « Pas sûr » : juste, mais au pif. Comptée à revoir, sans flashcard.
+      const known = a.correct && !a.unsure
+      all[a.origIdx] = { ...q, attempts: (q.attempts || 0) + 1, correct: (q.correct || 0) + (known ? 1 : 0), last_correct: known, unsure: a.correct && a.unsure ? true : false }
     }
     const prevCards = Array.isArray(current.lesson.flashcards) ? (current.lesson.flashcards as Flashcard[]) : []
     const { cards, added } = addCardsFromMistakes(prevCards, list.filter(a => !a.correct).map(a => ({ q: qs[a.origIdx], selected: a.selected })))
-    const ok = list.filter(a => a.correct).length
+    const ok = list.filter(a => a.correct && !a.unsure).length
     setTrainSaved({ ok, total: list.length, cards: added })
     setStats(s => ({ ...s, qcmOk: s.qcmOk + ok, qcmTotal: s.qcmTotal + list.length }))
     replaceLesson({ ...current.lesson, ai_questions: all, flashcards: cards })
@@ -475,18 +477,28 @@ function SessionBody() {
   useEffect(() => { setQcmNbState(getQcmCount()) }, [])
   const chooseQcmNb = (n: QcmCount) => { setQcmNbState(n); setQcmCount(n) }
   const [qcmPick, setQcmPick] = useState(false)
+  // Le petit choix 10 / 20 / 30 se referme quand on change d'étape ou de fiche.
+  useEffect(() => { setQcmPick(false) }, [step, idx])
 
-  const generateQcm = useCallback(async () => {
+  const generateQcm = useCallback(async (mode: 'replace' | 'append' = 'replace', nb?: QcmCount) => {
     if (!current) return
+    if (nb) setQcmCount(nb)
     setGenQcmErr(null)
     startGen(current.lesson.id, current.lesson.name)
     let ok = false
     try {
-      const res = await fetch('/api/generate-qcm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id, nbQ: getQcmCount(), format: 'mixed', difficulty: 'annales', mode: 'replace' }) })
+      const res = await fetch('/api/generate-qcm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id, nbQ: nb ?? getQcmCount(), format: 'mixed', difficulty: 'annales', mode }) })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || `Erreur ${res.status}`)
       const { data: fresh } = await supabase.from('lessons').select('*').eq('id', current.lesson.id).single()
-      if (fresh) { replaceLesson(fresh as Lesson); setPlan(pickTraining((fresh as Lesson).ai_questions || [])) }
+      if (fresh) {
+        replaceLesson(fresh as Lesson)
+        // Ajout pendant un entraînement : la série en cours continue, les
+        // nouvelles questions arrivent dans la suivante. Série finie : on en
+        // relance une, avec les nouvelles en premier.
+        if (mode === 'replace') setPlan(pickTraining((fresh as Lesson).ai_questions || []))
+        else if (trainSavedRef.current) { setTrainSaved(null); setAttempts([]); setQi(0); setSel([]); setChecked(false); setPlan(pickTraining((fresh as Lesson).ai_questions || [])) }
+      }
       ok = true
     } catch (e) {
       setGenQcmErr(e instanceof Error ? e.message : 'Erreur inconnue')
@@ -494,6 +506,8 @@ function SessionBody() {
       finishGen(current.lesson.id, ok)
     }
   }, [current, supabase, replaceLesson])
+  const trainSavedRef = useRef(trainSaved)
+  trainSavedRef.current = trainSaved
 
   const generateSynthese = useCallback(async () => {
     if (!current) return
@@ -697,7 +711,9 @@ function SessionBody() {
   const nextI = current.due.stepIndex + 1
   const nextDate = nextI < sysJ.length && current.lesson.learn_date ? stepDate(current.lesson, nextI, sysJ) : null
   const tq = plan.length ? qs[plan[qi]] : undefined
-  const okSoFar = attempts.filter(a => a.correct).length
+  const okSoFar = attempts.filter(a => a.correct && !a.unsure).length
+  const badSoFar = attempts.filter(a => !a.correct).length
+  const unsureSoFar = attempts.filter(a => a.correct && a.unsure).length
   const fc = deck.length ? lessonCards.find(c => c.id === deck[ci]) : undefined
   const cardSeen = Object.keys(cardRes).length
   const cardKnown = Object.values(cardRes).filter(Boolean).length
@@ -739,7 +755,7 @@ function SessionBody() {
         <p className="se-setup-sub">En un clic, MedRev lit {media.pdf_name || media.video_name ? <b>{media.pdf_name || media.video_name}</b> : 'ton cours'} et prépare ce qui manque.</p>
         <ul className="se-check">
           <li className="ok"><i>✓</i><span><strong>Cours ajouté</strong>{media.pdf_path ? `Poly${media.pdf_pages ? `, ${media.pdf_pages} pages` : ''}` : 'Vidéo de l\'amphi'}</span></li>
-          <li className={synth ? 'ok' : genSynth === 'running' ? 'run' : ''}><i>{synth ? '✓' : '2'}</i><span><strong>Fiche de synthèse</strong>{synth ? 'Prête' : genSynth === 'running' ? 'En cours, environ 20 secondes' : 'Les idées clés, un tableau et les pièges'}</span></li>
+          <li className={synth ? 'ok' : genSynth === 'running' ? 'run' : ''}><i>{synth ? '✓' : '2'}</i><span><strong>Fiche de synthèse</strong>{synth ? 'Prête' : genSynth === 'running' ? 'En cours, environ 20 secondes' : 'Les idées clés, adaptées à ton cours'}</span></li>
           <li className={!missingQcm ? 'ok' : qcmRunning ? 'run' : ''}><i>{!missingQcm ? '✓' : '3'}</i><span><strong>QCM et flashcards</strong>{!missingQcm ? `${qs.length} QCM prêts` : qcmRunning ? 'En cours, 30 à 60 secondes' : `${qcmNb} QCM, et une flashcard par erreur`}</span></li>
         </ul>
 
@@ -777,18 +793,9 @@ function SessionBody() {
             : 'Les QCM et les flashcards sont créés à partir de ton poly ou de la vidéo de l\'amphi. Ajoute-le, MedRev s\'occupe du reste.'}</p>
           {hasSource ? (
             <>
-              {qcmPick && !qcmRunning ? (
-                <div className="se-nbpanel">
-                  <div className="se-nbpanel-h">Combien de QCM&nbsp;?<button type="button" aria-label="Annuler" onClick={() => setQcmPick(false)}>×</button></div>
-                  <div className="rmod-nb big" role="group" aria-label="Combien de questions ?">
-                    {QCM_COUNTS.map(n => (
-                      <button key={n} type="button" onClick={() => { chooseQcmNb(n); setQcmPick(false); setTimeout(() => void generateQcm(), 0) }}><b>{n}</b>questions</button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <button type="button" className="se-btn se-btn-primary" onClick={() => setQcmPick(true)} disabled={qcmRunning}>{qcmRunning ? 'Création des QCM…' : 'Créer les QCM'}</button>
-              )}
+              <QcmPick open={qcmPick} onOpen={() => setQcmPick(true)} onClose={() => setQcmPick(false)}
+                onPick={n => { chooseQcmNb(n); setQcmPick(false); void generateQcm('replace', n) }}
+                label={qcmRunning ? 'Création des QCM…' : 'Créer les QCM'} className="se-btn se-btn-primary" disabled={qcmRunning} />
               {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
               {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
             </>
@@ -911,18 +918,40 @@ function SessionBody() {
                         <li key={i}>{e.texte}{e.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: e.page })}>p. {e.page}</button></> : null}</li>
                       ))}
                     </ul>
+                    {synth.etapes && (
+                      <div className="se-block">
+                        {synth.etapes.titre && <h3 className="se-block-h">{synth.etapes.titre}</h3>}
+                        <ol className="se-steps-list">
+                          {synth.etapes.items.map((e, i) => <li key={i}><b>{i + 1}</b><span>{e.texte}{e.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: e.page })}>p. {e.page}</button></> : null}</span></li>)}
+                        </ol>
+                      </div>
+                    )}
                     {synth.tableau && (
-                      <div className="se-table-wrap">
-                        <table className="se-table">
-                          <thead><tr>{synth.tableau.colonnes.map(c => <th key={c}>{c}</th>)}</tr></thead>
-                          <tbody>{synth.tableau.lignes.map((l, i) => <tr key={i}>{l.map((c, k) => <td key={k}>{c}</td>)}</tr>)}</tbody>
-                        </table>
+                      <div className="se-block">
+                        {synth.tableau.titre && <h3 className="se-block-h">{synth.tableau.titre}</h3>}
+                        <div className="se-table-wrap">
+                          <table className="se-table">
+                            <thead><tr>{synth.tableau.colonnes.map(c => <th key={c}>{c}</th>)}</tr></thead>
+                            <tbody>{synth.tableau.lignes.map((l, i) => <tr key={i}>{l.map((c, k) => <td key={k}>{c}</td>)}</tr>)}</tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                     {synth.liste && (
-                      <dl className="se-list">
-                        {synth.liste.map((x, i) => <div key={i}><dt>{x.terme}</dt><dd>{x.detail}</dd></div>)}
-                      </dl>
+                      <div className="se-block">
+                        {synth.listeTitre && <h3 className="se-block-h">{synth.listeTitre}</h3>}
+                        <dl className="se-list">
+                          {synth.liste.map((x, i) => <div key={i}><dt>{x.terme}</dt><dd>{x.detail}{x.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: x.page })}>p. {x.page}</button></> : null}</dd></div>)}
+                        </dl>
+                      </div>
+                    )}
+                    {synth.chiffres && (
+                      <div className="se-block">
+                        <h3 className="se-block-h">Les valeurs à connaître</h3>
+                        <div className="se-nums">
+                          {synth.chiffres.map((c, i) => <div key={i}><b>{c.valeur}</b><span>{c.sens}{c.page && media.pdf_path ? <> <button type="button" className="se-page" onClick={() => setSource({ pdf_page: c.page })}>p. {c.page}</button></> : null}</span></div>)}
+                        </div>
+                      </div>
                     )}
                   </>
                 ) : courseSetup}
@@ -960,27 +989,14 @@ function SessionBody() {
                     <span className="se-muted">Relis ton cours de ton côté, puis note-toi. Tu pourras ajouter le poly plus tard.</span>
                   </div>
                 )}
-                {trainLocked && hasSource && (
-                  <div className="se-box se-unlock">
-                    <b>Débloque l&apos;entraînement</b>
-                    <span className="se-muted">Crée les QCM de ce cours pour passer à l&apos;étape 2.</span>
-                    {qcmRunning ? (
-                      <GenProgress lessonId={current.lesson.id} variant="fiche" />
-                    ) : qcmPick ? (
-                      <div className="se-nbpanel">
-                        <div className="se-nbpanel-h">Combien de QCM&nbsp;?<button type="button" aria-label="Annuler" onClick={() => setQcmPick(false)}>×</button></div>
-                        <div className="rmod-nb big" role="group" aria-label="Combien de questions ?">
-                          {QCM_COUNTS.map(n => (
-                            <button key={n} type="button" onClick={() => { chooseQcmNb(n); setQcmPick(false); setTimeout(() => void generateQcm(), 0) }}><b>{n}</b>questions</button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <button type="button" className="se-btn se-btn-primary" onClick={() => setQcmPick(true)}>Créer les QCM</button>
-                    )}
-                    {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
-                  </div>
+                {trainLocked && hasSource && synth && (
+                  qcmRunning
+                    ? <GenProgress lessonId={current.lesson.id} variant="fiche" />
+                    : <QcmPick open={qcmPick} onOpen={() => setQcmPick(true)} onClose={() => setQcmPick(false)}
+                        onPick={n => { chooseQcmNb(n); setQcmPick(false); void generateQcm('replace', n) }}
+                        label="Créer les QCM" className="se-btn se-btn-ghost" />
                 )}
+                {trainLocked && synth && genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
                 <button type="button" className={`se-btn se-push ${!trainLocked ? 'se-btn-primary' : 'se-btn-ghost'}`} onClick={!trainLocked ? startTraining : goRate}>
                   {!trainLocked ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
                 </button>
@@ -1092,7 +1108,7 @@ function SessionBody() {
                       const last = attempts[attempts.length - 1]
                       return (
                         <div className={`se-feedback ${last?.correct ? 'ok' : 'ko'}`}>
-                          <b>{last?.correct ? 'Juste' : 'Faux : il fallait cocher exactement les bonnes propositions'}</b>
+                          <b>{last?.correct ? (last.unsure ? 'Juste, à revoir' : 'Juste') : 'Faux : il fallait cocher exactement les bonnes propositions'}</b>
                           {expl && <p>{expl}</p>}
                           {ref?.pdf_page && media.pdf_path && <button type="button" className="se-page" onClick={() => setSource({ pdf_page: ref.pdf_page })}>Voir la page {ref.pdf_page}</button>}
                           <ReportQuestion lessonId={current.lesson.id} source="session" questionIndex={plan[qi]} question={tq} />
@@ -1102,7 +1118,15 @@ function SessionBody() {
                     <div className="se-actions">
                       {!checked
                         ? <button type="button" className="se-btn se-btn-primary" onClick={validate} disabled={sel.length === 0}>Valider</button>
-                        : <button type="button" className="se-btn se-btn-primary" onClick={nextQuestion}>{qi + 1 < plan.length ? 'Question suivante' : lessonCards.length || attempts.some(a => !a.correct) ? 'Passer aux flashcards' : 'Passer à la note'}</button>}
+                        : <>
+                          {attempts[attempts.length - 1]?.correct && (
+                            <button type="button" className={`se-btn se-unsure${attempts[attempts.length - 1]?.unsure ? ' on' : ''}`}
+                              onClick={() => setAttempts(list => list.map((a, k) => (k === list.length - 1 ? { ...a, unsure: !a.unsure } : a)))}>
+                              {attempts[attempts.length - 1]?.unsure ? 'Marquée à revoir' : 'Pas sûr, à revoir'}
+                            </button>
+                          )}
+                          <button type="button" className="se-btn se-btn-primary" onClick={nextQuestion}>{qi + 1 < plan.length ? 'Question suivante' : lessonCards.length || attempts.some(a => !a.correct) ? 'Passer aux flashcards' : 'Passer à la note'}</button>
+                        </>}
                     </div>
                   </>
                 ) : null}
@@ -1113,7 +1137,8 @@ function SessionBody() {
                     <span className="se-muted">QCM, pour l&apos;instant</span>
                     <div className="se-mini-stats">
                       <div><b className="se-ok">{okSoFar}</b><span>juste{okSoFar > 1 ? 's' : ''}</span></div>
-                      <div><b className="se-late">{attempts.length - okSoFar}</b><span>fausse{attempts.length - okSoFar > 1 ? 's' : ''}</span></div>
+                      <div><b className="se-late">{badSoFar}</b><span>fausse{badSoFar > 1 ? 's' : ''}</span></div>
+                      {unsureSoFar > 0 && <div><b className="se-unsure-n">{unsureSoFar}</b><span>à revoir</span></div>}
                     </div>
                   </div>
                 )}
@@ -1126,6 +1151,14 @@ function SessionBody() {
                     </div>
                   </div>
                 )}
+                {mode === 'qcm' && qs.length > 0 && hasSource && (
+                  qcmRunning
+                    ? <GenProgress lessonId={current.lesson.id} variant="fiche" />
+                    : <QcmPick open={qcmPick} onOpen={() => setQcmPick(true)} onClose={() => setQcmPick(false)}
+                        onPick={n => { setQcmPick(false); void generateQcm('append', n) }}
+                        label="Créer d'autres questions" className="se-btn se-btn-link se-more" plus />
+                )}
+                {mode === 'qcm' && genQcmErr && qs.length > 0 && <p className="se-err" role="alert">{genQcmErr}</p>}
                 {(mode === 'cards' || qs.length > 0) && <div className="se-info">
                   {mode === 'qcm'
                     ? 'Chaque erreur devient une flashcard. Après les QCM, tu passes aux flashcards.'

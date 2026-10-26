@@ -12,19 +12,27 @@ export const SUBJ_COLORS = [
   '#C47B2B', '#3A8F8A', '#7AA56B', '#D9B24A',
 ]
 
-export function buildSubjectColorMap(
-  systems: { id: string; color?: string | null }[]
-): Map<string, string> {
+// La couleur d'une matière ne dépend que de sa place dans SON semestre
+// (ordre de création). Avant, elle dépendait de la liste passée : la vue
+// « Année », la session de travail (toutes les matières, sans tri) et la vue
+// S1 donnaient des couleurs différentes à la même matière.
+type Sys = { id: string; color?: string | null; semestre?: number | null; created_at?: string | null }
+
+export function buildSubjectColorMap(systems: Sys[]): Map<string, string> {
   const map = new Map<string, string>()
-  const distinct = new Set(
-    systems.map(s => s.color).filter((c): c is string => Boolean(c))
-  )
-  const allSame = distinct.size <= 1 && systems.length > 1
-  systems.forEach((s, idx) => {
-    const c = allSame
-      ? SUBJ_COLORS[idx % SUBJ_COLORS.length]
-      : (s.color || SUBJ_COLORS[idx % SUBJ_COLORS.length])
-    map.set(s.id, c)
+  const groups = new Map<string, Sys[]>()
+  systems.forEach(s => {
+    const k = String(s.semestre ?? '')
+    if (!groups.has(k)) groups.set(k, [])
+    groups.get(k)!.push(s)
+  })
+  groups.forEach(list => {
+    const sorted = [...list].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
+    const distinct = new Set(sorted.map(s => s.color).filter((c): c is string => Boolean(c)))
+    const allSame = distinct.size <= 1 && sorted.length > 1
+    sorted.forEach((s, idx) => {
+      map.set(s.id, allSame ? SUBJ_COLORS[idx % SUBJ_COLORS.length] : (s.color || SUBJ_COLORS[idx % SUBJ_COLORS.length]))
+    })
   })
   return map
 }
