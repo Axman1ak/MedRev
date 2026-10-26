@@ -7,7 +7,7 @@
 // rien d'autre à tenir à jour, et rien ne peut se désynchroniser.
 // Le rang suit le nombre de livres de l'année : il ne redescend jamais.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -64,7 +64,10 @@ function mondayOf(today: string): string {
 
 type Book = { key: string; w: number; h: number; c: string; gold: boolean; tip: string; date: string | null; score: number }
 
-const PER_ROW = 110 // au-delà, l'étagère passe sur une deuxième planche
+// Tous les livres ont la même largeur : une étagère pleine passe sur une
+// planche de plus, au lieu de serrer ses livres. Un semestre ou une année
+// entière tient donc sans que les livres rétrécissent.
+const BOOK_GAP = 2
 
 export default function BibliothequePage() {
   const supabase = createClient()
@@ -74,6 +77,23 @@ export default function BibliothequePage() {
   const [loading, setLoading] = useState(true)
   const [semestre, setSemestre] = useState<Semestre>(currentSemestre)
   const today = useMemo(() => todayStr(), [])
+
+  // Largeur disponible pour une rangée de livres : on la mesure pour savoir
+  // combien de livres tiennent sur une planche.
+  const [rowW, setRowW] = useState(0)
+  const [bookW, setBookW] = useState(10)
+  const roRef = useRef<ResizeObserver | null>(null)
+  const measureRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    roRef.current?.disconnect()
+    const sync = () => {
+      setRowW(el.clientWidth)
+      setBookW(window.matchMedia('(max-width: 768px)').matches ? 5 : 10)
+    }
+    sync()
+    roRef.current = new ResizeObserver(sync)
+    roRef.current.observe(el)
+  }, [])
 
   useEffect(() => {
     const raw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
@@ -125,8 +145,8 @@ export default function BibliothequePage() {
         const arr = m.get(l.system_id) ?? []
         arr.push({
           key: `${l.id}-${i}`,
-          w: 8 + Math.round(r * 4),
-          h: 46 + Math.round(r2 * 20),
+          w: 0,
+          h: 50 + Math.round(r2 * 10),
           c: shade(base, (r - 0.55) * 0.5),
           gold: score === 5,
           score,
@@ -180,8 +200,10 @@ export default function BibliothequePage() {
             </div>
           )}
           {shelves.map(({ sys, color, books }) => {
+            const gap = bookW < 10 ? 1 : BOOK_GAP
+            const perRow = Math.max(10, Math.floor((rowW - 12 + gap) / (bookW + gap)))
             const rows: Book[][] = []
-            for (let i = 0; i < books.length; i += PER_ROW) rows.push(books.slice(i, i + PER_ROW))
+            for (let i = 0; i < books.length; i += perRow) rows.push(books.slice(i, i + perRow))
             if (rows.length === 0) rows.push([])
             return (
               <div className="bib-shelf" key={sys.id}>
@@ -189,7 +211,7 @@ export default function BibliothequePage() {
                   <div className="bib-shelf-name"><i style={{ background: color }} />{sys.name}</div>
                   <div className="bib-shelf-n">{books.length === 0 ? 'aucun livre' : `${books.length} livre${books.length > 1 ? 's' : ''}`}</div>
                 </div>
-                <div className="bib-shelf-rows">
+                <div className="bib-shelf-rows" ref={measureRef}>
                   {rows.map((row, ri) => (
                     <div key={ri}>
                       <div className="bib-books">
@@ -197,7 +219,7 @@ export default function BibliothequePage() {
                           const d = Math.min(delay, 1400); delay += 3
                           return (
                             <span key={b.key} className="bib-book" title={b.tip}
-                              style={{ width: b.w, height: b.h, background: b.c, animationDelay: `${d}ms` }}>
+                              style={{ width: bookW, height: bookW < 10 ? Math.round(b.h * .66) : b.h, background: b.c, animationDelay: `${d}ms` }}>
                               {b.gold && <span className="bib-gold" />}
                             </span>
                           )

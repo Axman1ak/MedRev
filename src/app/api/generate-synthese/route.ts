@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
 
     parts.push({ text: `Tu prépares une FICHE DE SYNTHÈSE pour une étudiante de première année de médecine (PASS/LAS). Sujet de la fiche : "${lesson.name}".
 
-VÉRIFICATION PRÉALABLE : si les sources ne sont PAS un support de cours en santé ou en sciences (CV, facture, document administratif, texte sans rapport, fichier vide ou illisible), réponds uniquement :
+Tous les cours sont acceptés, quelle que soit la matière (santé, sciences, droit, économie, sciences humaines…). Ne refuse QUE si les sources sont vides ou illisibles ; dans ce seul cas, réponds uniquement :
 {"hors_sujet": true, "raison": "<ce que contient le document, en une courte phrase>"}
 
 BUT : un rappel qu'on lit en deux minutes AVANT de s'entraîner, pour avoir la STRUCTURE du cours en tête. C'est une vue d'ensemble, pas un résumé détaillé : on doit voir de quoi parle tout le poly, du début à la fin.
@@ -192,7 +192,7 @@ RÉPONDS UNIQUEMENT en JSON valide, sans markdown :
     if (parsed.hors_sujet === true) {
       const raison = str(parsed.raison, 140)
       return NextResponse.json(
-        { error: `Ce document ne ressemble pas à un cours${raison ? ` (${raison.replace(/\.$/, '')})` : ''}.`, code: 'not_a_course' },
+        { error: `Impossible de lire ce document${raison ? ` (${raison.replace(/\.$/, '')})` : ''}. Vérifie qu'il contient bien du texte.`, code: 'not_a_course' },
         { status: 422 },
       )
     }
