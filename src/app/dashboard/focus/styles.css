@@ -454,3 +454,12 @@
 .se-pill.s4 { background: #E4EDDE; color: #4E7A41; } .se-pill.s5 { background: #D8EAE0; color: #1B4332; }
 .se-redo { font-size: 12.5px; padding: 2px 0; }
 @media (max-width: 720px) { .se-redo { display: none; } }
+
+/* Étape 2 verrouillée tant qu'il n'y a ni QCM ni flashcards */
+.se-step.locked { opacity: .5; cursor: not-allowed; }
+.se-step.locked .se-step-n { background: transparent; border: 1.5px dashed currentColor; }
+.se-unlock { gap: 8px; }
+.se-nbpanel { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--bg-card, #fff); border: 1px solid var(--border-subtle, #E8E6E0); box-shadow: 0 12px 30px -16px rgba(21,48,78,.35); animation: se-pop .18s ease-out; }
+.se-nbpanel-h { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px; }
+.se-nbpanel-h button { border: 0; background: none; font-size: 18px; color: var(--text-secondary, #6B6A63); cursor: pointer; width: 30px; height: 30px; }
+@keyframes se-pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }

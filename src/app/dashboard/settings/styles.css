@@ -1092,6 +1092,7 @@
 .set-ligne-ico.gris   { background: #5E6B7A; }
 .set-ligne-ico.or     { background: #B2893C; }
 .set-ligne-ico.violet { background: #6B5CA8; }
+.set-ligne-ico.vert   { background: #3C8A62; }
 
 .set-ligne-txt {
   flex: 1 1 auto; min-width: 0;
@@ -1155,3 +1156,22 @@
 
 /* Bouton « Supprimer mon compte » : rouge sur marine = 2,94:1 en sombre. */
 [data-theme="dark"] .set-btn.ghost-rose { color: #F0918E; border-color: rgba(240, 145, 142, .45); }
+
+/* Jours de révision */
+.set-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 8px 0 12px; }
+.set-day {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 4px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--border, #E3E7EC); background: transparent; color: var(--set-gray);
+  font: inherit; transition: background .15s, border-color .15s, color .15s;
+}
+.set-day.on { background: #EAF2FA; border-color: #2E6FA8; color: #1E4F7C; }
+.set-day-l { font-weight: 700; font-size: 14px; }
+.set-day-s { font-size: 11px; }
+.set-day:not(.on) .set-day-l { text-decoration: line-through; }
+[data-theme="dark"] .set-day.on { background: rgba(46,111,168,.22); color: #CFE3F5; border-color: #4A8AC4; }
+@media (max-width: 520px) {
+  .set-days { gap: 5px; }
+  .set-day { padding: 10px 2px; }
+  .set-day-s { display: none; }
+}

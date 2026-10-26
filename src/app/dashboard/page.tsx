@@ -1,6 +1,7 @@
 'use client'
 // src/app/dashboard/page.tsx
 
+import { reviewDate } from '@/lib/restDays'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -101,7 +102,7 @@ function effectiveStepScore(s: StepEntry): Score | null {
 
 function stepDate(lesson: Lesson, i: number, j: number[] = DEFAULT_J): string {
   if (!lesson.learn_date) return ''
-  return dateStrFromOffset(lesson.learn_date, j[i])
+  return reviewDate(lesson.learn_date, j[i])
 }
 
 function getLastScore(lesson: Lesson, j: number[] = DEFAULT_J): Score | null {

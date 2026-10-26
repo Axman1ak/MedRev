@@ -101,8 +101,15 @@ export default function CartesPage() {
       if (cancelled) return
       setLesson(les as Lesson)
       setSystem((sys as System) ?? null)
-      setCards(readCards(les as Lesson))
-      setPhase('manage')
+      const all = readCards(les as Lesson)
+      setCards(all)
+      // « Refaire les ratées » depuis la fiche : ?ratees=1
+      const missed = all.filter(c => c.last_known === false)
+      if (new URLSearchParams(window.location.search).has('ratees') && missed.length > 0) {
+        setDeck(shuffleArr(missed)); setPos(0); setFlipped(false); setResults({}); setPhase('review')
+      } else {
+        setPhase('manage')
+      }
     }
     load()
     return () => { cancelled = true }
@@ -199,6 +206,7 @@ export default function CartesPage() {
         ...c,
         reviews: (c.reviews || 0) + 1,
         known: (c.known || 0) + (r ? 1 : 0),
+        last_known: r,
         last_reviewed_at: now,
       }
     })

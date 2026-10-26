@@ -1,6 +1,7 @@
 'use client'
 // src/app/dashboard/calendar/page.tsx
 
+import { reviewDate } from '@/lib/restDays'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -123,12 +124,10 @@ function computeOccurrences(lessons: Lesson[], schedOf: (id: string | null | und
     const postpones = lessonPostpones(l)
     for (let i = 0; i < j.length; i++) {
       if (skips.includes(i)) continue          // palier annulé → pas d'occurrence
-      const d = new Date(l.learn_date + 'T12:00:00')
-      d.setDate(d.getDate() + j[i])
       out.push({
         lesson: l,
         stepIndex: i,
-        date: postpones[String(i)] ?? toDateStr(d),  // report éventuel
+        date: postpones[String(i)] ?? reviewDate(l.learn_date, j[i]),  // report éventuel
         scoreForThisJ: stepScore(steps[i]),
         lastScore,
       })
