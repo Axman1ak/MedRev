@@ -672,3 +672,9 @@
 @media (min-width: 900px) { .qcm-content { max-width: 820px; } }
 .qcm-q-type.multi { color: #15304E; background: #EAF0F6; border-color: #C9D6E3; }
 [data-theme="dark"] .qcm-q-type.multi { color: #BFD3EA; background: #1E2A38; border-color: #33475E; }
+
+/* Terminer une session au milieu (tout est déjà enregistré) */
+.qcm-stop { margin-left: auto; border: 1px solid var(--border, #E1DDD3); background: var(--bg-card, #fff); color: var(--text-primary, #15304E); font: inherit; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 9px; cursor: pointer; }
+.qcm-stop:hover { border-color: var(--gray, #6B6F6A); }
+.qcm-size + .qcm-stop { margin-left: 8px; }
+.qcm-end-saved { margin: 10px auto 0; max-width: 460px; font-size: 13.5px; color: var(--text-secondary, #6B6F6A); line-height: 1.45; }

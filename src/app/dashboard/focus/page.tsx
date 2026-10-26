@@ -20,6 +20,8 @@
 // carte Progression du tableau de bord). Les colonnes de l'ancienne
 // bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
+import QcmCountPicker from '@/components/QcmCountPicker'
+import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -468,13 +470,17 @@ function SessionBody() {
   }, [qi, plan.length, finishQcm])
 
   // ---------- Génération (QCM, synthèse) depuis la session ----------
+  const [qcmNb, setQcmNbState] = useState<QcmCount>(10)
+  useEffect(() => { setQcmNbState(getQcmCount()) }, [])
+  const chooseQcmNb = (n: QcmCount) => { setQcmNbState(n); setQcmCount(n) }
+
   const generateQcm = useCallback(async () => {
     if (!current) return
     setGenQcmErr(null)
     startGen(current.lesson.id, current.lesson.name)
     let ok = false
     try {
-      const res = await fetch('/api/generate-qcm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id, nbQ: 30, format: 'mixed', difficulty: 'annales', mode: 'replace' }) })
+      const res = await fetch('/api/generate-qcm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id, nbQ: getQcmCount(), format: 'mixed', difficulty: 'annales', mode: 'replace' }) })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || `Erreur ${res.status}`)
       const { data: fresh } = await supabase.from('lessons').select('*').eq('id', current.lesson.id).single()
@@ -706,7 +712,7 @@ function SessionBody() {
         <p className="se-setup-sub">MedRev a besoin du poly ou de la vidéo de l&apos;amphi. À partir du fichier, il prépare tout le reste.</p>
         <ol className="se-howto">
           <li><b>1</b><span><strong>Dépose ton cours</strong>Le poly ou la vidéo de l&apos;amphi.</span></li>
-          <li><b>2</b><span><strong>MedRev prépare tout</strong>Synthèse, 30 QCM, flashcards.</span></li>
+          <li><b>2</b><span><strong>MedRev prépare tout</strong>Synthèse, QCM, flashcards.</span></li>
           <li><b>3</b><span><strong>Tu révises ici</strong>À chaque palier, au même endroit.</span></li>
         </ol>
         <div
@@ -732,8 +738,11 @@ function SessionBody() {
         <ul className="se-check">
           <li className="ok"><i>✓</i><span><strong>Cours ajouté</strong>{media.pdf_path ? `Poly${media.pdf_pages ? `, ${media.pdf_pages} pages` : ''}` : 'Vidéo de l\'amphi'}</span></li>
           <li className={synth ? 'ok' : genSynth === 'running' ? 'run' : ''}><i>{synth ? '✓' : '2'}</i><span><strong>Fiche de synthèse</strong>{synth ? 'Prête' : genSynth === 'running' ? 'En cours, environ 20 secondes' : 'Les idées clés, un tableau et les pièges'}</span></li>
-          <li className={!missingQcm ? 'ok' : qcmRunning ? 'run' : ''}><i>{!missingQcm ? '✓' : '3'}</i><span><strong>QCM et flashcards</strong>{!missingQcm ? `${qs.length} QCM prêts` : qcmRunning ? 'En cours, 30 à 60 secondes' : '30 QCM, et une flashcard par erreur'}</span></li>
+          <li className={!missingQcm ? 'ok' : qcmRunning ? 'run' : ''}><i>{!missingQcm ? '✓' : '3'}</i><span><strong>QCM et flashcards</strong>{!missingQcm ? `${qs.length} QCM prêts` : qcmRunning ? 'En cours, 30 à 60 secondes' : `${qcmNb} QCM, et une flashcard par erreur`}</span></li>
         </ul>
+        {missingQcm && !qcmRunning && (
+          <div className="qnb-row"><span>Combien de QCM créer ?</span><QcmCountPicker value={qcmNb} onChange={chooseQcmNb} /></div>
+        )}
         {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
         {(missingSynth || missingQcm) && (
           <button type="button" className="se-btn se-btn-primary se-setup-go" onClick={createAll} disabled={genSynth === 'running' || qcmRunning}>
@@ -764,11 +773,12 @@ function SessionBody() {
           </span>
           <h2>{hasSource ? 'Tes QCM ne sont pas encore créés' : 'Pas de QCM sans ton cours'}</h2>
           <p>{hasSource
-            ? '30 questions corrigées, tirées de ton cours, en 30 à 60 secondes. Chaque erreur deviendra une flashcard.'
+            ? 'Des questions corrigées, tirées de ton cours, en 30 à 60 secondes. Chaque erreur deviendra une flashcard.'
             : 'Les QCM et les flashcards sont créés à partir de ton poly ou de la vidéo de l\'amphi. Ajoute-le, MedRev s\'occupe du reste.'}</p>
           {hasSource ? (
             <>
-              <button type="button" className="se-btn se-btn-primary" onClick={generateQcm} disabled={qcmRunning}>{qcmRunning ? 'Création des QCM…' : 'Créer les 30 QCM'}</button>
+              {!qcmRunning && <div className="qnb-row" style={{ justifyContent: 'center' }}><QcmCountPicker value={qcmNb} onChange={chooseQcmNb} /></div>}
+              <button type="button" className="se-btn se-btn-primary" onClick={generateQcm} disabled={qcmRunning}>{qcmRunning ? 'Création des QCM…' : `Créer ${qcmNb} QCM`}</button>
               {qcmRunning && <GenProgress lessonId={current.lesson.id} variant="fiche" />}
               {genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
             </>

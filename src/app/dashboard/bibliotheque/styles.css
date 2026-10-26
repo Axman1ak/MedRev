@@ -107,3 +107,20 @@
   .bib-book { max-height: none; border-radius: 1px; }
   .bib-gold { height: 2px; margin: 0; }
 }
+
+/* ===== Ordinateur : la bibliothèque tient dans l'écran, sans défilement =====
+   Elle descend jusqu'en bas de la page ; quand elle se remplit, son contenu
+   est réduit (transform: scale) au lieu de défiler. Ces hauteurs doivent
+   rester alignées sur les constantes D de page.tsx. */
+@media (min-width: 769px) {
+  .bib-page { height: 100vh; height: 100dvh; overflow: hidden; }
+  .bib-grid { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  .bib-case { height: 100%; overflow: hidden; display: block; padding: 22px 26px 16px; }
+  .bib-fit { display: flex; flex-direction: column; gap: 6px; }
+  .bib-side { min-height: 0; overflow-y: auto; }
+  .bib-shelf { padding: 4px 0; }
+  .bib-shelf-rows { gap: 6px; }
+  .bib-books { height: 68px; padding: 0 6px; }
+  .bib-board { height: 9px; }
+  .bib-legend { margin-top: 4px; }
+}

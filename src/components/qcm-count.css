@@ -1,0 +1,6 @@
+/* Choix du nombre de QCM à créer (classes préfixées qnb) */
+.qnb { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--bg-soft, #F2F1ED); }
+.qnb button { min-width: 38px; height: 30px; border: 0; border-radius: 7px; background: none; font: 600 13px var(--font-hanken), 'Hanken Grotesk', sans-serif; color: var(--text-secondary, #5C5C5A); cursor: pointer; font-variant-numeric: tabular-nums; }
+.qnb button.on { background: var(--bg-card, #fff); color: var(--accent-primary, #15304E); box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+.qnb button:disabled { cursor: default; opacity: .6; }
+.qnb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; font-size: 13px; color: var(--text-secondary, #5C5C5A); }
