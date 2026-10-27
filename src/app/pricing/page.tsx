@@ -68,7 +68,7 @@ export default function PricingPublicPage() {
               <li>Matières et fiches illimitées</li>
               <li>Courbe J + notation 1-5</li>
               <li>Sessions de travail et flashcards</li>
-              <li>{FREE_AI_GENERATIONS_LIMIT} générations QCM IA</li>
+              <li>{FREE_AI_GENERATIONS_LIMIT} créations de QCM par mois</li>
               <li>{FREE_SIMULATOR_SESSIONS_LIMIT} sessions simulateur</li>
               <li>Vidéos jusqu&apos;à {FREE_VIDEO_SIZE_MB} Mo, PDF jusqu&apos;à {FREE_PDF_SIZE_MB} Mo</li>
             </ul>
@@ -138,7 +138,7 @@ export default function PricingPublicPage() {
           <CompareRow feat="Bibliothèque + Focus" free="Illimité" pro="Illimité" />
 
           <CompareGroup label="IA" />
-          <CompareRow feat="Générations QCM IA" free={`${FREE_AI_GENERATIONS_LIMIT} au total`} pro="Illimité" />
+          <CompareRow feat="Créations de QCM" free={`${FREE_AI_GENERATIONS_LIMIT} par mois`} pro="Illimité" />
           <CompareRow feat="Transcription vidéo" free={`${FREE_VIDEO_SIZE_MB} Mo max (~30 min)`} pro="Jusqu'à 250 Mo (~1h)" />
           <CompareRow feat="Taille PDF" free={`${FREE_PDF_SIZE_MB} Mo max`} pro="Sans limite" />
 

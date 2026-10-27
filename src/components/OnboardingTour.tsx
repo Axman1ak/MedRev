@@ -314,8 +314,8 @@ const STEPS: Step[] = [
         toi-même pour les définitions et valeurs à connaître par cœur.
         <br /><br />
         <em className="ont-premium-note">
-          Plan Gratuit : 10 générations IA totales sur tout le compte.{' '}
-          <strong>Premium</strong> : illimité.
+          Pendant la bêta : 10 créations de QCM et 10 fiches de synthèse
+          par mois, remises à zéro le 1er du mois.
         </em>
       </>
     ),

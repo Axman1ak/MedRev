@@ -10,6 +10,7 @@
 // ⚠ Plan Vercel : nécessite Pro pour avoir maxDuration > 10s.
 //   Vidéos > MAX_VIDEO_SIZE (250 Mo) → erreur "vidéo trop lourde" pour MVP.
 
+import { FREE_MONTHLY, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { boxValide, rognerSurFigure, reponseLisible } from '@/lib/visualCheck'
 import { lirePages, texteDansCadre } from '@/lib/pdfRegion'
@@ -33,8 +34,7 @@ const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline = 
 // Quota Free : 10 générations IA totales sur le compte. Au-delà, il faut Premium.
 // Révisé mai 2026 (était 5) — 5 était trop restrictif, l'user épuisait en
 // novembre puis ne voyait plus la valeur récurrente. Doit rester aligné avec
-// FREE_AI_GENERATIONS_LIMIT dans src/types/index.ts.
-const FREE_AI_GENERATIONS_LIMIT = 10
+// Limite Gratuite mensuelle : src/lib/quotas.ts.
 
 // Fair use Premium : cap mensuel pour protéger des outliers qui pourraient
 // cramer la marge avec des générations massives. Reset automatique au début
@@ -426,17 +426,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Free : check du compteur cumulatif à vie
-    if (profile.plan !== 'pro' && (profile.ai_generations_count ?? 0) >= FREE_AI_GENERATIONS_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Limite atteinte : ${FREE_AI_GENERATIONS_LIMIT} générations QCM IA en mode Gratuit. Passe en Premium pour des générations illimitées.`,
-          code: 'quota_exceeded',
-          quota: 'ai_generations',
-          limit: FREE_AI_GENERATIONS_LIMIT,
-          used: profile.ai_generations_count ?? 0,
-        },
-        { status: 403 }
-      )
+    // Gratuit (bêta) : limite mensuelle, voir src/lib/quotas.ts
+    if (profile.plan !== 'pro') {
+      const used = usedThisMonth(profile, 'qcm')
+      if (used >= FREE_MONTHLY.qcm) {
+        return NextResponse.json(quotaExceeded('qcm', used, FREE_MONTHLY.qcm), { status: 403 })
+      }
     }
 
     // Pro : check du cap mensuel (fair use). Le compteur est reset à la volée
@@ -928,7 +923,7 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
     // amont (qui demanderait 2 RPCs au lieu d'1). Le cap est un soft cap.
     let monthlyCount: number | null = null
     let monthlyCapHit = false
-    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_AI_GENERATIONS_LIMIT
+    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_MONTHLY.qcm
     const { data: incData, error: incErr } = await supabase.rpc('try_increment_ai_generations_monthly', {
       uid: user.id,
       monthly_limit: limitForRpc,

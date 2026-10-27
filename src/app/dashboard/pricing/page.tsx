@@ -178,7 +178,7 @@ function PricingContent() {
               <li><span className="pri-mark ok">✓</span>Matières et fiches illimitées</li>
               <li><span className="pri-mark ok">✓</span>Courbe J + notation 1-5</li>
               <li><span className="pri-mark ok">✓</span>Bibliothèque + sessions Focus illimitées</li>
-              <li><span className="pri-mark dim">·</span>{FREE_AI_GENERATIONS_LIMIT} générations QCM IA <em>au total</em></li>
+              <li><span className="pri-mark dim">·</span>{FREE_AI_GENERATIONS_LIMIT} créations de QCM <em>par mois</em></li>
               <li><span className="pri-mark dim">·</span>{FREE_SIMULATOR_SESSIONS_LIMIT} sessions simulateur</li>
               <li><span className="pri-mark dim">·</span>Vidéos jusqu&apos;à {FREE_VIDEO_SIZE_MB} Mo (~30 min)</li>
               <li><span className="pri-mark dim">·</span>PDF jusqu&apos;à {FREE_PDF_SIZE_MB} Mo</li>
@@ -295,7 +295,7 @@ function PricingContent() {
             <CompareRow feat="Bibliothèque + Focus" free="Illimité" pro="Illimité" />
 
             <CompareGroup label="IA" />
-            <CompareRow feat="Générations QCM IA" free={`${FREE_AI_GENERATIONS_LIMIT} au total`} pro="Illimité" />
+            <CompareRow feat="Créations de QCM" free={`${FREE_AI_GENERATIONS_LIMIT} par mois`} pro="Illimité" />
             <CompareRow feat="Transcription vidéo" free={`${FREE_VIDEO_SIZE_MB} Mo max (~30 min)`} pro="Jusqu'à 250 Mo (~1h)" />
             <CompareRow feat="Taille PDF" free={`${FREE_PDF_SIZE_MB} Mo max`} pro="Sans limite" />
 

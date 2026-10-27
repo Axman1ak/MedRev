@@ -13,6 +13,7 @@
 //
 // Résultat stocké dans lessons.media.synthese (jsonb, aucune migration).
 
+import { monthlyLimit, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { LessonSynthese } from '@/types'
@@ -141,6 +142,12 @@ export async function POST(req: NextRequest) {
     if (!lesson) return NextResponse.json({ error: 'Fiche introuvable' }, { status: 404 })
     if (lesson.user_id !== user.id) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
 
+    // Limite mensuelle (bêta) : voir src/lib/quotas.ts
+    const { data: profile } = await supabase.from('profiles').select('plan, usage').eq('id', user.id).single()
+    const limit = monthlyLimit(profile?.plan, 'synthese')
+    const used = profile ? usedThisMonth(profile, 'synthese') : 0
+    if (used >= limit) return NextResponse.json(quotaExceeded('synthese', used, limit), { status: 403 })
+
     const media = (lesson.media ?? {}) as Record<string, unknown> & {
       pdf_path?: string
       transcript?: { start: number; end: number; text: string }[]
@@ -233,6 +240,8 @@ RÉPONDS UNIQUEMENT en JSON valide, sans markdown, avec seulement les blocs choi
 
     const { error: upErr } = await supabase.from('lessons').update({ media: { ...media, synthese } }).eq('id', lesson.id)
     if (upErr) throw upErr
+    // Comptée seulement une fois la synthèse enregistrée.
+    await supabase.rpc('try_use_quota', { kind: 'synthese', monthly_limit: limit }).then(() => {}, () => {})
     return NextResponse.json({ synthese })
   } catch (e) {
     console.error('[generate-synthese]', e)

@@ -238,6 +238,7 @@ export interface Profile {
   // Horodatage du dernier changement d'année, pour l'afficher dans les Réglages.
   year_changed_at?: string | null
   rest_days?: number[] | null
+  usage?: Record<string, { m?: string; n?: number }> | null
 }
 
 // Quotas Free centralisés — partagés entre l'API (route.ts) et l'UI (Settings).
@@ -249,6 +250,7 @@ export interface Profile {
 // Révision mai 2026 : 5→10 IA et 1→3 simu pour laisser le user vraiment
 // découvrir la valeur Premium avant la limite. Rester sur des "totaux à vie"
 // (pas de renouvellement mensuel) pour la simplicité d'implémentation.
+// Bêta (oct. 2026) : limite MENSUELLE, la source de vérité est src/lib/quotas.ts.
 export const FREE_AI_GENERATIONS_LIMIT = 10
 export const FREE_SIMULATOR_SESSIONS_LIMIT = 3
 export const FREE_VIDEO_SIZE_MB = 100

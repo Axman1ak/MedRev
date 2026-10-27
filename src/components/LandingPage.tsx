@@ -288,7 +288,7 @@ export default function LandingPage() {
               <div className="ln-pricing-col">
                 <div className="ln-pricing-name">Gratuit</div>
                 <div className="ln-pricing-price">0 €</div>
-                <p>Fiches et planning illimités · 10 générations IA · 3 sessions simulateur</p>
+                <p>Fiches et planning illimités, 10 créations de QCM par mois, 3 sessions simulateur</p>
               </div>
               <div className="ln-pricing-sep" aria-hidden="true" />
               <div className="ln-pricing-col">

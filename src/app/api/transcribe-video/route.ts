@@ -9,6 +9,7 @@
 // Appelé automatiquement par ReviewModal après upload vidéo, et via
 // le bouton "Regénérer le transcript" si la vidéo est remplacée.
 
+import { monthlyLimit, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
     // Lecture du plan pour le check de taille (en Free, 100 Mo max ≈ 30 min)
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('plan')
+      .select('plan, usage')
       .eq('id', user.id)
       .single()
     if (profileErr || !profile) {
@@ -226,6 +227,13 @@ export async function POST(req: NextRequest) {
         },
         { status: 403 }
       )
+    }
+
+    // Limite mensuelle (bêta) : voir src/lib/quotas.ts
+    {
+      const limit = monthlyLimit(profile.plan, 'transcription')
+      const used = usedThisMonth(profile, 'transcription')
+      if (used >= limit) return NextResponse.json(quotaExceeded('transcription', used, limit), { status: 403 })
     }
 
     // Upload to Gemini Files API
@@ -305,6 +313,8 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (pas de markdown, pas de backtic
     if (updErr) {
       throw new Error(`Sauvegarde échouée : ${updErr.message}`)
     }
+    // Compté seulement une fois la transcription enregistrée.
+    await supabase.rpc('try_use_quota', { kind: 'transcription', monthly_limit: monthlyLimit(profile.plan, 'transcription') }).then(() => {}, () => {})
     if (dropVideo && videoPath) {
       // Best-effort : si la suppression échoue, la fiche reste valide.
       await supabase.storage.from('lesson-media').remove([videoPath]).then(() => {}, () => {})

@@ -23,6 +23,7 @@
 import { reviewDate } from '@/lib/restDays'
 import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
 import QcmPick from '@/components/QcmPick'
+import PaywallModal, { type PaywallInfo } from '@/components/PaywallModal'
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -477,6 +478,7 @@ function SessionBody() {
   useEffect(() => { setQcmNbState(getQcmCount()) }, [])
   const chooseQcmNb = (n: QcmCount) => { setQcmNbState(n); setQcmCount(n) }
   const [qcmPick, setQcmPick] = useState(false)
+  const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
   // Le petit choix 10 / 20 / 30 se referme quand on change d'étape ou de fiche.
   useEffect(() => { setQcmPick(false) }, [step, idx])
 
@@ -489,7 +491,11 @@ function SessionBody() {
     try {
       const res = await fetch('/api/generate-qcm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id, nbQ: nb ?? getQcmCount(), format: 'mixed', difficulty: 'annales', mode }) })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string }).error || `Erreur ${res.status}`)
+      if (!res.ok) {
+        const d = data as { error?: string; code?: string; quota?: PaywallInfo['quota']; used?: number; limit?: number }
+        if (res.status === 403 && d.code === 'quota_exceeded' && d.quota) setPaywall({ quota: d.quota, used: d.used, limit: d.limit, message: d.error })
+        throw new Error(d.error || `Erreur ${res.status}`)
+      }
       const { data: fresh } = await supabase.from('lessons').select('*').eq('id', current.lesson.id).single()
       if (fresh) {
         replaceLesson(fresh as Lesson)
@@ -515,7 +521,11 @@ function SessionBody() {
     try {
       const res = await fetch('/api/generate-synthese', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: current.lesson.id }) })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string }).error || `Erreur ${res.status}`)
+      if (!res.ok) {
+        const d = data as { error?: string; code?: string; quota?: PaywallInfo['quota']; used?: number; limit?: number }
+        if (res.status === 403 && d.code === 'quota_exceeded' && d.quota) setPaywall({ quota: d.quota, used: d.used, limit: d.limit, message: d.error })
+        throw new Error(d.error || `Erreur ${res.status}`)
+      }
       replaceLesson({ ...current.lesson, media: { ...(current.lesson.media as LessonMedia), synthese: (data as { synthese: LessonMedia['synthese'] }).synthese } })
       setGenSynth('idle')
     } catch (e) {
@@ -1214,6 +1224,7 @@ function SessionBody() {
 
       <input ref={pdfInput} type="file" accept="application/pdf" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
       <input ref={videoInput} type="file" accept="video/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadCourse(f) }} />
+      {paywall && <PaywallModal {...paywall} onClose={() => setPaywall(null)} />}
       {source && (
         <SourceLightbox media={media} sourceRef={source} lessonName={current.lesson.name} onClose={() => setSource(null)} />
       )}

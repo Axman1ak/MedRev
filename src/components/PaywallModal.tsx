@@ -26,9 +26,10 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
+import { FREE_MONTHLY } from '@/lib/quotas'
 import './paywall-modal.css'
 
-export type PaywallQuota = 'ai_generations' | 'simulator_sessions' | 'video_size' | 'pdf_size'
+export type PaywallQuota = 'ai_generations' | 'simulator_sessions' | 'video_size' | 'pdf_size' | 'synthese' | 'transcription'
 
 export type PaywallInfo = {
   quota: PaywallQuota
@@ -44,9 +45,19 @@ type PaywallModalProps = PaywallInfo & {
 // Contenu textuel selon le type de quota
 const QUOTA_COPY: Record<PaywallQuota, { title: string; intro: string; icon: string }> = {
   ai_generations: {
-    title: 'Plus de générations IA',
-    intro: "Tu as utilisé tes 10 générations QCM IA gratuites. Le Premium les rend illimitées.",
+    title: 'Plus de créations de QCM ce mois-ci',
+    intro: `Tu as utilisé tes ${FREE_MONTHLY.qcm} créations de QCM du mois. Le compteur repart à zéro le 1er du mois prochain.`,
     icon: '✦',
+  },
+  synthese: {
+    title: 'Plus de fiches de synthèse ce mois-ci',
+    intro: `Tu as utilisé tes ${FREE_MONTHLY.synthese} fiches de synthèse du mois. Le compteur repart à zéro le 1er du mois prochain.`,
+    icon: '✦',
+  },
+  transcription: {
+    title: 'Plus de transcriptions ce mois-ci',
+    intro: `Tu as utilisé tes ${FREE_MONTHLY.transcription} transcriptions de vidéos du mois. Le compteur repart à zéro le 1er du mois prochain.`,
+    icon: '▶',
   },
   simulator_sessions: {
     title: 'Plus de sessions simulateur',
@@ -61,7 +72,7 @@ const QUOTA_COPY: Record<PaywallQuota, { title: string; intro: string; icon: str
   pdf_size: {
     title: 'PDF trop lourd pour le Gratuit',
     intro: "Le mode Gratuit limite à 20 Mo par PDF. Le Premium retire cette limite.",
-    icon: '📄',
+    icon: '▤',
   },
 }
 
@@ -113,7 +124,7 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
 
         <div className="pw-icon" aria-hidden="true">{copy.icon}</div>
 
-        <div className="pw-kicker">Limite Gratuite atteinte</div>
+        <div className="pw-kicker">{OFFRES_PAYANTES_OUVERTES ? 'Limite Gratuite atteinte' : 'Limite du mois atteinte'}</div>
         <h2 id="pw-title" className="pw-title">{copy.title}</h2>
 
         <p className="pw-intro">{message || copy.intro}</p>
@@ -161,9 +172,9 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
         ) : (
           <>
             <p className="pw-intro">
-              Il n&apos;y a pas d&apos;abonnement en vente pour le moment : MedRev
-              est gratuit. Si cette limite te bloque vraiment dans tes révisions,
-              écris-moi et on la lève sur ton compte.
+              MedRev est gratuit pendant la bêta, avec une limite par mois pour
+              garder le service ouvert à tous. Si elle te bloque vraiment dans tes
+              révisions, écris-moi et on regarde ensemble.
             </p>
 
             <div className="pw-actions">

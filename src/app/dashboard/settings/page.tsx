@@ -10,11 +10,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile, ScoringSystemId } from '@/types'
-import { FREE_AI_GENERATIONS_LIMIT, FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP, SCORING_SYSTEMS } from '@/types'
+import { FREE_SIMULATOR_SESSIONS_LIMIT, PREMIUM_MONTHLY_AI_CAP, SCORING_SYSTEMS } from '@/types'
 import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import { getStoredTheme, setTheme as setStoredTheme } from '@/lib/theme'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import { DAY_NAMES, getRestDays, setRestDaysLocal } from '@/lib/restDays'
+import { FREE_MONTHLY, QUOTA_LABEL, usedThisMonth } from '@/lib/quotas'
 import './styles.css'
 import PageLoader from '@/components/PageLoader'
 import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
@@ -483,7 +484,6 @@ export default function SettingsPage() {
   const monthCount = inSameMonth ? (profile.ai_generations_month_count ?? 0) : 0
   const showMonthlyCap = monthCount > PREMIUM_MONTHLY_AI_CAP * 0.5
 
-  const aiUsed = profile.ai_generations_count ?? 0
   const simUsed = profile.simulator_sessions_count ?? 0
 
   // L'identité en haut de l'accueil. Pas de photo à téléverser pour l'instant,
@@ -588,7 +588,7 @@ export default function SettingsPage() {
             <div>
               <div className="set-abo-kicker">Ton abonnement</div>
               <h2 className="set-abo-title">
-                {isPro ? 'Med·Rev Premium' : 'Med·Rev Gratuit'}
+                {isPro ? 'MedRev Premium' : 'MedRev Gratuit'}
               </h2>
             </div>
             <span className={`set-abo-badge${isPro ? ' pro' : ''}`}>
@@ -623,9 +623,11 @@ export default function SettingsPage() {
               )}
 
               <div className="set-abo-quotas">
-                <div className="set-abo-quotas-lbl">Où tu en es sur tes quotas</div>
-                <QuotaBar label="Générations QCM IA" used={aiUsed} limit={FREE_AI_GENERATIONS_LIMIT} />
-                <QuotaBar label="Sessions simulateur" used={simUsed} limit={FREE_SIMULATOR_SESSIONS_LIMIT} />
+                <div className="set-abo-quotas-lbl">Ce mois-ci</div>
+                {(['qcm', 'synthese', 'transcription'] as const).map(k => (
+                  <QuotaBar key={k} label={QUOTA_LABEL[k]} used={usedThisMonth(profile, k)} limit={FREE_MONTHLY[k]} />
+                ))}
+                <QuotaBar label="Sessions simulateur, au total" used={simUsed} limit={FREE_SIMULATOR_SESSIONS_LIMIT} />
               </div>
 
               <div className="set-abo-cta-row">
@@ -638,7 +640,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <span className="set-abo-cta-note">
-                    Si l&apos;une de ces limites te bloque dans tes révisions, écris à{' '}
+                    Les compteurs repartent à zéro le 1er de chaque mois. Si l&apos;une de ces limites te bloque dans tes révisions, écris à{' '}
                     <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> et on la lève sur ton compte.
                   </span>
                 )}
@@ -649,7 +651,7 @@ export default function SettingsPage() {
           {isPro && (
             <>
               <p className="set-abo-pitch">
-                Merci de soutenir Med·Rev. Tout est illimité : générations IA,
+                Merci de soutenir MedRev. Tout est illimité : générations IA,
                 simulateur, vidéos jusqu&apos;à 250 Mo et PDF sans limite.
               </p>
 
