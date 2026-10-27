@@ -9,6 +9,7 @@
 //
 // Compte comme 1 génération IA dans le quota (RPC try_increment_ai_generations_monthly).
 
+import { FREE_MONTHLY, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -24,8 +25,7 @@ const GEMINI_FILE_GET_URL = (name: string) =>
 const PDF_INLINE_THRESHOLD = 18 * 1024 * 1024  // 18 Mo (limite Gemini inline)
 
 // Mêmes valeurs que generate-qcm — doivent rester alignées avec
-// FREE_AI_GENERATIONS_LIMIT / PREMIUM_MONTHLY_AI_CAP dans src/types/index.ts.
-const FREE_AI_GENERATIONS_LIMIT = 10
+// Limite Gratuite mensuelle : src/lib/quotas.ts ; cap Premium ci-dessous.
 const PREMIUM_MONTHLY_AI_CAP = 100
 
 // Cap dur de questions par annale : un sujet PASS fait 30-80 questions,
@@ -219,17 +219,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Profil introuvable' }, { status: 500 })
     }
 
-    if (profile.plan !== 'pro' && (profile.ai_generations_count ?? 0) >= FREE_AI_GENERATIONS_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Limite atteinte : ${FREE_AI_GENERATIONS_LIMIT} générations IA en mode Gratuit. Passe en Premium pour des extractions illimitées.`,
-          code: 'quota_exceeded',
-          quota: 'ai_generations',
-          limit: FREE_AI_GENERATIONS_LIMIT,
-          used: profile.ai_generations_count ?? 0,
-        },
-        { status: 403 }
-      )
+    // Gratuit (bêta) : limite mensuelle, voir src/lib/quotas.ts
+    if (profile.plan !== 'pro') {
+      const used = usedThisMonth(profile, 'qcm')
+      if (used >= FREE_MONTHLY.qcm) {
+        return NextResponse.json(quotaExceeded('qcm', used, FREE_MONTHLY.qcm), { status: 403 })
+      }
     }
 
     if (profile.plan === 'pro') {
@@ -401,7 +396,7 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks) 
     }
 
     // 9. Quota (après sauvegarde — une extraction échouée ne consomme rien)
-    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_AI_GENERATIONS_LIMIT
+    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_MONTHLY.qcm
     const { error: incErr } = await supabase.rpc('try_increment_ai_generations_monthly', {
       uid: user.id,
       monthly_limit: limitForRpc,
