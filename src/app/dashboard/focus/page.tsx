@@ -20,6 +20,7 @@
 // carte Progression du tableau de bord). Les colonnes de l'ancienne
 // bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
+import { currentSemestre } from '@/lib/semestre'
 import { reviewDate } from '@/lib/restDays'
 import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
 import QcmPick from '@/components/QcmPick'
@@ -155,9 +156,16 @@ function buildQueue(lessons: Lesson[], systems: System[], lessonParam: string | 
   let pool: Lesson[]
   if (systemParam) pool = lessons.filter(l => l.system_id === systemParam)
   else {
-    const semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null
-    const sem: 1 | 2 | 'year' = semRaw === '1' ? 1 : semRaw === 'year' ? 'year' : 2
+    // Même règle que le tableau de bord : sans choix enregistré, le semestre
+    // en cours (S1 de septembre à janvier). Avant, la session prenait S2 par
+    // défaut et tombait sur « Rien à réviser » pour les nouveaux comptes.
+    let semRaw: string | null = null
+    try { semRaw = typeof window !== 'undefined' ? localStorage.getItem('medrev-sem') : null } catch { /* stockage bloqué */ }
+    const sem: 1 | 2 | 'year' = semRaw === '1' ? 1 : semRaw === '2' ? 2 : semRaw === 'year' ? 'year' : currentSemestre()
     pool = sem === 'year' ? lessons : lessons.filter(l => systems.find(s => s.id === l.system_id)?.semestre === sem)
+    // Filet de sécurité : rien de dû dans ce semestre mais des fiches dues
+    // ailleurs dans l'année, on les propose plutôt qu'un écran vide.
+    if (sem !== 'year' && !pool.some(l => getDueOn(l, today, schedOf(l.system_id)))) pool = lessons
   }
   const q: QueueItem[] = []
   for (const l of pool) {
