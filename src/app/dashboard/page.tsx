@@ -1,6 +1,7 @@
 'use client'
 // src/app/dashboard/page.tsx
 
+import ReferralBanner from '@/components/ReferralBanner'
 import { reviewDate } from '@/lib/restDays'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -789,6 +790,8 @@ export default function DashboardPage() {
           Rechercher une fiche, une matière…
         </div>
       </div>
+
+      <ReferralBanner />
 
       {/* TÉLÉPHONE : la carte du jour, avec le bouton à portée de pouce */}
       {isPhone && (

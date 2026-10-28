@@ -32,6 +32,19 @@ export async function POST(req: NextRequest) {
     }
   }
  
+  // Fin d'un mois offert, paiement refusé, abonnement suspendu : Stripe ne
+  // supprime pas forcément l'abonnement, il change son statut (past_due,
+  // unpaid, incomplete_expired...). Avant, seul « deleted » retirait le
+  // Premium, donc un coupon d'un mois pouvait laisser Premium indéfiniment.
+  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.created') {
+    const subscription = event.data.object as Stripe.Subscription
+    const customerId = subscription.customer as string
+    const actif = subscription.status === 'active' || subscription.status === 'trialing'
+    await supabase.from('profiles')
+      .update({ plan: actif ? 'pro' : 'free' })
+      .eq('stripe_customer_id', customerId)
+  }
+
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object as Stripe.Subscription
     const customerId = subscription.customer as string
