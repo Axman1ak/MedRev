@@ -181,13 +181,19 @@ export default function PaywallModal({ quota, used, limit, message, onClose }: P
               <button type="button" className="pw-btn pw-btn-ghost" onClick={onClose}>
                 Fermer
               </button>
-              <a
-                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('MedRev : limite atteinte')}`}
-                className="pw-btn pw-btn-primary"
-                onClick={onClose}
-              >
-                Écrire
-              </a>
+              {quota === 'ai_generations' || quota === 'synthese' ? (
+                <Link href="/dashboard/settings?s=parrainage" className="pw-btn pw-btn-primary" onClick={onClose}>
+                  Inviter un ami
+                </Link>
+              ) : (
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('MedRev : limite atteinte')}`}
+                  className="pw-btn pw-btn-primary"
+                  onClick={onClose}
+                >
+                  Écrire
+                </a>
+              )}
             </div>
           </>
         )}

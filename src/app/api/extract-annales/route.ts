@@ -9,7 +9,7 @@
 //
 // Compte comme 1 génération IA dans le quota (RPC try_increment_ai_generations_monthly).
 
-import { FREE_MONTHLY, usedThisMonth, quotaExceeded } from '@/lib/quotas'
+import { monthlyLimit, fetchReferral, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -220,10 +220,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Gratuit (bêta) : limite mensuelle, voir src/lib/quotas.ts
+    const referral = profile.plan === 'pro' ? null : await fetchReferral(supabase)
+    const freeQcmLimit = monthlyLimit('free', 'qcm', referral)
     if (profile.plan !== 'pro') {
       const used = usedThisMonth(profile, 'qcm')
-      if (used >= FREE_MONTHLY.qcm) {
-        return NextResponse.json(quotaExceeded('qcm', used, FREE_MONTHLY.qcm), { status: 403 })
+      if (used >= freeQcmLimit) {
+        return NextResponse.json(quotaExceeded('qcm', used, freeQcmLimit), { status: 403 })
       }
     }
 
@@ -396,7 +398,7 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (sans markdown, sans backticks) 
     }
 
     // 9. Quota (après sauvegarde — une extraction échouée ne consomme rien)
-    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_MONTHLY.qcm
+    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : freeQcmLimit
     const { error: incErr } = await supabase.rpc('try_increment_ai_generations_monthly', {
       uid: user.id,
       monthly_limit: limitForRpc,

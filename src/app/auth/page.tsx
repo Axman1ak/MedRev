@@ -248,6 +248,15 @@ function AuthContent() {
 
   const [activeTab, setActiveTab] = useState<'register' | 'login'>(initialMode)
   const [step, setStep] = useState<Step>('form')
+  // Arrivée par un lien de parrainage (medrev.fr/r/CODE) : on le dit.
+  const [invited, setInvited] = useState(false)
+  useEffect(() => {
+    try {
+      const ref = searchParams?.get('ref')
+      if (ref) localStorage.setItem('medrev-ref', ref.trim().toUpperCase().slice(0, 12))
+      setInvited(!!localStorage.getItem('medrev-ref'))
+    } catch { /* stockage bloqué */ }
+  }, [searchParams])
 
   // Sync l'onglet actif avec ?mode= à chaque changement de URL.
   // - ?mode=login → onglet login
@@ -504,6 +513,9 @@ function AuthContent() {
             </div>
 
             {error && <div className="auth-error">{error}</div>}
+            {invited && activeTab === 'register' && (
+              <div className="auth-invite">Un ami t&apos;a invité : tu commences avec 5 créations de QCM et 5 fiches de synthèse de plus chaque mois.</div>
+            )}
 
             {activeTab === 'register' && step === 'form' && (
               <div className="auth-pane">

@@ -10,7 +10,7 @@
 // ⚠ Plan Vercel : nécessite Pro pour avoir maxDuration > 10s.
 //   Vidéos > MAX_VIDEO_SIZE (250 Mo) → erreur "vidéo trop lourde" pour MVP.
 
-import { FREE_MONTHLY, usedThisMonth, quotaExceeded } from '@/lib/quotas'
+import { monthlyLimit, fetchReferral, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { boxValide, rognerSurFigure, reponseLisible } from '@/lib/visualCheck'
 import { lirePages, texteDansCadre } from '@/lib/pdfRegion'
@@ -427,10 +427,12 @@ export async function POST(req: NextRequest) {
 
     // Free : check du compteur cumulatif à vie
     // Gratuit (bêta) : limite mensuelle, voir src/lib/quotas.ts
+    const referral = profile.plan === 'pro' ? null : await fetchReferral(supabase)
+    const freeQcmLimit = monthlyLimit('free', 'qcm', referral)
     if (profile.plan !== 'pro') {
       const used = usedThisMonth(profile, 'qcm')
-      if (used >= FREE_MONTHLY.qcm) {
-        return NextResponse.json(quotaExceeded('qcm', used, FREE_MONTHLY.qcm), { status: 403 })
+      if (used >= freeQcmLimit) {
+        return NextResponse.json(quotaExceeded('qcm', used, freeQcmLimit), { status: 403 })
       }
     }
 
@@ -923,7 +925,7 @@ RÈGLE NON NÉGOCIABLE : exactement 5 options par question, "answer" est un tabl
     // amont (qui demanderait 2 RPCs au lieu d'1). Le cap est un soft cap.
     let monthlyCount: number | null = null
     let monthlyCapHit = false
-    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : FREE_MONTHLY.qcm
+    const limitForRpc = profile.plan === 'pro' ? PREMIUM_MONTHLY_AI_CAP : freeQcmLimit
     const { data: incData, error: incErr } = await supabase.rpc('try_increment_ai_generations_monthly', {
       uid: user.id,
       monthly_limit: limitForRpc,

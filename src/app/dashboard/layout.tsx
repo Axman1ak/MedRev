@@ -224,6 +224,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             user.email?.split('@')[0] ||
             '...'
           setProfile({ ...data, name: displayName })
+          // Parrainage : un compte arrivé par medrev.fr/r/CODE est rattaché à
+          // son parrain une fois créé (la fonction refuse les comptes de plus
+          // de 7 jours, l'auto-parrainage et un second parrain).
+          try {
+            const ref = localStorage.getItem('medrev-ref')
+            if (ref && !(data as { referred_by?: string | null }).referred_by) {
+              supabase.rpc('claim_referral', { code: ref }).then(({ data: r }) => {
+                const reason = (r as { reason?: string } | null)?.reason
+                if (reason !== 'auth') { try { localStorage.removeItem('medrev-ref') } catch { /* rien */ } }
+              }, () => {})
+            } else if (ref) localStorage.removeItem('medrev-ref')
+          } catch { /* stockage bloqué */ }
           // Jours sans révision : toutes les dates de révision en dépendent.
           // Si ce navigateur ne les connaissait pas encore, on recharge une fois.
           if (setRestDaysLocal((data as { rest_days?: unknown }).rest_days ?? [])) {
@@ -413,6 +425,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </span>
                 <span><strong>Réglages</strong></span>
               </button>
+              <button type="button" role="menuitem" className="db-usermenu-item" onClick={() => allerReglages('parrainage')}>
+                <span className="db-usermenu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
+                <span><strong>Inviter des amis</strong></span>
+              </button>
               <div className="db-usermenu-sep" />
               <button type="button" role="menuitem" className="db-usermenu-item danger" onClick={seDeconnecter}>
                 <span className="db-usermenu-ico" aria-hidden="true">
@@ -508,6 +524,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button type="button" className="db-sheet-row" onClick={() => { setMoreOpen(false); allerReglages('reglages') }}>
                 <span className="db-sheet-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
                 Réglages
+                <svg className="db-sheet-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+              <button type="button" className="db-sheet-row" onClick={() => { setMoreOpen(false); allerReglages('parrainage') }}>
+                <span className="db-sheet-ic"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
+                Inviter des amis
                 <svg className="db-sheet-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>

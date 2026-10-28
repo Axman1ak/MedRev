@@ -13,7 +13,7 @@
 //
 // Résultat stocké dans lessons.media.synthese (jsonb, aucune migration).
 
-import { monthlyLimit, usedThisMonth, quotaExceeded } from '@/lib/quotas'
+import { monthlyLimit, fetchReferral, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { LessonSynthese } from '@/types'
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
 
     // Limite mensuelle (bêta) : voir src/lib/quotas.ts
     const { data: profile } = await supabase.from('profiles').select('plan, usage').eq('id', user.id).single()
-    const limit = monthlyLimit(profile?.plan, 'synthese')
+    const limit = monthlyLimit(profile?.plan, 'synthese', profile?.plan === 'pro' ? null : await fetchReferral(supabase))
     const used = profile ? usedThisMonth(profile, 'synthese') : 0
     if (used >= limit) return NextResponse.json(quotaExceeded('synthese', used, limit), { status: 403 })
 

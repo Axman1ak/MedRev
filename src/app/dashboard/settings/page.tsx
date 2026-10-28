@@ -15,7 +15,7 @@ import { soundsEnabled, setSoundsEnabled } from '@/lib/sounds'
 import { getStoredTheme, setTheme as setStoredTheme } from '@/lib/theme'
 import { YEARS, DEFAULT_YEAR, normalizeYear, yearLabel } from '@/lib/year'
 import { DAY_NAMES, getRestDays, setRestDaysLocal } from '@/lib/restDays'
-import { FREE_MONTHLY, QUOTA_LABEL, usedThisMonth } from '@/lib/quotas'
+import { QUOTA_LABEL, REFERRAL_BONUS, REFERRAL_MAX_FRIENDS, fetchReferral, monthlyLimit, referralBonus, usedThisMonth, type ReferralInfo } from '@/lib/quotas'
 import './styles.css'
 import PageLoader from '@/components/PageLoader'
 import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
@@ -25,7 +25,7 @@ import { OFFRES_PAYANTES_OUVERTES, CONTACT_EMAIL } from '@/lib/offres'
 // on en ressort par « Réglages » en haut à gauche. Plus d'onglets, plus de
 // sous-onglets, plus de carte posée sous une autre.
 type Vue =
-  | 'profil' | 'securite' | 'abonnement'
+  | 'profil' | 'securite' | 'abonnement' | 'parrainage'
   | 'annee' | 'jours' | 'bareme'
   | 'apparence' | 'aide' | 'contact'
 
@@ -40,6 +40,7 @@ const TITRES: Record<Vue, string> = {
   profil: 'Informations personnelles',
   securite: 'Connexion et sécurité',
   abonnement: 'Abonnement',
+  parrainage: 'Inviter des amis',
   annee: "Année d'études",
   jours: 'Jours de révision',
   bareme: 'Barème du simulateur',
@@ -58,6 +59,7 @@ const DEPUIS_MENU: Record<string, Vue | null> = {
   abonnement: 'abonnement',
   profil: 'profil',
   jours: 'jours',
+  parrainage: 'parrainage',
 }
 
 // Icônes au trait, dessinées au même gabarit (24, trait 1.7) pour que la
@@ -71,6 +73,11 @@ const ICONES: Record<Vue, ReactNode> = {
   securite: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+  parrainage: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" />
     </svg>
   ),
   abonnement: (
@@ -230,6 +237,21 @@ export default function SettingsPage() {
     const next = !sounds
     setSounds(next)
     setSoundsEnabled(next)
+  }
+
+  // Parrainage : lien personnel et nombre d'amis inscrits (RPC my_referral)
+  const [referral, setReferral] = useState<ReferralInfo>(null)
+  const [refMsg, setRefMsg] = useState('')
+  useEffect(() => { void fetchReferral(supabase).then(setReferral) }, [supabase])
+  const refLink = referral?.code ? `https://medrev.fr/r/${referral.code}` : ''
+  const refText = `Je révise ma P1 avec MedRev : il fait la synthèse et des QCM à partir de ton cours, et planifie tes révisions en J. Inscris-toi avec mon lien, on gagne chacun ${REFERRAL_BONUS} QCM de plus par mois : ${refLink}`
+  async function copyRef(txt: string, ok: string) {
+    try { await navigator.clipboard.writeText(txt); setRefMsg(ok) } catch { setRefMsg('Copie impossible, sélectionne le lien à la main.') }
+  }
+  async function shareRef() {
+    const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string; url?: string }) => Promise<void> }
+    if (nav.share) { try { await nav.share({ title: 'MedRev', text: refText }) } catch { /* annulé */ } }
+    else void copyRef(refText, 'Message copié, colle-le dans le groupe de ta promo.')
   }
 
   // Jours sans révision : enregistrés dans le profil et gardés dans ce
@@ -505,6 +527,7 @@ export default function SettingsPage() {
         { id: 'profil', teinte: 'bleu' },
         { id: 'securite', teinte: 'gris' },
         { id: 'abonnement', valeur: isPro ? 'Premium' : 'Gratuit', teinte: 'or' },
+        { id: 'parrainage', valeur: referral?.active ? `${referral.active} ami${referral.active > 1 ? 's' : ''}` : undefined, teinte: 'vert' },
       ],
     },
     {
@@ -625,7 +648,7 @@ export default function SettingsPage() {
               <div className="set-abo-quotas">
                 <div className="set-abo-quotas-lbl">Ce mois-ci</div>
                 {(['qcm', 'synthese', 'transcription'] as const).map(k => (
-                  <QuotaBar key={k} label={QUOTA_LABEL[k]} used={usedThisMonth(profile, k)} limit={FREE_MONTHLY[k]} />
+                  <QuotaBar key={k} label={QUOTA_LABEL[k]} used={usedThisMonth(profile, k)} limit={monthlyLimit('free', k, referral)} />
                 ))}
                 <QuotaBar label="Sessions simulateur, au total" used={simUsed} limit={FREE_SIMULATOR_SESSIONS_LIMIT} />
               </div>
@@ -984,6 +1007,24 @@ export default function SettingsPage() {
         )}
 
         {/* ============ SUPPRIMER (RGPD) ============ */}
+        {vue === 'parrainage' && (
+        <section className="set-card" id="set-parrainage">
+          <p className="set-ref-lead">Pour chaque ami de ta promo qui s&apos;inscrit avec ton lien et crée sa première fiche, vous gagnez tous les deux <strong>{REFERRAL_BONUS} créations de QCM et {REFERRAL_BONUS} fiches de synthèse de plus chaque mois</strong>.</p>
+          <div className="set-ref-link">
+            <input id="ref-link" readOnly value={refLink || 'Chargement…'} onFocus={e => e.currentTarget.select()} aria-label="Ton lien d'invitation" />
+            <button type="button" className="set-btn" disabled={!refLink} onClick={() => copyRef(refLink, 'Lien copié.')}>Copier</button>
+          </div>
+          <button type="button" className="set-btn primary set-ref-share" disabled={!refLink} onClick={shareRef}>Envoyer à ma promo</button>
+          {refMsg && <p className="set-hint" role="status">{refMsg}</p>}
+          <div className="set-ref-stats">
+            <div><b>{referral?.invited ?? 0}</b><span>ami{(referral?.invited ?? 0) > 1 ? 's' : ''} inscrit{(referral?.invited ?? 0) > 1 ? 's' : ''}</span></div>
+            <div><b>{Math.min(referral?.active ?? 0, REFERRAL_MAX_FRIENDS)}</b><span>compté{(referral?.active ?? 0) > 1 ? 's' : ''} pour le bonus</span></div>
+            <div><b>+{referralBonus(referral)}</b><span>par mois</span></div>
+          </div>
+          <p className="set-hint">Un ami compte dès qu&apos;il a créé sa première fiche. Bonus jusqu&apos;à {REFERRAL_MAX_FRIENDS} amis, soit +{REFERRAL_BONUS * REFERRAL_MAX_FRIENDS} par mois.{referral?.referred ? ` Tu as été invité, tu as déjà +${REFERRAL_BONUS}.` : ''}</p>
+        </section>
+        )}
+
         {vue === 'jours' && (
         <section className="set-card" id="set-jours">
           <p className="set-card-sub">Décoche les jours où tu ne révises pas. Une révision qui tombe ce jour-là passe au jour suivant.</p>
