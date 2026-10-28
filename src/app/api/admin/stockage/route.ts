@@ -72,6 +72,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: status >= 200 && status < 300, status })
     }
 
+    if (action === 'orphans') {
+      // Fichiers encore sur Supabase mais rattachés à aucune fiche ni annale.
+      const refs = new Set(await allPaths(admin))
+      const found: string[] = []
+      const walk = async (prefix: string, depth: number) => {
+        const { data } = await admin.storage.from(MEDIA_BUCKET).list(prefix, { limit: 1000 })
+        for (const e of data ?? []) {
+          const full = prefix ? `${prefix}/${e.name}` : e.name
+          if (e.id) found.push(full)            // un fichier
+          else if (depth < 4) await walk(full, depth + 1) // un dossier
+        }
+      }
+      await walk('', 0)
+      const orphans = found.filter(p => !refs.has(p))
+      if (orphans.length) await admin.storage.from(MEDIA_BUCKET).remove(orphans)
+      return NextResponse.json({ total: orphans.length, next: orphans.length, done: true, report: orphans.map(p => ({ path: p, result: 'orphelin supprimé de Supabase' })) })
+    }
+
     const paths = await allPaths(admin)
     const batch = paths.slice(offset, offset + BATCH)
     const report: { path: string; result: string }[] = []
