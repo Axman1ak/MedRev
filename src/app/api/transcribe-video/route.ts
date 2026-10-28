@@ -9,6 +9,7 @@
 // Appelé automatiquement par ReviewModal après upload vidéo, et via
 // le bouton "Regénérer le transcript" si la vidéo est remplacée.
 
+import { downloadMedia, removeMedia } from '@/lib/mediaServer'
 import { monthlyLimit, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -202,10 +203,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Download video from Storage
-    const { data: videoBlob, error: vidErr } = await supabase.storage
-      .from('lesson-media')
-      .download(media.video_path)
-    if (vidErr || !videoBlob) {
+    const videoBlob = await downloadMedia(supabase, media.video_path)
+    if (!videoBlob) {
       return NextResponse.json({ error: 'Vidéo introuvable dans Storage' }, { status: 500 })
     }
     if (videoBlob.size > MAX_VIDEO_SIZE) {
@@ -317,7 +316,7 @@ RÉPONDS UNIQUEMENT avec un tableau JSON valide (pas de markdown, pas de backtic
     await supabase.rpc('try_use_quota', { kind: 'transcription', monthly_limit: monthlyLimit(profile.plan, 'transcription') }).then(() => {}, () => {})
     if (dropVideo && videoPath) {
       // Best-effort : si la suppression échoue, la fiche reste valide.
-      await supabase.storage.from('lesson-media').remove([videoPath]).then(() => {}, () => {})
+      await removeMedia(supabase, [videoPath])
     }
 
     return NextResponse.json({

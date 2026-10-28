@@ -6,6 +6,7 @@
 // - bug 3 : les options A-E à gauche ne sont plus cliquables (réponse via la grille de droite uniquement)
 // - bug 4 : header A-E aligné par colonne dans la SheetGrid
 
+import { uploadMedia, removeMediaFiles } from '@/lib/media'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -650,10 +651,9 @@ export default function SimulateurPage() {
       if (insErr || !row) throw insErr ?? new Error('Insertion échouée')
 
       const path = `${userId}/annales/${row.id}/sujet.pdf`
-      const { error: upErr } = await supabase.storage
-        .from('lesson-media')
-        .upload(path, file, { upsert: true, contentType: 'application/pdf' })
-      if (upErr) {
+      try {
+        await uploadMedia(path, file, 'application/pdf')
+      } catch (upErr) {
         // Rollback de la row pour ne pas laisser une annale fantôme sans PDF.
         await supabase.from('annales').delete().eq('id', row.id)
         throw upErr
@@ -721,7 +721,7 @@ export default function SimulateurPage() {
     setAnnalesError(null)
     try {
       if (a.pdf_path) {
-        await supabase.storage.from('lesson-media').remove([a.pdf_path])
+        await removeMediaFiles([a.pdf_path])
       }
       const { error } = await supabase.from('annales').delete().eq('id', a.id)
       if (error) throw error

@@ -25,6 +25,7 @@
 // auth reste actif mais toutes les données sont vidées (le user verra un
 // "compte vide" s'il se reconnecte — pas idéal mais pas dramatique).
 
+import { removeMedia } from '@/lib/mediaServer'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
@@ -108,8 +109,7 @@ export async function POST(req: NextRequest) {
       if (media.pdf_path) storagePaths.push(media.pdf_path)
     }
     if (storagePaths.length > 0) {
-      const { error: storErr } = await supabase.storage.from('lesson-media').remove(storagePaths)
-      if (storErr) console.warn('[account/delete] Storage cleanup partial:', storErr.message)
+      await removeMedia(supabase, storagePaths)
     }
 
     // 6. Supprime voyage_checks (si la table existe et a des entrées)

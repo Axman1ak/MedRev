@@ -20,6 +20,7 @@
 // carte Progression du tableau de bord). Les colonnes de l'ancienne
 // bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
+import { uploadMedia, removeMediaFiles } from '@/lib/media'
 import { currentSemestre } from '@/lib/semestre'
 import { reviewDate } from '@/lib/restDays'
 import { getQcmCount, setQcmCount, type QcmCount } from '@/lib/qcmCount'
@@ -555,9 +556,8 @@ function SessionBody() {
       const prev = (current.lesson.media ?? {}) as LessonMedia
       const ext = kind === 'pdf' ? 'pdf' : ((file.name.split('.').pop() || 'mp4').toLowerCase())
       const path = `${userId}/${current.lesson.id}/${kind === 'pdf' ? 'poly' : 'cours'}.${ext}`
-      if (kind === 'video' && prev.video_path && prev.video_path !== path) await supabase.storage.from('lesson-media').remove([prev.video_path])
-      const { error: upErr } = await supabase.storage.from('lesson-media').upload(path, file, { upsert: true, contentType: file.type })
-      if (upErr) throw upErr
+      if (kind === 'video' && prev.video_path && prev.video_path !== path) await removeMediaFiles([prev.video_path])
+      await uploadMedia(path, file, file.type || (kind === 'pdf' ? 'application/pdf' : 'video/mp4'))
       const nowIso = new Date().toISOString()
       const next: LessonMedia = kind === 'pdf'
         ? { ...prev, pdf_path: path, pdf_pages: (await countPdfPages(file)) ?? undefined, pdf_size: file.size, pdf_uploaded_at: nowIso, pdf_name: file.name }

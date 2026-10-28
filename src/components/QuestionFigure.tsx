@@ -13,8 +13,8 @@
 // session de 20 questions sur la même fiche ne retélécharge pas 20 fois un
 // poly de 15 Mo.
 
+import { mediaUrl } from '@/lib/media'
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import './question-figure.css'
 
 interface Props {
@@ -37,11 +37,8 @@ function ouvrirPdf(chemin: string): Promise<any> {
   if (dejaLa) return dejaLa
 
   const p = (async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase.storage
-      .from('lesson-media')
-      .createSignedUrl(chemin, 3600)
-    if (error || !data?.signedUrl) throw new Error('poly introuvable')
+    const signedUrl = await mediaUrl(chemin)
+    if (!signedUrl) throw new Error('poly introuvable')
 
     // Import dynamique : pdf.js pèse lourd, il ne doit pas entrer dans le
     // bundle des pages qui n'affichent jamais de figure.
@@ -55,7 +52,7 @@ function ouvrirPdf(chemin: string): Promise<any> {
     pdfjs.GlobalWorkerOptions.workerSrc =
       `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`
 
-    return pdfjs.getDocument({ url: data.signedUrl }).promise
+    return pdfjs.getDocument({ url: signedUrl }).promise
   })()
 
   // Un échec ne doit pas être mis en cache : la signed URL expire, le réseau

@@ -26,6 +26,7 @@
 // pour rester utilisable depuis n'importe quel écran qui ouvre une fiche sans
 // avoir à lui faire redescendre ses listes.
 
+import { uploadMedia } from '@/lib/media'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Lesson, LessonMedia, System } from '@/types'
@@ -166,10 +167,7 @@ export default function BulkPolyUpload({
         // Si elle change ici, /api/generate-qcm ne retrouve plus les fichiers.
         const path = `${userId}/${fiche.id}/poly.pdf`
 
-        const { error: upErr } = await supabase.storage
-          .from('lesson-media')
-          .upload(path, ligne.file, { upsert: true, contentType: 'application/pdf' })
-        if (upErr) throw upErr
+        await uploadMedia(path, ligne.file, 'application/pdf')
 
         const media: LessonMedia = {
           ...((fiche.media ?? {}) as LessonMedia),

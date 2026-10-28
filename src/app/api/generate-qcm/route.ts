@@ -10,6 +10,7 @@
 // ⚠ Plan Vercel : nécessite Pro pour avoir maxDuration > 10s.
 //   Vidéos > MAX_VIDEO_SIZE (250 Mo) → erreur "vidéo trop lourde" pour MVP.
 
+import { downloadMedia } from '@/lib/mediaServer'
 import { monthlyLimit, fetchReferral, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { boxValide, rognerSurFigure, reponseLisible } from '@/lib/visualCheck'
@@ -530,10 +531,8 @@ export async function POST(req: NextRequest) {
     // serait absurde de le retélécharger depuis Storage pour ça.
     let pdfSource: Blob | null = null
     if (media.pdf_path) {
-      const { data: pdfBlob, error: pdfErr } = await supabase.storage
-        .from('lesson-media')
-        .download(media.pdf_path)
-      if (pdfErr || !pdfBlob) {
+      const pdfBlob = await downloadMedia(supabase, media.pdf_path)
+      if (!pdfBlob) {
         return NextResponse.json({ error: 'PDF introuvable dans Storage' }, { status: 500 })
       }
       pdfSource = pdfBlob
@@ -566,10 +565,8 @@ export async function POST(req: NextRequest) {
       })
       transcriptIncluded = true
     } else if (media.video_path) {
-      const { data: videoBlob, error: vidErr } = await supabase.storage
-        .from('lesson-media')
-        .download(media.video_path)
-      if (vidErr || !videoBlob) {
+      const videoBlob = await downloadMedia(supabase, media.video_path)
+      if (!videoBlob) {
         videoSkipReason = 'téléchargement Storage échoué'
       } else if (videoBlob.size > MAX_VIDEO_SIZE) {
         videoSkipReason = `vidéo trop lourde (${(videoBlob.size / 1024 / 1024).toFixed(0)} Mo > ${MAX_VIDEO_SIZE / 1024 / 1024} Mo)`
