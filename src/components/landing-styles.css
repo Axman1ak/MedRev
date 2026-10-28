@@ -429,3 +429,16 @@
   .legal-wrap, .manifesto-wrap { padding: 50px 18px; }
 }
 
+
+/* Arrivée par un lien de parrainage (page d'inscription) */
+.auth-invite {
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: #E8F3EC;
+  color: #1F6B45;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+[data-theme="dark"] .auth-invite { background: rgba(60, 138, 98, .2); color: #A9DFC0; }

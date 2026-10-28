@@ -28,8 +28,30 @@ export const QUOTA_LABEL: Record<QuotaKind, string> = {
   transcription: 'Transcriptions de vidéos',
 }
 
-export function monthlyLimit(plan: string | null | undefined, kind: QuotaKind): number {
-  return plan === 'pro' ? PRO_MONTHLY[kind] : FREE_MONTHLY[kind]
+// Parrainage : chaque ami inscrit avec ton lien qui crée au moins une fiche
+// te donne +5 créations par mois (QCM et synthèses), jusqu'à 4 amis. L'ami
+// reçoit aussi +5 dès son inscription. Transcriptions non concernées.
+export const REFERRAL_BONUS = 5
+export const REFERRAL_MAX_FRIENDS = 4
+
+export type ReferralInfo = { code?: string; referred?: boolean; invited?: number; active?: number } | null
+
+export function referralBonus(r: ReferralInfo): number {
+  if (!r) return 0
+  return REFERRAL_BONUS * (Math.min(r.active ?? 0, REFERRAL_MAX_FRIENDS) + (r.referred ? 1 : 0))
+}
+
+export function monthlyLimit(plan: string | null | undefined, kind: QuotaKind, r: ReferralInfo = null): number {
+  if (plan === 'pro') return PRO_MONTHLY[kind]
+  return FREE_MONTHLY[kind] + (kind === 'transcription' ? 0 : referralBonus(r))
+}
+
+/** Lit l'état du parrainage du compte connecté (RPC my_referral). */
+export async function fetchReferral(supabase: { rpc: (fn: string) => PromiseLike<{ data: unknown }> }): Promise<ReferralInfo> {
+  try {
+    const { data } = await supabase.rpc('my_referral')
+    return (data && typeof data === 'object' ? data : null) as ReferralInfo
+  } catch { return null }
 }
 
 /** Mois courant à l'heure de Paris, au format « 2026-10 » (même clé que la RPC). */
@@ -67,8 +89,9 @@ const NOUN: Record<QuotaKind, [string, string]> = {
 /** Corps de réponse 403 quand la limite du mois est atteinte. */
 export function quotaExceeded(kind: QuotaKind, used: number, limit: number) {
   const noun = NOUN[kind][limit > 1 ? 1 : 0]
+  const invite = kind === 'transcription' ? '' : ` Invite un ami de ta promo pour en gagner ${REFERRAL_BONUS} de plus chaque mois.`
   return {
-    error: `Tu as utilisé tes ${limit} ${noun} de ce mois. Le compteur repart à zéro le 1er du mois prochain.`,
+    error: `Tu as utilisé tes ${limit} ${noun} de ce mois. Le compteur repart à zéro le 1er du mois prochain.${invite}`,
     code: 'quota_exceeded',
     quota: kind === 'qcm' ? 'ai_generations' : kind,
     limit,

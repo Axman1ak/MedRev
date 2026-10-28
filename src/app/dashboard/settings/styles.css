@@ -1175,3 +1175,13 @@
   .set-day { padding: 10px 2px; }
   .set-day-s { display: none; }
 }
+
+/* Inviter des amis */
+.set-ref-lead { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--set-ink); }
+.set-ref-link { display: flex; gap: 8px; }
+.set-ref-link input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--set-line); background: var(--soft); color: var(--set-ink); font: 600 14px var(--font-hanken), sans-serif; }
+.set-ref-share { margin-top: 10px; width: 100%; }
+.set-ref-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0 12px; }
+.set-ref-stats div { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 12px; background: var(--soft); }
+.set-ref-stats b { font-family: var(--font-bricolage), sans-serif; font-size: 24px; color: var(--set-ink); font-variant-numeric: tabular-nums; }
+.set-ref-stats span { font-size: 12.5px; color: var(--set-gray); }
