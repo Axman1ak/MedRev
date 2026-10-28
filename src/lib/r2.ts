@@ -55,7 +55,12 @@ export async function r2Get(path: string): Promise<Blob | null> {
 }
 
 export async function r2Put(path: string, body: Blob | ArrayBuffer, contentType: string): Promise<void> {
-  const res = await aws().fetch(objectUrl(path), { method: 'PUT', body, headers: { 'Content-Type': contentType } })
+  // URL présignée + fetch classique : le corps part d'un bloc avec sa taille
+  // (Content-Length). Signé directement par aws4fetch, il partait en flux
+  // sans taille et R2 répondait 411 (Length Required).
+  const buf = body instanceof ArrayBuffer ? new Uint8Array(body) : new Uint8Array(await body.arrayBuffer())
+  const url = await r2SignedUrl('PUT', path, 900)
+  const res = await fetch(url, { method: 'PUT', body: buf, headers: { 'Content-Type': contentType, 'Content-Length': String(buf.byteLength) } })
   if (!res.ok) throw new Error(`R2 PUT ${res.status}`)
 }
 
