@@ -20,7 +20,7 @@ export default function StockagePage() {
   }, [])
   useEffect(() => { void refresh() }, [refresh])
 
-  async function run(action: 'copy' | 'purge') {
+  async function run(action: 'copy' | 'purge' | 'orphans') {
     setBusy(action); setLog([]); setMsg('')
     let offset = 0
     try {
@@ -64,6 +64,7 @@ export default function StockagePage() {
             <li><button type="button" disabled={!!busy} onClick={() => run('copy')}>2. Copier les fichiers vers R2</button></li>
             <li><button type="button" disabled={!!busy || !allCopied} onClick={() => run('purge')}>3. Libérer la place sur Supabase</button>
               {!allCopied && <span> (après la copie complète)</span>}</li>
+            <li><button type="button" disabled={!!busy || !allCopied} onClick={() => run('orphans')}>4. Supprimer les fichiers orphelins de Supabase</button></li>
           </ol>
         </>
       )}
