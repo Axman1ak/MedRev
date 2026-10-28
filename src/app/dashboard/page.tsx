@@ -1,6 +1,7 @@
 'use client'
 // src/app/dashboard/page.tsx
 
+import ReferralBanner from '@/components/ReferralBanner'
 import { reviewDate } from '@/lib/restDays'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -784,6 +785,7 @@ export default function DashboardPage() {
           <div className="kick">{todayLabel}</div>
           <h1 className="hi">Bonjour {firstName}</h1>
         </div>
+        <ReferralBanner />
         <div className="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" strokeLinecap="round"/></svg>
           Rechercher une fiche, une matière…
