@@ -9,8 +9,8 @@
 // - PDF : <iframe> avec ancre #page=N (lecteur PDF natif du navigateur)
 // - Tabs si vidéo + PDF disponibles, sinon affichage direct
 
+import { mediaUrl } from '@/lib/media'
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type { LessonMedia, AiQuestionSourceRef } from '@/types'
 import './source-lightbox.css'
 
@@ -24,7 +24,6 @@ interface Props {
 type Tab = 'video' | 'pdf'
 
 export default function SourceLightbox({ media, sourceRef, lessonName, onClose }: Props) {
-  const supabase = createClient()
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
@@ -49,12 +48,11 @@ export default function SourceLightbox({ media, sourceRef, lessonName, onClose }
 
         if (media.video_path) {
           promises.push(
-            supabase.storage
-              .from('lesson-media')
-              .createSignedUrl(media.video_path, 3600)
-              .then(({ data }) => {
+            mediaUrl(media.video_path)
+              .then((signedUrl) => {
                 if (cancelled) return
-                if (data?.signedUrl) {
+                if (signedUrl) {
+                  const data = { signedUrl }
                   // L'ancre #t=N permet à HTML5 video de démarrer au timestamp
                   const ts = sourceRef.video_ts
                   const url = ts !== undefined ? `${data.signedUrl}#t=${ts}` : data.signedUrl
@@ -65,12 +63,11 @@ export default function SourceLightbox({ media, sourceRef, lessonName, onClose }
         }
         if (media.pdf_path) {
           promises.push(
-            supabase.storage
-              .from('lesson-media')
-              .createSignedUrl(media.pdf_path, 3600)
-              .then(({ data }) => {
+            mediaUrl(media.pdf_path)
+              .then((signedUrl) => {
                 if (cancelled) return
-                if (data?.signedUrl) {
+                if (signedUrl) {
+                  const data = { signedUrl }
                   const page = sourceRef.pdf_page
                   // L'ancre #page=N est interprétée par le viewer PDF natif (Chrome/Firefox/Safari)
                   const url = page !== undefined ? `${data.signedUrl}#page=${page}` : data.signedUrl
@@ -91,7 +88,7 @@ export default function SourceLightbox({ media, sourceRef, lessonName, onClose }
     }
     load()
     return () => { cancelled = true }
-  }, [media.video_path, media.pdf_path, sourceRef.video_ts, sourceRef.pdf_page, supabase])
+  }, [media.video_path, media.pdf_path, sourceRef.video_ts, sourceRef.pdf_page])
 
   // Force le seek au timestamp quand la vidéo est prête (l'ancre #t= ne fonctionne
   // pas toujours sur les signed URLs derrière redirection — on garantit le seek manuellement)

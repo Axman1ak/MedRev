@@ -4,6 +4,7 @@
 // + extension 2026-05 : Sources (vidéo + PDF) + QCM générés.
 // Utilisé par Mes matières (fiches) et Calendrier.
 
+import { uploadMedia as putMediaFile, removeMediaFiles } from '@/lib/media'
 import QcmPick from '@/components/QcmPick'
 import { reviewDate } from '@/lib/restDays'
 import { setQcmCount, type QcmCount } from '@/lib/qcmCount'
@@ -377,17 +378,10 @@ export default function ReviewModal({
       // les fichiers orphelins (Supabase Storage upsert ne supprime pas les autres ext).
       const existingMedia = (lesson.media ?? {}) as LessonMedia
       if (kind === 'video' && existingMedia.video_path && existingMedia.video_path !== path) {
-        await supabase.storage.from('lesson-media').remove([existingMedia.video_path])
+        await removeMediaFiles([existingMedia.video_path])
       }
 
-      const { error: upErr } = await supabase.storage
-        .from('lesson-media')
-        .upload(path, file, {
-          upsert: true,
-          contentType: file.type || (kind === 'pdf' ? 'application/pdf' : 'video/mp4'),
-        })
-
-      if (upErr) throw upErr
+      await putMediaFile(path, file, file.type || (kind === 'pdf' ? 'application/pdf' : 'video/mp4'))
 
       // Update lessons.media
       const newMedia: LessonMedia & {
@@ -478,7 +472,7 @@ export default function ReviewModal({
 
     if (targetPath) {
       try {
-        await supabase.storage.from('lesson-media').remove([targetPath])
+        await removeMediaFiles([targetPath])
       } catch {
         // on continue même si le fichier physique a déjà été supprimé manuellement
       }

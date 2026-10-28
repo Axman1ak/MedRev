@@ -13,6 +13,7 @@
 //
 // Résultat stocké dans lessons.media.synthese (jsonb, aucune migration).
 
+import { downloadMedia } from '@/lib/mediaServer'
 import { monthlyLimit, fetchReferral, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -162,8 +163,8 @@ export async function POST(req: NextRequest) {
 
     const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } } | { fileData: { mimeType: string; fileUri: string } }> = []
     if (media.pdf_path) {
-      const { data: blob, error } = await supabase.storage.from('lesson-media').download(media.pdf_path)
-      if (error || !blob) return NextResponse.json({ error: 'PDF introuvable' }, { status: 500 })
+      const blob = await downloadMedia(supabase, media.pdf_path)
+      if (!blob) return NextResponse.json({ error: 'PDF introuvable' }, { status: 500 })
       if (blob.size < PDF_INLINE_THRESHOLD) {
         parts.push({ inlineData: { mimeType: 'application/pdf', data: Buffer.from(await blob.arrayBuffer()).toString('base64') } })
       } else {

@@ -9,6 +9,7 @@
 //
 // Compte comme 1 génération IA dans le quota (RPC try_increment_ai_generations_monthly).
 
+import { downloadMedia } from '@/lib/mediaServer'
 import { monthlyLimit, fetchReferral, usedThisMonth, quotaExceeded } from '@/lib/quotas'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -276,10 +277,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Download PDF + build Gemini parts
-    const { data: pdfBlob, error: pdfErr } = await supabase.storage
-      .from('lesson-media')
-      .download(annale.pdf_path)
-    if (pdfErr || !pdfBlob) {
+    const pdfBlob = await downloadMedia(supabase, annale.pdf_path)
+    if (!pdfBlob) {
       return NextResponse.json({ error: 'PDF introuvable dans Storage' }, { status: 500 })
     }
 
