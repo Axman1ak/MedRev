@@ -35,15 +35,12 @@ export default function ReferralBanner() {
   return (
     <div className="refb" role="region" aria-label="Inviter des amis">
       <span className="refb-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>
       </span>
-      <p className="refb-txt">
-        <b>Invite un ami de ta promo</b>
-        <span>Vous gagnez chacun {REFERRAL_BONUS} QCM et {REFERRAL_BONUS} synthèses de plus par mois.</span>
-      </p>
+      <p className="refb-txt"><b>Invite un ami</b> : +{REFERRAL_BONUS} QCM et +{REFERRAL_BONUS} synthèses par mois chacun</p>
       <Link href="/dashboard/settings?s=parrainage" className="refb-go">Inviter</Link>
       <button type="button" className="refb-x" aria-label="Fermer" onClick={close}>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>
     </div>
   )
