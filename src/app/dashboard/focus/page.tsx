@@ -20,6 +20,7 @@
 // carte Progression du tableau de bord). Les colonnes de l'ancienne
 // bibliothèque (fiches_count, book_log) ne sont plus écrites, ni effacées.
 
+import { getTodaySort, sortToday } from '@/lib/todaySort'
 import { uploadMedia, removeMediaFiles } from '@/lib/media'
 import { currentSemestre } from '@/lib/semestre'
 import { reviewDate } from '@/lib/restDays'
@@ -174,7 +175,9 @@ function buildQueue(lessons: Lesson[], systems: System[], lessonParam: string | 
     const d = getDueOn(l, today, j)
     if (d) q.push(item(l, d, j))
   }
-  q.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
+  // Même ordre que la liste du tableau de bord (choix de tri partagé).
+  const sorted = sortToday(q, getTodaySort(), systems, schedOf)
+  q.splice(0, q.length, ...sorted)
   if (lessonParam) {
     const at = q.findIndex(x => x.lesson.id === lessonParam)
     if (at > 0) q.unshift(q.splice(at, 1)[0])
@@ -682,11 +685,11 @@ function SessionBody() {
       <div className="se-root">
         <div className="se-done">
           <div className="se-kicker se-ok">Session terminée</div>
-          <h1 className="se-done-title">{rated} fiche{rated > 1 ? 's' : ''} revue{rated > 1 ? 's' : ''}.</h1>
+          <h1 className="se-done-title">{rated === 0 ? 'Aucune fiche revue.' : `${rated} fiche${rated > 1 ? 's' : ''} revue${rated > 1 ? 's' : ''}.`}</h1>
           <p className="se-done-sub">
             {dur} de travail{stats.qcmTotal > 0 ? `, ${stats.qcmOk} QCM justes sur ${stats.qcmTotal}` : ''}{stats.cardsTotal > 0 ? `, ${stats.cardsKnown} flashcard${stats.cardsKnown > 1 ? 's' : ''} sue${stats.cardsKnown > 1 ? 's' : ''} sur ${stats.cardsTotal}` : ''}.
           </p>
-          <section className="se-card se-done-list">
+          {results.some(Boolean) && <section className="se-card se-done-list">
             {queue.map((it, i) => {
               const r = results[i]
               if (!r) return null
@@ -705,7 +708,7 @@ function SessionBody() {
                 </div>
               )
             })}
-          </section>
+          </section>}
           <section className="se-card se-done-foot">
             <p><b>Demain :</b> {tomorrowCount} fiche{tomorrowCount > 1 ? 's' : ''} prévue{tomorrowCount > 1 ? 's' : ''}{weakCount === 1 ? '. Pense à relire la fiche notée 1 ou 2.' : weakCount > 1 ? `. Pense à relire les ${weakCount} fiches notées 1 ou 2.` : '.'}</p>
             <Link href="/dashboard" className="se-btn se-btn-primary">Retour au tableau de bord</Link>

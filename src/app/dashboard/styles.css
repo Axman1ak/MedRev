@@ -302,7 +302,9 @@
 /* ================== TÉLÉPHONE : AUJOURD'HUI façon iOS ==================
    Une carte marine en haut (le nombre du jour + le bouton), puis des listes
    groupées sur le fond : plus de cartes dans des cartes. */
-.dvx .m-hero, .dvx .m-sec, .dvx .m-late, .dvx .m-chev { display: none; }
+.dvx .m-hero, .dvx .m-sec, .dvx .m-sec-row, .dvx .m-late, .dvx .m-chev { display: none; }
+.dvx .tsort-dash { margin-left: auto; }
+.dvx .tsort-dash + .go { margin-left: 0; }
 @media (max-width: 768px) {
   .dvx { padding: 8px 8px 24px; }
   .dvx .topbar { margin-bottom: 14px; padding: 0 4px; }
@@ -321,6 +323,9 @@
   .dvx .grid { gap: 22px; }
   .dvx .grid .panel { background: transparent; border: 0; padding: 0; border-radius: 0; box-shadow: none; }
   .dvx .grid .panel > .phead { display: none; }
+  .dvx .m-sec-row { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 2px 6px 0; }
+  .dvx .m-sec-row .m-sec { margin-bottom: 2px; }
+  .dvx .m-sec-row .tsort-btn { width: 34px; height: 34px; border: 0; }
   .dvx .grid .col-r .panel > .phead { display: flex; flex-wrap: nowrap; align-items: baseline; gap: 8px; margin: 0; }
   .dvx .col-r .picon, .dvx .col-r .psub { display: none; }
   .dvx .col-r .ptitle { margin-bottom: 8px; }
