@@ -19,6 +19,8 @@ import { normalizeYear, scopeToYear } from '@/lib/year'
 import { useIsNarrow } from '@/lib/useNarrow'
 import PageLoader from '@/components/PageLoader'
 import { currentSemestre } from '@/lib/semestre'
+import { getTodaySort, setTodaySort, onTodaySortChange, sortToday, type TodaySort } from '@/lib/todaySort'
+import TodaySortMenu from '@/components/TodaySortMenu'
 
 const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
@@ -741,17 +743,17 @@ export default function DashboardPage() {
     ? (systems.find(s => s.id === reviewLesson.system_id)?.name || '')
     : ''
 
-  // Ordre de la liste : les retards d'abord (les plus en retard en tête),
-  // puis le reste par palier J croissant. C'est ce que promet la page
-  // d'accueil (« Les retards d'abord »).
+  // Ordre de la liste : choisi par l'étudiant (retards d'abord par défaut),
+  // le même dans la fenêtre « Voir plus » et dans la session de travail.
+  const [todaySort, setTodaySortState] = useState<TodaySort>('retard')
+  useEffect(() => {
+    setTodaySortState(getTodaySort())
+    return onTodaySortChange(setTodaySortState)
+  }, [])
+  const changeSort = useCallback((v: TodaySort) => { setTodaySortState(v); setTodaySort(v) }, [])
   const sortedQueue = useMemo(
-    () => [...todayQueue].sort((a, b) => {
-      const la = a.due.status === 'missed' ? a.due.overdueDays : 0
-      const lb = b.due.status === 'missed' ? b.due.overdueDays : 0
-      if (la !== lb) return lb - la
-      return schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex]
-    }),
-    [todayQueue]
+    () => sortToday(todayQueue, todaySort, semSystems, schedOf),
+    [todayQueue, todaySort, semSystems, schedOf]
   )
   // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
   // bouton, sinon on ne réserve que la hauteur du bouton « voir plus » (~44px),
@@ -808,13 +810,19 @@ export default function DashboardPage() {
 
       <div className="grid">
         <div className="panel reveal d2">
-          {isPhone && todayQueue.length > 0 && <h2 className="m-sec">Fiches du jour</h2>}
+          {isPhone && todayQueue.length > 0 && (
+            <div className="m-sec-row">
+              <h2 className="m-sec">Fiches du jour</h2>
+              {todayQueue.length > 1 && <TodaySortMenu value={todaySort} onChange={changeSort} />}
+            </div>
+          )}
           <div className="phead">
             <div className="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 6v14M5 8v11a1 1 0 0 0 1 1h6M19 8v11a1 1 0 0 1-1 1h-6M5 8a3 3 0 0 1 3-3 4 4 0 0 1 4 3 4 4 0 0 1 4-3 3 3 0 0 1 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             <div>
               <div className="ptitle">Fiches du jour</div>
               <div className="psub"><b>{todayQueue.length} fiche{todayQueue.length > 1 ? 's' : ''}</b> à réviser</div>
             </div>
+            {todayQueue.length > 1 && <TodaySortMenu value={todaySort} onChange={changeSort} className="tsort-dash" />}
             {todayQueue.length > 0 && <Link href={startSessionHref} className="go">Commencer</Link>}
           </div>
 
@@ -903,6 +911,8 @@ export default function DashboardPage() {
       {showTodayModal && (
         <TodayModal
           queue={sortedQueue}
+          sort={todaySort}
+          onSort={changeSort}
           systems={semSystems}
           startHref={startSessionHref}
           onClose={() => setShowTodayModal(false)}
@@ -914,39 +924,26 @@ export default function DashboardPage() {
 }
 
 // ======================= TODAY MODAL =======================
-type TodaySort = 'priority' | 'subject' | 'j'
-
 function TodayModal({
-  queue, systems, startHref, onClose, todayLabel,
+  queue, sort, onSort, systems, startHref, onClose, todayLabel,
 }: {
   queue: PriorityLesson[]
+  sort: TodaySort
+  onSort: (v: TodaySort) => void
   systems: System[]
   startHref: string
   onClose: () => void
   todayLabel: string
 }) {
-  const [sort, setSort] = useState<TodaySort>('j')
   const [subjectFilter, setSubjectFilter] = useState<string>('all')
   const schedOf = useMemo(() => makeScheduleResolver(systems), [systems])
   const colorOf = useMemo(() => buildSubjectColorMap(systems), [systems])
 
-  const sortedFiltered = useMemo(() => {
-    let list = queue.slice()
-    if (subjectFilter !== 'all') {
-      list = list.filter(p => p.lesson.system_id === subjectFilter)
-    }
-    if (sort === 'subject') {
-      list.sort((a, b) => {
-        const sa = systems.find(s => s.id === a.lesson.system_id)?.name ?? ''
-        const sb = systems.find(s => s.id === b.lesson.system_id)?.name ?? ''
-        return sa.localeCompare(sb)
-      })
-    } else if (sort === 'j') {
-      list.sort((a, b) => schedOf(a.lesson.system_id)[a.due.stepIndex] - schedOf(b.lesson.system_id)[b.due.stepIndex])
-    }
-    // 'priority' = déjà trié par le calcul
-    return list
-  }, [queue, systems, sort, subjectFilter, schedOf])
+  // La file arrive déjà triée selon le choix de l'étudiant.
+  const sortedFiltered = useMemo(
+    () => (subjectFilter === 'all' ? queue : queue.filter(p => p.lesson.system_id === subjectFilter)),
+    [queue, subjectFilter]
+  )
 
   const subjectsInQueue = useMemo(() => {
     const ids = new Set(queue.map(p => p.lesson.system_id))
@@ -981,16 +978,16 @@ function TodayModal({
         <div className="full-filters">
           <span className="full-filters-label">Trier par</span>
           <button
-            className={`pill${sort === 'priority' ? ' active' : ''}`}
-            onClick={() => setSort('priority')}
-          >Priorité</button>
+            className={`pill${sort === 'retard' ? ' active' : ''}`}
+            onClick={() => onSort('retard')}
+          >Retards d&apos;abord</button>
           <button
             className={`pill${sort === 'subject' ? ' active' : ''}`}
-            onClick={() => setSort('subject')}
+            onClick={() => onSort('subject')}
           >Matière</button>
           <button
             className={`pill${sort === 'j' ? ' active' : ''}`}
-            onClick={() => setSort('j')}
+            onClick={() => onSort('j')}
           >Palier J</button>
           <span style={{ flex: 1 }} />
           <span className="full-filters-label">Matière</span>
