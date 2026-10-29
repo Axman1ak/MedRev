@@ -69,9 +69,3 @@ export async function r2Delete(paths: string[]): Promise<void> {
 }
 
 /** Autorise le navigateur (medrev.fr) à envoyer et lire les fichiers directement. */
-export async function r2SetCors(origins: string[]): Promise<number> {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><CORSConfiguration>${origins.map(o =>
-    `<CORSRule><AllowedOrigin>${o}</AllowedOrigin><AllowedMethod>GET</AllowedMethod><AllowedMethod>PUT</AllowedMethod><AllowedMethod>HEAD</AllowedMethod><AllowedHeader>*</AllowedHeader><ExposeHeader>Content-Length</ExposeHeader><ExposeHeader>Content-Range</ExposeHeader><ExposeHeader>Accept-Ranges</ExposeHeader><MaxAgeSeconds>3600</MaxAgeSeconds></CORSRule>`).join('')}</CORSConfiguration>`
-  const res = await aws().fetch(`${bucketUrl()}?cors`, { method: 'PUT', body: xml, headers: { 'Content-Type': 'application/xml' } })
-  return res.status
-}
