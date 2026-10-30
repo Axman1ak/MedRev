@@ -251,7 +251,7 @@ export interface Profile {
 // découvrir la valeur Premium avant la limite. Rester sur des "totaux à vie"
 // (pas de renouvellement mensuel) pour la simplicité d'implémentation.
 // Bêta (oct. 2026) : limite MENSUELLE, la source de vérité est src/lib/quotas.ts.
-export const FREE_AI_GENERATIONS_LIMIT = 10
+export const FREE_AI_GENERATIONS_LIMIT = 5
 export const FREE_SIMULATOR_SESSIONS_LIMIT = 3
 export const FREE_VIDEO_SIZE_MB = 100
 export const FREE_PDF_SIZE_MB = 20

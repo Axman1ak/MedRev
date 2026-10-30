@@ -40,6 +40,14 @@ export async function lirePages(
   // Import dynamique : pdfjs ne doit pas entrer dans le bundle des routes qui
   // n'en ont pas besoin, et son chargement coûte une centaine de ms.
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  // Sous Node, pdfjs lance un « faux worker » en important pdf.worker.mjs
+  // par un chemin calculé à l'exécution. Une fois le code empaqueté par Next,
+  // ce fichier n'existe plus à côté du bundle : getDocument échouait à CHAQUE
+  // appel (« Setting up fake worker failed »), et l'étape 8e retirait donc
+  // toutes les illustrations. En chargeant le worker nous-mêmes et en le
+  // posant sur globalThis.pdfjsWorker, pdfjs l'utilise directement.
+  const g = globalThis as { pdfjsWorker?: unknown }
+  if (!g.pdfjsWorker) g.pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
 
   const doc = await pdfjs.getDocument({
     data: new Uint8Array(pdf),
