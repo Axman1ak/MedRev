@@ -4,7 +4,7 @@
 //
 // Pendant la bêta, MedRev est gratuit et rien n'est en vente
 // (src/lib/offres.ts). Pour garder les coûts d'IA sous contrôle quand de
-// nouveaux étudiants arrivent, chaque compte Gratuit a 10 créations par mois
+// nouveaux étudiants arrivent, chaque compte Gratuit a 5 créations par mois
 // et par type. Le compteur repart à zéro le 1er du mois.
 //
 // Pour augmenter les limites, il suffit de changer FREE_MONTHLY ci-dessous :
@@ -19,7 +19,7 @@
 
 export type QuotaKind = 'qcm' | 'synthese' | 'transcription'
 
-export const FREE_MONTHLY: Record<QuotaKind, number> = { qcm: 10, synthese: 10, transcription: 10 }
+export const FREE_MONTHLY: Record<QuotaKind, number> = { qcm: 5, synthese: 5, transcription: 5 }
 export const PRO_MONTHLY: Record<QuotaKind, number> = { qcm: 100, synthese: 100, transcription: 50 }
 
 export const QUOTA_LABEL: Record<QuotaKind, string> = {

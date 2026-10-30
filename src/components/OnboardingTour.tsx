@@ -314,7 +314,7 @@ const STEPS: Step[] = [
         toi-même pour les définitions et valeurs à connaître par cœur.
         <br /><br />
         <em className="ont-premium-note">
-          Pendant la bêta : 10 créations de QCM et 10 fiches de synthèse
+          Pendant la bêta : 5 créations de QCM et 5 fiches de synthèse
           par mois, remises à zéro le 1er du mois.
         </em>
       </>
