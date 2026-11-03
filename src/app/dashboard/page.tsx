@@ -21,7 +21,6 @@ import PageLoader from '@/components/PageLoader'
 import { currentSemestre } from '@/lib/semestre'
 import { getTodaySort, setTodaySort, onTodaySortChange, sortToday, type TodaySort } from '@/lib/todaySort'
 import TodaySortMenu from '@/components/TodaySortMenu'
-import DashFocus, { type FocusDay, type FocusVariant } from '@/components/DashFocus'
 
 const J = DEFAULT_J  // fallback ; le vrai planning est lu par matière (scheduleOf)
 const FRAGILE_THRESHOLD = 3 // fiche considérée fragile si moyenne < 3
@@ -756,25 +755,6 @@ export default function DashboardPage() {
     () => sortToday(todayQueue, todaySort, semSystems, schedOf),
     [todayQueue, todaySort, semSystems, schedOf]
   )
-  // Aperçu des nouvelles mises en page (?vue=jour|urgence|semaine)
-  const [focusVariant, setFocusVariant] = useState<FocusVariant>('jour')
-  useEffect(() => {
-    const v = new URLSearchParams(window.location.search).get('vue')
-    if (v === 'jour' || v === 'urgence' || v === 'semaine') setFocusVariant(v)
-  }, [])
-  const focusDays = useMemo<FocusDay[]>(() => {
-    const today = todayStr()
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = dateStrFromOffset(today, i)
-      const dt = new Date(date + 'T12:00:00')
-      const items = i === 0 ? [] : semLessons
-        .map(l => ({ lesson: l, due: getDueForToday(l, date, schedOf(l.system_id)) }))
-        .filter((x): x is { lesson: Lesson; due: DueInfo } => !!x.due && x.due.status === 'today')
-      const dow = dt.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')
-      return { date, dow: dow.charAt(0).toUpperCase() + dow.slice(1), num: dt.getDate(), items, isToday: i === 0 }
-    })
-  }, [semLessons, schedOf])
-
   // Combien de fiches tiennent SANS scroll : tout le panneau s'il n'y a pas de
   // bouton, sinon on ne réserve que la hauteur du bouton « voir plus » (~44px),
   // pas une ligne entière → moins de vide en bas.
@@ -828,21 +808,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!isPhone ? (
-        <DashFocus
-          variant={focusVariant}
-          queue={sortedQueue}
-          days={focusDays}
-          systems={semSystems}
-          colorOf={colorOf}
-          schedOf={schedOf}
-          startHref={startSessionHref}
-          onOpen={openReview}
-          tds={todayTds}
-          fmtTd={fmtTd}
-          sortMenu={todayQueue.length > 1 ? <TodaySortMenu value={todaySort} onChange={changeSort} /> : null}
-        />
-      ) : (
       <div className="grid">
         <div className="panel reveal d2">
           {isPhone && todayQueue.length > 0 && (
@@ -931,7 +896,6 @@ export default function DashboardPage() {
           <DashProgress userId={userId} lessons={semLessons} systems={semSystems} colorOf={colorOf} />
         </div>
       </div>
-      )}
 
       {reviewLesson && (
         <ReviewModal

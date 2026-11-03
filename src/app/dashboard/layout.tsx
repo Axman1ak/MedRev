@@ -32,9 +32,6 @@ const NAV = [
   { href: '/dashboard', label: "Aujourd'hui", exact: true, icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11l9-8 9 8M5 10v10h14V10" strokeLinecap="round" strokeLinejoin="round"/></svg>
   ) },
-  { href: '/dashboard/fiches', label: 'Fiches', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16" strokeLinecap="round"/></svg>
-  ) },
   { href: '/dashboard/calendar', label: 'Calendrier', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4" strokeLinecap="round"/></svg>
   ) },
@@ -88,7 +85,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // à la rubrique qui porte le même nom.
   const [menuOuvert, setMenuOuvert] = useState(false)
   const [sideSubjects, setSideSubjects] = useState<SideSubject[]>([])
-  const [semOpen, setSemOpen] = useState(false)
+  // Matière ouverte depuis la barre (pour la surligner) : lue dans l'URL.
+  const [openMatiere, setOpenMatiere] = useState<string | null>(null)
+  useEffect(() => {
+    if (!pathname.startsWith('/dashboard/fiches')) { setOpenMatiere(null); return }
+    setOpenMatiere(new URLSearchParams(window.location.search).get('matiere'))
+  }, [pathname])
+  function openSubject(id: string | null) {
+    setOpenMatiere(id)
+    // Déjà sur la page Fiches : elle ne se recharge pas, on la prévient.
+    if (id) window.dispatchEvent(new CustomEvent('medrev-open-matiere', { detail: id }))
+  }
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -335,15 +342,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .filter(s => normalizeYear(s.year) === year)
         .filter(s => semester === 'year' || s.semestre === semester)
       const ids = new Set(yearSystems.map(s => s.id))
-      // Matières de la barre latérale : celles du semestre affiché, avec leur
-      // couleur partagée et leur nombre de fiches.
+      // Matières de la barre : celles du semestre affiché, avec leur couleur
+      // partagée (la même que partout ailleurs) et leur nombre de fiches.
       const colorMap = buildSubjectColorMap(yearSystems)
       const perSys = new Map<string, number>()
       data.forEach(l => { const k = l.system_id as string; perSys.set(k, (perSys.get(k) || 0) + 1) })
       setSideSubjects(
         [...yearSystems]
           .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
-          .map(s => ({ id: s.id, name: s.name || 'Matière', color: colorMap.get(s.id) || '#8A8F98', count: perSys.get(s.id) || 0 }))
+          .map(s => ({ id: s.id, name: s.name || 'Matière', color: colorMap.get(s.id) || '#7FB0D4', count: perSys.get(s.id) || 0 }))
       )
       const scheduleFor = makeScheduleResolver(yearSystems)
       let cnt = 0
@@ -381,32 +388,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* SIDEBAR */}
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert ? ' menu-open' : ''}`} data-tour="sidebar">
-        {/* Logo et semestre affiché */}
-        <div className="db-top">
-          <Link href="/dashboard" className="db-logo">
-            <MedRevMark size={24} bg="#fff" fg="#15304E" className="db-logo-mk" /><span>MedRev</span>
-          </Link>
-          <div className="db-semdrop" data-tour="sem-toggle">
-            <button type="button" className="db-semdrop-btn" onClick={() => setSemOpen(o => !o)} aria-haspopup="menu" aria-expanded={semOpen}>
-              {semester === 'year' ? 'Année' : `Semestre ${semester}`}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-            {semOpen && (
-              <div className="db-semdrop-menu" role="menu">
-                {([1, 2, 'year'] as const).map(v => (
-                  <button key={String(v)} type="button" role="menuitemradio" aria-checked={semester === v}
-                    className={semester === v ? 'on' : ''}
-                    onClick={() => { chooseSemester(v); setSemOpen(false) }}>
-                    {v === 'year' ? 'Année entière' : `Semestre ${v}`}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Logo */}
+        <div className="db-logo">
+          <MedRevMark size={26} bg="#fff" fg="#15304E" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
         </div>
+
+        {/* Semester toggle */}
+        <div className="db-sem" data-tour="sem-toggle">
+          <button className={semester === 1 ? 'active' : ''} onClick={() => chooseSemester(1)}>S1</button>
+          <button className={semester === 2 ? 'active' : ''} onClick={() => chooseSemester(2)}>S2</button>
+          <button className={semester === 'year' ? 'active' : ''} onClick={() => chooseSemester('year')} title="Vue année (toutes matières S1 + S2)">Année</button>
+        </div>
+
+        <div className="db-sep" />
 
         {/* Navigation */}
         <div className="db-nav-section">
+          <div className="db-nav-label db-lbl">Navigation</div>
           {NAV.map(n => (
             <Link
               key={n.href}
@@ -423,21 +421,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </div>
 
-        {/* Matières : raccourcis vers la page Fiches filtrée */}
-        {sideSubjects.length > 0 && (
-          <div className="db-subjects">
-            <div className="db-nav-label">Matières</div>
-            <div className="db-subjects-list">
-              {sideSubjects.map(s => (
-                <a key={s.id} href={`/dashboard/fiches?matiere=${s.id}`} className="db-subject">
-                  <span className="db-subject-dot" style={{ background: s.color }} />
-                  <span className="db-subject-name">{s.name}</span>
-                  <span className="db-subject-n">{s.count}</span>
-                </a>
-              ))}
-            </div>
+        {/* Matières : remplacent l'entrée « Fiches » */}
+        <div className="db-nav-section db-subjects">
+          <div className="db-nav-label db-lbl">Matières</div>
+          <Link
+            href="/dashboard/fiches"
+            onClick={() => openSubject(null)}
+            className={`db-nav-item${pathname.startsWith('/dashboard/fiches') && !openMatiere ? ' active' : ''}`}
+            data-tour={isPhone ? undefined : 'nav-fiches'}
+            title="Toutes les matières"
+          >
+            <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></span>
+            <span className="db-lbl">Toutes les matières</span>
+          </Link>
+          <div className="db-subjects-list">
+            {sideSubjects.map(sub => (
+              <Link
+                key={sub.id}
+                href={`/dashboard/fiches?matiere=${sub.id}`}
+                onClick={() => openSubject(sub.id)}
+                className={`db-nav-item db-subject${openMatiere === sub.id ? ' active' : ''}`}
+                title={sub.name}
+              >
+                <span className="ic"><span className="db-subject-dot" style={{ background: sub.color }} /></span>
+                <span className="db-lbl db-subject-name">{sub.name}</span>
+                <span className="db-lbl db-subject-n">{sub.count}</span>
+              </Link>
+            ))}
           </div>
-        )}
+        </div>
 
         <div style={{ flex: 1 }} />
 

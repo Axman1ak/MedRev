@@ -339,6 +339,25 @@ export default function FichesPage() {
     setShowDueOnly(false)
   }, [systems, semester])
 
+  // Clic sur une matière dans la barre de gauche alors qu'on est déjà ici.
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const id = (e as CustomEvent<string>).detail
+      const sys = systems.find(s => s.id === id)
+      if (!sys) return
+      const sem = (sys as any).semestre
+      if (semester !== 'year' && (sem === 1 || sem === 2) && sem !== semester) {
+        wantedSystem.current = sys.id
+        setSemester(sem)
+      } else {
+        setSelectedSystemId(sys.id)
+      }
+      setShowDueOnly(false)
+    }
+    window.addEventListener('medrev-open-matiere', onOpen)
+    return () => window.removeEventListener('medrev-open-matiere', onOpen)
+  }, [systems, semester])
+
   useEffect(() => {
     if (semSystems.length === 0) { setSelectedSystemId(null); return }
     const wanted = wantedSystem.current
