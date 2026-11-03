@@ -12,10 +12,12 @@ import OnboardingTour from '@/components/OnboardingTour'
 import { currentSemestre } from '@/lib/semestre'
 import './layout.css'
 import MedRevMark from '@/components/MedRevMark'
+import { buildSubjectColorMap } from '@/lib/subjectColors'
 
 // Breakpoint mobile (en dessous : sidebar slide-in avec burger).
 
-type SystemRow = { id: string; year?: string; semestre?: number; schedule?: number[] | null }
+type SystemRow = { id: string; name?: string; color?: string | null; created_at?: string | null; year?: string; semestre?: number; schedule?: number[] | null }
+type SideSubject = { id: string; name: string; color: string; count: number }
 
 // "Déjà noté" au sens du calendrier : seul un score officiel compte. Un
 // temp_score posé via "retravailler plus tard" laisse le palier à faire.
@@ -85,6 +87,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // une app bancaire : chaque intention a son entrée, et chaque entrée mène
   // à la rubrique qui porte le même nom.
   const [menuOuvert, setMenuOuvert] = useState(false)
+  const [sideSubjects, setSideSubjects] = useState<SideSubject[]>([])
+  const [semOpen, setSemOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -316,7 +320,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const year = normalizeYear(profile.current_year)
     ;(async () => {
       const [{ data: sys }, { data }] = await Promise.all([
-        supabase.from('systems').select('id, year, semestre, schedule').eq('user_id', profile.id),
+        supabase.from('systems').select('id, name, color, created_at, year, semestre, schedule').eq('user_id', profile.id),
         supabase.from('lessons')
           .select('learn_date, steps, skips, postpones, system_id')
           .eq('user_id', profile.id),
@@ -331,6 +335,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .filter(s => normalizeYear(s.year) === year)
         .filter(s => semester === 'year' || s.semestre === semester)
       const ids = new Set(yearSystems.map(s => s.id))
+      // Matières de la barre latérale : celles du semestre affiché, avec leur
+      // couleur partagée et leur nombre de fiches.
+      const colorMap = buildSubjectColorMap(yearSystems)
+      const perSys = new Map<string, number>()
+      data.forEach(l => { const k = l.system_id as string; perSys.set(k, (perSys.get(k) || 0) + 1) })
+      setSideSubjects(
+        [...yearSystems]
+          .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
+          .map(s => ({ id: s.id, name: s.name || 'Matière', color: colorMap.get(s.id) || '#8A8F98', count: perSys.get(s.id) || 0 }))
+      )
       const scheduleFor = makeScheduleResolver(yearSystems)
       let cnt = 0
       data.forEach(l => {
@@ -367,23 +381,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* SIDEBAR */}
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert ? ' menu-open' : ''}`} data-tour="sidebar">
-        {/* Logo */}
-        <div className="db-logo">
-          <MedRevMark size={26} bg="#fff" fg="#15304E" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
+        {/* Logo et semestre affiché */}
+        <div className="db-top">
+          <Link href="/dashboard" className="db-logo">
+            <MedRevMark size={24} bg="#15304E" fg="#fff" className="db-logo-mk" /><span>MedRev</span>
+          </Link>
+          <div className="db-semdrop" data-tour="sem-toggle">
+            <button type="button" className="db-semdrop-btn" onClick={() => setSemOpen(o => !o)} aria-haspopup="menu" aria-expanded={semOpen}>
+              {semester === 'year' ? 'Année' : `Semestre ${semester}`}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            {semOpen && (
+              <div className="db-semdrop-menu" role="menu">
+                {([1, 2, 'year'] as const).map(v => (
+                  <button key={String(v)} type="button" role="menuitemradio" aria-checked={semester === v}
+                    className={semester === v ? 'on' : ''}
+                    onClick={() => { chooseSemester(v); setSemOpen(false) }}>
+                    {v === 'year' ? 'Année entière' : `Semestre ${v}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Semester toggle */}
-        <div className="db-sem" data-tour="sem-toggle">
-          <button className={semester === 1 ? 'active' : ''} onClick={() => chooseSemester(1)}>S1</button>
-          <button className={semester === 2 ? 'active' : ''} onClick={() => chooseSemester(2)}>S2</button>
-          <button className={semester === 'year' ? 'active' : ''} onClick={() => chooseSemester('year')} title="Vue année (toutes matières S1 + S2)">Année</button>
-        </div>
-
-        <div className="db-sep" />
 
         {/* Navigation */}
         <div className="db-nav-section">
-          <div className="db-nav-label db-lbl">Navigation</div>
           {NAV.map(n => (
             <Link
               key={n.href}
@@ -399,6 +422,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
         </div>
+
+        {/* Matières : raccourcis vers la page Fiches filtrée */}
+        {sideSubjects.length > 0 && (
+          <div className="db-subjects">
+            <div className="db-nav-label">Matières</div>
+            <div className="db-subjects-list">
+              {sideSubjects.map(s => (
+                <a key={s.id} href={`/dashboard/fiches?matiere=${s.id}`} className="db-subject">
+                  <span className="db-subject-dot" style={{ background: s.color }} />
+                  <span className="db-subject-name">{s.name}</span>
+                  <span className="db-subject-n">{s.count}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div style={{ flex: 1 }} />
 

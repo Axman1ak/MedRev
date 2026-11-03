@@ -372,3 +372,103 @@
 }
 @keyframes db-fade { from { opacity: 0; } }
 @keyframes db-up { from { transform: translateY(100%); } }
+
+/* ================== BARRE LATÉRALE CLAIRE (nov. 2026) ==================
+   Remplace le rail marine rétractable sur ordinateur : une barre claire
+   toujours ouverte, façon Notion, avec le semestre en menu déroulant,
+   les sections, les matières en raccourcis et le compte en bas.
+   Deux teintes possibles : grise (par défaut) ou bleutée (data-tone="blue"). */
+@media (min-width: 769px) {
+  .db-sidebar {
+    --sb: #F4F4F5; --sb-line: #E4E4E7; --sb-hover: #E9E9EC; --sb-active: #E4E5E9;
+    --sb-ink: #1B1D22; --sb-gray: #63676F; --sb-icon: #6B7079; --sb-dim: #9A9EA6;
+    --sb-accent: #2F5FD0; --sb-menu: #FFFFFF;
+    width: 248px; background: var(--sb); color: var(--sb-ink);
+    border-right: 1px solid var(--sb-line); padding: 18px 12px 12px;
+    overflow: visible; transition: none;
+  }
+  .db-sidebar[data-tone="blue"] {
+    --sb: #EEF3FB; --sb-line: #DBE4F2; --sb-hover: #E2EAF7; --sb-active: #DAE5F7;
+    --sb-ink: #13284A; --sb-gray: #55627A; --sb-icon: #4F6286; --sb-dim: #8C99AF;
+  }
+  [data-theme="dark"] .db-sidebar {
+    --sb: #17191E; --sb-line: #2A2D34; --sb-hover: #22252C; --sb-active: #262A33;
+    --sb-ink: #ECEEF2; --sb-gray: #A3A8B3; --sb-icon: #9AA0AC; --sb-dim: #757B87;
+    --sb-accent: #7EA2F0; --sb-menu: #1F2228;
+  }
+  .db-sidebar:hover, .db-sidebar.menu-open, .db-sidebar.tour-open { width: 248px; box-shadow: none; }
+  .db-sidebar .db-lbl { opacity: 1; }
+  .db-main { margin-left: 248px; }
+
+  .db-top { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 18px 8px; }
+  .db-sidebar .db-logo {
+    padding: 0; gap: 9px; font-size: 18px; font-weight: 800; letter-spacing: -.02em;
+    color: var(--sb-ink); text-decoration: none;
+  }
+  .db-semdrop { position: relative; }
+  .db-semdrop-btn {
+    display: flex; align-items: center; gap: 4px; padding: 5px 7px; border: 0; border-radius: 7px;
+    background: none; color: var(--sb-gray); font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .db-semdrop-btn:hover, .db-semdrop-btn[aria-expanded="true"] { background: var(--sb-hover); color: var(--sb-ink); }
+  .db-semdrop-btn svg { width: 13px; height: 13px; stroke-width: 2; }
+  .db-semdrop-menu {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 80; min-width: 160px;
+    background: var(--sb-menu); border: 1px solid var(--sb-line); border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(20, 30, 45, .14); padding: 5px;
+  }
+  .db-semdrop-menu button {
+    display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 7px;
+    background: none; font: inherit; font-size: 13.5px; color: var(--sb-ink); cursor: pointer;
+  }
+  .db-semdrop-menu button:hover { background: var(--sb-hover); }
+  .db-semdrop-menu button.on { font-weight: 600; color: var(--sb-accent); }
+
+  .db-sidebar .db-sep { display: none; }
+  .db-sidebar .db-nav-section { margin-bottom: 0; }
+  .db-sidebar .db-nav-item {
+    height: 34px; padding: 0 10px; gap: 11px; border-radius: 8px; margin-bottom: 2px;
+    color: var(--sb-ink); font-size: 14px; font-weight: 500;
+  }
+  .db-sidebar .db-nav-item:hover { background: var(--sb-hover); color: var(--sb-ink); }
+  .db-sidebar .db-nav-item.active { background: var(--sb-active); color: var(--sb-ink); font-weight: 600; }
+  .db-sidebar .db-nav-item.active::before { display: none; }
+  .db-sidebar .db-nav-item .ic { width: 18px; height: 18px; min-width: 18px; color: var(--sb-icon); }
+  .db-sidebar .db-nav-item.active .ic { color: var(--sb-accent); }
+  .db-sidebar .db-nav-item .ic svg { width: 17px; height: 17px; stroke-width: 1.8; }
+  .db-sidebar .db-nav-item .badge {
+    background: none; color: #B4432F; font-size: 12.5px; font-weight: 600; padding: 0;
+  }
+
+  .db-subjects { margin-top: 22px; min-height: 0; display: flex; flex-direction: column; }
+  .db-sidebar .db-nav-label {
+    font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0;
+    color: var(--sb-gray); padding: 0 10px 8px; margin: 0;
+  }
+  .db-subjects-list { overflow-y: auto; max-height: calc(100vh - 470px); }
+  .db-subject {
+    display: flex; align-items: center; gap: 11px; height: 31px; padding: 0 10px; border-radius: 8px;
+    color: var(--sb-ink); font-size: 13.5px; text-decoration: none;
+  }
+  .db-subject:hover { background: var(--sb-hover); }
+  .db-subject-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .db-subject-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .db-subject-n { font-size: 12px; color: var(--sb-dim); }
+
+  .db-sidebar .db-user-wrap { border-top: 1px solid var(--sb-line); padding: 10px 2px 0; }
+  .db-sidebar .db-user-card { padding: 7px 8px; justify-content: flex-start; background: none; }
+  .db-sidebar .db-user-card > .db-lbl, .db-sidebar .db-user-card .db-user-chev { display: block; }
+  .db-sidebar:hover .db-user-card, .db-sidebar.menu-open .db-user-card { padding: 7px 8px; background: none; }
+  .db-sidebar .db-user-card:hover, .db-sidebar:hover .db-user-card:hover { background: var(--sb-hover); }
+  .db-sidebar .db-user-avatar { background: #E3EAF8; color: #2F5FD0; width: 34px; height: 34px; min-width: 34px; font-size: 12.5px; }
+  .db-sidebar .db-user-card:hover .db-user-avatar { background: #D6E1F6; color: #2F5FD0; }
+  .db-sidebar .db-user-name { color: var(--sb-ink); font-size: 13.5px; text-align: left; }
+  .db-sidebar .db-user-meta { color: var(--sb-gray); font-size: 12px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .db-sidebar .db-user-chev { color: var(--sb-dim); }
+  .db-sidebar .db-usermenu { background: var(--sb-menu); border-color: var(--sb-line); box-shadow: 0 14px 34px rgba(20, 30, 45, .16); }
+  .db-sidebar .db-usermenu-item { color: var(--sb-ink); }
+  .db-sidebar .db-usermenu-item:hover { background: var(--sb-hover); color: var(--sb-ink); }
+  .db-sidebar .db-usermenu-item.danger { color: #B4432F; }
+  .db-sidebar .db-usermenu-item.danger:hover { background: #FBEDEA; color: #B4432F; }
+  .db-sidebar .db-usermenu-sep { background: var(--sb-line); }
+}
