@@ -377,24 +377,15 @@
    Remplace le rail marine rétractable sur ordinateur : une barre claire
    toujours ouverte, façon Notion, avec le semestre en menu déroulant,
    les sections, les matières en raccourcis et le compte en bas.
-   Deux teintes possibles : grise (par défaut) ou bleutée (data-tone="blue"). */
+   Teinte marine, comme le rail d'avant. */
 @media (min-width: 769px) {
   .db-sidebar {
-    --sb: #F4F4F5; --sb-line: #E4E4E7; --sb-hover: #E9E9EC; --sb-active: #E4E5E9;
-    --sb-ink: #1B1D22; --sb-gray: #63676F; --sb-icon: #6B7079; --sb-dim: #9A9EA6;
-    --sb-accent: #2F5FD0; --sb-menu: #FFFFFF;
+    --sb: #15304E; --sb-line: rgba(255,255,255,.10); --sb-hover: rgba(255,255,255,.07); --sb-active: rgba(255,255,255,.12);
+    --sb-ink: #FFFFFF; --sb-gray: rgba(255,255,255,.62); --sb-icon: rgba(255,255,255,.62); --sb-dim: rgba(255,255,255,.42);
+    --sb-accent: #7FB0D4; --sb-menu: #1B3B5E;
     width: 248px; background: var(--sb); color: var(--sb-ink);
     border-right: 1px solid var(--sb-line); padding: 18px 12px 12px;
     overflow: visible; transition: none;
-  }
-  .db-sidebar[data-tone="blue"] {
-    --sb: #EEF3FB; --sb-line: #DBE4F2; --sb-hover: #E2EAF7; --sb-active: #DAE5F7;
-    --sb-ink: #13284A; --sb-gray: #55627A; --sb-icon: #4F6286; --sb-dim: #8C99AF;
-  }
-  [data-theme="dark"] .db-sidebar {
-    --sb: #17191E; --sb-line: #2A2D34; --sb-hover: #22252C; --sb-active: #262A33;
-    --sb-ink: #ECEEF2; --sb-gray: #A3A8B3; --sb-icon: #9AA0AC; --sb-dim: #757B87;
-    --sb-accent: #7EA2F0; --sb-menu: #1F2228;
   }
   .db-sidebar:hover, .db-sidebar.menu-open, .db-sidebar.tour-open { width: 248px; box-shadow: none; }
   .db-sidebar .db-lbl { opacity: 1; }
@@ -415,7 +406,7 @@
   .db-semdrop-menu {
     position: absolute; right: 0; top: calc(100% + 4px); z-index: 80; min-width: 160px;
     background: var(--sb-menu); border: 1px solid var(--sb-line); border-radius: 10px;
-    box-shadow: 0 12px 30px rgba(20, 30, 45, .14); padding: 5px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .42); padding: 5px;
   }
   .db-semdrop-menu button {
     display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 7px;
@@ -437,7 +428,7 @@
   .db-sidebar .db-nav-item.active .ic { color: var(--sb-accent); }
   .db-sidebar .db-nav-item .ic svg { width: 17px; height: 17px; stroke-width: 1.8; }
   .db-sidebar .db-nav-item .badge {
-    background: none; color: #B4432F; font-size: 12.5px; font-weight: 600; padding: 0;
+    background: var(--sb-accent); color: #15304E; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
   }
 
   .db-subjects { margin-top: 22px; min-height: 0; display: flex; flex-direction: column; }
@@ -460,15 +451,15 @@
   .db-sidebar .db-user-card > .db-lbl, .db-sidebar .db-user-card .db-user-chev { display: block; }
   .db-sidebar:hover .db-user-card, .db-sidebar.menu-open .db-user-card { padding: 7px 8px; background: none; }
   .db-sidebar .db-user-card:hover, .db-sidebar:hover .db-user-card:hover { background: var(--sb-hover); }
-  .db-sidebar .db-user-avatar { background: #E3EAF8; color: #2F5FD0; width: 34px; height: 34px; min-width: 34px; font-size: 12.5px; }
-  .db-sidebar .db-user-card:hover .db-user-avatar { background: #D6E1F6; color: #2F5FD0; }
+  .db-sidebar .db-user-avatar { background: #22507E; color: #fff; width: 34px; height: 34px; min-width: 34px; font-size: 12.5px; }
+  .db-sidebar .db-user-card:hover .db-user-avatar { background: var(--sb-accent); color: #15304E; }
   .db-sidebar .db-user-name { color: var(--sb-ink); font-size: 13.5px; text-align: left; }
   .db-sidebar .db-user-meta { color: var(--sb-gray); font-size: 12px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .db-sidebar .db-user-chev { color: var(--sb-dim); }
-  .db-sidebar .db-usermenu { background: var(--sb-menu); border-color: var(--sb-line); box-shadow: 0 14px 34px rgba(20, 30, 45, .16); }
+  .db-sidebar .db-usermenu { background: var(--sb-menu); border-color: rgba(255,255,255,.12); box-shadow: 0 18px 44px rgba(0, 0, 0, .42); }
   .db-sidebar .db-usermenu-item { color: var(--sb-ink); }
   .db-sidebar .db-usermenu-item:hover { background: var(--sb-hover); color: var(--sb-ink); }
-  .db-sidebar .db-usermenu-item.danger { color: #B4432F; }
-  .db-sidebar .db-usermenu-item.danger:hover { background: #FBEDEA; color: #B4432F; }
+  .db-sidebar .db-usermenu-item.danger { color: #E99; }
+  .db-sidebar .db-usermenu-item.danger:hover { background: rgba(230,120,120,.14); color: #FBB; }
   .db-sidebar .db-usermenu-sep { background: var(--sb-line); }
 }

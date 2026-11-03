@@ -384,7 +384,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo et semestre affiché */}
         <div className="db-top">
           <Link href="/dashboard" className="db-logo">
-            <MedRevMark size={24} bg="#15304E" fg="#fff" className="db-logo-mk" /><span>MedRev</span>
+            <MedRevMark size={24} bg="#fff" fg="#15304E" className="db-logo-mk" /><span>MedRev</span>
           </Link>
           <div className="db-semdrop" data-tour="sem-toggle">
             <button type="button" className="db-semdrop-btn" onClick={() => setSemOpen(o => !o)} aria-haspopup="menu" aria-expanded={semOpen}>
