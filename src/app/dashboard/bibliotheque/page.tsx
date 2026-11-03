@@ -73,10 +73,10 @@ type Book = { key: string; w: number; h: number; c: string; gold: boolean; tip: 
 const BOOK_GAP = 2
 const D = { padX: 52, padY: 38, label: 158, rowsPad: 12, book: 8, rowH: 77, rowGap: 6, shelfPad: 8, shelfGap: 6, legend: 40, minLabelH: 40 }
 
-function fitScale(cw: number, ch: number, counts: number[]): number {
+function fitScale(cw: number, ch: number, counts: number[], bw: number = D.book): number {
   if (cw <= 0 || ch <= 0) return 1
   const heightAt = (s: number) => {
-    const perRow = Math.max(10, Math.floor((cw / s - D.label - D.rowsPad + BOOK_GAP) / (D.book + BOOK_GAP)))
+    const perRow = Math.max(10, Math.floor((cw / s - D.label - D.rowsPad + BOOK_GAP) / (bw + BOOK_GAP)))
     let h = D.legend
     counts.forEach((n, i) => {
       const rows = Math.max(1, Math.ceil(n / perRow))
@@ -98,6 +98,11 @@ export default function BibliothequePage() {
   const [loading, setLoading] = useState(true)
   const [semestre, setSemestre] = useState<Semestre>(currentSemestre)
   const today = useMemo(() => todayStr(), [])
+  const [look, setLook] = useState<'' | 'bois' | 'epure' | 'site'>('')
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('style')
+    if (v === 'bois' || v === 'epure' || v === 'site') setLook(v)
+  }, [])
 
   // Taille de la bibliothèque à l'écran (ordinateur : hauteur fixe ; téléphone : défile)
   const [box, setBox] = useState({ w: 0, h: 0, phone: false })
@@ -198,9 +203,11 @@ export default function BibliothequePage() {
   const progress = next ? (total - rank.at) / (next.at - rank.at) : 1
 
   // Mise en page des étagères
-  const bookW = box.phone ? 5 : D.book
+  // Aperçu des styles (?style=bois|epure|site) : livres plus larges.
+  const wide = !!look
+  const bookW = box.phone ? (wide ? 7 : 5) : (wide ? 12 : D.book)
   const gap = box.phone ? 1 : BOOK_GAP
-  const scale = box.phone ? 1 : fitScale(box.w - D.padX, box.h - D.padY, shelves.map(s => s.books.length))
+  const scale = box.phone ? 1 : fitScale(box.w - D.padX, box.h - D.padY, shelves.map(s => s.books.length), bookW)
   const innerW = box.phone ? box.w - 24 : (box.w - D.padX) / scale
   const perRow = Math.max(10, Math.floor((innerW - (box.phone ? 0 : D.label) - D.rowsPad + gap) / (bookW + gap)))
   const fitStyle: React.CSSProperties = box.phone || !box.w ? {} : { width: innerW, transform: `scale(${scale})`, transformOrigin: 'top left' }
@@ -209,7 +216,7 @@ export default function BibliothequePage() {
 
   let delay = 0
   return (
-    <div className="bib-page">
+    <div className={`bib-page${look ? ` bs bs-${look}` : ''}`}>
       <header className="bib-head">
         <h1>Ta bibliothèque</h1>
         <p>Chaque révision notée ajoute un livre sur l&apos;étagère de sa matière. Les livres ne partent jamais.</p>
@@ -244,6 +251,7 @@ export default function BibliothequePage() {
                             <span key={b.key} className="bib-book" title={b.tip}
                               style={{ width: bookW, height: box.phone ? Math.round(b.h * .66) : b.h, background: b.c, animationDelay: `${d}ms` }}>
                               {b.gold && <span className="bib-gold" />}
+                              {wide && <span className="bib-spine" />}
                             </span>
                           )
                         })}
@@ -262,6 +270,31 @@ export default function BibliothequePage() {
           </div>
         </section>
 
+        {look ? (
+        <aside className="bib-side">
+          <div className="bs-card">
+            <div className="bib-kicker">Ton rang</div>
+            <div className="bs-rank-row">
+              <div className="bs-rank-name">{rank.name}</div>
+              <div className="bs-rank-n">{total} livre{total > 1 ? 's' : ''}</div>
+            </div>
+            <div className="bib-bar"><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+            <div className="bs-next">{next ? <>Encore <strong>{next.at - total}</strong> avant {next.name}</> : 'Dernier rang atteint'}</div>
+            <ol className="bs-steps">
+              {RANKS.map((r, i) => (
+                <li key={r.name} className={i < rankIdx ? 'done' : i === rankIdx ? 'cur' : ''} title={`${r.name}, ${r.at} livres. ${r.treasure}`}>
+                  <span className="bs-dot" />
+                  <span className="bs-lbl">{r.name}</span>
+                </li>
+              ))}
+            </ol>
+            <div className="bs-week">
+              <div><b>+{week.n}</b><span>cette semaine</span></div>
+              <div><b>{week.five}</b><span>notés 5/5</span></div>
+            </div>
+          </div>
+        </aside>
+        ) : (
         <aside className="bib-side">
           <div className="bib-rank">
             <div className="bib-rank-top">
@@ -305,6 +338,7 @@ export default function BibliothequePage() {
             <div><b>{week.five}</b><span>noté{week.five > 1 ? 's' : ''} 5/5 cette semaine</span></div>
           </div>
         </aside>
+        )}
       </div>
     </div>
   )

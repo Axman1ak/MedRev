@@ -124,3 +124,76 @@
   .bib-board { height: 9px; }
   .bib-legend { margin-top: 4px; }
 }
+
+/* ================= Aperçu de styles (?style=bois|epure|site) ================= */
+/* Commun : livres plus larges avec un vrai dos, colonne de droite en une seule carte */
+.bs .bib-books { height: 70px; gap: 2px; }
+.bs .bib-book { position: relative; border-radius: 3px 3px 1px 1px; overflow: hidden; }
+.bs .bib-spine { position: absolute; left: 0; right: 0; top: 18%; bottom: 16%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.28) 0 1.5px, transparent 1.5px 4px, rgba(255,255,255,.18) 4px 5px, transparent 5px calc(100% - 5px), rgba(0,0,0,.18) calc(100% - 5px) calc(100% - 4px), transparent calc(100% - 4px) calc(100% - 1.5px), rgba(0,0,0,.22) calc(100% - 1.5px)); }
+.bs .bib-gold { position: absolute; top: 0; left: 0; right: 0; height: 4px; margin: 0; }
+.bs-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.bs-rank-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: -4px; }
+.bs-rank-name { font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 30px; line-height: 1.1; }
+.bs-rank-n { font-size: 13.5px; color: var(--text-secondary); white-space: nowrap; }
+.bs .bib-bar { margin-top: 0; }
+.bs-next { font-size: 13px; color: var(--text-secondary); }
+.bs-next strong { color: var(--text-primary); }
+.bs-steps { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); position: relative; }
+.bs-steps::before { content: ''; position: absolute; left: 8%; right: 8%; top: 6px; height: 2px; background: var(--border-subtle); }
+.bs-steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: default; }
+.bs-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-strong); box-sizing: border-box; }
+.bs-steps li.done .bs-dot { background: #15304E; border-color: #15304E; }
+.bs-steps li.cur .bs-dot { background: #D9B24A; border-color: #D9B24A; box-shadow: 0 0 0 4px rgba(217,178,74,.22); }
+.bs-lbl { font-size: 10.5px; color: var(--text-tertiary); text-align: center; line-height: 1.15; }
+.bs-steps li.cur .bs-lbl { color: var(--text-primary); font-weight: 700; }
+.bs-week { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.bs-week > div { display: flex; flex-direction: column; }
+.bs-week b { font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 600; }
+.bs-week span { font-size: 12.5px; color: var(--text-secondary); }
+.bs .bib-legend span:last-child { display: none; }
+
+/* ---------- 1. Bois : une vraie bibliothèque de cabinet d'étude ---------- */
+.bs-bois .bib-case {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, transparent 2px 11px),
+    linear-gradient(180deg, #3E2919 0%, #2C1C11 100%);
+  border: 10px solid #5B3B22; border-radius: 14px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,.55), 0 24px 40px -24px rgba(40,22,10,.6);
+}
+.bs-bois .bib-board { height: 12px; border-radius: 1px; background: linear-gradient(180deg, #A06A3E 0%, #7C4F2C 40%, #5C3A20 100%); box-shadow: 0 1px 0 rgba(255,220,180,.25) inset, 0 8px 10px -4px rgba(0,0,0,.55); }
+.bs-bois .bib-shelf-name { color: #F3E6CF; }
+.bs-bois .bib-shelf-n { color: #C9B08C; }
+.bs-bois .bib-book { filter: saturate(.82) brightness(.95); box-shadow: inset -3px 0 0 rgba(0,0,0,.28), inset 2px 0 0 rgba(255,255,255,.12); }
+.bs-bois .bib-spine { background: linear-gradient(180deg, #D9B24A 0 1.5px, transparent 1.5px 4px, rgba(217,178,74,.7) 4px 5px, transparent 5px calc(100% - 5px), rgba(217,178,74,.7) calc(100% - 5px) calc(100% - 4px), transparent calc(100% - 4px) calc(100% - 1.5px), #D9B24A calc(100% - 1.5px)); opacity: .75; }
+.bs-bois .bib-legend { color: #C9B08C; border-top-color: rgba(255,230,200,.1); }
+.bs-bois .bs-card { background: #FBF6EC; border-color: #E8DCC4; }
+.bs-bois .bs-rank-name { color: #5B3B22; }
+.bs-bois .bib-bar i { background: linear-gradient(90deg, #C99A2E, #E9C46A); }
+.bs-bois .bs-steps li.done .bs-dot { background: #5B3B22; border-color: #5B3B22; }
+
+/* ---------- 2. Épurée : fond clair, étagères fines, livres arrondis ---------- */
+.bs-epure .bib-case { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 20px; box-shadow: none; }
+.bs-epure .bib-board { height: 2px; border-radius: 2px; background: #DEDBD3; box-shadow: none; }
+.bs-epure .bib-shelf-name { color: var(--text-primary); }
+.bs-epure .bib-shelf-n { color: var(--text-tertiary); }
+.bs-epure .bib-books { gap: 2px; }
+.bs-epure .bib-book { border-radius: 4px; box-shadow: none; filter: saturate(.8) brightness(1.06); }
+.bs-epure .bib-spine { display: none; }
+.bs-epure .bib-gold { height: 6px; width: 6px; border-radius: 50%; left: 50%; top: 4px; transform: translateX(-50%); background: #fff; }
+.bs-epure .bib-legend { color: var(--text-tertiary); border-top-color: var(--border-subtle); }
+.bs-epure .bib-legend-gold { width: 6px; height: 6px; border-radius: 50%; background: #9AA0AA; }
+.bs-epure .bs-card { box-shadow: none; }
+.bs-epure .bib-bar { height: 6px; }
+.bs-epure .bib-bar i { background: #15304E; }
+
+/* ---------- 3. Comme le reste du site : cartes blanches du tableau de bord ---------- */
+.bs-site .bib-case { background: #fff; border: 1px solid #EBE7DF; border-radius: 20px; box-shadow: none; }
+.bs-site .bib-board { height: 10px; border-radius: 3px; background: linear-gradient(180deg, #EFE7D8 0%, #E2D7C2 100%); box-shadow: 0 4px 8px -4px rgba(120,100,60,.35); }
+.bs-site .bib-shelf-name { color: #181915; font-size: 14px; }
+.bs-site .bib-shelf-n { color: #5F5F58; }
+.bs-site .bib-book { box-shadow: inset -3px 0 0 rgba(0,0,0,.18), inset 2px 0 0 rgba(255,255,255,.2); }
+.bs-site .bib-legend { color: #5F5F58; border-top-color: #EBE7DF; }
+.bs-site .bs-card { border-color: #EBE7DF; border-radius: 20px; }
+.bs-site .bs-rank-name { color: #15304E; }
+.bs-site .bib-bar i { background: #15304E; }
