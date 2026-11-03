@@ -181,6 +181,23 @@ export default function FichesPage() {
   const [filterNote, setFilterNote] = useState<FilterNote>('all')
   const [filterProgress, setFilterProgress] = useState<FilterProgress>('all')
   const [showDueOnly, setShowDueOnly] = useState(false)
+  // Ordinateur : les matières se choisissent dans la barre de gauche.
+  // « Toutes les matières » affiche toutes les fiches, groupées par matière.
+  const [isDesk, setIsDesk] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 769px)')
+    const on = () => setIsDesk(mq.matches)
+    on(); mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const [titleMenu, setTitleMenu] = useState(false)
+  useEffect(() => {
+    if (!titleMenu) return
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('.fi-h1-menu')) setTitleMenu(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [titleMenu])
   const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState('')
   const [semester, setSemester] = useState<1 | 2 | 'year'>(currentSemestre)
@@ -332,7 +349,7 @@ export default function FichesPage() {
     matiereFromUrl.current = true
     const id = new URLSearchParams(window.location.search).get('matiere')
     const sys = id ? systems.find(s => s.id === id) : null
-    if (!sys) return
+    if (!sys) { if (window.matchMedia('(min-width: 769px)').matches) setShowAll(true); return }
     wantedSystem.current = sys.id
     const sem = (sys as any).semestre
     if (semester !== 'year' && (sem === 1 || sem === 2) && sem !== semester) setSemester(sem)
@@ -342,9 +359,12 @@ export default function FichesPage() {
   // Clic sur une matière dans la barre de gauche alors qu'on est déjà ici.
   useEffect(() => {
     function onOpen(e: Event) {
-      const id = (e as CustomEvent<string>).detail
+      const id = (e as CustomEvent<string | null>).detail
+      setTitleMenu(false)
+      if (!id) { setShowAll(true); setShowDueOnly(false); return }
       const sys = systems.find(s => s.id === id)
       if (!sys) return
+      setShowAll(false)
       const sem = (sys as any).semestre
       if (semester !== 'year' && (sem === 1 || sem === 2) && sem !== semester) {
         wantedSystem.current = sys.id
@@ -738,8 +758,12 @@ export default function FichesPage() {
       pool = lessons.filter(l => semSystems.find(s => s.id === l.system_id))
       pool = pool.filter(l => getDueStepIndex(l, today, schedOf(l.system_id)) !== -1)
     } else {
-      if (!selectedSystem) return []
-      pool = lessons.filter(l => l.system_id === selectedSystem.id)
+      if (showAll && isDesk) {
+        pool = lessons.filter(l => semSystems.find(s => s.id === l.system_id))
+      } else {
+        if (!selectedSystem) return []
+        pool = lessons.filter(l => l.system_id === selectedSystem.id)
+      }
     }
     if (search) {
       const q = search.toLowerCase()
@@ -752,7 +776,7 @@ export default function FichesPage() {
       pool = pool.filter(l => progressKind(l, schedOf(l.system_id)) === filterProgress)
     }
     return pool
-  }, [lessons, selectedSystem, filterNote, filterProgress, showDueOnly, search, semSystems, today, schedOf])
+  }, [lessons, selectedSystem, filterNote, filterProgress, showDueOnly, showAll, isDesk, search, semSystems, today, schedOf])
 
   const dueTodayCount = useMemo(
     () => lessons.filter(l => semSystems.find(s => s.id === l.system_id) && getDueStepIndex(l, today, schedOf(l.system_id)) !== -1).length,
@@ -792,10 +816,40 @@ export default function FichesPage() {
         {/* Header */}
         <div className="fi-topbar">
           <div>
-            <h1 className="fi-h1">Mes matières</h1>
-            <div className="fi-sub">
-              {semester === 'year' ? 'Année complète' : `Semestre ${semester}`}, {semSystems.length} matière{semSystems.length > 1 ? 's' : ''}, {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
-            </div>
+            {isDesk && !showAll && !showDueOnly && selectedSystem ? (() => {
+              const c = colorOfSystem.get(selectedSystem.id) || SUBJ_COLORS[0]
+              const counts = countsBySystem.get(selectedSystem.id) || { total: 0, due: 0 }
+              return (
+                <>
+                  <div className="fi-h1-row">
+                    <span className="fi-h1-ic" style={{ color: c, background: `${c}1A` }}><SubjectIcon name={selectedSystem.name} /></span>
+                    <h1 className="fi-h1">{selectedSystem.name}</h1>
+                    <div className="fi-h1-menu">
+                      <button type="button" className="fi-btn-icon mr-tip" data-tip="Options de la matière" aria-label="Options de la matière" onClick={() => setTitleMenu(v => !v)}>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>
+                      </button>
+                      {titleMenu && (
+                        <div className="fi-menu" onClick={e => e.stopPropagation()}>
+                          <button type="button" className="fi-menu-item" onClick={() => { setTitleMenu(false); openEdit('system', selectedSystem.id, selectedSystem.name) }}>Renommer</button>
+                          <button type="button" className="fi-menu-item" onClick={() => { setTitleMenu(false); openSchedModal(selectedSystem.id) }}>Paliers de révision (J+…)</button>
+                          <button type="button" className="fi-menu-item fi-menu-item-danger" onClick={() => { setTitleMenu(false); openDelete('system', selectedSystem.id, selectedSystem.name) }}>Supprimer</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="fi-sub">
+                    {counts.total} fiche{counts.total > 1 ? 's' : ''}{counts.due > 0 ? `, ${counts.due} à réviser aujourd'hui` : ''}
+                  </div>
+                </>
+              )
+            })() : (
+              <>
+                <h1 className="fi-h1">{isDesk ? 'Toutes les matières' : 'Mes matières'}</h1>
+                <div className="fi-sub">
+                  {semester === 'year' ? 'Année complète' : `Semestre ${semester}`}, {semSystems.length} matière{semSystems.length > 1 ? 's' : ''}, {totalSemFiches} fiche{totalSemFiches > 1 ? 's' : ''}
+                </div>
+              </>
+            )}
           </div>
           {/* TÉLÉPHONE : un seul + qui ouvre le menu d'ajout (façon iOS) */}
           <div className="fi-m-plus-wrap">
@@ -905,8 +959,8 @@ export default function FichesPage() {
                   className={`mtab${active ? ' active' : ''}`}
                   role="button"
                   tabIndex={0}
-                  onClick={() => { setSelectedSystemId(sys.id); setShowDueOnly(false) }}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelectedSystemId(sys.id); setShowDueOnly(false) } }}
+                  onClick={() => { setSelectedSystemId(sys.id); setShowDueOnly(false); setShowAll(false) }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelectedSystemId(sys.id); setShowDueOnly(false); setShowAll(false) } }}
                   style={active ? { background: c, borderColor: c } : undefined}
                 >
                   <span className="micon" style={active ? undefined : { color: c, background: `${c}1A` }}>
@@ -1132,6 +1186,29 @@ export default function FichesPage() {
 
             // Vue "à réviser" (multi-matières) ou matière sans chapitres :
             // grille à plat, comme avant.
+            // « Toutes les matières » : une section par matière.
+            if (showAll && isDesk && !showDueOnly) {
+              return (
+                <div className="fi-chap-sections">
+                  {semSystems.map(sys => {
+                    const list = visibleLessons.filter(l => l.system_id === sys.id)
+                    if (list.length === 0) return null
+                    const c = colorOfSystem.get(sys.id) || SUBJ_COLORS[0]
+                    return (
+                      <section key={sys.id} className="fi-chap-section">
+                        <h2 className="fi-chap-head">
+                          <span className="fi-sys-dot" style={{ background: c }} />
+                          <span className="fi-chap-name">{sys.name}</span>
+                          <span className="fi-chap-count">{list.length}</span>
+                          <span className="fi-chap-rule" aria-hidden="true" />
+                        </h2>
+                        <div className="fi-grid">{list.map(renderCard)}</div>
+                      </section>
+                    )
+                  })}
+                </div>
+              )
+            }
             const hasChapters = !showDueOnly && (visibleLessons.some(l => lessonChapter(l) !== '') || pendingChapters.length > 0)
             if (!hasChapters) {
               return (
