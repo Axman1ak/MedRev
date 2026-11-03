@@ -13,7 +13,7 @@
 .bib-shelf-name { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #EAF1F8; }
 .bib-shelf-name span, .bib-shelf-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bib-shelf-name i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
-.bib-shelf-n { font-size: 12px; color: #A9C2DA; margin: 3px 0 0 16px; }
+.bib-shelf-n { font-size: 12px; color: #A9C2DA; margin: 3px 0 0 16px; line-height: 1.35; }
 .bib-shelf-rows { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .bib-books { display: flex; align-items: flex-end; gap: 2px; height: 68px; padding: 0 6px; overflow: hidden; }
 .bib-book { flex: 0 1 auto; min-width: 3px; display: block; border-radius: 2px 2px 1px 1px; box-shadow: inset -2px 0 0 rgba(0,0,0,.22), inset 1px 0 0 rgba(255,255,255,.18); padding-top: 7px; box-sizing: border-box; animation: bib-rise .5s cubic-bezier(.2,.8,.2,1) both; transition: transform .15s; }
@@ -123,4 +123,116 @@
   .bib-books { height: 68px; padding: 0 6px; }
   .bib-board { height: 9px; }
   .bib-legend { margin-top: 4px; }
+}
+
+/* ================== Bibliothèque v3 (nov. 2026) ==================
+   1 fiche = 1 livre. Poussière quand la fiche est en retard, éclat quand
+   elle vient d'être révisée, détail de la fiche à droite au clic. */
+.bib-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.bib-dust-all { flex: none; background: #15304E; color: #fff; font-weight: 700; font-size: 14px; padding: 11px 18px; border-radius: 11px; text-decoration: none; transition: transform .12s, background .15s; }
+.bib-dust-all:hover { transform: translateY(-2px); background: #22507E; }
+
+.bib-books { height: 74px; gap: 3px; }
+.bib-book {
+  position: relative; border: 0; padding: 0; margin: 0; cursor: pointer; overflow: hidden;
+  border-radius: 2px 2px 1px 1px;
+  box-shadow: inset -3px 0 0 rgba(0,0,0,.20), inset 2px 0 0 rgba(255,255,255,.16), 0 1px 0 rgba(0,0,0,.25);
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), filter .2s, box-shadow .2s;
+}
+.bib-book:hover { transform: translateY(-5px); }
+.bib-book:focus-visible { outline: 2px solid #E9C46A; outline-offset: 2px; }
+.bib-book.on { transform: translateY(-12px); box-shadow: inset -3px 0 0 rgba(0,0,0,.2), 0 10px 18px -6px rgba(0,0,0,.6), 0 0 0 2px #E9C46A; }
+/* Nervures du dos */
+.bib-bands { position: absolute; left: 0; right: 0; top: 22%; height: 58%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.22) 0 2px, transparent 2px calc(100% - 2px), rgba(0,0,0,.18) calc(100% - 2px)); }
+.bib-gold { position: absolute; top: 0; left: 0; right: 0; height: 5px; margin: 0; background: linear-gradient(180deg, #F4D78A, #C99A2E); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+/* Fiche jamais révisée : livre pâle, sans relief */
+.bib-book.blank { box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); opacity: .75; }
+.bib-book.blank .bib-bands { display: none; }
+/* Poussière : un voile mat se pose sur le haut du livre, quelques grains,
+   et la couleur se ternit avec le temps. */
+.bib-dust { position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle, rgba(240,234,222,.95) 0 .8px, transparent 1.2px) 25% 6% / 4px 4px no-repeat,
+    radial-gradient(circle, rgba(240,234,222,.9) 0 .8px, transparent 1.2px) 70% 13% / 4px 4px no-repeat,
+    radial-gradient(circle, rgba(240,234,222,.8) 0 .8px, transparent 1.2px) 40% 24% / 4px 4px no-repeat,
+    linear-gradient(180deg, rgba(226,219,205,.92) 0%, rgba(226,219,205,.5) 9%, rgba(226,219,205,.14) 30%, transparent 55%); }
+.bib-book.dust-1 { filter: saturate(.85); }
+.bib-book.dust-1 .bib-dust { opacity: .45; }
+.bib-book.dust-2 { filter: saturate(.6) brightness(.93); }
+.bib-book.dust-2 .bib-dust { opacity: .8; }
+.bib-book.dust-3 { filter: saturate(.42) brightness(.86); transform: rotate(-4deg); transform-origin: bottom left; }
+.bib-book.dust-3:hover { transform: rotate(-4deg) translateY(-5px); }
+.bib-book.dust-3.on { transform: rotate(0) translateY(-12px); }
+.bib-book.dust-3 .bib-dust { opacity: 1; }
+/* À réviser aujourd'hui : un liseré qui respire */
+.bib-book.due::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 1.5px #E9C46A; animation: bib-due 1.8s ease-in-out infinite; pointer-events: none; }
+@keyframes bib-due { 50% { opacity: .25; } }
+/* Révisé aujourd'hui ou hier : un reflet passe */
+.bib-book.fresh::before { content: ''; position: absolute; top: 0; bottom: 0; width: 60%; left: -80%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: bib-shine 3.2s ease-in-out infinite; pointer-events: none; }
+@keyframes bib-shine { 0%, 55% { left: -80%; } 85%, 100% { left: 130%; } }
+
+.bib-shelf-dusty { color: #E9C46A; font-weight: 600; }
+.bib-shelf-go { display: inline-block; margin: 7px 0 0 16px; font-size: 12px; font-weight: 700; color: #15304E; background: #E9C46A; padding: 4px 10px; border-radius: 7px; text-decoration: none; }
+.bib-shelf-go:hover { background: #F4D78A; }
+
+.bib-legend i.lg-book { display: inline-block; width: 7px; height: 16px; border-radius: 1px; background: #5B8ED4; margin-right: 2px; vertical-align: middle; box-shadow: inset -2px 0 0 rgba(0,0,0,.2); }
+.bib-legend i.lg-thick { width: 12px; margin-right: 6px; }
+.bib-legend i.lg-dust { background: linear-gradient(180deg, #DCD4C3 0%, #93A3B8 35%, #6F86A3 100%); margin-right: 6px; }
+.bib-legend i.lg-gold { background: linear-gradient(180deg, #E9C46A 0 4px, #5B8ED4 4px); margin-right: 6px; }
+.bib-legend-hint { margin-left: auto; }
+
+/* Détail de la fiche, à la place du rang */
+.bib-detail { position: relative; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px; animation: bib-slide .22s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes bib-slide { from { opacity: 0; transform: translateX(14px); } }
+.bib-detail-x { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; display: grid; place-items: center; }
+.bib-detail-x:hover { background: var(--bg-muted); }
+.bib-detail-x svg { width: 16px; height: 16px; stroke-width: 2; }
+.bib-detail-sys { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.bib-detail-sys i { width: 8px; height: 8px; border-radius: 50%; }
+.bib-detail-title { margin: -6px 30px 0 0; font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 24px; line-height: 1.15; letter-spacing: -.01em; }
+.bib-detail-state { align-self: flex-start; font-size: 13px; font-weight: 600; padding: 5px 10px; border-radius: 8px; background: var(--bg-muted); color: var(--text-secondary); }
+.bib-detail-state.late { background: #F3EEE4; color: #7A6A4A; }
+.bib-detail-state.due { background: #FBF1D8; color: #8A6A16; }
+.bib-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bib-detail-stats > div { background: var(--bg-muted); border-radius: 12px; padding: 11px 12px; display: flex; flex-direction: column; }
+.bib-detail-stats b { font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif; font-size: 19px; font-weight: 600; }
+.bib-detail-stats span { font-size: 12px; color: var(--text-secondary); }
+.bib-steps { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 6px; }
+.bib-steps li { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 38px; }
+.bib-step-dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; border: 1.5px dashed var(--border-strong); box-sizing: border-box; }
+.bib-steps li.ok .bib-step-dot { border: 0; }
+.bib-steps li.next .bib-step-dot { border: 2px solid #15304E; }
+.bib-steps li.skip { opacity: .35; }
+.bib-step-j { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.bib-detail-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.bib-btn { text-align: center; padding: 11px 14px; border-radius: 11px; font-weight: 700; font-size: 14px; text-decoration: none; color: var(--text-primary); border: 1px solid var(--border-strong); }
+.bib-btn:hover { background: var(--bg-muted); }
+.bib-btn-main { background: #15304E; color: #fff; border-color: #15304E; }
+.bib-btn-main:hover { background: #22507E; }
+
+/* Série de jours */
+.bib-streak { position: relative; }
+.bib-streak svg { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; color: #C9CDD4; }
+.bib-streak.lit svg { color: #E58A2E; animation: bib-flame 1.6s ease-in-out infinite; transform-origin: bottom center; }
+@keyframes bib-flame { 50% { transform: scale(1.12) rotate(-3deg); } }
+.bib-streak small { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; }
+
+[data-theme="dark"] .bib-detail-state.late { background: #2A2618; color: #D8C79C; }
+[data-theme="dark"] .bib-detail-state.due { background: #2E2614; color: #E9C46A; }
+[data-theme="dark"] .bib-steps li.next .bib-step-dot { border-color: #8FB8E0; }
+[data-theme="dark"] .bib-btn-main { background: #2C5F8A; border-color: #2C5F8A; }
+
+@media (max-width: 768px) {
+  .bib-head { flex-direction: column; align-items: stretch; }
+  .bib-dust-all { text-align: center; }
+  .bib-books { height: 50px; gap: 2px; }
+  .bib-shelf-go { margin-left: 0; }
+  .bib-legend-hint { display: none; }
+  .bib-detail { order: 0; position: fixed; left: 8px; right: 8px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 60; box-shadow: 0 20px 50px rgba(0,0,0,.25); max-height: 70vh; overflow-y: auto; }
+}
+@media (min-width: 769px) {
+  .bib-books { height: 74px; }
 }
