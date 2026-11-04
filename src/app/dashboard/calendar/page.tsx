@@ -160,6 +160,7 @@ export default function CalendarPage() {
   const supabase = createClient()
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
   // Chargement des DONNÉES, pas seulement de l'identité. L'écran ne gardait
   // le loader que tant que `userId` était nul, or il arrive dès que
   // auth.getUser() répond, bien avant les matières et les fiches. Entre les
@@ -694,15 +695,27 @@ export default function CalendarPage() {
             <button className="cal-today-btn" onClick={goToday}>Aujourd&apos;hui</button>
             <button onClick={next} aria-label="Suivant">{'›'}</button>
           </div>
-          <button
-            type="button"
-            className="cal-td-trigger mr-tip"
-            onClick={() => openTdNew()}
-            aria-label="Ajouter un cours, un TD ou un examen blanc"
-            data-tip="Ajouter"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
+          <div className="cal-add">
+            <button type="button" className="cal-add-btn" onClick={() => setAddOpen(o => !o)} aria-haspopup="menu" aria-expanded={addOpen}>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              Ajouter
+            </button>
+            {addOpen && (
+              <>
+                <div className="cal-add-bg" onClick={() => setAddOpen(false)} />
+                <div className="cal-add-menu" role="menu">
+                  <button type="button" role="menuitem" onClick={() => { setAddOpen(false); router.push('/dashboard/fiches') }}>
+                    <span className="cal-add-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14" /></svg></span>
+                    <span><b>Ajouter un cours</b><small>Poly PDF ou vidéo, MedRev crée la fiche</small></span>
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => { setAddOpen(false); openTdNew() }}>
+                    <span className="cal-add-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M4 10h16M8 3v4M16 3v4" /></svg></span>
+                    <span><b>Événement</b><small>Amphi, TD, examen blanc</small></span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           {view === 'week' && (hasAnyLesson || semTds.length > 0) && (
             <button
               type="button"

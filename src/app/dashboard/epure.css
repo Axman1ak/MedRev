@@ -346,3 +346,41 @@
 .db-shell .rmod-nums div { display: flex; flex-direction: column; gap: 2px; }
 .db-shell .rmod-nums b { font-size: 20px; font-weight: 700; }
 .db-shell .rmod-nums span { font-size: 12px; color: var(--text-secondary); }
+
+/* =================== Aujourd'hui : journée légère ou vide =================== */
+.db-shell .dvx .panel:has(.dx-light) .flist { flex: none; }
+.db-shell .dvx .dx-empty { display: flex; flex-direction: column; gap: 6px; padding: 12px 10px 4px; }
+.db-shell .dvx .dx-empty b { font-size: 22px; font-weight: 700; color: var(--ink); }
+.db-shell .dvx .dx-empty span { font-size: 15px; color: var(--gray); }
+.db-shell .dvx .dx-light { display: flex; flex-direction: column; gap: 2px; margin-top: 22px; }
+.db-shell .dvx .dx-lbl { font-size: 13px; font-weight: 600; color: var(--gray); padding: 0 10px 6px; }
+.db-shell .dvx .dx-day { display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 10px; text-decoration: none; color: var(--ink); font-size: 14px; }
+.db-shell .dvx .dx-day:hover { background: var(--line); }
+.db-shell .dvx .dx-day b { width: 44px; font-weight: 600; }
+.db-shell .dvx .dx-day > span:last-child { color: var(--gray); }
+.db-shell .dvx .dx-dots { display: flex; gap: 4px; min-width: 40px; }
+.db-shell .dvx .dx-dots i { width: 8px; height: 8px; border-radius: 50%; }
+.db-shell .dvx .dx-add { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 12px 10px; border: 1px dashed var(--line2); border-radius: 12px; text-decoration: none; color: var(--ink); }
+.db-shell .dvx .dx-add:hover { background: var(--line); }
+.db-shell .dvx .dx-add > span:first-child { width: 32px; height: 32px; border-radius: 8px; background: var(--line); display: grid; place-items: center; font-size: 18px; color: var(--marine2); }
+.db-shell .dvx .dx-add b { display: block; font-size: 15px; font-weight: 600; }
+.db-shell .dvx .dx-add small { font-size: 13px; color: var(--gray); }
+
+/* ======================= Calendrier : menu « Ajouter » ======================= */
+.db-shell .cal-add { position: relative; }
+.db-shell .cal-add-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--accent-primary); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.db-shell .cal-add-btn:hover { filter: brightness(.9); }
+.db-shell .cal-add-bg { position: fixed; inset: 0; z-index: 49; }
+.db-shell .cal-add-menu { position: absolute; right: 0; top: 42px; z-index: 50; width: 300px; padding: 6px; border-radius: 12px; background: var(--bg-elevated); box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-subtle); display: flex; flex-direction: column; }
+.db-shell .cal-add-menu button { display: flex; align-items: center; gap: 12px; padding: 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left; color: var(--text-primary); cursor: pointer; }
+.db-shell .cal-add-menu button:hover { background: var(--bg-soft); }
+.db-shell .cal-add-ic { flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-soft); color: var(--accent-primary); display: grid; place-items: center; }
+.db-shell .cal-add-ic svg { width: 16px; height: 16px; }
+.db-shell .cal-add-menu b { display: block; font-size: 14px; font-weight: 600; }
+.db-shell .cal-add-menu small { font-size: 12px; color: var(--text-secondary); }
+
+/* ==================== Bibliothèque : étagères sur toute la hauteur ==================== */
+@media (min-width: 769px) {
+  .db-shell .bib-fit { min-height: 100%; justify-content: space-evenly; }
+  .db-shell .bib-case { padding-top: 10px; padding-bottom: 10px; }
+}

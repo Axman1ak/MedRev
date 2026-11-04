@@ -707,6 +707,22 @@ export default function DashboardPage() {
   const heatmap = useMemo(() => computeHeatmap(activeDays, today, 4), [activeDays, today])
   const upcomingLoad = useMemo(() => computeUpcomingLoad(semLessons, today, schedOf), [semLessons, today, schedOf])
   const matiereStats = useMemo(() => computeMatiereStats(semSystems, semLessons), [semSystems, semLessons])
+  // Les 3 prochains jours : nombre de fiches prévues et leurs matières.
+  const nextDays = useMemo(() => [1, 2, 3].map(k => {
+    const date = dateStrFromOffset(today, k)
+    const ids: string[] = []
+    for (const l of semLessons) {
+      if (!l.learn_date) continue
+      const steps = (l.steps as StepEntry[]) || []
+      const j = schedOf(l.system_id)
+      for (let i = 0; i < j.length; i++) {
+        if (stepScore(steps[i])) continue
+        if (stepDate(l, i, j) === date) { ids.push(l.system_id); break }
+      }
+    }
+    const lbl = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' })
+    return { date, label: lbl.charAt(0).toUpperCase() + lbl.slice(1), n: ids.length, ids }
+  }), [semLessons, today, schedOf])
 
   // Nombre de jours actifs cette semaine jusqu'à aujourd'hui (inclus)
   const weekDone = weekDays.filter(d => d.active && !d.inFuture).length
@@ -840,7 +856,10 @@ export default function DashboardPage() {
 
           <div className="flist" ref={flistRef}>
             {todayQueue.length === 0 ? (
-              <div style={{ color: 'var(--gray)', fontSize: 14, padding: '24px 0' }}>Aucune révision aujourd&apos;hui. Profite de ta journée !</div>
+              <div className="dx-empty">
+                <b>Rien à réviser aujourd&apos;hui</b>
+                {(() => { const nx = nextDays.find(d => d.n > 0); return nx ? <span>Prochaine session {nx.label.toLowerCase()}, {nx.n} fiche{nx.n > 1 ? 's' : ''}.</span> : <span>Profite de ta journée.</span> })()}
+              </div>
             ) : (<>{visibleQueue.map((p, idx) => {
               const sys = semSystems.find(s => s.id === p.lesson.system_id)
               const sysName = sys?.name ?? 'Matière'
@@ -884,6 +903,23 @@ export default function DashboardPage() {
             )}
             </>)}
           </div>
+
+          {!isPhone && sortedQueue.length < 6 && (
+            <div className="dx-light">
+              <div className="dx-lbl">À venir</div>
+              {nextDays.map(d => (
+                <Link key={d.date} href="/dashboard/calendar" className="dx-day">
+                  <b>{d.label}</b>
+                  <span className="dx-dots">{d.ids.slice(0, 6).map((id, i) => <i key={i} style={{ background: colorOf.get(id) || '#22507E' }} />)}</span>
+                  <span>{d.n === 0 ? 'rien de prévu' : `${d.n} fiche${d.n > 1 ? 's' : ''}`}</span>
+                </Link>
+              ))}
+              <Link href="/dashboard/fiches" className="dx-add">
+                <span aria-hidden="true">+</span>
+                <span><b>Ajouter un cours</b><small>Poly ou vidéo de l&apos;amphi</small></span>
+              </Link>
+            </div>
+          )}
 
         </div>
 
