@@ -356,6 +356,26 @@ export default function FichesPage() {
     setShowDueOnly(false)
   }, [systems, semester])
 
+  // Recherche (⌘K) : /dashboard/fiches?fiche=<id> ouvre directement la fiche,
+  // et l'évènement medrev-open-fiche fait de même quand on est déjà ici.
+  const ficheFromUrl = useRef(false)
+  useEffect(() => {
+    if (ficheFromUrl.current || lessons.length === 0 || typeof window === 'undefined') return
+    ficheFromUrl.current = true
+    const id = new URLSearchParams(window.location.search).get('fiche')
+    const les = id ? lessons.find(l => l.id === id) : null
+    if (les) setReviewLesson(les)
+  }, [lessons])
+  useEffect(() => {
+    function onOpenFiche(e: Event) {
+      const id = (e as CustomEvent<string>).detail
+      const les = lessons.find(l => l.id === id)
+      if (les) setReviewLesson(les)
+    }
+    window.addEventListener('medrev-open-fiche', onOpenFiche)
+    return () => window.removeEventListener('medrev-open-fiche', onOpenFiche)
+  }, [lessons])
+
   // Clic sur une matière dans la barre de gauche alors qu'on est déjà ici.
   useEffect(() => {
     function onOpen(e: Event) {

@@ -1,0 +1,293 @@
+@charset "UTF-8";
+/* src/app/dashboard/epure.css
+   Direction « épurée » (nov. 2026), branche redesign-epure.
+   Chargé APRÈS layout.css et avant les styles de chaque page : toutes les
+   règles ici sont donc préfixées (.db-shell, .dvx, .fi-main…) pour gagner en
+   spécificité sans !important. Principe : moins de cadres, moins de rouge,
+   moins de titres. Le contenu est posé sur le fond, la hiérarchie vient de la
+   typographie et des espacements. Supprimer ce fichier rend l'ancien visuel. */
+
+/* ====================== BARRE LATÉRALE CLAIRE, DÉPLIÉE ====================== */
+@media (min-width: 769px) {
+  .db-shell .db-sidebar,
+  .db-shell .db-sidebar:hover,
+  .db-shell .db-sidebar.menu-open,
+  .db-shell .db-sidebar.tour-open {
+    width: 248px;
+    background: var(--sb-bg);
+    color: var(--sb-text);
+    border-right: 1px solid var(--sb-border);
+    box-shadow: none;
+    padding: 22px 0 14px;
+  }
+  .db-shell .db-lbl { opacity: 1; }
+  .db-shell .db-main { margin-left: 248px; }
+
+  .db-shell .db-logo { color: var(--sb-text); padding: 0 12px 20px 22px; }
+  .db-shell .db-logo .db-logo-r { color: inherit; }
+  .db-shell .db-sep { display: none; }
+  .db-shell .db-nav-label { display: none; }
+  .db-shell .db-nav-section { margin-bottom: 0; padding: 0 10px; }
+  .db-shell .db-nav-section + .db-nav-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sb-border); }
+
+  .db-shell .db-nav-item {
+    height: 40px; padding: 0 12px; gap: 12px; border-radius: 8px;
+    color: var(--sb-text); font-size: 15px; font-weight: 500;
+  }
+  .db-shell .db-nav-item:hover { background: var(--sb-hover); color: var(--sb-text); }
+  .db-shell .db-nav-item.active { background: var(--sb-active); color: var(--sb-text); font-weight: 600; }
+  .db-shell .db-nav-item.active::before { display: none; }
+  .db-shell .db-nav-item .ic svg { width: 19px; height: 19px; stroke-width: 1.8; }
+  .db-shell .db-nav-item .badge { background: var(--sb-active); color: var(--sb-text-muted); font-weight: 600; }
+
+  .db-shell .db-search-item { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--sb-text-muted); }
+  .db-shell .db-kbd { margin-left: auto; font: 500 12px var(--font-hanken), 'Hanken Grotesk', sans-serif; padding: 2px 6px; border-radius: 5px; background: var(--sb-active); color: var(--sb-text-muted); }
+
+  .db-shell .db-nav-item.db-subject { height: 34px; font-size: 14px; }
+  .db-shell .db-subject-dot { width: 8px; height: 8px; }
+  .db-shell .db-subject-n,
+  .db-shell .db-nav-item.db-subject.active .db-subject-n { color: var(--sb-text-dim); }
+  .db-shell .db-subjects-list { max-height: calc(100vh - 470px); }
+
+  .db-shell .db-semdrop-btn { color: var(--sb-text-muted); }
+  .db-shell .db-semdrop-btn:hover,
+  .db-shell .db-semdrop-btn[aria-expanded="true"] { background: var(--sb-hover); color: var(--sb-text); }
+  .db-shell .db-semdrop-menu,
+  .db-shell .db-usermenu { background: var(--bg-elevated); border-color: var(--border-subtle); box-shadow: var(--shadow-lg); }
+  .db-shell .db-semdrop-menu button,
+  .db-shell .db-usermenu-item { color: var(--text-primary); }
+  .db-shell .db-semdrop-menu button:hover,
+  .db-shell .db-usermenu-item:hover { background: var(--bg-soft); color: var(--text-primary); }
+  .db-shell .db-semdrop-menu button.on { color: var(--accent-medium); }
+  .db-shell .db-usermenu-sep { background: var(--border-subtle); }
+  .db-shell .db-usermenu-item.danger { color: var(--danger); }
+
+  .db-shell .db-user-wrap { border-top: 1px solid var(--sb-border); padding: 10px 10px 0; }
+  .db-shell .db-sidebar .db-user-card,
+  .db-shell .db-sidebar:hover .db-user-card { background: none; padding: 7px 8px; justify-content: flex-start; }
+  .db-shell .db-user-card > .db-lbl { display: block; }
+  .db-shell .db-sidebar .db-user-card:hover { background: var(--sb-hover); }
+  .db-shell .db-user-avatar { background: var(--accent-soft); color: var(--accent-on-soft); }
+  .db-shell .db-user-card:hover .db-user-avatar { background: var(--accent-soft); color: var(--accent-on-soft); }
+  .db-shell .db-user-name { color: var(--sb-text); }
+  .db-shell .db-user-meta { color: var(--sb-text-dim); }
+  .db-shell .db-sidebar .db-theme { display: grid; color: var(--sb-text-muted); }
+  .db-shell .db-theme:hover { background: var(--sb-hover); color: var(--sb-text); }
+}
+
+/* ============================ RECHERCHE ⌘K ============================ */
+.sp-wrap { position: fixed; inset: 0; z-index: 400; background: rgba(17, 19, 16, .28); display: flex; justify-content: center; align-items: flex-start; padding: 14vh 16px 16px; animation: db-fade .15s ease both; }
+.sp-card { width: 100%; max-width: 560px; background: var(--bg-elevated); border-radius: 14px; box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-subtle); overflow: hidden; font-family: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif; color: var(--text-primary); }
+.sp-field { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); color: var(--text-tertiary); }
+.sp-field svg { width: 18px; height: 18px; stroke-width: 2; flex: none; }
+.sp-field input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 16px; color: var(--text-primary); }
+.sp-field kbd { font: 500 12px inherit; padding: 2px 6px; border-radius: 5px; background: var(--bg-soft); color: var(--text-secondary); }
+.sp-list { max-height: 50vh; overflow-y: auto; padding: 6px; }
+.sp-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 15px; color: inherit; text-align: left; cursor: pointer; }
+.sp-row.on { background: var(--bg-soft); }
+.sp-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.sp-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.sp-meta { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+.sp-empty { padding: 18px 12px; font-size: 14px; color: var(--text-secondary); }
+
+/* ======================== AUJOURD'HUI (tableau de bord) ======================== */
+@media (min-width: 721px) {
+  .db-shell .dvx { padding: 44px 52px 36px; }
+  .db-shell .dvx .topbar { margin-bottom: 30px; }
+  .db-shell .dvx .kick { display: none; }
+  .db-shell .dvx .hi { font-family: var(--sans); font-size: 34px; font-weight: 700; }
+  .db-shell .dvx .grid { gap: 56px; }
+
+  /* Plus de cartes : le contenu est posé sur le fond. */
+  .db-shell .dvx .panel { background: transparent; border: 0; border-radius: 0; padding: 0; }
+  .db-shell .dvx .picon { display: none; }
+  .db-shell .dvx .ptitle { font-family: var(--sans); font-size: 17px; font-weight: 700; }
+  .db-shell .dvx .psub { font-size: 14px; }
+  .db-shell .dvx .psub b { color: inherit; font-weight: 600; }
+  .db-shell .dvx .panel:first-child .ptitle { display: none; }
+  .db-shell .dvx .panel:first-child .psub { font-size: 15px; margin: 0; }
+  .db-shell .dvx .go { border-radius: 10px; padding: 11px 22px; font-weight: 600; }
+  .db-shell .dvx .go:hover { transform: none; filter: brightness(.9); background: var(--marine); }
+
+  /* Fiches du jour : des lignes, pas des boîtes. */
+  .db-shell .dvx .flist { gap: 0; margin-top: 14px; }
+  .db-shell .dvx .fiche { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 10px; padding: 13px 10px; gap: 14px; }
+  [data-theme="dark"] .db-shell .dvx .fiche { background: transparent; }
+  .db-shell .dvx .fiche:hover { background: var(--line); border-color: var(--line); }
+  .db-shell .dvx .ftag { width: auto; height: auto; background: none !important; }
+  .db-shell .dvx .ftag svg { width: 17px; height: 17px; }
+  .db-shell .dvx .fnm { font-size: 15px; }
+  .db-shell .dvx .fsub { font-size: 13px; margin-top: 2px; }
+  .db-shell .dvx .fj { background: none; color: var(--gray); font-weight: 500; font-size: 13px; padding: 0; margin-left: 8px; }
+  .db-shell .dvx .badge-late { background: none; color: var(--gold); font-weight: 500; font-size: 13px; padding: 0; }
+  .db-shell .dvx .badge-late.soft { color: var(--gray); }
+  .db-shell .dvx .fdue { font-size: 13px; }
+  .db-shell .dvx .flist-more { border: 0; text-align: left; padding: 13px 10px; font-weight: 600; }
+  .db-shell .dvx .flist-more:hover { background: var(--line); }
+  .db-shell .dvx .td-today { background: transparent; border: 0; border-left: 3px solid var(--marine3); border-radius: 0; padding: 6px 12px; }
+
+  /* Colonne de droite : progression puis « À faire », séparés d'un filet. */
+  .db-shell .dvx .col-r { gap: 34px; }
+  .db-shell .dvx .dpg .phead { margin-bottom: 0; }
+  .db-shell .dvx .dpg .ptitle, .db-shell .dvx .dpg .psub { display: none; }
+  .db-shell .dvx .dpg-link { margin-left: auto; padding-top: 0; }
+  .db-shell .dvx .dpg-kpis { margin-top: 6px; gap: 16px; }
+  .db-shell .dvx .dpg-kpis div { background: none; padding: 0; border-radius: 0; }
+  .db-shell .dvx .dpg-kpis b { font-family: var(--sans); font-weight: 700; color: var(--ink); }
+  .db-shell .dvx .dpg-lbl span:first-child { font-weight: 500; color: var(--gray); }
+  .db-shell .dvx .dpg-sec { margin-top: 22px; }
+  .db-shell .dvx .todo-panel { border-top: 1px solid var(--line); padding-top: 26px; }
+  .db-shell .dvx .todo-panel .psub { display: none; }
+  .db-shell .dvx .todo { border-top: 0 !important; padding: 9px 0; }
+  .db-shell .dvx .add { border-top: 0; }
+}
+
+/* ======================== TOUTES LES MATIÈRES ======================== */
+/* Les cartes deviennent des lignes : nom, points de progression, prochaine
+   révision. Le clic ouvre le panneau de la fiche (le ReviewModal, posé en
+   tiroir à droite, voir plus bas). */
+@media (min-width: 769px) {
+  .db-shell .fi-main .fi-grid { display: flex; flex-direction: column; gap: 0; }
+  .db-shell .fi-main .card { background: transparent; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: none; }
+  .db-shell .fi-main .card:hover { box-shadow: none; background: var(--bg-soft); }
+  .db-shell .fi-main .card.clickable:hover { border-color: var(--border-subtle); }
+  .db-shell .fi-main .card-accent { display: none; }
+  .db-shell .fi-main .card-body { flex-direction: row; align-items: center; gap: 20px; padding: 12px; }
+  .db-shell .fi-main .card-head { flex: 1; min-width: 0; align-items: center; }
+  .db-shell .fi-main .card-name { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-size: 15px; font-weight: 600; }
+  .db-shell .fi-main .card-when { order: 3; font-size: 13px; color: var(--text-secondary); font-weight: 500; background: none; padding: 0; }
+  .db-shell .fi-main .card-when.urgent { color: var(--warning); }
+  .db-shell .fi-main .card-status { background: none !important; padding: 0; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-secondary) !important; width: 80px; }
+  .db-shell .fi-main .stamps { display: flex; gap: 5px; padding: 0; background: none; flex: none; }
+  .db-shell .fi-main .stamp { width: 9px; height: 9px; font-size: 0; }
+  .db-shell .fi-main .stamp-star { display: none; }
+  .db-shell .fi-main .card-foot { display: none; }
+  .db-shell .fi-main .fi-menu-btn-card { opacity: 0; }
+  .db-shell .fi-main .card:hover .fi-menu-btn-card { opacity: 1; }
+}
+
+/* Panneau de la fiche : le ReviewModal s'ouvre en tiroir à droite sur
+   ordinateur. Tout son contenu (paliers J+ et notes, cours PDF / vidéo,
+   QCM, cartes) reste le même. */
+@media (min-width: 769px) {
+  .db-shell .rmod-overlay { justify-content: flex-end; align-items: stretch; padding: 0; background: rgba(17, 19, 16, .18); }
+  .db-shell .rmod-card {
+    max-width: 460px; max-height: none; height: 100vh; border-radius: 0;
+    box-shadow: -18px 0 50px rgba(0, 0, 0, .10); border-left: 1px solid var(--border-subtle);
+    animation: ep-drawer .24s cubic-bezier(.2, .9, .25, 1);
+  }
+  @keyframes ep-drawer { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+
+/* ============================ CALENDRIER ============================ */
+/* Colonnes sans cadre, séparées d'un filet. Les révisions en haut de la
+   journée, les cours et examens (TD) en bas. */
+@media (min-width: 769px) {
+  .db-shell .cal-page { padding: 44px 52px 0; gap: 26px; }
+  .db-shell .cal-week { gap: 0; border-top: 1px solid var(--cal-border); }
+  .db-shell .cal-day { background: transparent; border: 0; border-left: 1px solid var(--cal-border); border-radius: 0; padding-bottom: 14px; }
+  .db-shell .cal-day:first-child { border-left: 0; }
+  .db-shell .cal-day.cal-today { background: var(--bg-soft); }
+  .db-shell .cal-day.cal-past { background: transparent; }
+  .db-shell .cal-day.cal-past .cal-fiche { opacity: .55; }
+  .db-shell .cal-day-head { border-bottom: 0; }
+  .db-shell .cal-day-count { border: 0; background: none; }
+  .db-shell .cal-tds { order: 10; margin-top: auto; padding: 8px 8px 0; }
+  .db-shell .cal-td { background: var(--bg-soft); border: 0; border-left: 3px solid var(--cal-gm); border-radius: 7px; }
+  .db-shell .cal-day.cal-today .cal-td { background: var(--bg-card); }
+  .db-shell .cal-td.is-eb { border-left-color: var(--accent-primary); }
+  .db-shell .cal-legend { border: 0; background: none; padding-left: 0; }
+  .db-shell .cal-month { border: 0; border-top: 1px solid var(--cal-border); border-radius: 0; }
+}
+
+/* =========================== BIBLIOTHÈQUE =========================== */
+/* Étagères claires sur toute la largeur ; le rang passe dans un bouton en
+   haut à droite qui ouvre un tiroir avec la liste des rangs. */
+.db-shell .bib-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.db-shell .bib-head h1 { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -.02em; }
+.db-shell .bib-head p { font-size: 15px; margin-top: 4px; }
+.db-shell .bib-rankbtn { display: flex; align-items: center; gap: 14px; padding: 9px 16px 9px 9px; border: 0; border-radius: 14px; background: var(--bg-soft); color: var(--text-primary); font: inherit; cursor: pointer; text-align: left; }
+.db-shell .bib-rankbtn:hover { background: var(--bg-muted); }
+.db-shell .bib-rankbtn-seal { width: 40px; height: 40px; border-radius: 50%; background: #F6EBCF; color: #9A7420; display: grid; place-items: center; flex: none; }
+[data-theme="dark"] .db-shell .bib-rankbtn-seal { background: #3A3018; color: #E9C46A; }
+.db-shell .bib-rankbtn-txt { display: flex; flex-direction: column; gap: 6px; width: 150px; }
+.db-shell .bib-rankbtn-txt > span:first-child { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }
+.db-shell .bib-rankbtn-txt small { font-size: 13px; color: var(--text-secondary); }
+.db-shell .bib-rankbtn-bar { height: 4px; border-radius: 2px; background: var(--border-subtle); overflow: hidden; }
+.db-shell .bib-rankbtn-bar i { display: block; height: 100%; background: #D4A93C; }
+.db-shell .bib-case { background: transparent; box-shadow: none; border-radius: 0; }
+[data-theme="dark"] .db-shell .bib-case { background: transparent; }
+.db-shell .bib-shelf-name { color: var(--text-primary); }
+.db-shell .bib-shelf-n { color: var(--text-secondary); }
+.db-shell .bib-board { height: 7px; background: #DCCFBA; box-shadow: 0 3px 6px rgba(120, 95, 60, .18); }
+[data-theme="dark"] .db-shell .bib-board { background: #4A4032; box-shadow: none; }
+.db-shell .bib-book { box-shadow: inset -1px 0 0 rgba(0, 0, 0, .10); }
+.db-shell .bib-case-empty { color: var(--text-secondary); }
+.db-shell .bib-case-empty a { color: var(--accent-medium); }
+.db-shell .bib-drawer-close { display: none; }
+
+@media (min-width: 769px) {
+  .db-shell .bib-page { padding: 44px 52px 32px; gap: 28px; }
+  .db-shell .bib-grid { grid-template-columns: minmax(0, 1fr); }
+  .db-shell .bib-side {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 300; width: 380px; max-width: 100%;
+    background: var(--bg-elevated); box-shadow: -18px 0 50px rgba(0, 0, 0, .12);
+    padding: 32px 28px; overflow-y: auto; transform: translateX(100%); visibility: hidden;
+    transition: transform .24s cubic-bezier(.2, .9, .25, 1), visibility 0s .24s;
+  }
+  .db-shell .bib-side.open { transform: none; visibility: visible; transition: transform .24s cubic-bezier(.2, .9, .25, 1); }
+  .db-shell .bib-drawer-bg { position: fixed; inset: 0; z-index: 299; background: rgba(17, 19, 16, .18); }
+  .db-shell .bib-drawer-close { display: grid; place-items: center; position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; border: 0; border-radius: 10px; background: none; color: var(--text-secondary); cursor: pointer; }
+  .db-shell .bib-drawer-close:hover { background: var(--bg-soft); }
+  .db-shell .bib-rank { border: 0; padding: 0; background: none; }
+}
+@media (max-width: 768px) {
+  .db-shell .bib-rankbtn { display: none; }
+  .db-shell .bib-head h1 { font-size: 28px; }
+}
+
+/* ======================== SESSION DE RÉVISION ======================== */
+/* En-tête clair au lieu du bandeau marine, étapes en onglets soulignés,
+   contenu posé sur le fond. La colonne « Au programme » reste à gauche. */
+.db-shell .se-root { background: #FAF8F4; color: #181915; }
+.db-shell .se-head { background: #FAF8F4; color: #181915; border-bottom: 1px solid #E2DDD2; }
+.db-shell .se-logo { background: #15304E; color: #fff; }
+.db-shell .se-head-name { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; }
+.db-shell .se-head-sub,
+.db-shell .se-head-prog-lbl { color: #5F5F58; }
+.db-shell .se-segs i { background: #E2DDD2; }
+.db-shell .se-segs i.done { background: #A9BFDB; }
+.db-shell .se-segs i.cur { background: #15304E; }
+.db-shell .se-btn-ghost-dark { background: transparent; color: #181915; border-color: transparent; }
+.db-shell .se-btn-ghost-dark:hover { background: #EEEBE4; }
+.db-shell .se-btn-link-dark { color: #5F5F58; }
+.db-shell .se-btn-link-dark:hover { color: #181915; }
+.db-shell .se-queue { border-right: 1px solid #E2DDD2; padding-right: 14px; }
+.db-shell .se-qrow.cur { background: #EEEBE4; border-color: transparent; box-shadow: none; }
+.db-shell .se-qrow:hover { background: #EEEBE4; }
+.db-shell .se-card { background: transparent; border: 0; border-radius: 0; }
+.db-shell .se-fiche { padding: 6px 0 0; }
+.db-shell .se-title { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 34px; color: #181915; }
+.db-shell .se-chip-late { background: none; color: var(--warning); padding: 0; }
+.db-shell .se-chip-plain { background: none; padding: 0; color: #5F5F58; }
+.db-shell .se-steps { display: flex; gap: 28px; border-bottom: 1px solid #E2DDD2; }
+.db-shell .se-step { background: none !important; border: 0 !important; border-bottom: 2px solid transparent !important; border-radius: 0; padding: 0 0 12px; margin-bottom: -1px; color: #5F5F58 !important; }
+.db-shell .se-step.on { border-bottom-color: #15304E !important; color: #181915 !important; }
+.db-shell .se-step-n { display: none; }
+.db-shell .se-step-txt span { display: none; }
+.db-shell .se-tabs { background: #EEEBE4; }
+
+/* ============================ STATISTIQUES ============================ */
+.db-shell .st6-head h1 { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -.02em; }
+.db-shell .st6-head p { display: none; }
+.db-shell .st6-subs { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.db-shell .st6-empty { background: var(--bg-soft); border: 0; }
+
+/* ============================= SIMULATEUR ============================= */
+.db-shell .sim-panneau { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+.db-shell .sim-bloc { padding: 18px 0; }
+.db-shell .sim-card { background: transparent; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; padding: 18px 0; }
+.db-shell .sim-lb { background: var(--bg-card); border: 0; box-shadow: var(--shadow-md); }
+.db-shell .sim-seg { border-color: transparent; background: var(--bg-soft); }
+.db-shell .sim-seg.on { box-shadow: inset 0 0 0 1px var(--accent-primary); }
+.db-shell .sim-ann { border: 0; }

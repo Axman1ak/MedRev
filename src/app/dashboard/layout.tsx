@@ -11,6 +11,8 @@ import { makeScheduleResolver } from '@/lib/schedule'
 import OnboardingTour from '@/components/OnboardingTour'
 import { currentSemestre } from '@/lib/semestre'
 import './layout.css'
+import './epure.css'
+import SearchPalette from '@/components/SearchPalette'
 import MedRevMark from '@/components/MedRevMark'
 import { getStoredTheme, setTheme, type ThemeId } from '@/lib/theme'
 import { buildSubjectColorMap } from '@/lib/subjectColors'
@@ -149,6 +151,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [replayKey, setReplayKey] = useState(0)
   const [isReplay, setIsReplay] = useState(false)
   const [existingLessonCount, setExistingLessonCount] = useState(0)
+
+  // Recherche globale ⌘K
+  const [searchOpen, setSearchOpen] = useState(false)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(o => !o) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   useEffect(() => { setMobileNavOpen(false) }, [pathname])
@@ -402,7 +414,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert || semOpen ? ' menu-open' : ''}`} data-tour="sidebar">
         {/* Logo, et le semestre affiché en menu déroulant */}
         <div className="db-logo">
-          <MedRevMark size={26} bg="#fff" fg="#15304E" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
+          <MedRevMark size={26} bg="#15304E" fg="#fff" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
           <div className="db-semdrop db-lbl" ref={semRef} data-tour="sem-toggle">
             <button type="button" className="db-semdrop-btn" onClick={() => setSemOpen(o => !o)} aria-haspopup="menu" aria-expanded={semOpen}>
               {semester === 'year' ? 'Année' : `Semestre ${semester}`}
@@ -426,7 +438,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation */}
         <div className="db-nav-section">
-          <div className="db-nav-label db-lbl">Navigation</div>
+          <button type="button" className="db-nav-item db-search-item" onClick={() => setSearchOpen(true)}>
+            <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5" strokeLinecap="round"/></svg></span>
+            <span className="db-lbl">Rechercher</span>
+            <kbd className="db-kbd db-lbl">⌘K</kbd>
+          </button>
           {NAV.map(n => (
             <Link
               key={n.href}
@@ -445,7 +461,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Matières : remplacent l'entrée « Fiches » */}
         <div className="db-nav-section db-subjects">
-          <div className="db-nav-label db-lbl">Matières</div>
           <Link
             href="/dashboard/fiches"
             onClick={() => openSubject(null)}
@@ -615,6 +630,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       )}
+
+      <SearchPalette
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        userId={profile?.id ?? null}
+        colors={new Map(sideSubjects.map(s => [s.id, s.color]))}
+      />
 
       {/* ONBOARDING TOUR */}
       {tourOpen && profile && (

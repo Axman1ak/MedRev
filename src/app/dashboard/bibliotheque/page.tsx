@@ -192,6 +192,7 @@ export default function BibliothequePage() {
       .sort((a, b) => b.books.length - a.books.length)
   }, [systems, semestre, booksBySys, colorOf])
 
+  const [rankOpen, setRankOpen] = useState(false)
   const rankIdx = RANKS.reduce((acc, r, i) => (total >= r.at ? i : acc), 0)
   const rank = RANKS[rankIdx]
   const next = RANKS[rankIdx + 1] ?? null
@@ -211,8 +212,19 @@ export default function BibliothequePage() {
   return (
     <div className="bib-page">
       <header className="bib-head">
-        <h1>Ta bibliothèque</h1>
-        <p>Chaque révision notée ajoute un livre sur l&apos;étagère de sa matière. Les livres ne partent jamais.</p>
+        <div>
+          <h1>Ta bibliothèque</h1>
+          <p>{total} livre{total > 1 ? 's' : ''}{week.n > 0 ? `, +${week.n} cette semaine` : ''}</p>
+        </div>
+        <button type="button" className="bib-rankbtn" onClick={() => setRankOpen(true)} aria-expanded={rankOpen} aria-haspopup="dialog">
+          <span className="bib-rankbtn-seal" aria-hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.2 3.5 5 3.5 8s-1 5.8-3.5 8c-2.5-2.2-3.5-5-3.5-8s1-5.8 3.5-8z"/></svg>
+          </span>
+          <span className="bib-rankbtn-txt">
+            <span><strong>{rank.name}</strong><small>{next ? `${total} / ${next.at}` : `${total}`}</small></span>
+            <span className="bib-rankbtn-bar"><i style={{ width: `${Math.round(progress * 100)}%` }} /></span>
+          </span>
+        </button>
       </header>
 
       <div className="bib-grid">
@@ -243,8 +255,7 @@ export default function BibliothequePage() {
                           return (
                             <span key={b.key} className="bib-book" title={b.tip}
                               style={{ width: bookW, height: box.phone ? Math.round(b.h * .66) : b.h, background: b.c, animationDelay: `${d}ms` }}>
-                              {b.gold && <span className="bib-gold" />}
-                            </span>
+                                                          </span>
                           )
                         })}
                       </div>
@@ -255,14 +266,14 @@ export default function BibliothequePage() {
               </div>
             )
           })}
-          <div className="bib-legend">
-            <span><i className="bib-legend-gold" />Révision notée 5/5</span>
-            <span>Survole un livre pour voir la fiche et la date</span>
-          </div>
           </div>
         </section>
 
-        <aside className="bib-side">
+        {rankOpen && <div className="bib-drawer-bg" onClick={() => setRankOpen(false)} />}
+        <aside className={`bib-side${rankOpen ? ' open' : ''}`} role="dialog" aria-label="Rangs">
+          <button type="button" className="bib-drawer-close" onClick={() => setRankOpen(false)} aria-label="Fermer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
           <div className="bib-rank">
             <div className="bib-rank-top">
               <div className="bib-seal" aria-hidden>
@@ -300,10 +311,6 @@ export default function BibliothequePage() {
             </ol>
           </div>
 
-          <div className="bib-week">
-            <div><b>+{week.n}</b><span>livre{week.n > 1 ? 's' : ''} cette semaine</span></div>
-            <div><b>{week.five}</b><span>noté{week.five > 1 ? 's' : ''} 5/5 cette semaine</span></div>
-          </div>
         </aside>
       </div>
     </div>
