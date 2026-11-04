@@ -189,6 +189,52 @@ export default function StatsPage() {
   const maxBar = Math.max(...week.bars.map(b => b.ms), 3600000)
   const avgBar = week.bars.reduce((a, b) => a + b.ms, 0) / week.bars.length
 
+  // ===== Vue explorable (nov. 2026) =====
+  const [period, setPeriod] = useState<7 | 30 | 'sem'>(30)
+  const [metric, setMetric] = useState<'time' | 'notes' | 'active'>('time')
+  const [selDay, setSelDay] = useState<string | null>(null)
+  const [openSys, setOpenSys] = useState<string | null>(null)
+  const [noteSel, setNoteSel] = useState<number | null>(null)
+
+  // Révisions notées par jour : { date: [{ lesson, score }] }
+  const notesByDay = useMemo(() => {
+    const m = new Map<string, { l: Lesson; score: number }[]>()
+    for (const l of semLessons) {
+      for (const st of (Array.isArray(l.steps) ? l.steps : []) as StepEntry[]) {
+        const sc = effectiveScore(st); const dt = stepDate(st)
+        if (!sc || !dt) continue
+        const arr = m.get(dt) ?? []; arr.push({ l, score: sc }); m.set(dt, arr)
+      }
+    }
+    return m
+  }, [semLessons])
+
+  const days = useMemo(() => {
+    let n = period === 'sem' ? 0 : period
+    if (period === 'sem') {
+      // Depuis la plus ancienne date d'apprentissage du semestre (64 jours au plus).
+      const first = semLessons.map(l => l.learn_date).filter(Boolean).sort()[0] as string | undefined
+      const diff = first ? Math.round((new Date(today + 'T12:00:00').getTime() - new Date(first + 'T12:00:00').getTime()) / 86400000) + 1 : 30
+      n = Math.max(14, Math.min(120, diff))
+    }
+    return Array.from({ length: n }, (_, i) => {
+      const date = addDays(today, -(n - 1 - i))
+      const ms = dayLog[date] ?? 0
+      const notes = notesByDay.get(date) ?? []
+      return { date, ms, notes, active: ms > 0 || notes.length > 0 }
+    })
+  }, [period, today, dayLog, notesByDay, semLessons])
+
+  const prevDays = useMemo(() => {
+    const n = days.length
+    return Array.from({ length: n }, (_, i) => {
+      const date = addDays(today, -(2 * n - 1 - i))
+      const ms = dayLog[date] ?? 0
+      const notes = notesByDay.get(date) ?? []
+      return { ms, notes: notes.length, active: ms > 0 || notes.length > 0 }
+    })
+  }, [days.length, today, dayLog, notesByDay])
+
   // ===== À retravailler =====
   const weak = useMemo(() => semLessons
     .map(l => ({ l, note: lastNote(l), late: isLate(l, today, schedOf(l.system_id) ?? DEFAULT_J) }))
@@ -198,15 +244,10 @@ export default function StatsPage() {
 
   if (loading) return <div className="stats-page"><PageLoader label="Calcul de tes statistiques…" /></div>
 
-  const semName = semestre === 'year' ? "Toute l'année" : `Semestre ${semestre}`
-
   if (totals.n === 0) {
     return (
-      <div className="stats-page st6">
-        <header className="st6-head">
-          <h1>Où tu en es</h1>
-          <p>{semName}</p>
-        </header>
+      <div className="stats-page st6 st7">
+        <header className="st7-head"><h1>Statistiques</h1></header>
         <div className="st6-empty">
           <p>Pas encore de fiche sur cette période. Crée tes fiches et note tes premières révisions : tes statistiques apparaîtront ici, matière par matière.</p>
           <Link href="/dashboard/fiches" className="st6-btn">Aller aux fiches</Link>
@@ -215,127 +256,173 @@ export default function StatsPage() {
     )
   }
 
-  const hours = fmtHours(week.ms)
   const qcmPct = totals.att > 0 ? Math.round(100 * totals.ok / totals.att) : null
-  const lateSub = totals.late === 0
-    ? 'Tout est à jour'
-    : totals.lateSubs.length <= 2
-      ? totals.lateSubs.join(' et ')
-      : `${totals.lateSubs.slice(0, 2).join(', ')} et ${totals.lateSubs.length - 2} autre${totals.lateSubs.length - 2 > 1 ? 's' : ''}`
-  const weakIds = weak.slice(0, 30).map(w => w.l.id).join(',')
+  const sumMs = days.reduce((a, d) => a + d.ms, 0)
+  const sumNotes = days.reduce((a, d) => a + d.notes.length, 0)
+  const sumActive = days.filter(d => d.active).length
+  const pMs = prevDays.reduce((a, d) => a + d.ms, 0)
+  const pNotes = prevDays.reduce((a, d) => a + d.notes, 0)
+  const pActive = prevDays.filter(d => d.active).length
+  const fmtMs = (ms: number) => { const h = fmtHours(ms); return h.small === 'min' ? `${h.big} min` : `${h.big} ${h.small}` }
+  const delta = (a: number, b: number, unit: 'ms' | 'n') => {
+    if (a === b) return { t: 'comme avant', c: '' }
+    const d = a - b
+    const t = unit === 'ms' ? fmtMs(Math.abs(d)) : String(Math.abs(d))
+    return { t: `${d > 0 ? '+' : '−'}${t} vs avant`, c: d > 0 ? 'up' : 'down' }
+  }
+  const kpis = [
+    { id: 'time' as const, label: 'Temps de révision', value: fmtMs(sumMs), d: delta(sumMs, pMs, 'ms') },
+    { id: 'notes' as const, label: 'Révisions notées', value: String(sumNotes), d: delta(sumNotes, pNotes, 'n') },
+    { id: 'active' as const, label: 'Jours actifs', value: `${sumActive} / ${days.length}`, d: delta(sumActive, pActive, 'n') },
+  ]
+  const val = (d: typeof days[number]) => metric === 'time' ? d.ms : metric === 'notes' ? d.notes.length : (d.active ? 1 : 0)
+  const maxV = Math.max(1, ...days.map(val))
+  const curDay = days.find(d => d.date === selDay) ?? days[days.length - 1]
+  const chartLbl = metric === 'time' ? 'temps par jour' : metric === 'notes' ? 'révisions notées par jour' : 'jours actifs'
+  const longDay = (d: string) => { const x = new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); return x.charAt(0).toUpperCase() + x.slice(1) }
+
+  // Fiches par dernière note (1 à 5), 0 = pas encore notée
+  const byNote = [0, 1, 2, 3, 4, 5].map(k => semLessons.filter(l => (lastNote(l)?.score ?? 0) === k))
+  const noteK = noteSel ?? ([1, 2, 3, 4, 5].find(k => byNote[k].length > 0) ?? 0)
+  const NOTE_WORD = ['pas encore notées', 'à revoir', 'faibles', 'moyennes', 'bien', 'maîtrisées']
+  const qcmOf = (l: Lesson) => {
+    let a = 0, o = 0
+    for (const q of l.ai_questions ?? []) { a += q.attempts ?? 0; o += q.correct ?? 0 }
+    return a > 0 ? `${Math.round(100 * o / a)} %` : '—'
+  }
+  const nextOf = (l: Lesson) => {
+    if (!l.learn_date) return { t: 'pas planifiée', late: false }
+    const j = schedOf(l.system_id) ?? DEFAULT_J
+    const steps = (Array.isArray(l.steps) ? l.steps : []) as StepEntry[]
+    const raw = l as unknown as { skips?: unknown; postpones?: unknown }
+    const skips = Array.isArray(raw.skips) ? (raw.skips as number[]) : []
+    const post = raw.postpones && typeof raw.postpones === 'object' ? (raw.postpones as Record<string, string>) : {}
+    for (let i = 0; i < j.length; i++) {
+      if (stepScore(steps[i]) || skips.includes(i)) continue
+      const due = post[String(i)] ?? reviewDate(l.learn_date, j[i])
+      if (due < today) return { t: `${Math.round((new Date(today + 'T12:00:00').getTime() - new Date(due + 'T12:00:00').getTime()) / 86400000)} j de retard`, late: true }
+      if (due === today) return { t: "aujourd'hui", late: false }
+      return { t: fmtDay(due), late: false }
+    }
+    return { t: 'terminée', late: false }
+  }
 
   return (
-    <div className="stats-page st6">
-      <header className="st6-head">
-        <h1>Où tu en es</h1>
-        <p>{semName}, {totals.n} fiche{totals.n > 1 ? 's' : ''}, mis à jour à chaque note.</p>
+    <div className="stats-page st6 st7">
+      <header className="st7-head">
+        <h1>Statistiques</h1>
+        <div className="st7-seg" role="group" aria-label="Période">
+          {([[7, '7 jours'], [30, '30 jours'], ['sem', 'Semestre']] as const).map(([v, l]) => (
+            <button key={String(v)} type="button" aria-pressed={period === v} className={period === v ? 'on' : ''} onClick={() => { setPeriod(v); setSelDay(null) }}>{l}</button>
+          ))}
+        </div>
       </header>
 
-      <section className="st6-kpis" aria-label="Chiffres clés">
-        <div className="st6-kpi">
-          <div className="st6-kicker">Fiches maîtrisées</div>
-          <div className="st6-kpi-v"><b>{totals.mastered}</b><span>/ {totals.n}</span></div>
-          <div className="st6-kpi-s">dernière note 4 ou 5</div>
-        </div>
-        <div className="st6-kpi">
-          <div className="st6-kicker">En retard</div>
-          <div className="st6-kpi-v"><b className={totals.late > 0 ? 'late' : ''}>{totals.late}</b><span>fiche{totals.late > 1 ? 's' : ''}</span></div>
-          <div className="st6-kpi-s">{lateSub}</div>
-        </div>
-        <div className="st6-kpi">
-          <div className="st6-kicker">Cette semaine</div>
-          <div className="st6-kpi-v"><b>{hours.big}</b><span>{hours.small}</span></div>
-          <div className="st6-kpi-s">{week.notes} révision{week.notes > 1 ? 's' : ''} notée{week.notes > 1 ? 's' : ''}</div>
-        </div>
-        <div className="st6-kpi">
-          <div className="st6-kicker">Réussite aux QCM</div>
-          <div className="st6-kpi-v">{qcmPct === null ? <b className="dim">0</b> : <b>{qcmPct}</b>}<span>%</span></div>
-          <div className="st6-kpi-s">{totals.att > 0 ? `sur ${totals.att} réponse${totals.att > 1 ? 's' : ''}` : 'Aucun QCM fait pour le moment'}</div>
+      <section className="st7-kpis" aria-label="Chiffres clés">
+        {kpis.map(k => (
+          <button key={k.id} type="button" className={`st7-kpi${metric === k.id ? ' on' : ''}`} aria-pressed={metric === k.id} onClick={() => setMetric(k.id)}>
+            <span className="st7-kpi-l">{k.label}</span>
+            <b>{k.value}</b>
+            <span className={`st7-kpi-d ${k.d.c}`}>{k.d.t}</span>
+          </button>
+        ))}
+        <div className="st7-kpi static">
+          <span className="st7-kpi-l">Réussite aux QCM</span>
+          <b>{qcmPct === null ? '—' : `${qcmPct} %`}</b>
+          <span className="st7-kpi-d">{totals.att > 0 ? `sur ${totals.att} réponses` : 'aucun QCM fait'}</span>
         </div>
       </section>
 
-      <div className="st6-grid">
-        <section className="st6-subs" aria-label="Par matière">
-          <div className="st6-sec-head">
-            <h2>Par matière</h2>
-            <span>De la plus faible à la plus forte</span>
+      <section className="st7-chart" aria-label={chartLbl}>
+        <div className="st7-bars" style={{ gap: days.length > 40 ? 2 : days.length > 10 ? 4 : 12 }}>
+          {days.map(d => (
+            <button key={d.date} type="button" aria-label={longDay(d.date)} aria-pressed={d.date === curDay.date}
+              className={`st7-bar${d.date === curDay.date ? ' on' : ''}${d.active ? ' act' : ''}`}
+              style={{ height: `${Math.max(3, Math.round(100 * val(d) / maxV))}%` }}
+              onClick={() => setSelDay(d.date)} />
+          ))}
+        </div>
+        <div className="st7-axis"><span>{fmtDay(days[0].date)}</span><span>{chartLbl}</span><span>aujourd&apos;hui</span></div>
+
+        <div className="st7-day">
+          <div className="st7-day-h">
+            <b>{longDay(curDay.date)}</b>
+            <span>{curDay.active ? `${fmtMs(curDay.ms)}, ${curDay.notes.length} révision${curDay.notes.length > 1 ? 's' : ''} notée${curDay.notes.length > 1 ? 's' : ''}` : 'Aucune activité'}</span>
           </div>
-          <div className="st6-table">
-            <div className="st6-tr st6-th">
-              <span>Matière</span><span>Dernière note de chaque fiche</span><span>Maîtrise</span><span>Retard</span><span>QCM</span><span />
+          <div className="st7-day-list">
+            {curDay.notes.length === 0
+              ? <span className="st7-muted">{curDay.ms > 0 ? 'Du temps en session, sans note posée ce jour-là.' : 'Pas de révision ce jour-là.'}</span>
+              : curDay.notes.map((n, i) => (
+                <Link key={`${n.l.id}-${i}`} href={`/dashboard/fiches?matiere=${n.l.system_id}&fiche=${n.l.id}`} className="st7-row">
+                  <i style={{ background: colorOf.get(n.l.system_id) || '#3E6F9C' }} />
+                  <span className="st7-row-t">{n.l.name}</span>
+                  <span className={`st7-note n${n.score}`}>{n.score}</span>
+                  <span className="st7-muted">{qcmOf(n.l)} QCM</span>
+                </Link>
+              ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="st7-grid">
+        <section className="st7-subs" aria-label="Par matière">
+          <div className="st7-th"><span /><span>Maîtrise</span><span>QCM</span><span>Retard</span></div>
+          {rows.map(r => {
+            const open = openSys === r.sys.id
+            const ls = semLessons.filter(l => l.system_id === r.sys.id)
+            return (
+              <div key={r.sys.id} className={`st7-sub${open ? ' open' : ''}`}>
+                <button type="button" className="st7-tr" aria-expanded={open} onClick={() => setOpenSys(open ? null : r.sys.id)}>
+                  <span className="st7-name"><i style={{ background: r.color }} /><b>{r.sys.name}</b><small>{r.n}</small></span>
+                  <span className="st7-mbar"><span><i style={{ width: `${Math.round(r.mastery * 100)}%`, background: r.color }} /></span><em>{Math.round(r.mastery * 100)} %</em></span>
+                  <span className="st7-num">{r.att > 0 ? `${Math.round(100 * r.ok / r.att)} %` : '—'}</span>
+                  <span className={`st7-num${r.late > 0 ? ' late' : ''}`}>{r.late > 0 ? r.late : '—'}</span>
+                </button>
+                {open && (
+                  <div className="st7-fiches">
+                    {ls.map(l => {
+                      const nt = lastNote(l); const nx = nextOf(l)
+                      return (
+                        <Link key={l.id} href={`/dashboard/fiches?matiere=${l.system_id}&fiche=${l.id}`} className="st7-tr st7-fiche">
+                          <span className="st7-name"><span className={`st7-note n${nt?.score ?? 0}`}>{nt?.score ?? '·'}</span>{l.name}</span>
+                          <span className={nx.late ? 'late' : 'st7-muted'}>{nx.t}</span>
+                          <span className="st7-num">{qcmOf(l)}</span>
+                          <span />
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </section>
+
+        <aside className="st7-side">
+          <span className="st7-muted">Dernière note de chaque fiche</span>
+          <div className="st7-dist">
+            {[1, 2, 3, 4, 5, 0].map(k => byNote[k].length > 0 && (
+              <button key={k} type="button" aria-pressed={noteK === k} aria-label={`${byNote[k].length} fiches ${NOTE_WORD[k]}`}
+                className={noteK === k ? 'on' : ''} style={{ flexGrow: byNote[k].length, background: k === 0 ? NOTE_NONE : NOTE_COLORS[k - 1] }}
+                onClick={() => setNoteSel(k)} />
+            ))}
+          </div>
+          <div className="st7-legend">
+            {[1, 2, 3, 4, 5].map(k => <span key={k}><i style={{ background: NOTE_COLORS[k - 1] }} />{k} ({byNote[k].length})</span>)}
+          </div>
+          <div className="st7-notelist">
+            <div className="st7-notelist-h">
+              <b>{byNote[noteK].length} fiche{byNote[noteK].length > 1 ? 's' : ''} {NOTE_WORD[noteK]}</b>
+              {byNote[noteK].length > 0 && <Link href={`/dashboard/focus?lessons=${byNote[noteK].slice(0, 30).map(l => l.id).join(',')}`}>Réviser</Link>}
             </div>
-            {rows.map((r, i) => (
-              <Link key={r.sys.id} href={`/dashboard/fiches?matiere=${r.sys.id}`} className="st6-tr st6-row" style={{ animationDelay: `${60 + i * 50}ms` }}>
-                <span className="st6-sub"><i style={{ background: r.color }} /><b>{r.sys.name}</b><small>{r.n}</small></span>
-                <span className="st6-dist" style={{ animationDelay: `${60 + i * 50}ms` }}>
-                  {r.dist.map((v, k) => v > 0 && (
-                    <span key={k} style={{ flexGrow: v, background: NOTE_COLORS[k] }} title={`${v} fiche${v > 1 ? 's' : ''} : dernière note ${k + 1}/5`} />
-                  ))}
-                  {r.none > 0 && <span style={{ flexGrow: r.none, background: NOTE_NONE }} title={`${r.none} fiche${r.none > 1 ? 's' : ''} pas encore notée${r.none > 1 ? 's' : ''}`} />}
-                </span>
-                <span className="st6-num">{r.rated > 0 ? `${Math.round(r.mastery * 100)} %` : '0 %'}</span>
-                <span className={`st6-num ${r.late > 0 ? 'late' : 'dim'}`}>{r.late > 0 ? `${r.late} fiche${r.late > 1 ? 's' : ''}` : 'à jour'}</span>
-                <span className="st6-num">{r.att > 0 ? `${Math.round(100 * r.ok / r.att)} %` : <em>pas de QCM</em>}</span>
-                <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            {byNote[noteK].slice(0, 8).map(l => (
+              <Link key={l.id} href={`/dashboard/fiches?matiere=${l.system_id}&fiche=${l.id}`} className="st7-row">
+                <i style={{ background: colorOf.get(l.system_id) || '#3E6F9C' }} />
+                <span className="st7-row-t">{l.name}</span>
+                <span className="st7-muted">{qcmOf(l)} QCM</span>
               </Link>
             ))}
           </div>
-          <div className="st6-legend">
-            {NOTE_COLORS.map((c, k) => <span key={k}><i style={{ background: c }} />{k + 1}/5</span>)}
-            <span><i style={{ background: NOTE_NONE }} />pas encore notée</span>
-            <span className="st6-legend-r">Maîtrisée = dernière note 4 ou 5</span>
-          </div>
-        </section>
-
-        <aside className="st6-side">
-          <section aria-label="À retravailler">
-            <div className="st6-sec-head">
-              <h2>À retravailler</h2>
-              {weak.length > 5 && <Link href={`/dashboard/focus?lessons=${weakIds}`}>Tout revoir ({weak.length})</Link>}
-            </div>
-            {weak.length === 0
-              ? <p className="st6-none">Aucune fiche notée 1 ou 2 sur cette période.</p>
-              : (
-                <ul className="st6-weak">
-                  {weak.slice(0, 5).map(({ l, note, late }) => {
-                    const sys = semSystems.find(s => s.id === l.system_id)
-                    return (
-                      <li key={l.id}>
-                        <span className={`st6-note n${note!.score}`}>{note!.score}/5</span>
-                        <span className="st6-weak-t">
-                          <b>{l.name}</b>
-                          <small>{sys?.name ?? 'Matière'}{late ? ', en retard' : note!.date ? `, notée le ${fmtDay(note!.date)}` : ''}</small>
-                        </span>
-                        <Link href={`/dashboard/focus?lessons=${l.id}`} className="st6-mini">Réviser</Link>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-          </section>
-
-          <section aria-label="Temps de travail">
-            <div className="st6-sec-head">
-              <h2>Temps par semaine</h2>
-              <span>moyenne {fmtHours(avgBar).big}{fmtHours(avgBar).small !== 'min' ? ` ${fmtHours(avgBar).small}` : ' min'}</span>
-            </div>
-            <div className="st6-bars" role="img" aria-label="Temps de travail des 8 dernières semaines">
-              {week.bars.map((b, i) => {
-                const h = Math.floor(b.ms / 3600000)
-                const last = i === week.bars.length - 1
-                return (
-                  <div key={b.start} className="st6-bar-col">
-                    <span className={last ? 'cur' : ''}>{b.ms > 0 ? (h > 0 ? `${h} h` : `${Math.round(b.ms / 60000)} min`) : ''}</span>
-                    <i className={last ? 'cur' : ''} style={{ height: `${Math.max(b.ms > 0 ? 4 : 0, Math.round(100 * b.ms / maxBar))}px`, animationDelay: `${200 + i * 60}ms` }} />
-                  </div>
-                )
-              })}
-            </div>
-            <div className="st6-bars-lbl">
-              {week.bars.map(b => <span key={b.start}>{fmtDay(b.start)}</span>)}
-            </div>
-            <p className="st6-foot">Temps passé en session de travail sur MedRev.</p>
-          </section>
         </aside>
       </div>
     </div>
