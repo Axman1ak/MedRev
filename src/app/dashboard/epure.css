@@ -291,3 +291,17 @@
 .db-shell .sim-seg { border-color: transparent; background: var(--bg-soft); }
 .db-shell .sim-seg.on { box-shadow: inset 0 0 0 1px var(--accent-primary); }
 .db-shell .sim-ann { border: 0; }
+
+/* ===================== Retouches après vérification ===================== */
+@media (min-width: 769px) {
+  .db-shell .db-sidebar .db-theme { display: grid !important; }
+  /* Paliers manqués : un point vide gris dans la liste, pas un cercle rouge. */
+  .db-shell .fi-main .stamp.missed,
+  .db-shell .fi-main .stamp.future { background: var(--border-subtle); border: 0; box-shadow: none; }
+}
+.db-shell .dvx .tsort-btn { border: 0; background: transparent; }
+.db-shell .cal-title { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -.02em; }
+.db-shell .cal-title em { font-style: normal; color: var(--text-tertiary); font-weight: 500; }
+.db-shell .sim-title { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -.02em; }
+.db-shell .sim-title em { font-style: normal; color: inherit; }
+.db-shell .sim-bloc.sim-lancer { background: transparent; padding-left: 0; padding-right: 0; }
