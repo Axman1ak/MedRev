@@ -305,3 +305,44 @@
 .db-shell .sim-title { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -.02em; }
 .db-shell .sim-title em { font-style: normal; color: inherit; }
 .db-shell .sim-bloc.sim-lancer { background: transparent; padding-left: 0; padding-right: 0; }
+
+/* ===================== PANNEAU DE LA FICHE (contenu) ===================== */
+/* Ordre : en-tête (matière, nom, prochaine révision), trois actions,
+   paliers J+ avec la note et la date, trois chiffres, sources. */
+.db-shell .rmod-kicker { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.db-shell .rmod-title { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 24px; letter-spacing: -.01em; }
+.db-shell .rmod-next { margin-top: 6px; font-size: 14px; color: var(--text-secondary); }
+.db-shell .rmod-next.late { color: var(--warning); }
+.db-shell .rmod-divider { display: none; }
+.db-shell .rmod-block-label { margin: 26px 0 12px; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-secondary); }
+
+.db-shell .rmod-duo { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
+.db-shell .rmod-feat { border: 0; border-radius: 12px; padding: 12px; background: var(--bg-soft); }
+.db-shell .rmod-feat-h { margin-bottom: 2px; font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-primary); }
+.db-shell .rmod-feat-ic { display: none; }
+.db-shell .rmod-feat-sub { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.db-shell .rmod-feat-n { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-bottom: 10px; }
+.db-shell .rmod-feat-n em { font-size: 12px; }
+.db-shell .rmod-feat-cta { padding: 8px 10px; font-size: 13px; font-weight: 600; }
+.db-shell .rmod-feat-go { background: #15304E; }
+.db-shell .rmod-feat-go .rmod-feat-h { color: #fff; }
+.db-shell .rmod-feat-go .rmod-feat-sub { color: rgba(255, 255, 255, .72); }
+.db-shell .rmod-feat-go .rmod-feat-cta { background: #fff; color: #15304E; }
+
+.db-shell .rmod-jpicker { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 8px; }
+.db-shell .rmod-jstep { background: none; border: 0; padding: 4px 0; gap: 5px; }
+.db-shell .rmod-jstep:hover:not(:disabled) { background: var(--bg-soft); }
+.db-shell .rmod-jstep:disabled { opacity: 1; background: none; }
+.db-shell .rmod-jbig { width: 36px; height: 36px; font-size: 14px; font-weight: 700; color: #fff; box-sizing: border-box; }
+.db-shell .rmod-stamp.s3 { color: #1A1A1A; }
+.db-shell .rmod-stamp.future { border: 0; background: var(--bg-soft); }
+.db-shell .rmod-stamp.missed { border: 2px dashed var(--warning); }
+.db-shell .rmod-stamp.today { background: transparent; outline: 0; border: 2px dashed #15304E; }
+.db-shell .rmod-jlbl { order: 2; font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--text-primary); }
+.db-shell .rmod-jstatus { order: 3; font-size: 11px; }
+.db-shell .rmod-jbig { order: 1; }
+
+.db-shell .rmod-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.db-shell .rmod-nums div { display: flex; flex-direction: column; gap: 2px; }
+.db-shell .rmod-nums b { font-size: 20px; font-weight: 700; }
+.db-shell .rmod-nums span { font-size: 12px; color: var(--text-secondary); }
