@@ -23,6 +23,8 @@ import PageLoader from '@/components/PageLoader'
 import { cleanExplanation, whyFor } from '@/lib/qcmText'
 import ReportQuestion from '@/components/ReportQuestion'
 import { currentSemestre } from '@/lib/semestre'
+import { isMissed } from '@/lib/qcmMissed'
+import type { AiQuestion } from '@/types'
 
 type Semestre = 1 | 2 | 'year'
 type Mode = 'apprentissage' | 'examen'
@@ -354,6 +356,26 @@ export default function SimulateurPage() {
   // Quota Free : vérifié serveur via /api/simulator/start avant lancement.
   // - quotaError : message inline pour les erreurs réseau / serveur génériques
   // - paywall    : payload pour la modale Premium quand l'API renvoie 403 quota_exceeded
+  // Refonte (nov. 2026) : trois onglets. Épreuves = le format des partiels,
+  // Mes erreurs = les questions ratées, Concours de la fac.
+  const [simTab, setSimTab] = useState<'epreuves' | 'concours' | 'erreurs'>('epreuves')
+  const [onlyMissed, setOnlyMissed] = useState(false)
+  const [epCap, setEpCap] = useState<number | null>(null)
+  const [pendingLaunch, setPendingLaunch] = useState(false)
+  const [openEp, setOpenEp] = useState<string | null>(null)
+  const [surMesure, setSurMesure] = useState(false)
+  const [errFilter, setErrFilter] = useState<string>('all')
+  const [epFormats, setEpFormats] = useState<Record<string, number>>({})
+  useEffect(() => {
+    try { const raw = localStorage.getItem('medrev-epreuve-format'); if (raw) setEpFormats(JSON.parse(raw)) } catch { /* rien */ }
+  }, [])
+  function setEpFormat(id: string, n: number) {
+    setEpFormats(prev => {
+      const next = { ...prev, [id]: n }
+      try { localStorage.setItem('medrev-epreuve-format', JSON.stringify(next)) } catch { /* rien */ }
+      return next
+    })
+  }
   const [launching, setLaunching] = useState(false)
   const [quotaError, setQuotaError] = useState<string | null>(null)
   const [paywall, setPaywall] = useState<PaywallInfo | null>(null)
@@ -472,10 +494,14 @@ export default function SimulateurPage() {
       if (sysCibles.has(l.system_id) && !selectedLessonIds.has(l.id)) continue
       const sys = systems.find(s => s.id === l.system_id)
       if (!sys) continue
-      out.push(...parseQuestions(l, sys.name, sys.id))
+      const parsed = parseQuestions(l, sys.name, sys.id)
+      if (onlyMissed) {
+        const raw = (Array.isArray(l.ai_questions) ? l.ai_questions : []) as AiQuestion[]
+        out.push(...parsed.filter(q => q.qIndex !== undefined && raw[q.qIndex] && isMissed(raw[q.qIndex])))
+      } else out.push(...parsed)
     }
     return out
-  }, [lessons, selectedSysIds, selectedLessonIds, systems])
+  }, [lessons, selectedSysIds, selectedLessonIds, systems, onlyMissed])
 
   // ---- Annales : dérivées ----
   // Un PDF d'annale couvre souvent plusieurs matières : on ne filtre donc PAS
@@ -518,7 +544,7 @@ export default function SimulateurPage() {
   // les conditions réelles. Toutes les questions de la portée, et un chrono
   // imposé en mode examen (~1,5 min/question = rythme concours). En mode
   // apprentissage, pas de chrono (correction en direct).
-  const examQuestionCount = totalAvailable
+  const examQuestionCount = epCap ? Math.min(epCap, totalAvailable) : totalAvailable
   const examDurationMin = mode === 'examen' ? Math.max(1, Math.ceil(examQuestionCount * 1.5)) : null
 
   // On pousse ces valeurs calculées dans l'état que lit launchSession.
@@ -609,6 +635,27 @@ export default function SimulateurPage() {
     }
     setPhase('session')
     setLaunching(false)
+  }
+
+  // Lancement depuis un onglet : on attend que la portée choisie soit
+  // répercutée dans nbQuestions et duration avant de construire la session.
+  useEffect(() => {
+    if (!pendingLaunch) return
+    if (nbQuestions !== examQuestionCount || duration !== examDurationMin) return
+    setPendingLaunch(false)
+    void launchSession()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLaunch, nbQuestions, duration, examQuestionCount, examDurationMin])
+
+  function lancerEpreuve(sysIds: string[], cap: number) {
+    setSource('genere'); setOnlyMissed(false)
+    setSelectedSysIds(new Set(sysIds)); setSelectedLessonIds(new Set())
+    setEpCap(cap); setPendingLaunch(true)
+  }
+  function lancerErreurs(sysIds: string[]) {
+    setSource('genere'); setOnlyMissed(true); setMode('apprentissage')
+    setSelectedSysIds(new Set(sysIds)); setSelectedLessonIds(new Set())
+    setEpCap(null); setPendingLaunch(true)
   }
 
   // ---- Annales : actions ----
@@ -1084,15 +1131,118 @@ export default function SimulateurPage() {
       )
     })() : null
 
-    return (
-      <div className="sim-page sim-page-config">
-        <div className="sim-cfg-wrap">
-        <div className="sim-cfg">
-          <div className="sim-cfg-top">
-            <div className="sim-kick">Simulateur</div>
-            <h1 className="sim-title">Ton <em>entraînement</em></h1>
-          </div>
+    // ---------------------------------------------------------- ÉPREUVES
+    const fmtFor = (id: string) => epFormats[id] ?? 30
+    const sysAvecQcm = semSystems.filter(sy => countQuestionsForSystem(sy.id) > 0)
+    const totalComplet = sysAvecQcm.reduce((a, sy) => a + Math.min(fmtFor(sy.id), countQuestionsForSystem(sy.id)), 0)
+    const dureeTxt = (n: number) => { const m = Math.ceil(n * 1.5); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min` }
+    const reel = mode === 'examen'
+    const epreuves = [
+      ...(sysAvecQcm.length > 1 ? [{ id: '__all', name: 'Semestre complet', color: 'var(--text-primary)', n: totalComplet, avail: totalComplet, ids: sysAvecQcm.map(sy => sy.id), fiches: lessons.filter(l => sysAvecQcm.some(sy => sy.id === l.system_id)).length, sansQcm: 0 }] : []),
+      ...semSystems.map(sy => {
+        const avail = countQuestionsForSystem(sy.id)
+        const ls = lessons.filter(l => l.system_id === sy.id)
+        return {
+          id: sy.id, name: sy.name, color: colorOfSystem.get(sy.id) ?? PALETTE[0],
+          n: Math.min(fmtFor(sy.id), avail), avail, ids: [sy.id], fiches: ls.length,
+          sansQcm: ls.filter(l => !Array.isArray(l.ai_questions) || (l.ai_questions as unknown[]).length === 0).length,
+        }
+      }),
+    ]
 
+    // ------------------------------------------------------- MES ERREURS
+    const erreurs = semSystems.flatMap(sy => lessons.filter(l => l.system_id === sy.id).flatMap(l => {
+      const raw = (Array.isArray(l.ai_questions) ? l.ai_questions : []) as AiQuestion[]
+      return raw.map((q, i) => ({ q, i })).filter(x => x.q && isMissed(x.q)).map(x => {
+        const ref = x.q.source_ref && typeof x.q.source_ref === 'object' ? x.q.source_ref as AiQuestionSourceRef : null
+        return {
+          key: `${l.id}-${x.i}`, sysId: sy.id, color: colorOfSystem.get(sy.id) ?? PALETTE[0],
+          stem: (x.q.question || x.q.stem || '').trim(), fiche: l.name, lessonId: l.id,
+          times: Math.max(1, (x.q.attempts || 0) - (x.q.correct || 0)),
+          ref: ref?.pdf_page ? `poly p. ${ref.pdf_page}` : ref?.video_ts !== undefined ? `vidéo ${formatTs(ref.video_ts)}` : '',
+        }
+      })
+    }))
+    const errParMatiere = semSystems.map(sy => ({ sy, n: erreurs.filter(e => e.sysId === sy.id).length })).filter(x => x.n > 0)
+    const errVisibles = errFilter === 'all' ? erreurs : erreurs.filter(e => e.sysId === errFilter)
+
+    const tabs = [
+      { id: 'epreuves' as const, label: 'Épreuves', badge: String(epreuves.length) },
+      { id: 'concours' as const, label: 'Concours de la fac', badge: 'bientôt' },
+      { id: 'erreurs' as const, label: 'Mes erreurs', badge: String(erreurs.length) },
+    ]
+
+    return (
+      <div className="sim-page sim-page-config sim2">
+        <h1 className="sim2-h1">Simulateur</h1>
+        <nav className="sim2-tabs" aria-label="Sections du simulateur">
+          {tabs.map(t => (
+            <button key={t.id} type="button" className={simTab === t.id ? 'on' : ''} aria-current={simTab === t.id ? 'page' : undefined}
+              onClick={() => { setSimTab(t.id); setOnlyMissed(false); setEpCap(null) }}>
+              {t.label}<span>{t.badge}</span>
+            </button>
+          ))}
+        </nav>
+
+        {quotaError && <div role="alert" className="sim-err">{quotaError}</div>}
+
+        {simTab === 'epreuves' && (
+          <div className="sim2-ep">
+            <div className="sim2-bar">
+              <span>Le format de tes partiels, avec le barème {scoring.label.toLowerCase()}.</span>
+              <div className="sim2-seg" role="group" aria-label="Conditions">
+                <button type="button" className={reel ? 'on' : ''} aria-pressed={reel} onClick={() => setMode('examen')}>Conditions réelles</button>
+                <button type="button" className={!reel ? 'on' : ''} aria-pressed={!reel} onClick={() => setMode('apprentissage')}>Entraînement</button>
+              </div>
+            </div>
+            {semSystems.length === 0 && <div className="sim-vide">Aucune matière pour {semester === 'year' ? "l'année" : `le semestre ${semester}`}.</div>}
+            <div className="sim2-list">
+              {epreuves.map(e => {
+                const open = openEp === e.id
+                const vide = e.avail === 0
+                return (
+                  <div key={e.id} className={`sim2-row${open ? ' open' : ''}${vide ? ' vide' : ''}`}>
+                    <div className="sim2-row-main">
+                      <button type="button" className="sim2-row-t" aria-expanded={open} onClick={() => setOpenEp(open ? null : e.id)}>
+                        <i style={{ background: e.color }} />
+                        <span>
+                          <b>{e.name}</b>
+                          <small>{vide ? `${e.fiches} fiche${e.fiches > 1 ? 's' : ''}, aucun QCM` : `${e.n} QCM, ${reel ? `${dureeTxt(e.n)}, chronométré` : 'sans chrono, correction immédiate'}`}</small>
+                        </span>
+                      </button>
+                      {vide
+                        ? <button type="button" className="sim2-ghost" onClick={() => router.push(`/dashboard/fiches?matiere=${e.id}`)}>Générer des QCM</button>
+                        : <button type="button" className={`sim2-go${e.id === '__all' ? ' main' : ''}`} disabled={launching} onClick={() => lancerEpreuve(e.ids, e.n)}>{launching && pendingLaunch ? '…' : 'Simuler'}</button>}
+                    </div>
+                    {open && !vide && (
+                      <div className="sim2-detail">
+                        <div>
+                          <span className="sim2-lbl">Questions tirées de</span>
+                          <span>{e.fiches} fiche{e.fiches > 1 ? 's' : ''}, {e.avail} QCM disponibles</span>
+                          {e.sansQcm > 0 && <span className="sim2-warn">{e.sansQcm} fiche{e.sansQcm > 1 ? 's' : ''} sans QCM, non incluse{e.sansQcm > 1 ? 's' : ''}</span>}
+                        </div>
+                        {e.id !== '__all' && (
+                          <div>
+                            <span className="sim2-lbl">Nombre de QCM de l&apos;épreuve</span>
+                            <div className="sim2-chips">
+                              {[15, 20, 30, 40, 60].map(n => (
+                                <button key={n} type="button" className={fmtFor(e.id) === n ? 'on' : ''} onClick={() => setEpFormat(e.id, n)}>{n}</button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <button type="button" className="sim2-more" aria-expanded={surMesure} onClick={() => { setSurMesure(v => !v); setOnlyMissed(false); setEpCap(null) }}>
+              {surMesure ? 'Masquer la session sur mesure' : 'Session sur mesure (fiches précises, annales)'}
+            </button>
+            {surMesure && (
+              <div className="sim2-custom">
           <div className="sim-panneau">
 
             <section className="sim-bloc" data-tour="sim-quoi">
@@ -1252,9 +1402,13 @@ export default function SimulateurPage() {
             </div>
 
           </div>
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* ------------------------------------------ CONCOURS BLANC ET CLASSEMENT */}
+        {simTab === 'concours' && (
+          <div className="sim2-concours">
         <aside className="sim-rank" aria-label="Concours blanc et classement">
           <section className="sim-cb">
             <div className="sim-kick sim-kick-light">Bientôt</div>
@@ -1280,7 +1434,45 @@ export default function SimulateurPage() {
             </div>
           </section>
         </aside>
-        </div>
+          </div>
+        )}
+
+        {simTab === 'erreurs' && (
+          <div className="sim2-err">
+            {erreurs.length === 0 ? (
+              <div className="sim-vide">Aucune question ratée pour le moment. Les QCM que tu rates apparaîtront ici.</div>
+            ) : (
+              <>
+                <div className="sim2-bar">
+                  <div className="sim2-chips">
+                    <button type="button" className={errFilter === 'all' ? 'on' : ''} onClick={() => setErrFilter('all')}>Tout <em>{erreurs.length}</em></button>
+                    {errParMatiere.map(x => (
+                      <button key={x.sy.id} type="button" className={errFilter === x.sy.id ? 'on' : ''} onClick={() => setErrFilter(x.sy.id)}>
+                        <i style={{ background: colorOfSystem.get(x.sy.id) ?? PALETTE[0] }} />{x.sy.name} <em>{x.n}</em>
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="sim2-go main" disabled={launching}
+                    onClick={() => lancerErreurs(errFilter === 'all' ? errParMatiere.map(x => x.sy.id) : [errFilter])}>
+                    {launching ? 'Lancement…' : `Refaire les ${errVisibles.length}`}
+                  </button>
+                </div>
+                <div className="sim2-list">
+                  {errVisibles.slice(0, 60).map(e => (
+                    <div key={e.key} className="sim2-errrow">
+                      <i style={{ background: e.color }} />
+                      <span>
+                        <b>{e.stem.length > 160 ? e.stem.slice(0, 157) + '…' : e.stem}</b>
+                        <small>{e.fiche}, ratée {e.times} fois</small>
+                      </span>
+                      {e.ref && <em>{e.ref}</em>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {paywall && (
           <PaywallModal

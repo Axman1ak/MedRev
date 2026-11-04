@@ -1414,3 +1414,58 @@
   .sim-gen-w { display: none; }
   .sim-mat-gen { font-size: 14px; font-weight: 600; padding: 8px 4px; }
 }
+
+/* ===================== Refonte en onglets (nov. 2026) ===================== */
+.sim2 { max-width: 1040px; margin: 0 auto; padding: 44px 52px 56px; display: flex; flex-direction: column; gap: 24px; box-sizing: border-box; }
+.sim2-h1 { margin: 0; font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-size: 34px; font-weight: 700; letter-spacing: -.02em; color: var(--text-primary); }
+.sim2-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--border-subtle); }
+.sim2-tabs button { display: flex; align-items: center; gap: 8px; padding: 0 0 12px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+.sim2-tabs button.on { color: var(--text-primary); font-weight: 600; border-bottom-color: var(--accent-primary); }
+.sim2-tabs button span { font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--bg-soft); padding: 1px 7px; border-radius: 999px; }
+.sim2-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; color: var(--text-secondary); margin-bottom: 12px; }
+.sim2-seg { display: flex; padding: 3px; border-radius: 10px; background: var(--bg-soft); }
+.sim2-seg button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; font: inherit; font-size: 14px; color: var(--text-secondary); cursor: pointer; }
+.sim2-seg button.on { background: var(--bg-card); color: var(--text-primary); font-weight: 600; box-shadow: var(--shadow-sm); }
+.sim2-list { display: flex; flex-direction: column; }
+.sim2-row { border-bottom: 1px solid var(--border-subtle); border-radius: 12px; }
+.sim2-row.open { background: var(--bg-soft); }
+.sim2-row-main { display: flex; align-items: center; gap: 16px; padding: 12px; }
+.sim2-row-t { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 4px 6px; margin: -4px -6px; border: 0; border-radius: 8px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.sim2-row-t:hover { background: var(--bg-soft); }
+.sim2-row-t > i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.sim2-row-t > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sim2-row-t b { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.sim2-row-t small { font-size: 13px; color: var(--text-secondary); }
+.sim2-row.vide b { color: var(--text-tertiary); }
+.sim2-go { flex: none; border: 0; border-radius: 10px; padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 600; background: var(--accent-soft); color: var(--accent-on-soft); cursor: pointer; }
+.sim2-go.main { background: var(--accent-primary); color: #fff; }
+.sim2-go:disabled { opacity: .5; cursor: default; }
+.sim2-go:hover:not(:disabled) { filter: brightness(.92); }
+.sim2-ghost { flex: none; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--accent-medium); cursor: pointer; padding: 8px 10px; border-radius: 8px; }
+.sim2-ghost:hover { background: var(--bg-soft); }
+.sim2-detail { display: flex; flex-wrap: wrap; gap: 20px 48px; padding: 2px 32px 18px; font-size: 14px; color: var(--text-primary); }
+.sim2-detail > div { display: flex; flex-direction: column; gap: 6px; }
+.sim2-lbl { font-size: 13px; color: var(--text-secondary); }
+.sim2-warn { font-size: 13px; color: var(--warning); }
+.sim2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sim2-chips button { display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-card); font: inherit; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+.sim2-chips button.on { border-color: var(--accent-primary); background: var(--accent-soft); }
+.sim2-chips button i { width: 8px; height: 8px; border-radius: 50%; }
+.sim2-chips button em { font-style: normal; color: var(--text-secondary); }
+.sim2-more { align-self: flex-start; margin-top: 18px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-medium); cursor: pointer; padding: 8px 0; }
+.sim2-custom { margin-top: 4px; }
+.sim2-concours .sim-rank { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; position: static; width: auto; }
+.sim2-errrow { display: flex; align-items: center; gap: 14px; padding: 14px 12px; border-bottom: 1px solid var(--border-subtle); border-radius: 10px; }
+.sim2-errrow:hover { background: var(--bg-soft); }
+.sim2-errrow > i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.sim2-errrow > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sim2-errrow b { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.sim2-errrow small { font-size: 13px; color: var(--text-secondary); }
+.sim2-errrow em { flex: none; font-style: normal; font-size: 13px; font-weight: 600; color: var(--accent-medium); }
+@media (max-width: 768px) {
+  .sim2 { padding: 18px 12px 32px; }
+  .sim2-concours .sim-rank { grid-template-columns: minmax(0, 1fr); }
+  .sim2-detail { padding: 2px 12px 14px; }
+}
+.sim-page-config.sim2 { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 44px 52px 56px; }
+@media (max-width: 768px) { .sim-page-config.sim2 { padding: 18px 12px 32px; } }
