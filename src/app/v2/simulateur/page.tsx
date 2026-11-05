@@ -21,7 +21,7 @@ class Logic extends DCLogic {
       weight: st.tab === i ? 700 : 500, color: st.tab === i ? '#1A1D23' : '#6B6F76', line: st.tab === i ? '#15304E' : 'transparent'
     }));
     const E = [
-      ['all', 'Semestre complet', '#15304E', '180 QCM, 4 h 30', [11.2, 12.1, 12.8], ''],
+      ['all', 'Semestre complet', '#F4C35A', '180 QCM, 4 h 30', [11.2, 12.1, 12.8], ''],
       ['ana', 'Anatomie', '#4F7CC9', '30 QCM, 45 min', [10.4, 11.8, 12.6, 13.9], ''],
       ['phy', 'Physiologie', '#8B6BB8', '30 QCM, 45 min', [12.5, 14.1], ''],
       ['pha', 'Pharmacologie', '#D08A3E', '20 QCM, 30 min', [9.8, 11.2, 10.9], ''],
@@ -38,8 +38,9 @@ class Logic extends DCLogic {
         name, color, format,
         last: n ? fmt(scores[n - 1]) : 'Pas encore fait', unit: n ? '/20' : '',
         trend: diff === null ? '' : (diff >= 0 ? '+' : '') + fmt(diff),
-        trendColor: diff !== null && diff < 0 ? '#B4533A' : '#2F6B45',
-        border: on ? '#15304E' : 'transparent', pressed: on ? 'true' : 'false',
+        trendColor: id === 'all' ? (diff !== null && diff < 0 ? '#F2B4A4' : '#9BD3AE') : (diff !== null && diff < 0 ? '#B4533A' : '#2F6B45'),
+        bg: id === 'all' ? '#15304E' : '#FFFFFF', fg: id === 'all' ? '#FFFFFF' : '#1A1D23', sub: id === 'all' ? 'rgba(255,255,255,.7)' : '#6B6F76',
+        border: on ? (id === 'all' ? '#F4C35A' : '#15304E') : 'transparent', pressed: on ? 'true' : 'false',
         span: id === 'all' ? 'span 3' : 'auto',
         pick: () => this.setState({ sel: id })
       };
@@ -50,7 +51,7 @@ class Logic extends DCLogic {
     const sc = cur[4].slice(-4);
     const bars = sc.map((s, i) => ({ score: fmt(s), h: Math.round(s / 20 * 80) + '%', bg: i === sc.length - 1 ? cur[2] : '#E4DFD4', date: dates[4 - sc.length + i] }));
     const sel = { name: cur[1], color: cur[2], format: cur[3], bars, hasHistory: sc.length > 0, noHistory: sc.length === 0 };
-    const modeDefs = [['Conditions réelles', 'Chrono, correction à la fin'], ['Entraînement', 'Sans chrono, correction à chaque question']];
+    const modeDefs = [['Mode examen', ''], ['Mode étude', '']];
     const modes = modeDefs.map(([label, desc], i) => {
       const on = st.mode === i;
       return { label, desc, pressed: on ? 'true' : 'false', pick: () => this.setState({ mode: i }), bg: on ? '#F4F6FA' : '#FFFFFF', border: on ? '#15304E' : '#E4DFD4', ring: on ? '#15304E' : '#C9C3B8', dot: on ? '#15304E' : 'transparent' };
@@ -124,21 +125,21 @@ export default function Page() {
                 <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
                   {(v.epreuves || []).map((e: any, i_e: number) => (
                     <Fragment key={i_e}>
-                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "18px", padding: "24px", borderRadius: "16px", background: "#FFFFFF", border: `2px solid ${e.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)", gridColumn: e.span}}>
+                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: e.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "18px", padding: "24px", borderRadius: "16px", background: e.bg, border: `2px solid ${e.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)", gridColumn: e.span}}>
                         <span style={{display: "flex", alignItems: "center", gap: "10px"}}>
                           <span style={{width: "12px", height: "12px", borderRadius: "50%", background: e.color}}></span>
                           <span style={{fontSize: "20px", fontWeight: "700"}}>
                             {e.name}
                           </span>
                         </span>
-                        <span style={{fontSize: "16px", color: "#6B6F76"}}>
+                        <span style={{fontSize: "16px", color: e.sub}}>
                           {e.format}
                         </span>
                         <span style={{display: "flex", alignItems: "baseline", gap: "10px"}}>
                           <span style={{fontSize: "38px", fontWeight: "700", letterSpacing: "-.02em"}}>
                             {e.last}
                           </span>
-                          <span style={{fontSize: "16px", color: "#9AA0A8"}}>
+                          <span style={{fontSize: "16px", color: e.sub}}>
                             {e.unit}
                           </span>
                           <span style={{fontSize: "16px", fontWeight: "600", color: e.trendColor}}>
@@ -170,9 +171,6 @@ export default function Page() {
                         <span style={{display: "flex", flexDirection: "column", gap: "2px"}}>
                           <span style={{fontSize: "17px", fontWeight: "600"}}>
                             {m.label}
-                          </span>
-                          <span style={{fontSize: "15px", color: "#6B6F76"}}>
-                            {m.desc}
                           </span>
                         </span>
                       </button>
