@@ -560,3 +560,4 @@
   .db-shell .cal-fiche-dot.cal-scored { width: 7px; height: 7px; margin-top: 0; border: 0; box-shadow: none; opacity: .45; }
   .db-shell .cal-sub { display: none; }
 }
+@media (min-width: 769px) { .db-shell .cal-legend { display: none; } }
