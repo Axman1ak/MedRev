@@ -479,3 +479,61 @@
 @media (min-width: 769px) {
   .db-shell .se-main { max-width: 900px; padding-left: 48px; padding-right: 48px; }
 }
+
+/* ===================== Retour du marine + proportions de la maquette ===================== */
+@media (min-width: 769px) {
+  /* Barre latérale marine, dépliée, libellés visibles. */
+  .db-shell .db-sidebar,
+  .db-shell .db-sidebar:hover,
+  .db-shell .db-sidebar.menu-open,
+  .db-shell .db-sidebar.tour-open { background: #15304E; color: #fff; border-right: 0; }
+  .db-shell .db-logo { color: #fff; }
+  .db-shell .db-nav-section + .db-nav-section { border-top-color: rgba(255, 255, 255, .10); }
+  .db-shell .db-nav-item { color: rgba(255, 255, 255, .78); }
+  .db-shell .db-nav-item:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+  .db-shell .db-nav-item.active { background: rgba(255, 255, 255, .12); color: #fff; }
+  .db-shell .db-search-item { color: rgba(255, 255, 255, .6); }
+  .db-shell .db-kbd { background: rgba(255, 255, 255, .10); color: rgba(255, 255, 255, .6); }
+  .db-shell .db-nav-item .badge { background: rgba(255, 255, 255, .14); color: #fff; }
+  .db-shell .db-subject-n,
+  .db-shell .db-nav-item.db-subject.active .db-subject-n { color: rgba(255, 255, 255, .45); }
+  .db-shell .db-semdrop-btn { color: rgba(255, 255, 255, .66); }
+  .db-shell .db-semdrop-btn:hover,
+  .db-shell .db-semdrop-btn[aria-expanded="true"] { background: rgba(255, 255, 255, .08); color: #fff; }
+  .db-shell .db-user-wrap { border-top-color: rgba(255, 255, 255, .10); }
+  .db-shell .db-sidebar .db-user-card:hover { background: rgba(255, 255, 255, .07); }
+  .db-shell .db-user-avatar,
+  .db-shell .db-user-card:hover .db-user-avatar { background: #22507E; color: #fff; }
+  .db-shell .db-user-name { color: #fff; }
+  .db-shell .db-user-meta { color: rgba(255, 255, 255, .55); }
+  .db-shell .db-sidebar .db-theme { color: rgba(255, 255, 255, .6); }
+  .db-shell .db-theme:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+
+  /* Largeur de lecture : le contenu reste dans une colonne centrée, comme sur
+     la maquette, au lieu de s'étirer sur un écran de 1920 px. */
+  .db-shell .dvx { padding-left: max(52px, calc((100% - 1180px) / 2)); padding-right: max(52px, calc((100% - 1180px) / 2)); }
+  .db-shell .fi-main { padding: 44px max(52px, calc((100% - 1120px) / 2)) 48px; }
+  body:has(.rmod-overlay) .db-shell .fi-main { padding-right: 52px; padding-left: 52px; }
+  .db-shell .cal-page { padding-left: max(52px, calc((100% - 1240px) / 2)); padding-right: max(52px, calc((100% - 1240px) / 2)); }
+  .db-shell .st7 { padding-left: max(52px, calc((100% - 1180px) / 2)); padding-right: max(52px, calc((100% - 1180px) / 2)); }
+  .db-shell .bib-page { padding-left: max(52px, calc((100% - 1240px) / 2)); padding-right: max(52px, calc((100% - 1240px) / 2)); }
+  .db-shell .fi-main .fi-h1, .db-shell .fi-main h1 { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-size: 34px; font-weight: 700; letter-spacing: -.02em; }
+}
+
+/* Aujourd'hui : une pastille de couleur au lieu de l'icône, comme la maquette. */
+.db-shell .dvx .ftag svg { display: none; }
+.db-shell .dvx .ftag::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+/* Toutes les matières : nom, points, niveau, prochaine révision, Réviser. */
+@media (min-width: 769px) {
+  .db-shell .fi-main .card-head,
+  .db-shell .fi-main .card-foot { display: contents; }
+  .db-shell .fi-main .card-name { order: 0; flex: 1 1 auto; }
+  .db-shell .fi-main .stamps { order: 1; }
+  .db-shell .fi-main .card-status { order: 2; display: block; }
+  .db-shell .fi-main .card-when { order: 3; display: block; width: 110px; text-align: right; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .db-shell .fi-main .card-when.urgent { color: var(--warning); }
+  .db-shell .fi-main .next-text { display: none; }
+  .db-shell .fi-main .cta { order: 4; display: inline-block; background: none !important; border: 0 !important; color: var(--accent-medium) !important; font-size: 13px; font-weight: 600; padding: 6px 8px; border-radius: 7px; }
+  .db-shell .fi-main .card:hover .cta { background: var(--bg-muted) !important; }
+}

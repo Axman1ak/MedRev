@@ -414,7 +414,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`db-sidebar${mobileNavOpen ? ' open' : ''}${menuOuvert || semOpen ? ' menu-open' : ''}`} data-tour="sidebar">
         {/* Logo, et le semestre affiché en menu déroulant */}
         <div className="db-logo">
-          <MedRevMark size={26} bg="#15304E" fg="#fff" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
+          <MedRevMark size={26} bg="#fff" fg="#15304E" className="db-logo-mk" /><span className="db-lbl">Med<span className="db-logo-r">Rev</span></span>
           <div className="db-semdrop db-lbl" ref={semRef} data-tour="sem-toggle">
             <button type="button" className="db-semdrop-btn" onClick={() => setSemOpen(o => !o)} aria-haspopup="menu" aria-expanded={semOpen}>
               {semester === 'year' ? 'Année' : `Semestre ${semester}`}
