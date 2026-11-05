@@ -45,7 +45,7 @@ class Logic extends DCLogic {
         const notes = Array.from({ length: count }, (_, k) => Math.min(5, 2 + Math.floor(k / 3) + (k % 2)));
         const avg = notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : 0;
         if (on) sel = {
-          title, short, count: String(count), avg: avg.toFixed(1).replace('.', ',') + '/5', cover,
+          title, short, count: String(count), avg: avg.toFixed(1).replace('.', ',') + '/5', cover, color: base, band: mastered ? '#F6E3A6' : '#F5EFE3', mark: mastered ? '#F2C14E' : '#F5EFE3',
           pages: mastered ? gilt : paper, bigPw: (12 + Math.round(count * 2.2)) + 'px', bigW: (156 + 12 + Math.round(count * 2.2)) + 'px',
           rule: mastered ? '#F2C14E' : 'rgba(255,255,255,.7)', titleColor: mastered ? '#FFE7A3' : '#FFFFFF',
           state: mastered ? 'Livre doré, fiche maîtrisée' : 'Encore ' + (9 - count) + ' révisions pour le dorer',
@@ -53,7 +53,7 @@ class Logic extends DCLogic {
           steps: Array.from({ length: 14 }, (_, k) => ({ bg: k < count ? scale[notes[k]] : '#F1EEE7' }))
         };
         return {
-          title, short, count: String(count), label: title + ', ' + count + ' pages', cover,
+          title, short, count: String(count), label: title + ', ' + count + ' pages', cover, color: base, band: mastered ? '#F6E3A6' : '#F5EFE3', mark: mastered ? '#F2C14E' : '#F5EFE3',
           pw: pw + 'px', totalW: (96 + pw) + 'px', pages: mastered ? gilt : paper, gold: mastered,
           rule: mastered ? '#F2C14E' : 'rgba(255,255,255,.7)', titleColor: mastered ? '#FFE7A3' : '#FFFFFF',
           ring: on ? '0 0 0 3px #FFFFFF, 0 0 0 5px #15304E' : '0 0 0 0 transparent',
@@ -131,23 +131,27 @@ export default function Page() {
                         ) : null}
                         <button type={"button"} className={"mr-book"} onClick={b.pick} aria-label={b.label} aria-pressed={b.pressed} style={{width: b.totalW, height: "144px"}}>
                           <span style={{position: "absolute", left: "96px", top: "4px", bottom: "3px", width: b.pw, borderRadius: "0 4px 4px 0", background: b.pages, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.10), 2px 3px 6px rgba(26,29,35,.12)"}}></span>
-                          <span style={{position: "absolute", left: "0", top: "0", width: "102px", height: "144px", borderRadius: "3px 7px 7px 3px", background: b.cover, boxShadow: `${b.ring}, 0 6px 14px rgba(26,29,35,.18)`, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "14px 10px 12px 20px", boxSizing: "border-box", textAlign: "left"}}>
-                            <span style={{position: "absolute", left: "0", top: "0", bottom: "0", width: "11px", background: "linear-gradient(90deg, rgba(0,0,0,.28), rgba(0,0,0,.08) 70%, rgba(255,255,255,.18))"}}></span>
-                            <span style={{position: "absolute", left: "11px", top: "0", bottom: "0", width: "1px", background: "rgba(255,255,255,.25)"}}></span>
+                          <span style={{position: "absolute", left: "0", top: "0", width: "102px", height: "144px", borderRadius: "2px 4px 4px 2px", background: b.color, boxShadow: `${b.ring}, 0 4px 10px rgba(26,29,35,.16)`, overflow: "hidden", display: "flex", flexDirection: "column", boxSizing: "border-box"}}>
+                            <span style={{flex: "0 0 34px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "700", letterSpacing: ".14em", color: "rgba(255,255,255,.85)"}}>
+                              {b.short}
+                            </span>
+                            <span style={{flex: "1", margin: "0 0", background: b.band, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "7px", padding: "6px 8px", textAlign: "center", borderTop: "1px solid rgba(0,0,0,.06)", borderBottom: "1px solid rgba(0,0,0,.06)"}}>
+                              <span style={{fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "13px", lineHeight: "1.2", color: "#1A1D23", hyphens: "auto", overflowWrap: "break-word"}}>
+                                {b.title}
+                              </span>
+                              <span style={{width: "22px", height: "1px", background: b.color}}></span>
+                            </span>
+                            <span style={{flex: "0 0 30px", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                              <span style={{width: "16px", height: "16px", borderRadius: "50%", background: b.mark, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", fontSize: "10px", fontWeight: "700", color: b.color}}>
+                                {"M"}
+                              </span>
+                            </span>
                             {b.gold ? (
                               <>
                                 <span className={"mr-foil"} style={{position: "absolute", inset: "0"}}></span>
                               </>
                             ) : null}
-                            <span style={{position: "relative", fontSize: "10px", fontWeight: "700", letterSpacing: ".1em", color: "rgba(255,255,255,.75)"}}>
-                              {b.short}
-                            </span>
-                            <span style={{position: "relative", display: "flex", flexDirection: "column", gap: "10px"}}>
-                              <span style={{height: "2px", width: "26px", background: b.rule}}></span>
-                              <span style={{fontSize: "13px", fontWeight: "700", lineHeight: "1.2", color: b.titleColor, hyphens: "auto", overflowWrap: "break-word", display: "-webkit-box", WebkitLineClamp: "4", WebkitBoxOrient: "vertical", overflow: "hidden"}}>
-                                {b.title}
-                              </span>
-                            </span>
+                            <span style={{position: "absolute", left: "0", top: "0", bottom: "0", width: "4px", background: "rgba(0,0,0,.14)"}}></span>
                           </span>
                         </button>
                         <span className={"shadow"} style={{display: "block", width: b.totalW, height: "10px", marginTop: "2px", borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(26,29,35,.22), rgba(26,29,35,0) 70%)"}}></span>
@@ -167,17 +171,22 @@ export default function Page() {
           <section className={"mr-rise"} aria-label={"Livre choisi"} style={{display: "flex", flexDirection: "column", gap: "18px", padding: "28px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
             <div style={{alignSelf: "center", position: "relative", width: v.sel.bigW, height: "230px"}}>
               <span style={{position: "absolute", left: "156px", top: "6px", bottom: "5px", width: v.sel.bigPw, borderRadius: "0 5px 5px 0", background: v.sel.pages, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.1)"}}></span>
-              <span style={{position: "absolute", left: "0", top: "0", width: "164px", height: "230px", borderRadius: "4px 10px 10px 4px", background: v.sel.cover, boxShadow: "0 12px 26px rgba(26,29,35,.22)", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "20px 16px 18px 28px", boxSizing: "border-box"}}>
-                <span style={{position: "absolute", left: "0", top: "0", bottom: "0", width: "14px", background: "linear-gradient(90deg, rgba(0,0,0,.28), rgba(0,0,0,.08) 70%, rgba(255,255,255,.18))"}}></span>
-                <span style={{position: "relative", fontSize: "11px", fontWeight: "700", letterSpacing: ".1em", color: "rgba(255,255,255,.75)"}}>
+              <span style={{position: "absolute", left: "0", top: "0", width: "164px", height: "230px", borderRadius: "3px 6px 6px 3px", background: v.sel.color, boxShadow: "0 10px 22px rgba(26,29,35,.2)", overflow: "hidden", display: "flex", flexDirection: "column"}}>
+                <span style={{flex: "0 0 52px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "700", letterSpacing: ".16em", color: "rgba(255,255,255,.85)"}}>
                   {v.sel.short}
                 </span>
-                <span style={{position: "relative", display: "flex", flexDirection: "column", gap: "12px"}}>
-                  <span style={{height: "2px", width: "32px", background: v.sel.rule}}></span>
-                  <span style={{fontSize: "20px", fontWeight: "700", lineHeight: "1.2", color: v.sel.titleColor}}>
+                <span style={{flex: "1", background: v.sel.band, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "10px 14px", textAlign: "center"}}>
+                  <span style={{fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "20px", lineHeight: "1.2", color: "#1A1D23"}}>
                     {v.sel.title}
                   </span>
+                  <span style={{width: "32px", height: "1px", background: v.sel.color}}></span>
                 </span>
+                <span style={{flex: "0 0 46px", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                  <span style={{width: "24px", height: "24px", borderRadius: "50%", background: v.sel.mark, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", fontSize: "14px", fontWeight: "700", color: v.sel.color}}>
+                    {"M"}
+                  </span>
+                </span>
+                <span style={{position: "absolute", left: "0", top: "0", bottom: "0", width: "5px", background: "rgba(0,0,0,.14)"}}></span>
               </span>
             </div>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
