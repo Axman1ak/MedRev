@@ -114,7 +114,7 @@ export default function Page() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-    <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexDirection: "column"}}>
+    <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "calc(100vh / 0.9)", display: "flex", flexDirection: "column"}}>
       <header style={{display: "flex", alignItems: "center", gap: "20px", padding: "16px clamp(16px, 3vw, 32px)", borderBottom: "1px solid #EDE9E1"}}>
         <Link href={"/v2"} className={"mr-ghost"} aria-label={"Quitter la session"} style={{width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", color: "#3D424A", textDecoration: "none"}}>
           <svg width={"18"} height={"18"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} aria-hidden={"true"}>
