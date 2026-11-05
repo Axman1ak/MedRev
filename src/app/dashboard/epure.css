@@ -470,3 +470,12 @@
 .db-shell .rmod-nums { margin-top: 20px; }
 .db-shell .rmod-nums b { font-size: 17px; }
 .db-shell .rmod-cours-row { padding: 8px 10px; }
+
+/* Retouches : sources lisibles dans le panneau, colonne de session plus large */
+.db-shell .rmod-cours-row { flex-wrap: wrap; gap: 4px 8px; }
+.db-shell .rmod-cours-nom { flex: 1 1 160px; min-width: 0; }
+.db-shell .rmod-cours-nom em { display: block; font-size: 12px; }
+.db-shell .rmod-cours-act { padding: 4px 6px; font-size: 12px; }
+@media (min-width: 769px) {
+  .db-shell .se-main { max-width: 900px; padding-left: 48px; padding-right: 48px; }
+}
