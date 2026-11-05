@@ -2,3 +2,4 @@
 .v2-root { background: #FAF8F4; min-height: 100vh; }
 .v2-root svg { display: inline; }
 .v2-root button { font: inherit; }
+html, body { margin: 0; overflow-x: hidden; }

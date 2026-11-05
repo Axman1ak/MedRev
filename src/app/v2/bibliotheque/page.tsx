@@ -85,7 +85,7 @@ export default function Page() {
   return (
     <>
       <style>{CSS}</style>
-    <div style={{position: "relative", fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "1080px", display: "flex", flexWrap: "wrap"}}>
+    <div style={{position: "relative", fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexWrap: "wrap"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="3" />
       </div>
