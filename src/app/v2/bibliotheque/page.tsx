@@ -2,69 +2,81 @@
 'use client'
 import { Fragment } from 'react'
 import { DCLogic, useDC } from '@/app/v2/_ui/dc'
-import Link from 'next/link'
 import Sidebar from '@/app/v2/_ui/Sidebar'
 
-const DEFAULTS = {}
+const DEFAULTS = {"panelDefault": false}
 
-const CSS = "\n\na{color:#15304E}\n.mr-btn{transition:transform .15s ease, filter .15s ease}\n.mr-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}\n.mr-book{font:inherit;position:relative;display:block;padding:0;border:0;background:transparent;cursor:pointer;transform-origin:left bottom;transition:transform .35s cubic-bezier(.2,.8,.2,1)}\n.mr-book:hover{transform:perspective(700px) rotateY(-22deg) translateY(-8px)}\n.mr-book:active{transform:perspective(700px) rotateY(-28deg) translateY(-10px) scale(1.02)}\n.mr-book .shadow{transition:transform .35s ease, opacity .35s ease}\n.mr-book:hover .shadow{transform:scaleX(.9);opacity:.6}\n@keyframes mr-up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}\n@keyframes mr-drop{0%{opacity:0;transform:translateY(-26px)}70%{opacity:1;transform:translateY(3px)}100%{transform:none}}\n@keyframes mr-fill{from{width:0}}\n@keyframes mr-sheen{0%{background-position:-160% 0}55%,100%{background-position:260% 0}}\n@keyframes mr-badge{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}\n.mr-rise{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\n.mr-drop{animation:mr-drop .55s cubic-bezier(.2,.8,.2,1) both}\n.mr-bar{animation:mr-fill 1.2s cubic-bezier(.2,.8,.2,1) .3s both}\n.mr-foil{background:linear-gradient(110deg,transparent 35%,rgba(255,244,210,.28) 50%,transparent 65%);background-size:250% 100%;animation:mr-sheen 3.6s ease-in-out infinite}\n.mr-badge{animation:mr-badge 1.8s ease-in-out infinite}\n"
+const CSS = "\n\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-book{transition:transform .12s ease}\n.mr-book:hover{transform:translateY(-4px)}\n.mr-chip:hover{background:#EAE5DB}\n.mr-ghost:hover{background:#F1EEE7}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { sel: '0-1' };
+    this.state = { open: null };
   }
   renderVals() {
-    const st = this.state;
-    const mix = (hex, k, to) => { const n = parseInt(hex.slice(1), 16); const t = to === 'w' ? 255 : 0; const f = (c) => Math.round(c + (t - c) * k).toString(16).padStart(2, '0'); return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255); };
-    const scale = ['#ECE8E0', '#D98C7E', '#E2AE6A', '#D8C46A', '#93BC80', '#4E9A6B'];
-    const SUB = [
-      ['Anatomie spécifique', 'ANATOMIE', '#3F6DB8', [['Cerveau, vascularisation', 6], ['Nerfs crâniens', 4], ['Tronc cérébral', 3], ['Membre supérieur', 11], ['Membre inférieur', 9], ['Moelle épinière', 5], ['Bassin', 7], ['Thorax', 13], ['Abdomen', 8], ['Cou', 2], ['Face', 6], ['Cœur', 10], ['Rachis', 4], ['Crâne', 12], ['Œil', 1]]],
-      ['Physiologie', 'PHYSIOLOGIE', '#7556A8', [['Potentiel d\x27action', 5], ['Fonction rénale', 12], ['Respiration', 7]]],
-      ['Santé, Société, Humanité', 'SSH', '#2F7D71', [['Éthique médicale', 14], ['Santé publique', 9], ['Épidémiologie', 6]]],
-      ['Biophysique', 'BIOPHYSIQUE', '#B0473F', [['Optique géométrique', 3], ['Thermodynamique', 10]]],
-      ['Pharmacologie', 'PHARMACO', '#B8742E', [['Pharmacocinétique', 3], ['Récepteurs et ligands', 6]]],
-      ['Biostatistiques', 'BIOSTATS', '#86603C', [['Tests statistiques', 1]]]
+    const open = this.state.open ?? !!this.props.panelDefault;
+    const OBJ = {
+      book: 'M5 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5zM19 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z',
+      sablier: 'M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9',
+      chandelier: 'M12 2c1.4 1.8 1.4 3.2 0 4.2c-1.4-1-1.4-2.4 0-4.2zM10.5 8h3v10h-3zM6 18h12M8 21h8',
+      globe: 'M12 3a7.5 7.5 0 1 0 0 15a7.5 7.5 0 1 0 0-15zM4.5 10.5h15M12 3c2.3 2.8 2.3 12.2 0 15M12 3c-2.3 2.8-2.3 12.2 0 15M12 18v2M8 21h8',
+      buste: 'M12 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM6 21c0-5 2.7-8 6-8s6 3 6 8zM9 21h6',
+      codex: 'M4 7l8-3 8 3-8 3zM4 7v6l8 3 8-3V7M12 10v6M8 16l-2 5M16 16l2 5'
+    };
+    const subs = [
+      ['Anatomie spécifique', '#4F7CC9', 120, 'sablier', 'Le sablier'],
+      ['Physiologie', '#8B6BB8', 64, 'chandelier', 'Le chandelier'],
+      ['Santé, Société, Humanité', '#3E8E85', 48, 'globe', 'Le globe'],
+      ['Biophysique', '#C4554D', 35, null, ''],
+      ['Pharmacologie', '#D08A3E', 30, null, ''],
+      ['Biostatistiques', '#9C7148', 20, null, '']
     ];
-    const isNew = { '0-1': true, '1-0': true, '0-7': true, '4-1': true };
-    const paper = 'repeating-linear-gradient(90deg, #FDFBF6 0, #FDFBF6 1.5px, #D8CFBF 1.5px, #D8CFBF 2.5px)';
-    const gilt = 'repeating-linear-gradient(90deg, #FBE3A0 0, #FBE3A0 1px, #E2AE45 1px, #E2AE45 2px)';
-    let total = 0, pagesAll = 0, gold = 0, sel = null;
-    let d = 0;
-    const shelves = SUB.map(([name, short, color, list], si) => {
-      let sp = 0;
-      const books = list.map(([title, count], i) => {
-        const id = si + '-' + i;
-        const mastered = count >= 9;
-        total++; pagesAll += count; sp += count; if (mastered) gold++;
-        const on = st.sel === id;
-        const pw = 8 + Math.round(count * 1.6);
-        const tone = ((i * 37) % 5) / 5;
-        const base = tone < .4 ? mix(color, tone * 0.3, 'w') : mix(color, (tone - .4) * 0.3, 'b');
-        const cover = 'linear-gradient(150deg, ' + mix(base, 0.16, 'w') + ' 0%, ' + base + ' 45%, ' + mix(base, 0.28, 'b') + ' 100%)';
-        const notes = Array.from({ length: count }, (_, k) => Math.min(5, 2 + Math.floor(k / 3) + (k % 2)));
-        const avg = notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : 0;
-        if (on) sel = {
-          title, short, count: String(count), avg: avg.toFixed(1).replace('.', ',') + '/5', cover, color: base, band: mastered ? '#F6E3A6' : '#F5EFE3', mark: mastered ? '#F2C14E' : '#F5EFE3',
-          pages: mastered ? gilt : paper, bigPw: (12 + Math.round(count * 2.2)) + 'px', bigW: (156 + 12 + Math.round(count * 2.2)) + 'px',
-          rule: mastered ? '#F2C14E' : 'rgba(255,255,255,.7)', titleColor: mastered ? '#FFE7A3' : '#FFFFFF',
-          state: mastered ? 'Livre doré, fiche maîtrisée' : 'Encore ' + (9 - count) + ' révisions pour le dorer',
-          stateColor: mastered ? '#B07A10' : '#6B6F76',
-          steps: Array.from({ length: 14 }, (_, k) => ({ bg: k < count ? scale[notes[k]] : '#F1EEE7' }))
-        };
-        return {
-          title, short, count: String(count), label: title + ', ' + count + ' pages', cover, color: base, band: mastered ? '#F6E3A6' : '#F5EFE3', mark: mastered ? '#F2C14E' : '#F5EFE3',
-          pw: pw + 'px', totalW: (96 + pw) + 'px', pages: mastered ? gilt : paper, gold: mastered,
-          rule: mastered ? '#F2C14E' : 'rgba(255,255,255,.7)', titleColor: mastered ? '#FFE7A3' : '#FFFFFF',
-          ring: on ? '0 0 0 3px #FFFFFF, 0 0 0 5px #15304E' : '0 0 0 0 transparent',
-          pressed: on ? 'true' : 'false', isNew: !!isNew[id], delay: (0.1 + (d++) * 0.035).toFixed(2) + 's',
-          pick: () => this.setState({ sel: id })
-        };
-      });
-      return { name, color, count: books.length, pages: sp, books, delay: (si * 0.06) + 's' };
+    const shade = (hex, k) => {
+      const n = parseInt(hex.slice(1), 16);
+      const f = (c) => Math.round(c + (255 - c) * k);
+      return 'rgb(' + f(n >> 16) + ',' + f((n >> 8) & 255) + ',' + f(n & 255) + ')';
+    };
+    const cap = 110;
+    const shelves = subs.map(([name, color, count, obj, objectName], si) => {
+      const books = [];
+      for (let i = 0; i < Math.min(count, cap); i++) {
+        const r = Math.abs(Math.sin((i + 1) * 12.9898 + si * 78.233)) % 1;
+        const gold = (i * 7 + si * 3) % 9 === 0;
+        books.push({
+          w: (6 + Math.round(r * 5)) + 'px',
+          h: (44 + Math.round(((r * 7) % 1) * 20)) + 'px',
+          bg: shade(color, 0.1 + ((r * 13) % 1) * 0.3),
+          top: 'transparent',
+          label: name + ', révision ' + (i + 1)
+        });
+      }
+      return { name, color, count, books, hasMore: count > cap, more: '+' + (count - cap), hasObject: !!obj, objectPath: obj ? OBJ[obj] : '', objectName };
     });
-    const stats = [{ v: String(total), plus: '', l: 'livres' }, { v: String(pagesAll), plus: ' +9', l: 'pages' }, { v: String(gold), plus: '', l: 'livres dorés' }];
-    return { shelves, stats, sel: sel || {} };
+    const R = [
+      ['Apprenti', 'Ta première étagère', 0, 'book'],
+      ['Copiste', 'Le sablier, 30 livres', 30, 'sablier'],
+      ['Scribe', 'Le chandelier, 100 livres', 100, 'chandelier'],
+      ['Lettré', 'Le globe, 250 livres', 250, 'globe'],
+      ['Érudit', 'Le buste d’Hippocrate, encore 183 livres', 500, 'buste'],
+      ['Maître', 'Le codex sur lutrin, 1000 livres', 1000, 'codex']
+    ];
+    const ranks = R.map(([name, detail, at, ic], i) => {
+      const reached = 317 >= at;
+      const current = name === 'Lettré';
+      return {
+        name, detail, icon: OBJ[ic],
+        circleBg: current ? '#F6EBCF' : (reached ? '#F4F1EA' : '#FAF8F4'),
+        iconColor: reached ? '#9A7420' : '#B8BCC2',
+        ring: current ? '0 0 0 2px #D4A93C' : 'none',
+        color: reached ? '#1A1D23' : '#9AA0A8',
+        lineColor: i === R.length - 1 ? 'transparent' : (317 >= R[i + 1][2] ? '#D4A93C' : '#E4DFD4')
+      };
+    });
+    return {
+      shelves, ranks, panelOpen: open, panelExpanded: open ? 'true' : 'false',
+      openPanel: () => this.setState({ open: true }),
+      closePanel: () => this.setState({ open: false })
+    };
   }
 }
 
@@ -73,153 +85,120 @@ export default function Page() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-    <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex"}}>
+    <div style={{position: "relative", fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexWrap: "wrap"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="3" />
       </div>
-      <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "44px 56px 64px", display: "flex", gap: "32px", alignItems: "flex-start"}}>
-        <div style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "24px"}}>
-          <header style={{display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px"}}>
-            <span style={{display: "flex", flexDirection: "column", gap: "6px"}}>
-              <h1 style={{margin: "0", fontSize: "36px", fontWeight: "700", letterSpacing: "-.02em"}}>
-                {"Biblioth\u00e8que"}
+      <main style={{flex: "999 1 560px", minWidth: "0", boxSizing: "border-box", padding: "48px clamp(20px, 4vw, 56px) 56px", display: "flex", flexDirection: "column"}}>
+        <div style={{flex: "1", display: "flex", flexDirection: "column", gap: "48px"}}>
+          <header style={{display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px"}}>
+            <div style={{display: "flex", flexDirection: "column", gap: "4px"}}>
+              <h1 style={{margin: "0", fontSize: "34px", fontWeight: "700", letterSpacing: "-.02em"}}>
+                {" Ta biblioth\u00e8que "}
               </h1>
-              <span style={{fontSize: "16px", color: "#6B6F76"}}>
-                {"Un livre par fiche. Chaque r\u00e9vision lui ajoute des pages, une fiche ma\u00eetris\u00e9e se dore."}
+              <span style={{fontSize: "15px", color: "#6B6F76"}}>
+                {" 317 livres, +3 cette semaine "}
               </span>
-            </span>
-            <span style={{display: "flex", gap: "12px"}}>
-              {(v.stats || []).map((s: any, i_s: number) => (
-                <Fragment key={i_s}>
-                  <span style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px 18px", borderRadius: "14px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", minWidth: "110px"}}>
-                    <span style={{fontSize: "24px", fontWeight: "700"}}>
-                      {s.v}
-                      <span style={{fontSize: "14px", fontWeight: "700", color: "#C98A12"}}>
-                        {s.plus}
-                      </span>
-                    </span>
-                    <span style={{fontSize: "13px", color: "#6B6F76"}}>
-                      {s.l}
-                    </span>
+            </div>
+            <button type={"button"} className={"mr-chip"} onClick={v.openPanel} aria-expanded={v.panelExpanded} style={{font: "inherit", display: "flex", alignItems: "center", gap: "14px", padding: "10px 16px 10px 10px", border: "0", borderRadius: "14px", background: "#F1EEE7", color: "#1A1D23", cursor: "pointer", textAlign: "left"}}>
+              <span aria-hidden={"true"} style={{width: "40px", height: "40px", borderRadius: "50%", background: "#F6EBCF", color: "#9A7420", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                <svg width={"20"} height={"20"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.7"} strokeLinecap={"round"}>
+                  <circle cx={"12"} cy={"12"} r={"9"} />
+                  <path d={"M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"} />
+                </svg>
+              </span>
+              <span style={{display: "flex", flexDirection: "column", gap: "6px", width: "150px"}}>
+                <span style={{display: "flex", justifyContent: "space-between", fontSize: "15px"}}>
+                  <strong>
+                    {" Lettr\u00e9 "}
+                  </strong>
+                  <span style={{color: "#6B6F76", fontSize: "13px"}}>
+                    {" 317 / 500 "}
                   </span>
+                </span>
+                <span style={{height: "4px", borderRadius: "2px", background: "#E2DCCF", overflow: "hidden"}}>
+                  <span style={{display: "block", width: "27%", height: "4px", background: "#D4A93C"}}></span>
+                </span>
+              </span>
+            </button>
+          </header>
+          <div style={{flex: "1", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "30px"}}>
+            {(v.shelves || []).map((s: any, i_s: number) => (
+              <Fragment key={i_s}>
+                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "12px 24px"}}>
+                  <div style={{width: "180px", display: "flex", flexDirection: "column", gap: "2px", paddingBottom: "10px"}}>
+                    <span style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "600"}}>
+                      <span style={{width: "8px", height: "8px", borderRadius: "50%", background: s.color, flex: "none"}}></span>
+                      {" "}{s.name}{" "}
+                    </span>
+                    <span style={{fontSize: "13px", color: "#6B6F76", paddingLeft: "16px"}}>
+                      {" "}{s.count}{" livres "}
+                    </span>
+                  </div>
+                  <div style={{flex: "1 1 420px", minWidth: "0", display: "flex", flexDirection: "column"}}>
+                    <div style={{display: "flex", alignItems: "flex-end", gap: "2px", height: "70px", overflow: "hidden", padding: "0 8px"}}>
+                      {(s.books || []).map((b: any, i_b: number) => (
+                        <Fragment key={i_b}>
+                          <span className={"mr-book"} title={b.label} style={{flex: "none", width: b.w, height: b.h, borderRadius: "2px 2px 1px 1px", background: b.bg, borderTop: `3px solid ${b.top}`, boxSizing: "border-box"}}></span>
+                        </Fragment>
+                      ))}
+                      {s.hasMore ? (
+                        <>
+                          <span style={{flex: "none", fontSize: "12px", color: "#6B6F76", padding: "0 0 4px 8px"}}>
+                            {" "}{s.more}{" "}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                    <div style={{height: "7px", borderRadius: "2px", background: "#DCCFBA", boxShadow: "0 3px 6px rgba(120,95,60,.18)"}}></div>
+                  </div>
+                </div>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      </main>
+      {v.panelOpen ? (
+        <>
+          <div onClick={v.closePanel} style={{position: "absolute", inset: "0", background: "rgba(26,29,35,.18)"}}></div>
+          <aside role={"dialog"} aria-label={"Rangs"} style={{position: "absolute", top: "0", right: "0", bottom: "0", width: "380px", maxWidth: "100%", boxSizing: "border-box", background: "#FFFFFF", boxShadow: "-12px 0 40px rgba(26,29,35,.12)", padding: "32px 28px", display: "flex", flexDirection: "column", gap: "28px", overflowY: "auto"}}>
+            <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+              <span style={{fontSize: "22px", fontWeight: "700"}}>
+                {" Rangs "}
+              </span>
+              <button type={"button"} className={"mr-ghost"} onClick={v.closePanel} aria-label={"Fermer"} style={{font: "inherit", width: "36px", height: "36px", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
+                <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} aria-hidden={"true"}>
+                  <path d={"M6 6l12 12M18 6L6 18"} />
+                </svg>
+              </button>
+            </div>
+            <ol style={{listStyle: "none", margin: "0", padding: "0", display: "flex", flexDirection: "column"}}>
+              {(v.ranks || []).map((r: any, i_r: number) => (
+                <Fragment key={i_r}>
+                  <li style={{display: "flex", gap: "16px"}}>
+                    <div style={{display: "flex", flexDirection: "column", alignItems: "center", width: "44px", flex: "none"}}>
+                      <span aria-hidden={"true"} style={{width: "44px", height: "44px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: r.circleBg, color: r.iconColor, boxShadow: r.ring}}>
+                        <svg width={"22"} height={"22"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.6"} strokeLinecap={"round"} strokeLinejoin={"round"}>
+                          <path d={r.icon} />
+                        </svg>
+                      </span>
+                      <span style={{flex: "1", width: "2px", minHeight: "18px", background: r.lineColor}}></span>
+                    </div>
+                    <div style={{display: "flex", flexDirection: "column", gap: "2px", padding: "10px 0 22px"}}>
+                      <span style={{fontSize: "16px", fontWeight: "700", color: r.color}}>
+                        {" "}{r.name}{" "}
+                      </span>
+                      <span style={{fontSize: "13px", color: "#6B6F76"}}>
+                        {" "}{r.detail}{" "}
+                      </span>
+                    </div>
+                  </li>
                 </Fragment>
               ))}
-            </span>
-          </header>
-          {(v.shelves || []).map((sh: any, i_sh: number) => (
-            <Fragment key={i_sh}>
-              <section className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "6px", padding: "22px 28px 0", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", animationDelay: sh.delay}}>
-                <span style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
-                  <span style={{display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", fontWeight: "700"}}>
-                    <span style={{width: "10px", height: "10px", borderRadius: "50%", background: sh.color}}></span>
-                    {sh.name}
-                  </span>
-                  <span style={{fontSize: "15px", color: "#6B6F76"}}>
-                    {sh.count}{" livres, "}{sh.pages}{" pages"}
-                  </span>
-                </span>
-                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "28px 26px", padding: "30px 6px 0"}}>
-                  {(sh.books || []).map((b: any, i_b: number) => (
-                    <Fragment key={i_b}>
-                      <div className={"mr-drop"} style={{position: "relative", display: "flex", flexDirection: "column", alignItems: "flex-start", animationDelay: b.delay}}>
-                        {b.isNew ? (
-                          <>
-                            <span className={"mr-badge"} style={{position: "absolute", top: "-26px", left: "50%", marginLeft: "-20px", zIndex: "2", width: "40px", textAlign: "center", fontSize: "12px", fontWeight: "700", color: "#8A5A08", background: "#FDF0CC", borderRadius: "999px", padding: "3px 0"}}>
-                              {"+1"}
-                            </span>
-                          </>
-                        ) : null}
-                        <button type={"button"} className={"mr-book"} onClick={b.pick} aria-label={b.label} aria-pressed={b.pressed} style={{width: b.totalW, height: "144px"}}>
-                          <span style={{position: "absolute", left: "96px", top: "4px", bottom: "3px", width: b.pw, borderRadius: "0 4px 4px 0", background: b.pages, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.10), 2px 3px 6px rgba(26,29,35,.12)"}}></span>
-                          <span style={{position: "absolute", left: "0", top: "0", width: "102px", height: "144px", borderRadius: "2px 4px 4px 2px", background: b.color, boxShadow: `${b.ring}, 0 4px 10px rgba(26,29,35,.16)`, overflow: "hidden", display: "flex", flexDirection: "column", boxSizing: "border-box"}}>
-                            <span style={{flex: "0 0 34px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "700", letterSpacing: ".14em", color: "rgba(255,255,255,.85)"}}>
-                              {b.short}
-                            </span>
-                            <span style={{flex: "1", margin: "0 0", background: b.band, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "7px", padding: "6px 8px", textAlign: "center", borderTop: "1px solid rgba(0,0,0,.06)", borderBottom: "1px solid rgba(0,0,0,.06)"}}>
-                              <span style={{fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "13px", lineHeight: "1.2", color: "#1A1D23", hyphens: "auto", overflowWrap: "break-word"}}>
-                                {b.title}
-                              </span>
-                              <span style={{width: "22px", height: "1px", background: b.color}}></span>
-                            </span>
-                            <span style={{flex: "0 0 30px", display: "flex", alignItems: "center", justifyContent: "center"}}>
-                              <span style={{width: "16px", height: "16px", borderRadius: "50%", background: b.mark, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", fontSize: "10px", fontWeight: "700", color: b.color}}>
-                                {"M"}
-                              </span>
-                            </span>
-                            {b.gold ? (
-                              <>
-                                <span className={"mr-foil"} style={{position: "absolute", inset: "0"}}></span>
-                              </>
-                            ) : null}
-                            <span style={{position: "absolute", left: "0", top: "0", bottom: "0", width: "4px", background: "rgba(0,0,0,.14)"}}></span>
-                          </span>
-                        </button>
-                        <span className={"shadow"} style={{display: "block", width: b.totalW, height: "10px", marginTop: "2px", borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(26,29,35,.22), rgba(26,29,35,0) 70%)"}}></span>
-                        <span style={{marginTop: "6px", fontSize: "13px", color: "#6B6F76"}}>
-                          {b.count}{" pages"}
-                        </span>
-                      </div>
-                    </Fragment>
-                  ))}
-                </div>
-                <div style={{height: "22px"}}></div>
-              </section>
-            </Fragment>
-          ))}
-        </div>
-        <aside style={{flex: "0 0 330px", position: "sticky", top: "44px", display: "flex", flexDirection: "column", gap: "18px"}}>
-          <section className={"mr-rise"} aria-label={"Livre choisi"} style={{display: "flex", flexDirection: "column", gap: "18px", padding: "28px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
-            <div style={{alignSelf: "center", position: "relative", width: v.sel.bigW, height: "230px"}}>
-              <span style={{position: "absolute", left: "156px", top: "6px", bottom: "5px", width: v.sel.bigPw, borderRadius: "0 5px 5px 0", background: v.sel.pages, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.1)"}}></span>
-              <span style={{position: "absolute", left: "0", top: "0", width: "164px", height: "230px", borderRadius: "3px 6px 6px 3px", background: v.sel.color, boxShadow: "0 10px 22px rgba(26,29,35,.2)", overflow: "hidden", display: "flex", flexDirection: "column"}}>
-                <span style={{flex: "0 0 52px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "700", letterSpacing: ".16em", color: "rgba(255,255,255,.85)"}}>
-                  {v.sel.short}
-                </span>
-                <span style={{flex: "1", background: v.sel.band, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "10px 14px", textAlign: "center"}}>
-                  <span style={{fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "20px", lineHeight: "1.2", color: "#1A1D23"}}>
-                    {v.sel.title}
-                  </span>
-                  <span style={{width: "32px", height: "1px", background: v.sel.color}}></span>
-                </span>
-                <span style={{flex: "0 0 46px", display: "flex", alignItems: "center", justifyContent: "center"}}>
-                  <span style={{width: "24px", height: "24px", borderRadius: "50%", background: v.sel.mark, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", fontSize: "14px", fontWeight: "700", color: v.sel.color}}>
-                    {"M"}
-                  </span>
-                </span>
-                <span style={{position: "absolute", left: "0", top: "0", bottom: "0", width: "5px", background: "rgba(0,0,0,.14)"}}></span>
-              </span>
-            </div>
-            <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
-              <span style={{fontSize: "20px", fontWeight: "700"}}>
-                {v.sel.title}
-              </span>
-              <span style={{fontSize: "14px", fontWeight: "600", color: v.sel.stateColor}}>
-                {v.sel.state}
-              </span>
-            </span>
-            <div style={{display: "flex", flexDirection: "column", gap: "8px"}}>
-              <span style={{display: "flex", justifyContent: "space-between", fontSize: "14px", color: "#6B6F76"}}>
-                <span>
-                  {v.sel.count}{" pages sur 14"}
-                </span>
-                <span>
-                  {"moyenne "}{v.sel.avg}
-                </span>
-              </span>
-              <span style={{display: "flex", gap: "3px"}}>
-                {(v.sel.steps || []).map((p: any, i_p: number) => (
-                  <Fragment key={i_p}>
-                    <span style={{flex: "1", height: "8px", borderRadius: "3px", background: p.bg}}></span>
-                  </Fragment>
-                ))}
-              </span>
-            </div>
-            <Link href={"/v2/matieres"} className={"mr-btn"} style={{textAlign: "center", fontSize: "16px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", padding: "14px", borderRadius: "12px", textDecoration: "none"}}>
-              {"Ouvrir la fiche"}
-            </Link>
-          </section>
-        </aside>
-      </main>
+            </ol>
+          </aside>
+        </>
+      ) : null}
     </div>
     </>
   )

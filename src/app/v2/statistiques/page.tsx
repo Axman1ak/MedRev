@@ -55,7 +55,6 @@ class Logic extends DCLogic {
       ['Temps de révision', hm(sum('mins')), '+18% vs avant', '#2F6B45', 'mins', (v) => hm(v)],
       ['Fiches révisées', String(sum('nf')), '+6 vs avant', '#2F6B45', 'nf', (v) => v + ' fiches'],
       ['Réussite QCM', Math.round(avg('qcm')) + '%', '+4 pts', '#2F6B45', 'qcm', (v) => v + '%'],
-      ['Ressenti moyen', avg('note').toFixed(1).replace('.', ',') + '/5', '−0,2', '#B4533A', 'note', (v) => v.toFixed(1).replace('.', ',') + '/5'],
       ['Révisions à l’heure', Math.round(avg('onTime')) + '%', '−9 pts', '#B4533A', 'onTime', (v) => v + '%']
     ];
     const kpis = K.map(([label, value, delta, dc], i) => {
@@ -139,7 +138,7 @@ export default function Page() {
             ))}
           </div>
         </header>
-        <div style={{display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "16px"}}>
+        <div style={{display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "16px"}}>
           {(v.kpis || []).map((k: any, i_k: number) => (
             <Fragment key={i_k}>
               <button type={"button"} className={"mr-card"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "22px", borderRadius: "16px", background: k.bg, border: "0", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
