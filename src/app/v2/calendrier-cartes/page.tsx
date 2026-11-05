@@ -7,7 +7,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-item{transition:background .12s ease}\n.mr-item:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-menu:hover{background:#F4F1EA}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-item{transition:background .12s ease}\n.mr-item:hover{box-shadow:0 0 0 1px #DDD8CE, 0 2px 6px rgba(26,29,35,.08) !important}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-menu:hover{background:#F4F1EA}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -32,7 +32,7 @@ class Logic extends DCLogic {
     const days = raw.map(([name, num, kind, events, items, more], i) => ({
       name, num, events, items,
       hasMore: more > 0, more: '+' + more + ' autres',
-      border: kind === 'today' ? '#15304E' : 'transparent',
+      border: i === 0 ? '0' : '1px solid #EDE9E1',
       bg: kind === 'today' ? '#F4F1EA' : 'transparent',
       numBg: kind === 'today' ? '#15304E' : 'transparent',
       numColor: kind === 'today' ? '#FFFFFF' : (kind === 'past' ? '#9AA0A8' : '#1A1D23')
@@ -59,7 +59,7 @@ export default function Page() {
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="1" />
       </div>
-      <main style={{flex: "999 1 560px", minWidth: "0", boxSizing: "border-box", padding: "48px clamp(20px, 4vw, 56px) 40px", display: "flex", flexDirection: "column"}}>
+      <main style={{flex: "999 1 560px", minWidth: "0", boxSizing: "border-box", padding: "48px clamp(20px, 4vw, 56px) 0", display: "flex", flexDirection: "column"}}>
         <div style={{flex: "1", width: "100%", display: "flex", flexDirection: "column", gap: "32px"}}>
           <header style={{display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px"}}>
             <h1 style={{margin: "0", fontSize: "34px", fontWeight: "700", letterSpacing: "-.02em"}}>
@@ -119,10 +119,10 @@ export default function Page() {
             </div>
           </header>
           <div style={{flex: "1", display: "flex", overflowX: "auto"}}>
-            <div style={{flex: "1", display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", minWidth: "880px", gap: "12px"}}>
+            <div style={{flex: "1", display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", minWidth: "880px", borderTop: "1px solid #EDE9E1"}}>
               {(v.days || []).map((d: any, i_d: number) => (
                 <Fragment key={i_d}>
-                  <div style={{minHeight: "560px", padding: "16px 8px 14px", borderRadius: "16px", border: `2px solid ${d.border}`, background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", display: "flex", flexDirection: "column", gap: "12px"}}>
+                  <div style={{minHeight: "560px", padding: "16px 8px 24px", borderLeft: d.border, background: d.bg, display: "flex", flexDirection: "column", gap: "12px"}}>
                     <div style={{display: "flex", alignItems: "center", gap: "8px", padding: "0 6px"}}>
                       <span style={{fontSize: "13px", fontWeight: "500", color: "#6B6F76"}}>
                         {d.name}
@@ -131,10 +131,10 @@ export default function Page() {
                         {d.num}
                       </span>
                     </div>
-                    <div style={{display: "flex", flexDirection: "column", gap: "1px"}}>
+                    <div style={{display: "flex", flexDirection: "column", gap: "6px"}}>
                       {(d.items || []).map((it: any, i_it: number) => (
                         <Fragment key={i_it}>
-                          <Link href={"/v2/session"} className={"mr-item"} style={{display: "flex", alignItems: "center", gap: "8px", padding: "6px", borderRadius: "8px", textDecoration: "none", color: it.color, fontSize: "13px", lineHeight: "1.3"}}>
+                          <Link href={"/v2/session"} className={"mr-item"} style={{display: "flex", alignItems: "center", gap: "8px", padding: "9px 8px", borderRadius: "10px", background: "#FFFFFF", boxShadow: "0 0 0 1px #EDE9E1, 0 1px 2px rgba(26,29,35,.04)", textDecoration: "none", color: it.color, fontSize: "13px", lineHeight: "1.3"}}>
                             <span style={{width: "7px", height: "7px", borderRadius: "50%", background: it.dot, flex: "none", opacity: it.opacity, margin: "0 3px"}}></span>
                             <span style={{overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>
                               {it.title}

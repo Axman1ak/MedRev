@@ -36,10 +36,9 @@ class Logic extends DCLogic {
       const f = (c) => Math.round(c + (255 - c) * k);
       return 'rgb(' + f(n >> 16) + ',' + f((n >> 8) & 255) + ',' + f(n & 255) + ')';
     };
-    const cap = 110;
-    const shelves = subs.map(([name, color, count, obj, objectName], si) => {
+        const shelves = subs.map(([name, color, count, obj, objectName], si) => {
       const books = [];
-      for (let i = 0; i < Math.min(count, cap); i++) {
+      for (let i = 0; i < count; i++) {
         const r = Math.abs(Math.sin((i + 1) * 12.9898 + si * 78.233)) % 1;
         const gold = (i * 7 + si * 3) % 9 === 0;
         books.push({
@@ -50,7 +49,7 @@ class Logic extends DCLogic {
           label: name + ', révision ' + (i + 1)
         });
       }
-      return { name, color, count, books, hasMore: count > cap, more: '+' + (count - cap), hasObject: !!obj, objectPath: obj ? OBJ[obj] : '', objectName };
+      return { name, color, count, books, hasObject: !!obj, objectPath: obj ? OBJ[obj] : '', objectName };
     });
     const R = [
       ['Apprenti', 'Ta première étagère', 0, 'book'],
@@ -125,8 +124,8 @@ export default function Page() {
           <div style={{flex: "1", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "30px"}}>
             {(v.shelves || []).map((s: any, i_s: number) => (
               <Fragment key={i_s}>
-                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "12px 24px", padding: "24px 28px 22px", borderRadius: "18px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
-                  <div style={{width: "180px", display: "flex", flexDirection: "column", gap: "2px", paddingBottom: "10px"}}>
+                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "12px 24px", padding: "24px 28px 22px", borderRadius: "18px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
+                  <div style={{width: "180px", display: "flex", flexDirection: "column", gap: "2px", paddingTop: "24px"}}>
                     <span style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "600"}}>
                       <span style={{width: "8px", height: "8px", borderRadius: "50%", background: s.color, flex: "none"}}></span>
                       {" "}{s.name}{" "}
@@ -135,22 +134,14 @@ export default function Page() {
                       {" "}{s.count}{" livres "}
                     </span>
                   </div>
-                  <div style={{flex: "1 1 420px", minWidth: "0", display: "flex", flexDirection: "column"}}>
-                    <div style={{display: "flex", alignItems: "flex-end", gap: "2px", height: "70px", overflow: "hidden", padding: "0 8px"}}>
-                      {(s.books || []).map((b: any, i_b: number) => (
-                        <Fragment key={i_b}>
+                  <div style={{flex: "1 1 420px", minWidth: "0", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "18px 2px", padding: "0 8px", backgroundImage: "linear-gradient(to bottom, transparent 70px, #DCCFBA 70px, #DCCFBA 77px, transparent 77px)", backgroundSize: "100% 95px", borderRadius: "2px"}}>
+                    {(s.books || []).map((b: any, i_b: number) => (
+                      <Fragment key={i_b}>
+                        <span style={{flex: "none", height: "77px", display: "flex", alignItems: "flex-end", paddingBottom: "7px", boxSizing: "border-box"}}>
                           <span className={"mr-book"} title={b.label} style={{flex: "none", width: b.w, height: b.h, borderRadius: "2px 2px 1px 1px", background: b.bg, borderTop: `3px solid ${b.top}`, boxSizing: "border-box"}}></span>
-                        </Fragment>
-                      ))}
-                      {s.hasMore ? (
-                        <>
-                          <span style={{flex: "none", fontSize: "12px", color: "#6B6F76", padding: "0 0 4px 8px"}}>
-                            {" "}{s.more}{" "}
-                          </span>
-                        </>
-                      ) : null}
-                    </div>
-                    <div style={{height: "7px", borderRadius: "2px", background: "#DCCFBA", boxShadow: "0 3px 6px rgba(120,95,60,.18)"}}></div>
+                        </span>
+                      </Fragment>
+                    ))}
                   </div>
                 </div>
               </Fragment>
