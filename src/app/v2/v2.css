@@ -1,0 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+.v2-root { background: #FAF8F4; min-height: 100vh; }
+.v2-root svg { display: inline; }
+.v2-root button { font: inherit; }
