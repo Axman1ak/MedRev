@@ -145,9 +145,9 @@ export default function Page() {
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="0" />
       </div>
-      <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "40px 56px 80px", display: "flex", gap: "56px", alignItems: "flex-start"}}>
-        <section aria-label={"Ton parcours"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px"}}>
-          <div className={"mr-rise"} style={{width: "860px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "22px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
+      <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "40px 56px 40px", display: "flex", gap: "56px", alignItems: "flex-start"}}>
+        <section aria-label={"Ton parcours"} style={{flex: "1", minWidth: "0", height: "calc(100vh - 80px)", display: "flex", flexDirection: "column", alignItems: "center", gap: "0"}}>
+          <div className={"mr-rise"} style={{flex: "none", width: "860px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "22px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "13px", color: "rgba(255,255,255,.6)", letterSpacing: ".06em"}}>
                 {"SEMAINE 10"}
@@ -165,87 +165,89 @@ export default function Page() {
               {"Anatomie, Physiologie, Pharmaco "}
             </span>
           </div>
-          <div style={{position: "relative", width: "860px", height: v.totalH}}>
-            <svg width={"860"} height={v.totalH} viewBox={`0 0 860 ${v.svgH}`} aria-hidden={"true"} style={{position: "absolute", left: "0", top: "0", overflow: "visible"}}>
-              <path d={v.fullPath} fill={"none"} stroke={"#ECE7DD"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
-              <path className={"mr-line"} pathLength={"1"} d={v.donePath} fill={"none"} stroke={"#15304E"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
-            </svg>
-            {(v.bands || []).map((w: any, i_w: number) => (
-              <Fragment key={i_w}>
-                <div className={"mr-rise"} style={{position: "absolute", left: "0", right: "0", top: w.top, display: "flex", alignItems: "center", gap: "18px", fontSize: "15px", fontWeight: "600", color: "#9AA0A8", animationDelay: w.delay}}>
-                  <span style={{flex: "1", height: "1px", background: "#E4DFD4"}}></span>
-                  <span style={{padding: "6px 16px", borderRadius: "999px", background: "#FAF8F4", border: "1px solid #E4DFD4"}}>
-                    {w.title}
-                    <span style={{fontWeight: "500"}}>
-                      {" \u00b7 "}{w.sub}
-                    </span>
-                  </span>
-                  <span style={{flex: "1", height: "1px", background: "#E4DFD4"}}></span>
-                </div>
-              </Fragment>
-            ))}
-            {(v.nodes || []).map((n: any, i_n: number) => (
-              <Fragment key={i_n}>
-                <div className={"mr-enter"} id={n.anchor} style={{position: "absolute", left: n.left, top: n.top, width: n.size, height: n.size, animationDelay: n.delay}}>
-                  {n.halo ? (
-                    <>
-                      <span className={"mr-halo"} style={{position: "absolute", inset: "0", borderRadius: n.radius, background: n.haloColor}}></span>
-                    </>
-                  ) : null}
-                  <button type={"button"} className={`mr-node ${n.anim}`} onClick={n.pick} aria-label={n.label} aria-pressed={n.pressed} style={{font: "inherit", position: "relative", width: "100%", height: "100%", borderRadius: n.radius, border: n.border, background: n.bg, color: n.fg, boxShadow: n.shadow, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "0"}}>
-                    {n.showRing ? (
-                      <>
-                        <svg width={"104"} height={"104"} viewBox={"0 0 104 104"} aria-hidden={"true"} style={{position: "absolute", left: "-8px", top: "-8px", transform: "rotate(-90deg)"}}>
-                          <circle cx={"52"} cy={"52"} r={"44"} fill={"none"} stroke={"#E4DFD4"} strokeWidth={"5"} />
-                          <circle className={"mr-ringfill"} cx={"52"} cy={"52"} r={"44"} fill={"none"} stroke={"#F49A2E"} strokeWidth={"5"} strokeLinecap={"round"} strokeDasharray={"276"} strokeDashoffset={n.ringOffset} />
-                        </svg>
-                      </>
-                    ) : null}
-                    {n.showImg ? (
-                      <>
-                        <img src={n.img} alt={""} className={n.iconClass} style={{width: n.imgSize, height: n.imgSize, filter: n.imgFilter, pointerEvents: "none"}} />
-                      </>
-                    ) : null}
-                    {n.showSvg ? (
-                      <>
-                        <svg className={n.iconClass} width={n.iconSize} height={n.iconSize} viewBox={n.viewBox} fill={n.iconFill} stroke={n.iconStroke} strokeWidth={n.iconStrokeW} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
-                          <path d={n.icon} />
-                        </svg>
-                      </>
-                    ) : null}
-                  </button>
-                  <span style={{position: "absolute", top: "50%", right: "calc(100% + 22px)", transform: "translateY(-50%)", whiteSpace: "nowrap", textAlign: "right", display: "flex", flexDirection: "column", gap: "2px"}}>
-                    <span style={{fontSize: "15px", fontWeight: n.dateWeight, color: n.dateColor}}>
-                      {n.date}
-                    </span>
-                    <span style={{fontSize: "13px", color: "#9AA0A8"}}>
-                      {n.sub}
-                    </span>
-                  </span>
-                  {n.gain ? (
-                    <>
-                      <span className={"mr-gain"} style={{position: "absolute", left: "50%", top: "-14px", marginLeft: "-40px", width: "80px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "18px", fontWeight: "700", color: "#3F4CC9"}}>
-                        {"+25 "}
-                        <img src={"/v2/assets/eclat.svg"} alt={""} style={{width: "20px", height: "20px"}} />
+          <div style={{flex: "1", minHeight: "0", width: "100%", overflowY: "auto", display: "flex", justifyContent: "center", paddingTop: "24px", WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%)", maskImage: "linear-gradient(to bottom, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%)"}}>
+            <div style={{position: "relative", width: "860px", height: v.totalH}}>
+              <svg width={"860"} height={v.totalH} viewBox={`0 0 860 ${v.svgH}`} aria-hidden={"true"} style={{position: "absolute", left: "0", top: "0", overflow: "visible"}}>
+                <path d={v.fullPath} fill={"none"} stroke={"#ECE7DD"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
+                <path className={"mr-line"} pathLength={"1"} d={v.donePath} fill={"none"} stroke={"#15304E"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
+              </svg>
+              {(v.bands || []).map((w: any, i_w: number) => (
+                <Fragment key={i_w}>
+                  <div className={"mr-rise"} style={{position: "absolute", left: "0", right: "0", top: w.top, display: "flex", alignItems: "center", gap: "18px", fontSize: "15px", fontWeight: "600", color: "#9AA0A8", animationDelay: w.delay}}>
+                    <span style={{flex: "1", height: "1px", background: "#E4DFD4"}}></span>
+                    <span style={{padding: "6px 16px", borderRadius: "999px", background: "#FAF8F4", border: "1px solid #E4DFD4"}}>
+                      {w.title}
+                      <span style={{fontWeight: "500"}}>
+                        {" \u00b7 "}{w.sub}
                       </span>
-                    </>
-                  ) : null}
-                </div>
-              </Fragment>
-            ))}
-            <div className={"mr-card-in"} style={{position: "absolute", left: v.card.left, top: v.card.top, width: "320px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "6px", padding: "22px 24px", borderRadius: "18px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.06), 0 16px 40px rgba(26,29,35,.10)"}}>
-              <span style={{fontSize: "14px", color: "#6B6F76"}}>
-                {v.card.kicker}
-              </span>
-              <span style={{fontSize: "24px", fontWeight: "700", letterSpacing: "-.01em"}}>
-                {v.card.title}
-              </span>
-              <span style={{fontSize: "15px", color: "#6B6F76"}}>
-                {v.card.sub}
-              </span>
-              <Link href={"/v2/session"} className={"mr-btn"} style={{marginTop: "12px", textAlign: "center", fontSize: "17px", fontWeight: "700", color: v.card.btnFg, background: v.card.btnBg, padding: "14px", borderRadius: "12px", textDecoration: "none"}}>
-                {v.card.cta}
-              </Link>
+                    </span>
+                    <span style={{flex: "1", height: "1px", background: "#E4DFD4"}}></span>
+                  </div>
+                </Fragment>
+              ))}
+              {(v.nodes || []).map((n: any, i_n: number) => (
+                <Fragment key={i_n}>
+                  <div className={"mr-enter"} id={n.anchor} style={{position: "absolute", left: n.left, top: n.top, width: n.size, height: n.size, animationDelay: n.delay}}>
+                    {n.halo ? (
+                      <>
+                        <span className={"mr-halo"} style={{position: "absolute", inset: "0", borderRadius: n.radius, background: n.haloColor}}></span>
+                      </>
+                    ) : null}
+                    <button type={"button"} className={`mr-node ${n.anim}`} onClick={n.pick} aria-label={n.label} aria-pressed={n.pressed} style={{font: "inherit", position: "relative", width: "100%", height: "100%", borderRadius: n.radius, border: n.border, background: n.bg, color: n.fg, boxShadow: n.shadow, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "0"}}>
+                      {n.showRing ? (
+                        <>
+                          <svg width={"104"} height={"104"} viewBox={"0 0 104 104"} aria-hidden={"true"} style={{position: "absolute", left: "-8px", top: "-8px", transform: "rotate(-90deg)"}}>
+                            <circle cx={"52"} cy={"52"} r={"44"} fill={"none"} stroke={"#E4DFD4"} strokeWidth={"5"} />
+                            <circle className={"mr-ringfill"} cx={"52"} cy={"52"} r={"44"} fill={"none"} stroke={"#F49A2E"} strokeWidth={"5"} strokeLinecap={"round"} strokeDasharray={"276"} strokeDashoffset={n.ringOffset} />
+                          </svg>
+                        </>
+                      ) : null}
+                      {n.showImg ? (
+                        <>
+                          <img src={n.img} alt={""} className={n.iconClass} style={{width: n.imgSize, height: n.imgSize, filter: n.imgFilter, pointerEvents: "none"}} />
+                        </>
+                      ) : null}
+                      {n.showSvg ? (
+                        <>
+                          <svg className={n.iconClass} width={n.iconSize} height={n.iconSize} viewBox={n.viewBox} fill={n.iconFill} stroke={n.iconStroke} strokeWidth={n.iconStrokeW} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
+                            <path d={n.icon} />
+                          </svg>
+                        </>
+                      ) : null}
+                    </button>
+                    <span style={{position: "absolute", top: "50%", right: "calc(100% + 22px)", transform: "translateY(-50%)", whiteSpace: "nowrap", textAlign: "right", display: "flex", flexDirection: "column", gap: "2px"}}>
+                      <span style={{fontSize: "15px", fontWeight: n.dateWeight, color: n.dateColor}}>
+                        {n.date}
+                      </span>
+                      <span style={{fontSize: "13px", color: "#9AA0A8"}}>
+                        {n.sub}
+                      </span>
+                    </span>
+                    {n.gain ? (
+                      <>
+                        <span className={"mr-gain"} style={{position: "absolute", left: "50%", top: "-14px", marginLeft: "-40px", width: "80px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "18px", fontWeight: "700", color: "#3F4CC9"}}>
+                          {"+25 "}
+                          <img src={"/v2/assets/eclat.svg"} alt={""} style={{width: "20px", height: "20px"}} />
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
+                </Fragment>
+              ))}
+              <div className={"mr-card-in"} style={{position: "absolute", left: v.card.left, top: v.card.top, width: "320px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "6px", padding: "22px 24px", borderRadius: "18px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.06), 0 16px 40px rgba(26,29,35,.10)"}}>
+                <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                  {v.card.kicker}
+                </span>
+                <span style={{fontSize: "24px", fontWeight: "700", letterSpacing: "-.01em"}}>
+                  {v.card.title}
+                </span>
+                <span style={{fontSize: "15px", color: "#6B6F76"}}>
+                  {v.card.sub}
+                </span>
+                <Link href={"/v2/session"} className={"mr-btn"} style={{marginTop: "12px", textAlign: "center", fontSize: "17px", fontWeight: "700", color: v.card.btnFg, background: v.card.btnBg, padding: "14px", borderRadius: "12px", textDecoration: "none"}}>
+                  {v.card.cta}
+                </Link>
+              </div>
             </div>
           </div>
         </section>
