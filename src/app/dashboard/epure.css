@@ -542,3 +542,21 @@
   .db-shell .fi-main .card-status { width: 84px; }
   .db-shell .fi-main .stamps { justify-content: flex-end; min-width: 170px; }
 }
+
+/* ============ CALENDRIER : comme la maquette (en-tête de jour, lignes simples) ============ */
+@media (min-width: 769px) {
+  .db-shell .cal-day-head { height: auto; display: flex; align-items: center; gap: 8px; padding: 14px 10px 10px; border-bottom: 0; }
+  .db-shell .cal-day-name { font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .db-shell .cal-day-num-row { margin: 0; }
+  .db-shell .cal-day-num { font-family: var(--font-hanken), 'Hanken Grotesk', sans-serif; font-size: 15px; font-weight: 600; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; }
+  .db-shell .cal-day.cal-today .cal-day-num { background: var(--accent-primary); color: #fff; }
+  .db-shell .cal-day-count { display: none; }
+  .db-shell .cal-day-list { padding: 4px 6px; }
+  .db-shell .cal-week .cal-fiche { height: auto; padding: 6px; background: transparent; border: 0; border-radius: 8px; }
+  .db-shell .cal-week .cal-fiche:hover { background: var(--bg-muted); }
+  .db-shell .cal-fiche-j { display: none; }
+  .db-shell .cal-fiche-name { font-size: 13px; font-weight: 400; color: var(--text-primary); }
+  .db-shell .cal-fiche.cal-done .cal-fiche-name { color: var(--text-tertiary); }
+  .db-shell .cal-fiche-dot.cal-scored { width: 7px; height: 7px; margin-top: 0; border: 0; box-shadow: none; opacity: .45; }
+  .db-shell .cal-sub { display: none; }
+}

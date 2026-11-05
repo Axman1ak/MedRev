@@ -543,6 +543,7 @@ export default function CalendarPage() {
   }
 
   // Avant : `return null`, donc un écran blanc jusqu'à l'arrivée des données.
+  const subjColor = buildSubjectColorMap(semSystems)
   if (loading || !userId) return <div className="cal-page"><PageLoader label="Chargement de ton calendrier…" /></div>
 
   // ============= Render =============
@@ -826,7 +827,7 @@ export default function CalendarPage() {
                             onClick={() => openReview(occ)}
                             title={`${sysName ? sysName + ', ' : ''}${occ.lesson.name}, J+${scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}`}
                           >
-                            <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                            <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} style={{ background: subjColor.get(occ.lesson.system_id) || undefined }} />
                             <span className="cal-fiche-body">
                               <span className="cal-fiche-name">{occ.lesson.name}</span>
                               <span className="cal-fiche-j">J+{scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}</span>
@@ -986,7 +987,7 @@ export default function CalendarPage() {
                         <span className="cal-fiche-name">{occ.lesson.name}</span>
                         {sysName && <span className="cal-of-sub">{sysName}</span>}
                       </span>
-                      <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} />
+                      <span className={`cal-fiche-dot ${cls}${done ? ' cal-scored' : ''}`} style={{ background: subjColor.get(occ.lesson.system_id) || undefined }} />
                       <span className="cal-fiche-j">J+{scheduleOf(systemsById.get(occ.lesson.system_id))[occ.stepIndex]}</span>
                     </button>
                   )
