@@ -59,7 +59,7 @@ class Logic extends DCLogic {
       { id: 'f6', date: 'Mar. 10', kind: 'future', n: 4 },
       { id: 'goal', date: 'Concours blanc', kind: 'goal' }
     ];
-    const items = st.old ? older.concat(current) : current;
+    const items = older.concat(current);
     const CX = 300, AMP = 130, STEP = 118;
     let y = 50, k = 0;
     const pts = [], nodes = [], bands = [];
@@ -78,24 +78,26 @@ class Logic extends DCLogic {
       if (kind === 'today' && done) kind = 'todayDone';
       if (kind === 'chest') kind = !done ? 'chestLocked' : (st.opened ? 'chestOpen' : 'chestReady');
       const ring = on ? '0 0 0 4px #FAF8F4, 0 0 0 7px #15304E' : '0 2px 6px rgba(26,29,35,.08)';
-      const S = { done: 64, today: 88, todayDone: 88, missed: 56, rest: 40, future: 60, chestLocked: 60, chestReady: 64, chestOpen: 60, goal: 72 }[kind];
+      const S = { done: 64, today: 88, todayDone: 88, missed: 56, rest: 40, future: 60, chestLocked: 76, chestReady: 82, chestOpen: 76, goal: 72 }[kind];
       const ic = (name, size, fill, stroke, w, cls) => ({ viewBox: ICON[name][0], icon: ICON[name][1], iconSize: String(size), iconFill: fill, iconStroke: stroke, iconStrokeW: String(w), iconClass: cls || '' });
       const sub = d.n ? d.n + ' fiches' : '';
       let n = {
         left: (cx - S / 2) + 'px', top: (cy - S / 2) + 'px', size: S + 'px', delay: (nodes.length * 0.05) + 's',
         label: d.date, pressed: on ? 'true' : 'false', pick: () => this.setState({ sel: d.id }),
         date: d.date, sub, dateWeight: 500, dateColor: '#9AA0A8', radius: '50%', halo: false, haloColor: 'transparent',
-        showRing: false, ringOffset: '276', anim: '', gain: false, border: '0', shadow: ring
+        showRing: false, ringOffset: '276', anim: '', gain: false, border: '0', shadow: ring,
+        showImg: false, showSvg: true, img: '', imgSize: '0px', imgFilter: 'none', anchor: d.kind === 'today' ? 'aujourdhui' : 'n-' + d.id
       };
+      const im = (src, size, filter, cls) => ({ showImg: true, showSvg: false, img: src, imgSize: size + 'px', imgFilter: filter || 'none', iconClass: cls || '' });
       if (kind === 'done') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...ic('check', 28, 'none', 'currentColor', 3), dateColor: '#3D424A', dateWeight: 600 };
-      if (kind === 'today') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...ic('flame', 38, 'rgba(255,255,255,.92)', 'none', 0), halo: true, haloColor: 'rgba(21,48,78,.22)', showRing: true, date: 'Aujourd’hui', dateColor: '#15304E', dateWeight: 700, sub: '' };
-      if (kind === 'todayDone') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...ic('flame', 42, '#F49A2E', 'none', 0, 'mr-lit'), halo: true, haloColor: 'rgba(244,154,46,.35)', showRing: true, ringOffset: '0', date: 'Aujourd’hui', dateColor: '#15304E', dateWeight: 700, sub: 'session faite' };
+      if (kind === 'today') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...im('/v2/assets/flame-off.svg', 46, 'brightness(1.6)'), halo: true, haloColor: 'rgba(21,48,78,.22)', showRing: true, date: 'Aujourd’hui', dateColor: '#15304E', dateWeight: 700, sub: '' };
+      if (kind === 'todayDone') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...im('/v2/assets/flame.svg', 50, 'none', 'mr-lit'), halo: true, haloColor: 'rgba(244,154,46,.35)', showRing: true, ringOffset: '0', date: 'Aujourd’hui', dateColor: '#15304E', dateWeight: 700, sub: 'session faite' };
       if (kind === 'missed') n = { ...n, bg: '#FAF8F4', fg: '#B9B3A8', border: '2px dashed #D9D3C7', shadow: on ? ring : 'none', ...ic('dash', 22, 'none', 'currentColor', 2.5) };
       if (kind === 'rest') n = { ...n, bg: '#ECE8E0', fg: '#9AA0A8', shadow: on ? ring : 'none', ...ic('dot', 16, 'none', 'currentColor', 6), sub: 'repos' };
       if (kind === 'future') n = { ...n, bg: '#FFFFFF', fg: '#B9B3A8', border: '2px solid #E4DFD4', shadow: on ? ring : 'none', ...ic('check', 24, 'none', 'currentColor', 2.5), dateColor: '#6B6F76' };
-      if (kind === 'chestLocked') n = { ...n, radius: '18px', bg: '#FFFFFF', fg: '#B9B3A8', border: '2px solid #E4DFD4', shadow: on ? ring : 'none', ...ic('chest', 28, 'none', 'currentColor', 1.8), sub: 'après ta session' };
-      if (kind === 'chestReady') n = { ...n, radius: '18px', bg: '#F4C35A', fg: '#7A5208', anim: 'mr-ready', ...ic('chest', 30, 'none', 'currentColor', 2), dateColor: '#7A5208', dateWeight: 700, sub: 'clique pour ouvrir', pick: () => this.setState({ opened: true, sel: d.id }) };
-      if (kind === 'chestOpen') n = { ...n, radius: '18px', bg: '#FDF3DC', fg: '#C98A12', anim: d.id === 'chest' ? 'mr-opened' : '', ...ic('open', 28, 'none', 'currentColor', 1.8), sub: '+25 éclats', gain: d.id === 'chest' };
+      if (kind === 'chestLocked') n = { ...n, radius: '18px', bg: 'transparent', fg: '#B9B3A8', shadow: 'none', ...im('/v2/assets/chest.svg', 76, 'grayscale(1) opacity(.45)'), sub: 'après ta session' };
+      if (kind === 'chestReady') n = { ...n, radius: '22px', bg: 'transparent', fg: '#7A5208', anim: 'mr-ready', shadow: 'none', ...im('/v2/assets/chest.svg', 82), dateColor: '#7A5208', dateWeight: 700, sub: 'clique pour ouvrir', pick: () => this.setState({ opened: true, sel: d.id }) };
+      if (kind === 'chestOpen') n = { ...n, radius: '18px', bg: 'transparent', fg: '#C98A12', shadow: 'none', anim: d.id === 'chest' ? 'mr-opened' : '', ...im('/v2/assets/chest-open.svg', 76, d.id === 'chest' ? 'none' : 'saturate(.6)'), sub: '+25 éclats', gain: d.id === 'chest' };
       if (kind === 'goal') n = { ...n, radius: '20px', bg: '#FFFFFF', fg: '#15304E', border: '2px solid #15304E', ...ic('flag', 30, 'none', 'currentColor', 2), dateColor: '#15304E', dateWeight: 700, sub: 'sam. 22 nov.' };
       nodes.push(n);
     });
@@ -129,8 +131,6 @@ class Logic extends DCLogic {
       nodes, bands, card, sel, quests,
       fullPath: curve(pts), donePath: curve(pts.slice(0, doneUpTo + 1)),
       totalH: (y + 10) + 'px', svgH: String(y + 10),
-      oldLabel: st.old ? 'Masquer les semaines précédentes' : 'Voir les semaines précédentes',
-      toggleOld: () => this.setState({ old: !st.old }),
       balance: st.opened ? '265' : '240', balanceAnim: st.opened ? 'mr-bump' : ''
     };
   }
@@ -165,9 +165,6 @@ export default function Page() {
               {"Anatomie, Physiologie, Pharmaco "}
             </span>
           </div>
-          <button type={"button"} className={"mr-btn"} onClick={v.toggleOld} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#15304E", background: "#FFFFFF", border: "1px solid #E4DFD4", padding: "10px 20px", borderRadius: "999px", cursor: "pointer"}}>
-            {v.oldLabel}
-          </button>
           <div style={{position: "relative", width: "860px", height: v.totalH}}>
             <svg width={"860"} height={v.totalH} viewBox={`0 0 860 ${v.svgH}`} aria-hidden={"true"} style={{position: "absolute", left: "0", top: "0", overflow: "visible"}}>
               <path d={v.fullPath} fill={"none"} stroke={"#ECE7DD"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
@@ -189,7 +186,7 @@ export default function Page() {
             ))}
             {(v.nodes || []).map((n: any, i_n: number) => (
               <Fragment key={i_n}>
-                <div className={"mr-enter"} style={{position: "absolute", left: n.left, top: n.top, width: n.size, height: n.size, animationDelay: n.delay}}>
+                <div className={"mr-enter"} id={n.anchor} style={{position: "absolute", left: n.left, top: n.top, width: n.size, height: n.size, animationDelay: n.delay}}>
                   {n.halo ? (
                     <>
                       <span className={"mr-halo"} style={{position: "absolute", inset: "0", borderRadius: n.radius, background: n.haloColor}}></span>
@@ -204,9 +201,18 @@ export default function Page() {
                         </svg>
                       </>
                     ) : null}
-                    <svg className={n.iconClass} width={n.iconSize} height={n.iconSize} viewBox={n.viewBox} fill={n.iconFill} stroke={n.iconStroke} strokeWidth={n.iconStrokeW} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
-                      <path d={n.icon} />
-                    </svg>
+                    {n.showImg ? (
+                      <>
+                        <img src={n.img} alt={""} className={n.iconClass} style={{width: n.imgSize, height: n.imgSize, filter: n.imgFilter, pointerEvents: "none"}} />
+                      </>
+                    ) : null}
+                    {n.showSvg ? (
+                      <>
+                        <svg className={n.iconClass} width={n.iconSize} height={n.iconSize} viewBox={n.viewBox} fill={n.iconFill} stroke={n.iconStroke} strokeWidth={n.iconStrokeW} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
+                          <path d={n.icon} />
+                        </svg>
+                      </>
+                    ) : null}
                   </button>
                   <span style={{position: "absolute", top: "50%", right: "calc(100% + 22px)", transform: "translateY(-50%)", whiteSpace: "nowrap", textAlign: "right", display: "flex", flexDirection: "column", gap: "2px"}}>
                     <span style={{fontSize: "15px", fontWeight: n.dateWeight, color: n.dateColor}}>
@@ -218,8 +224,9 @@ export default function Page() {
                   </span>
                   {n.gain ? (
                     <>
-                      <span className={"mr-gain"} style={{position: "absolute", left: "50%", top: "-10px", marginLeft: "-30px", width: "60px", textAlign: "center", fontSize: "18px", fontWeight: "700", color: "#C98A12"}}>
-                        {"+25 \u25c6"}
+                      <span className={"mr-gain"} style={{position: "absolute", left: "50%", top: "-14px", marginLeft: "-40px", width: "80px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "18px", fontWeight: "700", color: "#3F4CC9"}}>
+                        {"+25 "}
+                        <img src={"/v2/assets/eclat.svg"} alt={""} style={{width: "20px", height: "20px"}} />
                       </span>
                     </>
                   ) : null}
@@ -243,10 +250,8 @@ export default function Page() {
           </div>
         </section>
         <aside style={{flex: "0 0 360px", display: "flex", flexDirection: "column", gap: "20px", position: "sticky", top: "40px"}}>
-          <Link href={"/v2/bibliotheque"} className={"mr-rise mr-lift"} style={{display: "flex", alignItems: "center", gap: "16px", padding: "20px 24px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", textDecoration: "none", color: "#1A1D23"}}>
-            <span aria-hidden={"true"} style={{width: "44px", height: "44px", borderRadius: "12px", background: "#FDF3DC", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#C98A12"}}>
-              {"\u25c6"}
-            </span>
+          <Link href={"/v2/boutique"} className={"mr-rise mr-lift"} style={{display: "flex", alignItems: "center", gap: "16px", padding: "20px 24px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", textDecoration: "none", color: "#1A1D23"}}>
+            <img src={"/v2/assets/eclat.svg"} alt={""} style={{width: "44px", height: "44px"}} />
             <span style={{flex: "1", display: "flex", flexDirection: "column", gap: "2px"}}>
               <span className={v.balanceAnim} style={{fontSize: "24px", fontWeight: "700", display: "inline-block", transformOrigin: "left center"}}>
                 {v.balance}
@@ -316,8 +321,9 @@ export default function Page() {
                     <span style={{fontWeight: "600"}}>
                       {q.title}
                     </span>
-                    <span style={{color: "#C98A12", fontWeight: "700", whiteSpace: "nowrap"}}>
-                      {"+"}{q.reward}{" \u25c6"}
+                    <span style={{display: "flex", alignItems: "center", gap: "4px", color: "#3F4CC9", fontWeight: "700", whiteSpace: "nowrap"}}>
+                      {"+"}{q.reward}{" "}
+                      <img src={"/v2/assets/eclat.svg"} alt={""} style={{width: "16px", height: "16px"}} />
                     </span>
                   </span>
                   <span style={{display: "flex", alignItems: "center", gap: "10px"}}>
