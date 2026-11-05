@@ -97,7 +97,7 @@ export default function Page() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-    <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "calc(100vh / 0.9)", display: "flex"}}>
+    <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="4" />
       </div>

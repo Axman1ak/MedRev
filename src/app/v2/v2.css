@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
-.v2-root { background: #FAF8F4; min-height: 100vh; zoom: 0.9; }
+.v2-root { background: #FAF8F4; min-height: 100vh; }
 .v2-root svg { display: inline; }
 .v2-root button { font: inherit; }
 html, body { margin: 0; }
 /* panneau de détail de la fiche : reste visible pendant le défilement */
-.v2-root aside[aria-label="Détail de la fiche"] { position: sticky; top: 0; height: calc(100vh / 0.9); overflow-y: auto; align-self: flex-start; }
+.v2-root aside[aria-label="Détail de la fiche"] { position: sticky; top: 0; height: 100vh; overflow-y: auto; align-self: flex-start; }
 body:has(.v2-root), html:has(.v2-root) { overflow-x: clip !important; }
