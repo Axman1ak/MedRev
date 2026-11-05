@@ -537,3 +537,8 @@
   .db-shell .fi-main .cta { order: 4; display: inline-block; background: none !important; border: 0 !important; color: var(--accent-medium) !important; font-size: 13px; font-weight: 600; padding: 6px 8px; border-radius: 7px; }
   .db-shell .fi-main .card:hover .cta { background: var(--bg-muted) !important; }
 }
+@media (min-width: 769px) {
+  .db-shell .fi-main .cta { min-width: 70px; text-align: right; box-sizing: border-box; }
+  .db-shell .fi-main .card-status { width: 84px; }
+  .db-shell .fi-main .stamps { justify-content: flex-end; min-width: 170px; }
+}
