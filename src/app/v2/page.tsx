@@ -7,72 +7,132 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {"session": "à faire"}
 
-const CSS = "\n\na{color:#1E3354}a:hover{color:#0F1E36}\n.mr-btn:hover{filter:brightness(.92)}\n.mr-node{transition:transform .15s ease}\n.mr-node:hover{transform:translateY(-3px)}\n@keyframes mr-pulse{0%{box-shadow:0 7px 0 #0B1D31,0 0 0 0 rgba(21,48,78,.45)}70%{box-shadow:0 7px 0 #0B1D31,0 0 0 22px rgba(21,48,78,0)}100%{box-shadow:0 7px 0 #0B1D31,0 0 0 0 rgba(21,48,78,0)}}\n@keyframes mr-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}\n@keyframes mr-flicker{0%,100%{transform:scale(1,1) rotate(-2deg)}50%{transform:scale(1.04,.96) rotate(2deg)}}\n.mr-today{animation:mr-pulse 2s ease-out infinite}\n.mr-bubble{animation:mr-bob 2.4s ease-in-out infinite}\n.mr-lit path{transform-origin:50% 100%;animation:mr-flicker 1.8s ease-in-out infinite}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-btn{transition:transform .15s ease, filter .15s ease}\n.mr-btn:hover{filter:brightness(1.15);transform:translateY(-1px)}\n.mr-btn:active{transform:scale(.97)}\n.mr-node{transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease}\n.mr-node:hover{transform:scale(1.1)}\n.mr-node:active{transform:scale(.95)}\n.mr-lift{transition:transform .2s ease, box-shadow .2s ease}\n.mr-lift:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(26,29,35,.06),0 12px 28px rgba(26,29,35,.08) !important}\n@keyframes mr-in{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}\n@keyframes mr-halo{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.8);opacity:0}}\n@keyframes mr-card{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}\n@keyframes mr-fill{from{width:0}}\n@keyframes mr-flicker{0%,100%{transform:scale(1,1) rotate(-2deg)}50%{transform:scale(1.06,.94) rotate(2deg)}}\n@keyframes mr-ignite{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1)}}\n@keyframes mr-ring{from{stroke-dashoffset:276}}\n@keyframes mr-wiggle{0%,80%,100%{transform:rotate(0)}84%{transform:rotate(-8deg)}88%{transform:rotate(8deg)}92%{transform:rotate(-5deg)}96%{transform:rotate(4deg)}}\n@keyframes mr-shine{0%,100%{box-shadow:0 0 0 0 rgba(244,195,90,.0)}50%{box-shadow:0 0 0 10px rgba(244,195,90,.25)}}\n@keyframes mr-pop{0%{transform:scale(.6);opacity:0}50%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}\n@keyframes mr-float{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-60px);opacity:0}}\n@keyframes mr-count{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}\n.mr-enter{animation:mr-in .5s cubic-bezier(.2,.8,.2,1) both}\n.mr-rise{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\n.mr-line{stroke-dasharray:1;animation:mr-draw 1.4s cubic-bezier(.4,0,.2,1) .15s both}\n.mr-halo{animation:mr-halo 2.2s ease-out infinite}\n.mr-card-in{animation:mr-card .45s cubic-bezier(.2,.8,.2,1) .5s both}\n.mr-bar{animation:mr-fill 1.2s cubic-bezier(.2,.8,.2,1) .5s both}\n.mr-lit{animation:mr-ignite .8s cubic-bezier(.2,.8,.2,1) both}\n.mr-lit path{transform-origin:50% 100%;animation:mr-flicker 1.6s ease-in-out .8s infinite}\n.mr-ringfill{animation:mr-ring 1.4s cubic-bezier(.2,.8,.2,1) .4s both}\n.mr-ready{animation:mr-wiggle 2.6s ease-in-out infinite, mr-shine 2.6s ease-in-out infinite}\n.mr-opened{animation:mr-pop .6s cubic-bezier(.2,.8,.2,1) both}\n.mr-gain{animation:mr-float 1.8s ease-out both}\n.mr-bump{animation:mr-count .5s ease both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { sel: 'today' };
+    this.state = { sel: 'today', old: false, opened: false };
   }
   renderVals() {
     const st = this.state;
     const done = this.props.session === 'faite';
     const C = { bio: '#C4554D', ana: '#4F7CC9', phy: '#8B6BB8', stat: '#9C7148', pha: '#D08A3E', ssh: '#3E8E85' };
     const pool = [['Nerfs crâniens', C.ana], ['Pharmacocinétique', C.pha], ['Potentiel d’action', C.phy], ['Optique géométrique', C.bio], ['Éthique médicale', C.ssh], ['Tests statistiques', C.stat], ['Membre supérieur', C.ana], ['Fonction rénale', C.phy], ['Récepteurs et ligands', C.pha]];
-    const wave = ['0px', '90px', '140px', '90px', '0px', '-90px', '-140px', '-90px'];
-    const days = [
-      { id: 'f3', date: 'samedi 7 nov.', kind: 'future', n: 2 },
-      { id: 'f2', date: 'vendredi 6 nov.', kind: 'future', n: 3 },
-      { id: 'f1', date: 'jeudi 5 nov.', kind: 'future', n: 5 },
-      { id: 'today', date: 'mercredi 4 nov.', kind: 'today', n: 9 },
-      { band: true, title: 'Cette semaine', sub: '3 sessions sur 3', bandBg: '#E7ECF4', bandFg: '#15304E' },
-      { id: 'p1', date: 'mardi 3 nov.', kind: 'done', n: 6, qcm: '78%', note: '3,9' },
-      { id: 'p2', date: 'lundi 2 nov.', kind: 'done', n: 4, qcm: '71%', note: '3,5' },
-      { id: 'p3', date: 'dimanche 1 nov.', kind: 'rest' },
-      { band: true, title: 'Semaine dernière', sub: '5 sessions sur 6', bandBg: '#F1EEE7', bandFg: '#3D424A' },
-      { id: 'p4', date: 'samedi 31 oct.', kind: 'done', n: 3, qcm: '82%', note: '4,1' },
-      { id: 'p5', date: 'vendredi 30 oct.', kind: 'missed', n: 5 },
-      { id: 'p6', date: 'jeudi 29 oct.', kind: 'done', n: 7, qcm: '64%', note: '3,2' },
-      { id: 'p7', date: 'mercredi 28 oct.', kind: 'done', n: 5, qcm: '69%', note: '3,6' },
-      { id: 'p8', date: 'mardi 27 oct.', kind: 'done', n: 4, qcm: '75%', note: '3,8' },
-      { id: 'p9', date: 'lundi 26 oct.', kind: 'done', n: 6, qcm: '58%', note: '3,0' },
-      { band: true, title: 'Il y a 2 semaines', sub: '4 sessions sur 6', bandBg: '#F1EEE7', bandFg: '#3D424A' },
-      { id: 'p10', date: 'samedi 24 oct.', kind: 'done', n: 2, qcm: '80%', note: '4,0' },
-      { id: 'p11', date: 'vendredi 23 oct.', kind: 'done', n: 5, qcm: '62%', note: '3,1' },
-      { id: 'p12', date: 'jeudi 22 oct.', kind: 'missed', n: 4 },
-      { id: 'p13', date: 'mercredi 21 oct.', kind: 'done', n: 6, qcm: '66%', note: '3,4' }
+    const ICON = {
+      check: ['0 0 24 24', 'M5 12.5l4.5 4.5L19 7.5'],
+      flame: ['0 0 120 140', 'M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z'],
+      chest: ['0 0 24 24', 'M4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 10l1.5-5h13L20 10M10 13h4'],
+      open: ['0 0 24 24', 'M4 12h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM3 9l3-5 14 3-1 5M10 15h4'],
+      flag: ['0 0 24 24', 'M6 21V4M6 4h11l-2 4 2 4H6'],
+      dot: ['0 0 24 24', 'M12 12h.01'],
+      dash: ['0 0 24 24', 'M8 12h8']
+    };
+    const older = [
+      { band: true, title: 'Semaine 8', sub: '4 sessions sur 6' },
+      { id: 'o1', date: 'Mer. 21 oct.', kind: 'done', n: 6, qcm: '66%', note: '3,4' },
+      { id: 'o2', date: 'Jeu. 22 oct.', kind: 'missed', n: 4 },
+      { id: 'o3', date: 'Ven. 23 oct.', kind: 'done', n: 5, qcm: '62%', note: '3,1' },
+      { id: 'oc', date: 'Coffre', kind: 'chestOpen' },
+      { id: 'o4', date: 'Sam. 24 oct.', kind: 'done', n: 2, qcm: '80%', note: '4,0' },
+      { band: true, title: 'Semaine 9', sub: '5 sessions sur 6' },
+      { id: 'o5', date: 'Lun. 26 oct.', kind: 'done', n: 6, qcm: '58%', note: '3,0' },
+      { id: 'o6', date: 'Mar. 27 oct.', kind: 'done', n: 4, qcm: '75%', note: '3,8' },
+      { id: 'o7', date: 'Mer. 28 oct.', kind: 'done', n: 5, qcm: '69%', note: '3,6' },
+      { id: 'o8', date: 'Jeu. 29 oct.', kind: 'done', n: 7, qcm: '64%', note: '3,2' },
+      { id: 'o9', date: 'Ven. 30 oct.', kind: 'missed', n: 5 },
+      { id: 'o10', date: 'Sam. 31 oct.', kind: 'done', n: 3, qcm: '82%', note: '4,1' },
+      { id: 'o11', date: 'Dim. 1 nov.', kind: 'rest' },
+      { band: true, title: 'Semaine 10', sub: 'en cours' }
     ];
-    let k = 0;
-    const blocks = days.map((d) => {
-      if (d.band) return { isBand: true, isNode: false, title: d.title, sub: d.sub, bandBg: d.bandBg, bandFg: d.bandFg };
-      const x = wave[k++ % wave.length];
+    const current = [
+      { id: 'p2', date: 'Lun. 2', kind: 'done', n: 4, qcm: '71%', note: '3,5' },
+      { id: 'p1', date: 'Mar. 3', kind: 'done', n: 6, qcm: '78%', note: '3,9' },
+      { id: 'today', date: 'Aujourd’hui', kind: 'today', n: 9 },
+      { id: 'chest', date: 'Coffre', kind: 'chest' },
+      { id: 'f1', date: 'Jeu. 5', kind: 'future', n: 5 },
+      { id: 'f2', date: 'Ven. 6', kind: 'future', n: 3 },
+      { id: 'f3', date: 'Sam. 7', kind: 'future', n: 2 },
+      { id: 'f4', date: 'Dim. 8', kind: 'rest' },
+      { band: true, title: 'Semaine 11', sub: 'à venir' },
+      { id: 'f5', date: 'Lun. 9', kind: 'future', n: 6 },
+      { id: 'f6', date: 'Mar. 10', kind: 'future', n: 4 },
+      { id: 'goal', date: 'Concours blanc', kind: 'goal' }
+    ];
+    const items = st.old ? older.concat(current) : current;
+    const CX = 300, AMP = 130, STEP = 118;
+    let y = 50, k = 0;
+    const pts = [], nodes = [], bands = [];
+    let todayPt = null, todayIdx = 0;
+    items.forEach((d) => {
+      if (d.band) { bands.push({ top: (y - 6) + 'px', title: d.title, sub: d.sub, delay: (nodes.length * 0.04) + 's' }); y += 64; return; }
+      const cx = Math.round(CX + AMP * Math.sin(k * 0.85));
+      k++;
+      const big = d.kind === 'today';
+      const cy = y + (big ? 30 : 0);
+      y += big ? STEP + 60 : STEP;
+      pts.push([cx, cy]);
+      if (big) { todayPt = [cx, cy]; todayIdx = pts.length - 1; }
       const on = st.sel === d.id;
-      const isTodayPending = d.kind === 'today' && !done;
-      const kind = d.kind === 'today' && done ? 'done' : d.kind;
-      const base = {
-        isBand: false, isNode: true, x, date: d.kind === 'today' ? 'Aujourd’hui' : d.date, label: d.date,
-        pressed: on ? 'true' : 'false', pick: () => this.setState({ sel: d.id }), isToday: isTodayPending,
-        nodeClass: '', flameClass: '', showFlame: true, showText: false, text: '',
-        rowH: isTodayPending ? '270px' : '150px', dateWeight: 500, dateColor: '#6B6F76',
-        bubbleTitle: d.n + ' fiches t’attendent'
+      let kind = d.kind;
+      if (kind === 'today' && done) kind = 'todayDone';
+      if (kind === 'chest') kind = !done ? 'chestLocked' : (st.opened ? 'chestOpen' : 'chestReady');
+      const ring = on ? '0 0 0 4px #FAF8F4, 0 0 0 7px #15304E' : '0 2px 6px rgba(26,29,35,.08)';
+      const S = { done: 64, today: 88, todayDone: 88, missed: 56, rest: 40, future: 60, chestLocked: 60, chestReady: 64, chestOpen: 60, goal: 72 }[kind];
+      const ic = (name, size, fill, stroke, w, cls) => ({ viewBox: ICON[name][0], icon: ICON[name][1], iconSize: String(size), iconFill: fill, iconStroke: stroke, iconStrokeW: String(w), iconClass: cls || '' });
+      const sub = d.n ? d.n + ' fiches' : '';
+      let n = {
+        left: (cx - S / 2) + 'px', top: (cy - S / 2) + 'px', size: S + 'px', delay: (nodes.length * 0.05) + 's',
+        label: d.date, pressed: on ? 'true' : 'false', pick: () => this.setState({ sel: d.id }),
+        date: d.date, sub, dateWeight: 500, dateColor: '#9AA0A8', radius: '50%', halo: false, haloColor: 'transparent',
+        showRing: false, ringOffset: '276', anim: '', gain: false, border: '0', shadow: ring
       };
-      const ring = on ? ', 0 0 0 5px #FAF8F4, 0 0 0 8px #15304E' : '';
-      if (kind === 'done') return { ...base, size: '96px', border: '0', bg: '#F49A2E', fg: '#FFFFFF', shadow: '0 6px 0 #C46F17' + ring, flameFill: '#FFF3D6', flameSize: '46', flameClass: d.kind === 'today' ? 'mr-lit' : '', dateColor: '#1A1D23', dateWeight: 600 };
-      if (kind === 'today') return { ...base, size: '120px', border: '0', bg: '#15304E', fg: '#FFFFFF', shadow: '0 7px 0 #0B1D31' + ring, flameFill: 'rgba(255,255,255,.9)', flameSize: '56', nodeClass: 'mr-today', dateColor: '#15304E', dateWeight: 700 };
-      if (kind === 'missed') return { ...base, size: '80px', border: '3px dashed #D9D3C7', bg: '#FAF8F4', fg: '#9AA0A8', shadow: on ? '0 0 0 4px #15304E' : 'none', flameFill: '#E4DFD4', flameSize: '34' };
-      if (kind === 'rest') return { ...base, size: '64px', border: '0', bg: '#ECE8E0', fg: '#9AA0A8', shadow: on ? '0 0 0 4px #15304E' : 'none', showFlame: false, showText: true, text: 'z', rowH: '120px' };
-      return { ...base, size: '88px', border: '0', bg: '#E4DFD4', fg: '#9AA0A8', shadow: '0 6px 0 #CFC8BB' + ring, showFlame: false, showText: true, text: String(d.n) };
+      if (kind === 'done') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...ic('check', 28, 'none', 'currentColor', 3), dateColor: '#3D424A', dateWeight: 600 };
+      if (kind === 'today') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...ic('flame', 38, 'rgba(255,255,255,.92)', 'none', 0), halo: true, haloColor: 'rgba(21,48,78,.22)', showRing: true, date: 'Aujourd’hui', dateColor: '#15304E', dateWeight: 700, sub: '' };
+      if (kind === 'todayDone') n = { ...n, bg: '#15304E', fg: '#FFFFFF', ...ic('flame', 42, '#F49A2E', 'none', 0, 'mr-lit'), halo: true, haloColor: 'rgba(244,154,46,.35)', showRing: true, ringOffset: '0', date: 'Aujourd’hui', dateColor: '#15304E', dateWeight: 700, sub: 'session faite' };
+      if (kind === 'missed') n = { ...n, bg: '#FAF8F4', fg: '#B9B3A8', border: '2px dashed #D9D3C7', shadow: on ? ring : 'none', ...ic('dash', 22, 'none', 'currentColor', 2.5) };
+      if (kind === 'rest') n = { ...n, bg: '#ECE8E0', fg: '#9AA0A8', shadow: on ? ring : 'none', ...ic('dot', 16, 'none', 'currentColor', 6), sub: 'repos' };
+      if (kind === 'future') n = { ...n, bg: '#FFFFFF', fg: '#B9B3A8', border: '2px solid #E4DFD4', shadow: on ? ring : 'none', ...ic('check', 24, 'none', 'currentColor', 2.5), dateColor: '#6B6F76' };
+      if (kind === 'chestLocked') n = { ...n, radius: '18px', bg: '#FFFFFF', fg: '#B9B3A8', border: '2px solid #E4DFD4', shadow: on ? ring : 'none', ...ic('chest', 28, 'none', 'currentColor', 1.8), sub: 'après ta session' };
+      if (kind === 'chestReady') n = { ...n, radius: '18px', bg: '#F4C35A', fg: '#7A5208', anim: 'mr-ready', ...ic('chest', 30, 'none', 'currentColor', 2), dateColor: '#7A5208', dateWeight: 700, sub: 'clique pour ouvrir', pick: () => this.setState({ opened: true, sel: d.id }) };
+      if (kind === 'chestOpen') n = { ...n, radius: '18px', bg: '#FDF3DC', fg: '#C98A12', anim: d.id === 'chest' ? 'mr-opened' : '', ...ic('open', 28, 'none', 'currentColor', 1.8), sub: '+25 éclats', gain: d.id === 'chest' };
+      if (kind === 'goal') n = { ...n, radius: '20px', bg: '#FFFFFF', fg: '#15304E', border: '2px solid #15304E', ...ic('flag', 30, 'none', 'currentColor', 2), dateColor: '#15304E', dateWeight: 700, sub: 'sam. 22 nov.' };
+      nodes.push(n);
     });
-    const d = days.find((x) => x.id === st.sel) || days[3];
+    const curve = (arr) => arr.map((p, i) => {
+      if (i === 0) return 'M' + p[0] + ' ' + p[1];
+      const q = arr[i - 1]; const my = (q[1] + p[1]) / 2;
+      return 'C' + q[0] + ' ' + my + ' ' + p[0] + ' ' + my + ' ' + p[0] + ' ' + p[1];
+    }).join(' ');
+    const doneUpTo = done ? (st.opened ? todayIdx + 1 : todayIdx) : todayIdx;
+    const card = {
+      left: (Math.max(...pts.map((p) => p[0])) + 90) + 'px', top: (todayPt[1] - 96) + 'px',
+      kicker: done ? 'Session faite' : 'Session du jour',
+      title: done ? 'Bravo, à demain' : '9 fiches à revoir',
+      sub: done ? (st.opened ? 'Coffre ouvert, +25 éclats' : 'Ton coffre est prêt à être ouvert') : 'Anatomie, Pharmaco et 3 autres',
+      cta: done ? 'Continuer à réviser' : 'Commencer', btnBg: done ? '#F1EEE7' : '#15304E', btnFg: done ? '#15304E' : '#FFFFFF'
+    };
+    const all = items.filter((x) => !x.band);
+    const dd = all.find((x) => x.id === st.sel) || all.find((x) => x.id === 'today');
     const fiches = (n, right) => Array.from({ length: Math.min(n, 5) }, (_, i) => { const p = pool[(i * 2 + n) % pool.length]; return { title: p[0], color: p[1], right: right(i) }; });
     let sel;
-    if (d.kind === 'today' && !done) sel = { kicker: 'Session du jour', date: 'Aujourd’hui', hasStats: false, stats: [], fiches: fiches(d.n, (i) => ['45 min', '30 min', '25 min', '20 min', '35 min'][i]), isToday: true, cta: 'Commencer la session' };
-    else if (d.kind === 'today') sel = { kicker: 'Session faite', date: 'Aujourd’hui', hasStats: true, stats: [{ v: '9', l: 'fiches' }, { v: '74%', l: 'QCM' }, { v: '3,8', l: 'note' }], fiches: fiches(9, (i) => ['3/5', '4/5', '4/5', '3/5', '5/5'][i]), isToday: true, cta: 'Continuer à réviser' };
-    else if (d.kind === 'done') sel = { kicker: 'Session faite', date: d.date, hasStats: true, stats: [{ v: String(d.n), l: 'fiches' }, { v: d.qcm, l: 'QCM' }, { v: d.note, l: 'note' }], fiches: fiches(d.n, (i) => ['4/5', '3/5', '5/5', '3/5', '4/5'][i]), isToday: false };
-    else if (d.kind === 'missed') sel = { kicker: 'Session manquée', date: d.date, hasStats: false, stats: [], fiches: fiches(d.n, () => 'reportée'), isToday: false };
-    else if (d.kind === 'rest') sel = { kicker: 'Jour de repos', date: d.date, hasStats: false, stats: [], fiches: [], isToday: false };
-    else sel = { kicker: 'À venir', date: d.date, hasStats: false, stats: [], fiches: fiches(d.n, () => 'prévue'), isToday: false };
-    return { blocks, sel };
+    if (dd.kind === 'today' && !done) sel = { kicker: 'Au programme', date: 'Aujourd’hui', hasStats: false, stats: [], fiches: fiches(dd.n, (i) => ['J+3', 'Rattrapage', 'J+7', 'J+1', 'J+15'][i]) };
+    else if (dd.kind === 'today') sel = { kicker: 'Session faite', date: 'Aujourd’hui', hasStats: true, stats: [{ v: '9', l: 'fiches' }, { v: '74%', l: 'QCM' }, { v: '3,8', l: 'note' }], fiches: fiches(9, (i) => ['3/5', '4/5', '4/5', '3/5', '5/5'][i]) };
+    else if (dd.kind === 'done') sel = { kicker: 'Session faite', date: dd.date, hasStats: true, stats: [{ v: String(dd.n), l: 'fiches' }, { v: dd.qcm, l: 'QCM' }, { v: dd.note, l: 'note' }], fiches: fiches(dd.n, (i) => ['4/5', '3/5', '5/5', '3/5', '4/5'][i]) };
+    else if (dd.kind === 'missed') sel = { kicker: 'Session manquée', date: dd.date, hasStats: false, stats: [], fiches: fiches(dd.n, () => 'reportée') };
+    else if (dd.kind === 'rest') sel = { kicker: 'Jour de repos', date: dd.date, hasStats: false, stats: [], fiches: [] };
+    else if (dd.kind === 'chest' || dd.kind === 'chestOpen') sel = { kicker: 'Coffre', date: (dd.kind === 'chestOpen' || st.opened) ? '+25 éclats gagnés' : (done ? 'Prêt à ouvrir' : 'Fais ta session pour l’ouvrir'), hasStats: false, stats: [], fiches: [] };
+    else if (dd.kind === 'goal') sel = { kicker: 'Objectif', date: 'Concours blanc, sam. 22 nov.', hasStats: false, stats: [], fiches: [{ title: 'Toutes les UE, 4 h 30', color: '#15304E', right: '' }, { title: '412 inscrits de ta fac', color: '#15304E', right: '' }] };
+    else sel = { kicker: 'À venir', date: dd.date, hasStats: false, stats: [], fiches: fiches(dd.n, () => 'prévue') };
+    const quests = [['Faire 5 sessions', '3/5', 60, '#15304E', 30], ['Rattraper tes retards', '4/6', 67, '#F49A2E', 20], ['80% à un QCM', '1/1', 100, '#4E9A6B', 10]].map(([title, count, p, color, reward]) => ({ title, count, pct: p + '%', color, reward }));
+    return {
+      nodes, bands, card, sel, quests,
+      fullPath: curve(pts), donePath: curve(pts.slice(0, doneUpTo + 1)),
+      totalH: (y + 10) + 'px', svgH: String(y + 10),
+      oldLabel: st.old ? 'Masquer les semaines précédentes' : 'Voir les semaines précédentes',
+      toggleOld: () => this.setState({ old: !st.old }),
+      balance: st.opened ? '265' : '240', balanceAnim: st.opened ? 'mr-bump' : ''
+    };
   }
 }
 
@@ -80,79 +140,134 @@ export default function Page() {
   const v = useDC(Logic, DEFAULTS)
   return (
     <>
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
     <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="0" />
       </div>
-      <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "40px 56px 80px", display: "flex", gap: "48px", alignItems: "flex-start"}}>
-        <section aria-label={"Ton parcours"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", alignItems: "center"}}>
-          {(v.blocks || []).map((b: any, i_b: number) => (
-            <Fragment key={i_b}>
-              <div style={{width: "100%", maxWidth: "760px", display: "flex", flexDirection: "column", alignItems: "center"}}>
-                {b.isBand ? (
-                  <>
-                    <div style={{width: "100%", boxSizing: "border-box", margin: "28px 0 20px", padding: "18px 24px", borderRadius: "16px", background: b.bandBg, color: b.bandFg, display: "flex", alignItems: "center", justifyContent: "space-between"}}>
-                      <span style={{fontSize: "18px", fontWeight: "700"}}>
-                        {b.title}
-                      </span>
-                      <span style={{fontSize: "15px", opacity: ".75"}}>
-                        {b.sub}
-                      </span>
-                    </div>
-                  </>
-                ) : null}
-                {b.isNode ? (
-                  <>
-                    <div style={{position: "relative", height: b.rowH, width: "100%", display: "flex", justifyContent: "center", alignItems: "center"}}>
-                      <div style={{transform: `translateX(${b.x})`, display: "flex", flexDirection: "column", alignItems: "center", gap: "10px"}}>
-                        {b.isToday ? (
-                          <>
-                            <Link href={"/v2/session"} className={"mr-bubble"} style={{display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", padding: "14px 22px", borderRadius: "16px", background: "#FFFFFF", boxShadow: "0 6px 20px rgba(26,29,35,.12)", textDecoration: "none", color: "#1A1D23", position: "relative", marginBottom: "8px"}}>
-                              <span style={{fontSize: "17px", fontWeight: "700"}}>
-                                {b.bubbleTitle}
-                              </span>
-                              <span style={{fontSize: "15px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", padding: "10px 26px", borderRadius: "12px", marginTop: "6px"}}>
-                                {"Commencer"}
-                              </span>
-                              <span style={{position: "absolute", bottom: "-8px", left: "50%", width: "16px", height: "16px", background: "#FFFFFF", transform: "translateX(-50%) rotate(45deg)"}}></span>
-                            </Link>
-                          </>
-                        ) : null}
-                        <button type={"button"} className={`mr-node ${b.nodeClass}`} onClick={b.pick} aria-label={b.label} aria-pressed={b.pressed} style={{font: "inherit", width: b.size, height: b.size, borderRadius: "50%", border: b.border, background: b.bg, color: b.fg, boxShadow: b.shadow, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "0"}}>
-                          {b.showFlame ? (
-                            <>
-                              <svg className={b.flameClass} width={b.flameSize} height={b.flameSize} viewBox={"0 0 120 140"} aria-hidden={"true"}>
-                                <path fill={b.flameFill} d={"M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z"} />
-                              </svg>
-                            </>
-                          ) : null}
-                          {b.showText ? (
-                            <>
-                              <span style={{fontSize: "20px", fontWeight: "700"}}>
-                                {b.text}
-                              </span>
-                            </>
-                          ) : null}
-                        </button>
-                        <span style={{fontSize: "14px", fontWeight: b.dateWeight, color: b.dateColor}}>
-                          {b.date}
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </Fragment>
-          ))}
-        </section>
-        <aside style={{flex: "0 0 400px", display: "flex", flexDirection: "column", gap: "20px", position: "sticky", top: "40px"}}>
-          <section aria-label={"Détail"} style={{display: "flex", flexDirection: "column", gap: "18px", padding: "28px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
+      <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "40px 56px 80px", display: "flex", gap: "56px", alignItems: "flex-start"}}>
+        <section aria-label={"Ton parcours"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px"}}>
+          <div className={"mr-rise"} style={{width: "860px", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "22px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
+              <span style={{fontSize: "13px", color: "rgba(255,255,255,.6)", letterSpacing: ".06em"}}>
+                {"SEMAINE 10"}
+              </span>
+              <span style={{fontSize: "22px", fontWeight: "700"}}>
+                {"Du 2 au 8 novembre"}
+              </span>
+            </span>
+            <span style={{display: "flex", alignItems: "center", gap: "12px", fontSize: "15px", color: "rgba(255,255,255,.8)"}}>
+              <span style={{display: "flex", gap: "5px"}}>
+                <span style={{width: "9px", height: "9px", borderRadius: "50%", background: "#4F7CC9"}}></span>
+                <span style={{width: "9px", height: "9px", borderRadius: "50%", background: "#8B6BB8"}}></span>
+                <span style={{width: "9px", height: "9px", borderRadius: "50%", background: "#D08A3E"}}></span>
+              </span>
+              {"Anatomie, Physiologie, Pharmaco "}
+            </span>
+          </div>
+          <button type={"button"} className={"mr-btn"} onClick={v.toggleOld} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#15304E", background: "#FFFFFF", border: "1px solid #E4DFD4", padding: "10px 20px", borderRadius: "999px", cursor: "pointer"}}>
+            {v.oldLabel}
+          </button>
+          <div style={{position: "relative", width: "860px", height: v.totalH}}>
+            <svg width={"860"} height={v.totalH} viewBox={`0 0 860 ${v.svgH}`} aria-hidden={"true"} style={{position: "absolute", left: "0", top: "0", overflow: "visible"}}>
+              <path d={v.fullPath} fill={"none"} stroke={"#ECE7DD"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
+              <path className={"mr-line"} pathLength={"1"} d={v.donePath} fill={"none"} stroke={"#15304E"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
+            </svg>
+            {(v.bands || []).map((w: any, i_w: number) => (
+              <Fragment key={i_w}>
+                <div className={"mr-rise"} style={{position: "absolute", left: "0", right: "0", top: w.top, display: "flex", alignItems: "center", gap: "18px", fontSize: "15px", fontWeight: "600", color: "#9AA0A8", animationDelay: w.delay}}>
+                  <span style={{flex: "1", height: "1px", background: "#E4DFD4"}}></span>
+                  <span style={{padding: "6px 16px", borderRadius: "999px", background: "#FAF8F4", border: "1px solid #E4DFD4"}}>
+                    {w.title}
+                    <span style={{fontWeight: "500"}}>
+                      {" \u00b7 "}{w.sub}
+                    </span>
+                  </span>
+                  <span style={{flex: "1", height: "1px", background: "#E4DFD4"}}></span>
+                </div>
+              </Fragment>
+            ))}
+            {(v.nodes || []).map((n: any, i_n: number) => (
+              <Fragment key={i_n}>
+                <div className={"mr-enter"} style={{position: "absolute", left: n.left, top: n.top, width: n.size, height: n.size, animationDelay: n.delay}}>
+                  {n.halo ? (
+                    <>
+                      <span className={"mr-halo"} style={{position: "absolute", inset: "0", borderRadius: n.radius, background: n.haloColor}}></span>
+                    </>
+                  ) : null}
+                  <button type={"button"} className={`mr-node ${n.anim}`} onClick={n.pick} aria-label={n.label} aria-pressed={n.pressed} style={{font: "inherit", position: "relative", width: "100%", height: "100%", borderRadius: n.radius, border: n.border, background: n.bg, color: n.fg, boxShadow: n.shadow, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "0"}}>
+                    {n.showRing ? (
+                      <>
+                        <svg width={"104"} height={"104"} viewBox={"0 0 104 104"} aria-hidden={"true"} style={{position: "absolute", left: "-8px", top: "-8px", transform: "rotate(-90deg)"}}>
+                          <circle cx={"52"} cy={"52"} r={"44"} fill={"none"} stroke={"#E4DFD4"} strokeWidth={"5"} />
+                          <circle className={"mr-ringfill"} cx={"52"} cy={"52"} r={"44"} fill={"none"} stroke={"#F49A2E"} strokeWidth={"5"} strokeLinecap={"round"} strokeDasharray={"276"} strokeDashoffset={n.ringOffset} />
+                        </svg>
+                      </>
+                    ) : null}
+                    <svg className={n.iconClass} width={n.iconSize} height={n.iconSize} viewBox={n.viewBox} fill={n.iconFill} stroke={n.iconStroke} strokeWidth={n.iconStrokeW} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
+                      <path d={n.icon} />
+                    </svg>
+                  </button>
+                  <span style={{position: "absolute", top: "50%", right: "calc(100% + 22px)", transform: "translateY(-50%)", whiteSpace: "nowrap", textAlign: "right", display: "flex", flexDirection: "column", gap: "2px"}}>
+                    <span style={{fontSize: "15px", fontWeight: n.dateWeight, color: n.dateColor}}>
+                      {n.date}
+                    </span>
+                    <span style={{fontSize: "13px", color: "#9AA0A8"}}>
+                      {n.sub}
+                    </span>
+                  </span>
+                  {n.gain ? (
+                    <>
+                      <span className={"mr-gain"} style={{position: "absolute", left: "50%", top: "-10px", marginLeft: "-30px", width: "60px", textAlign: "center", fontSize: "18px", fontWeight: "700", color: "#C98A12"}}>
+                        {"+25 \u25c6"}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+              </Fragment>
+            ))}
+            <div className={"mr-card-in"} style={{position: "absolute", left: v.card.left, top: v.card.top, width: "320px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "6px", padding: "22px 24px", borderRadius: "18px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.06), 0 16px 40px rgba(26,29,35,.10)"}}>
+              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                {v.card.kicker}
+              </span>
+              <span style={{fontSize: "24px", fontWeight: "700", letterSpacing: "-.01em"}}>
+                {v.card.title}
+              </span>
               <span style={{fontSize: "15px", color: "#6B6F76"}}>
+                {v.card.sub}
+              </span>
+              <Link href={"/v2/session"} className={"mr-btn"} style={{marginTop: "12px", textAlign: "center", fontSize: "17px", fontWeight: "700", color: v.card.btnFg, background: v.card.btnBg, padding: "14px", borderRadius: "12px", textDecoration: "none"}}>
+                {v.card.cta}
+              </Link>
+            </div>
+          </div>
+        </section>
+        <aside style={{flex: "0 0 360px", display: "flex", flexDirection: "column", gap: "20px", position: "sticky", top: "40px"}}>
+          <Link href={"/v2/bibliotheque"} className={"mr-rise mr-lift"} style={{display: "flex", alignItems: "center", gap: "16px", padding: "20px 24px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", textDecoration: "none", color: "#1A1D23"}}>
+            <span aria-hidden={"true"} style={{width: "44px", height: "44px", borderRadius: "12px", background: "#FDF3DC", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#C98A12"}}>
+              {"\u25c6"}
+            </span>
+            <span style={{flex: "1", display: "flex", flexDirection: "column", gap: "2px"}}>
+              <span className={v.balanceAnim} style={{fontSize: "24px", fontWeight: "700", display: "inline-block", transformOrigin: "left center"}}>
+                {v.balance}
+                <span style={{fontSize: "15px", fontWeight: "500", color: "#6B6F76"}}>
+                  {" \u00e9clats"}
+                </span>
+              </span>
+              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                {"Voir la boutique"}
+              </span>
+            </span>
+            <span style={{fontSize: "20px", color: "#9AA0A8"}}>
+              {"\u2192"}
+            </span>
+          </Link>
+          <section aria-label={"Détail"} className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "16px", padding: "24px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", animationDelay: ".1s"}}>
+            <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
+              <span style={{fontSize: "14px", color: "#6B6F76"}}>
                 {v.sel.kicker}
               </span>
-              <span style={{fontSize: "26px", fontWeight: "700"}}>
+              <span style={{fontSize: "22px", fontWeight: "700"}}>
                 {v.sel.date}
               </span>
             </span>
@@ -162,10 +277,10 @@ export default function Page() {
                   {(v.sel.stats || []).map((s: any, i_s: number) => (
                     <Fragment key={i_s}>
                       <div style={{display: "flex", flexDirection: "column", gap: "2px"}}>
-                        <span style={{fontSize: "24px", fontWeight: "700"}}>
+                        <span style={{fontSize: "22px", fontWeight: "700"}}>
                           {s.v}
                         </span>
-                        <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                        <span style={{fontSize: "13px", color: "#6B6F76"}}>
                           {s.l}
                         </span>
                       </div>
@@ -177,7 +292,7 @@ export default function Page() {
             <div style={{display: "flex", flexDirection: "column"}}>
               {(v.sel.fiches || []).map((f: any, i_f: number) => (
                 <Fragment key={i_f}>
-                  <div style={{display: "flex", alignItems: "center", gap: "12px", padding: "11px 0", borderTop: "1px solid #F1EEE7", fontSize: "15px"}}>
+                  <div style={{display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderTop: "1px solid #F1EEE7", fontSize: "15px"}}>
                     <span style={{width: "9px", height: "9px", borderRadius: "50%", background: f.color}}></span>
                     <span style={{flex: "1", fontWeight: "600"}}>
                       {f.title}
@@ -189,24 +304,33 @@ export default function Page() {
                 </Fragment>
               ))}
             </div>
-            {v.sel.isToday ? (
-              <>
-                <Link href={"/v2/session"} className={"mr-btn"} style={{textAlign: "center", fontSize: "18px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", padding: "16px", borderRadius: "14px", textDecoration: "none"}}>
-                  {v.sel.cta}
-                </Link>
-              </>
-            ) : null}
           </section>
-          <section aria-label={"Prochain concours blanc"} style={{display: "flex", flexDirection: "column", gap: "10px", padding: "24px 28px", borderRadius: "20px", background: "#15304E", color: "#FFFFFF"}}>
-            <span style={{fontSize: "15px", color: "rgba(255,255,255,.7)"}}>
-              {"Prochain concours blanc"}
+          <section aria-label={"Défis de la semaine"} className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "18px", padding: "24px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", animationDelay: ".2s"}}>
+            <span style={{fontSize: "18px", fontWeight: "700"}}>
+              {"D\u00e9fis de la semaine"}
             </span>
-            <span style={{fontSize: "22px", fontWeight: "700"}}>
-              {"Samedi 22 novembre"}
-            </span>
-            <Link href={"/v2/simulateur"} style={{alignSelf: "flex-start", marginTop: "6px", fontSize: "15px", fontWeight: "700", color: "#15304E", background: "#F4F1EA", padding: "11px 18px", borderRadius: "10px", textDecoration: "none"}}>
-              {"Je m\u2019inscris"}
-            </Link>
+            {(v.quests || []).map((q: any, i_q: number) => (
+              <Fragment key={i_q}>
+                <div style={{display: "flex", flexDirection: "column", gap: "8px"}}>
+                  <span style={{display: "flex", justifyContent: "space-between", gap: "12px", fontSize: "15px"}}>
+                    <span style={{fontWeight: "600"}}>
+                      {q.title}
+                    </span>
+                    <span style={{color: "#C98A12", fontWeight: "700", whiteSpace: "nowrap"}}>
+                      {"+"}{q.reward}{" \u25c6"}
+                    </span>
+                  </span>
+                  <span style={{display: "flex", alignItems: "center", gap: "10px"}}>
+                    <span style={{flex: "1", height: "8px", borderRadius: "4px", background: "#F1EEE7", overflow: "hidden"}}>
+                      <span className={"mr-bar"} style={{display: "block", height: "8px", borderRadius: "4px", width: q.pct, background: q.color}}></span>
+                    </span>
+                    <span style={{fontSize: "13px", color: "#6B6F76", width: "36px", textAlign: "right"}}>
+                      {q.count}
+                    </span>
+                  </span>
+                </div>
+              </Fragment>
+            ))}
           </section>
         </aside>
       </main>

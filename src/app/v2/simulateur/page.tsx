@@ -6,7 +6,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#1E3354}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.9)}\n.mr-tab:hover{color:#1A1D23}\n.mr-card{transition:box-shadow .15s ease, transform .15s ease}\n.mr-card:hover{box-shadow:0 2px 4px rgba(26,29,35,.06),0 12px 28px rgba(26,29,35,.08)}\n.mr-opt:hover{border-color:#1E3354 !important}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.9)}\n.mr-tab:hover{color:#1A1D23}\n.mr-card{transition:box-shadow .15s ease, transform .15s ease}\n.mr-card:hover{box-shadow:0 2px 4px rgba(26,29,35,.06),0 12px 28px rgba(26,29,35,.08)}\n.mr-opt:hover{border-color:#15304E !important}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -95,7 +95,7 @@ export default function Page() {
   const v = useDC(Logic, DEFAULTS)
   return (
     <>
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
     <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="4" />

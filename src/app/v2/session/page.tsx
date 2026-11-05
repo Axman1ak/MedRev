@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#1E3354}a:hover{color:#0F1E36}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-opt{transition:background .12s ease}\n.mr-opt:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-opt{transition:background .12s ease}\n.mr-opt:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -44,7 +44,7 @@ class Logic extends DCLogic {
       current: i === step ? 'step' : 'false',
       weight: i === step ? 600 : 500,
       color: i === step ? '#1A1D23' : '#6B6F76',
-      line: i === step ? '#1E3354' : 'transparent'
+      line: i === step ? '#15304E' : 'transparent'
     }));
     const opts = [
       ['A', 'La dépolarisation est due à une entrée de Na+.', true],
@@ -59,9 +59,9 @@ class Logic extends DCLogic {
       return {
         letter, text, pressed: on ? 'true' : 'false',
         toggle: () => { if (!validated) this.setState({ checked: { ...checked, [letter]: !on } }); },
-        border: showRight ? '#93BC80' : (showWrong ? '#D98C7E' : (on ? '#1E3354' : '#E4DFD4')),
+        border: showRight ? '#93BC80' : (showWrong ? '#D98C7E' : (on ? '#15304E' : '#E4DFD4')),
         bg: showRight ? '#F0F6EC' : (showWrong ? '#FBEFEC' : '#FFFFFF'),
-        boxBg: on ? '#1E3354' : '#F1EEE7',
+        boxBg: on ? '#15304E' : '#F1EEE7',
         boxColor: on ? '#FFFFFF' : '#3D424A',
         verdict: validated ? (ok ? 'Vrai' : 'Faux') : '',
         verdictColor: ok ? '#3E7A52' : '#9A5A1F'
@@ -72,7 +72,7 @@ class Logic extends DCLogic {
     const ratings = rl.map((label, i) => ({
       n: i + 1, label, pressed: rating === i + 1 ? 'true' : 'false',
       pick: () => this.setState({ rating: i + 1 }),
-      border: rating === i + 1 ? '#1E3354' : '#E4DFD4',
+      border: rating === i + 1 ? '#15304E' : '#E4DFD4',
       bg: rating === i + 1 ? '#EEF2F8' : '#FFFFFF'
     }));
     let primaryLabel = 'Continuer';
@@ -113,7 +113,7 @@ export default function Page() {
   const v = useDC(Logic, DEFAULTS)
   return (
     <>
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
     <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexDirection: "column"}}>
       <header style={{display: "flex", alignItems: "center", gap: "20px", padding: "16px clamp(16px, 3vw, 32px)", borderBottom: "1px solid #EDE9E1"}}>
         <Link href={"/v2"} className={"mr-ghost"} aria-label={"Quitter la session"} style={{width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", color: "#3D424A", textDecoration: "none"}}>
@@ -122,7 +122,7 @@ export default function Page() {
           </svg>
         </Link>
         <div role={"progressbar"} aria-label={"Progression de la session"} aria-valuemin={"0"} aria-valuemax={"13"} aria-valuenow={"2"} style={{flex: "1", height: "6px", borderRadius: "3px", background: "#ECE8E0", overflow: "hidden"}}>
-          <div style={{width: "15%", height: "6px", borderRadius: "3px", background: "#1E3354"}}></div>
+          <div style={{width: "15%", height: "6px", borderRadius: "3px", background: "#15304E"}}></div>
         </div>
         <span style={{fontSize: "14px", color: "#6B6F76", whiteSpace: "nowrap"}}>
           {"3 / 13"}
@@ -353,7 +353,7 @@ export default function Page() {
             <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "14px", color: "#6B6F76", background: "transparent", border: "0", padding: "10px 12px", borderRadius: "10px", cursor: "pointer"}}>
               {"Reporter \u00e0 demain"}
             </button>
-            <button type={"button"} className={"mr-btn"} onClick={v.primary} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "12px 26px", borderRadius: "10px", cursor: "pointer"}}>
+            <button type={"button"} className={"mr-btn"} onClick={v.primary} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#15304E", border: "0", padding: "12px 26px", borderRadius: "10px", cursor: "pointer"}}>
               {v.primaryLabel}
             </button>
           </div>

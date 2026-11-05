@@ -7,7 +7,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#1E3354}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-act:hover{background:#EAE5DB}\n.mr-card{transition:box-shadow .15s ease}\n.mr-card:hover{box-shadow:0 2px 4px rgba(26,29,35,.06),0 10px 24px rgba(26,29,35,.08) !important}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-act:hover{background:#EAE5DB}\n.mr-card{transition:box-shadow .15s ease}\n.mr-card:hover{box-shadow:0 2px 4px rgba(26,29,35,.06),0 10px 24px rgba(26,29,35,.08) !important}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -58,7 +58,7 @@ class Logic extends DCLogic {
           date: n ? dates[i] : (isNext ? (f[6] ? 'en retard' : f[5]) : ''),
           bg: n ? scale[n] : (isNext ? '#FFFFFF' : '#F4F1EA'),
           color: n ? '#1A1D23' : '#9AA0A8',
-          border: isNext ? '2px dashed #1E3354' : '0'
+          border: isNext ? '2px dashed #15304E' : '0'
         };
       });
       const avg = (notes.reduce((a, b) => a + b, 0) / notes.length).toFixed(1).replace('.', ',');
@@ -77,7 +77,7 @@ export default function Page() {
   const v = useDC(Logic, DEFAULTS)
   return (
     <>
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
     <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexWrap: "wrap"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="5" />
@@ -94,7 +94,7 @@ export default function Page() {
                   <path d={"M4 6h16M7 12h10M10 18h4"} />
                 </svg>
               </button>
-              <button type={"button"} className={"mr-btn"} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
+              <button type={"button"} className={"mr-btn"} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#15304E", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
                 {"Nouvelle fiche"}
               </button>
             </div>
@@ -167,7 +167,7 @@ export default function Page() {
               </button>
             </div>
             <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px"}}>
-              <Link href={"/v2/session"} className={"mr-btn"} style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#1E3354", color: "#FFFFFF", textDecoration: "none"}}>
+              <Link href={"/v2/session"} className={"mr-btn"} style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#15304E", color: "#FFFFFF", textDecoration: "none"}}>
                 <span style={{fontSize: "14px", fontWeight: "600"}}>
                   {"R\u00e9viser"}
                 </span>
@@ -247,7 +247,7 @@ export default function Page() {
               {(v.sel.sources || []).map((src: any, i_src: number) => (
                 <Fragment key={i_src}>
                   <a href={"#"} className={"mr-row"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", textDecoration: "none", color: "#1A1D23"}}>
-                    <span aria-hidden={"true"} style={{width: "34px", height: "34px", borderRadius: "8px", background: "#F1EEE7", color: "#1E3354", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "700"}}>
+                    <span aria-hidden={"true"} style={{width: "34px", height: "34px", borderRadius: "8px", background: "#F1EEE7", color: "#15304E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "700"}}>
                       {src.kind}
                     </span>
                     <span style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "1px"}}>
@@ -261,7 +261,7 @@ export default function Page() {
                   </a>
                 </Fragment>
               ))}
-              <button type={"button"} className={"mr-ghost"} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", border: "1px dashed #D9D3C7", background: "transparent", color: "#1E3354", fontSize: "14px", fontWeight: "600", cursor: "pointer", textAlign: "left", marginTop: "4px"}}>
+              <button type={"button"} className={"mr-ghost"} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", border: "1px dashed #D9D3C7", background: "transparent", color: "#15304E", fontSize: "14px", fontWeight: "600", cursor: "pointer", textAlign: "left", marginTop: "4px"}}>
                 <span aria-hidden={"true"} style={{width: "34px", textAlign: "center", fontSize: "18px"}}>
                   {"+"}
                 </span>

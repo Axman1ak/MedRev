@@ -7,7 +7,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#1E3354}a:hover{color:#0F1E36}\n.mr-item{transition:background .12s ease}\n.mr-item:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-menu:hover{background:#F4F1EA}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-item{transition:background .12s ease}\n.mr-item:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-menu:hover{background:#F4F1EA}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -18,7 +18,7 @@ class Logic extends DCLogic {
     const C = { bio: '#C4554D', ana: '#4F7CC9', phy: '#8B6BB8', stat: '#9C7148', pha: '#D08A3E', ssh: '#3E8E85' };
     const done = (t, c) => ({ title: t, dot: c, color: '#9AA0A8', opacity: 0.45 });
     const todo = (t, c) => ({ title: t, dot: c, color: '#1A1D23', opacity: 1 });
-    const exam = (time, title) => ({ time, title, line: '#1E3354' });
+    const exam = (time, title) => ({ time, title, line: '#15304E' });
     const cls = (time, title) => ({ time, title, line: '#A9BFDB' });
     const raw = [
       ['lun.', '2', 'past', [cls('8h', 'Amphi anatomie')], [done('Membre supérieur', C.ana), done('Thermodynamique', C.bio)], 0],
@@ -34,7 +34,7 @@ class Logic extends DCLogic {
       hasMore: more > 0, more: '+' + more + ' autres',
       border: i === 0 ? '0' : '1px solid #EDE9E1',
       bg: kind === 'today' ? '#F4F1EA' : 'transparent',
-      numBg: kind === 'today' ? '#1E3354' : 'transparent',
+      numBg: kind === 'today' ? '#15304E' : 'transparent',
       numColor: kind === 'today' ? '#FFFFFF' : (kind === 'past' ? '#9AA0A8' : '#1A1D23')
     }));
     const menu = [
@@ -54,7 +54,7 @@ export default function Page() {
   const v = useDC(Logic, DEFAULTS)
   return (
     <>
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
     <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexWrap: "wrap"}}>
       <div style={{flex: "0 0 240px", display: "flex"}}>
         <Sidebar active="1" />
@@ -87,7 +87,7 @@ export default function Page() {
                 {"\u203a"}
               </button>
               <div style={{position: "relative"}}>
-                <button type={"button"} className={"mr-btn"} onClick={v.toggleMenu} aria-expanded={v.menuExpanded} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
+                <button type={"button"} className={"mr-btn"} onClick={v.toggleMenu} aria-expanded={v.menuExpanded} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#15304E", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
                   {"+ Ajouter"}
                 </button>
                 {v.menuOpen ? (
@@ -96,7 +96,7 @@ export default function Page() {
                       {(v.menu || []).map((m: any, i_m: number) => (
                         <Fragment key={i_m}>
                           <button type={"button"} role={"menuitem"} className={"mr-menu"} onClick={v.toggleMenu} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "8px", border: "0", background: "transparent", cursor: "pointer", textAlign: "left", color: "#1A1D23"}}>
-                            <span aria-hidden={"true"} style={{width: "32px", height: "32px", borderRadius: "8px", background: "#F1EEE7", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E3354"}}>
+                            <span aria-hidden={"true"} style={{width: "32px", height: "32px", borderRadius: "8px", background: "#F1EEE7", display: "flex", alignItems: "center", justifyContent: "center", color: "#15304E"}}>
                               <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.9"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                                 <path d={m.icon} />
                               </svg>
@@ -144,7 +144,7 @@ export default function Page() {
                       ))}
                       {d.hasMore ? (
                         <>
-                          <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "13px", color: "#1E3354", background: "transparent", border: "0", padding: "6px", borderRadius: "8px", cursor: "pointer", textAlign: "left"}}>
+                          <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "13px", color: "#15304E", background: "transparent", border: "0", padding: "6px", borderRadius: "8px", cursor: "pointer", textAlign: "left"}}>
                             {d.more}
                           </button>
                         </>

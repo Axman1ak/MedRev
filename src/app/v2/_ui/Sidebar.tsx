@@ -44,7 +44,7 @@ export default function Sidebar({ active = '0' }: { active?: string }) {
   const v = useDC(Logic, { ...DEFAULTS, active })
   return (
     <>
-      <style>{CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
     <nav aria-label={"Navigation principale"} style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#FFFFFF", boxSizing: "border-box", width: "100%", height: "100vh", position: "sticky", top: "0", overflowY: "auto", padding: "24px 14px", display: "flex", flexDirection: "column", gap: "20px", background: "#15304E"}}>
       <div style={{display: "flex", alignItems: "center", gap: "10px", padding: "0 10px"}}>
         <div style={{width: "30px", height: "30px", borderRadius: "8px", background: "#FFFFFF", color: "#15304E", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "16px"}}>
