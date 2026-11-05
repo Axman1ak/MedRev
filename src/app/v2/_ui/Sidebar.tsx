@@ -23,7 +23,7 @@ class Logic extends DCLogic {
       ['0', 'Aujourd’hui', 'home', '/v2'],
       ['1', 'Calendrier', 'cal', '/v2/calendrier'],
       ['2', 'Statistiques', 'stats', '/v2/statistiques'],
-      ['3', 'Mémoire', 'lib', '/v2/bibliotheque'],
+      ['3', 'Bibliothèque', 'lib', '/v2/bibliotheque'],
       ['4', 'Simulateur', 'sim', '/v2/simulateur']
     ];
     const nav = items.map(([id, label, ic, href]) => ({ label, href, icon: icons[ic], weight: id === active ? 600 : 500, bg: id === active ? on : 'transparent' }));

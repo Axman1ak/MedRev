@@ -165,7 +165,7 @@ export default function Page() {
               {"Anatomie, Physiologie, Pharmaco "}
             </span>
           </div>
-          <div style={{flex: "1", minHeight: "0", width: "100%", overflowY: "auto", display: "flex", justifyContent: "center", paddingTop: "24px", WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%)", maskImage: "linear-gradient(to bottom, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%)"}}>
+          <div style={{flex: "1", minHeight: "0", width: "100%", overflowY: "auto", display: "flex", justifyContent: "center", paddingTop: "24px", scrollbarWidth: "none"}}>
             <div style={{position: "relative", width: "860px", height: v.totalH}}>
               <svg width={"860"} height={v.totalH} viewBox={`0 0 860 ${v.svgH}`} aria-hidden={"true"} style={{position: "absolute", left: "0", top: "0", overflow: "visible"}}>
                 <path d={v.fullPath} fill={"none"} stroke={"#ECE7DD"} strokeWidth={"14"} strokeLinecap={"round"} strokeLinejoin={"round"} />
