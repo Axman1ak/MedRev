@@ -707,10 +707,12 @@ export default function ReviewModal({
               {stepIdx === null ? systemName || 'Fiche' : 'Session de révision'}
             </div>
             <div className="rmod-title">{lesson.name}</div>
-            <div className="rmod-meta">
-              {systemName}
-              {lesson.learn_date && <>, appris le {frenchDate(lesson.learn_date)}</>}
-            </div>
+            {stepIdx !== null && (
+              <div className="rmod-meta">
+                {systemName}
+                {lesson.learn_date && <>, appris le {frenchDate(lesson.learn_date)}</>}
+              </div>
+            )}
             {stepIdx === null && nextInfo && (
               <div className={`rmod-next${nextInfo.late ? ' late' : ''}`}>{nextInfo.text.charAt(0).toUpperCase() + nextInfo.text.slice(1)}</div>
             )}
@@ -730,111 +732,44 @@ export default function ReviewModal({
             )}
 
 
-            <div className="rmod-duo">
-              <div className="rmod-feat rmod-feat-go">
-                <div className="rmod-feat-h">Réviser</div>
-                <div className="rmod-feat-sub">{nextInfo?.late ? 'en retard' : nextInfo?.idx != null ? `J+${j[nextInfo.idx]}` : 'à jour'}</div>
-                <button
-                  type="button"
-                  className="rmod-feat-cta"
-                  onClick={() => { onClose(); router.push(`/dashboard/focus?lesson=${lesson.id}`) }}
-                >Commencer</button>
-              </div>
-              <div className="rmod-feat" data-tour="qcm-section">
-                <div className="rmod-feat-h">
-                  <span className="rmod-feat-ic qcm" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h9" /><path d="m17.5 17 1.6 1.6 3-3.4" /></svg>
-                  </span>
-                  QCM
-                </div>
-
-                {qcmCount > 0 ? (
-                  <>
-                    <div className="rmod-feat-n">{qcmCount}<em>question{qcmCount > 1 ? 's' : ''}</em></div>
-                    <button
-                      type="button"
-                      className="rmod-feat-cta"
-                      onClick={startQcmSession}
-                      disabled={generating}
-                    >M&apos;entraîner</button>
-                    {missedCount > 0 && (
-                      <button
-                        type="button"
-                        className="rmod-feat-cta alt"
-                        onClick={startMissedSession}
-                        disabled={generating}
-                      >{missedCount > 1 ? `Refaire les ${missedCount} ratées` : 'Refaire la question ratée'}</button>
-                    )}
-                    {hasGenJob ? (
-                      <GenProgress lessonId={lesson.id} variant="fiche" />
-                    ) : (
-                      <QcmPick
-                        open={genPick === 'append'}
-                        onOpen={() => setGenPick('append')}
-                        onClose={() => setGenPick(null)}
-                        onPick={n => generateQcms('append', n)}
-                        label="Créer d'autres questions"
-                        className="rmod-feat-2nd"
-                        plus
-                        disabled={generating}
-                      />
-                    )}
-                  </>
-                ) : hasAnySource ? (
-                  <>
-                    <QcmPick
-                      open={genPick === 'replace'}
-                      onOpen={() => setGenPick('replace')}
-                      onClose={() => setGenPick(null)}
-                      onPick={n => generateQcms('replace', n)}
-                      label={generating ? 'Génération en cours' : 'Créer les QCM'}
-                      className="rmod-feat-cta"
-                      disabled={generating}
-                    />
-                    <GenProgress lessonId={lesson.id} variant="fiche" />
-                  </>
-                ) : (
-                  <>
-                    <button type="button" className="rmod-feat-cta ghost" disabled>
-                      En attente du cours
-                    </button>
-                  </>
-                )}
-              </div>
-
-              <div className="rmod-feat">
-                <div className="rmod-feat-h">
-                  <span className="rmod-feat-ic cartes" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="14" height="13" rx="2.5" /><path d="M7.5 4h11A2.5 2.5 0 0 1 21 6.5v10" /></svg>
-                  </span>
-                  Flashcards
-                </div>
-
-                {cartesCount > 0 ? (
-                  <>
-                    <div className="rmod-feat-n">{cartesCount}<em>carte{cartesCount > 1 ? 's' : ''}</em></div>
-                    <button type="button" className="rmod-feat-cta" onClick={openCartes}>
-                      Réviser les cartes
-                    </button>
-                    {missedCardsCount > 0 && (
-                      <button type="button" className="rmod-feat-cta alt" onClick={openMissedCartes}>
-                        {missedCardsCount > 1 ? `Refaire les ${missedCardsCount} ratées` : 'Refaire la carte ratée'}
-                      </button>
-                    )}
-                    <button type="button" className="rmod-feat-2nd" onClick={openCartes}>
-                      Gérer le paquet
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" className="rmod-feat-cta" onClick={openCartes}>
-                      Créer des cartes
-                    </button>
-                  </>
-                )}
-              </div>
+            <div className="rmod-acts">
+              <button type="button" className="rmod-act go" onClick={() => { onClose(); router.push(`/dashboard/focus?lesson=${lesson.id}`) }}>
+                <b>Réviser</b>
+                <span>{nextInfo?.late ? 'en retard' : nextInfo?.idx != null ? `J+${j[nextInfo.idx]}` : 'à jour'}</span>
+              </button>
+              <button
+                type="button"
+                className="rmod-act"
+                disabled={generating || (qcmCount === 0 && !hasAnySource)}
+                onClick={() => { if (qcmCount > 0) startQcmSession(); else void generateQcms('replace', 20) }}
+              >
+                <b>QCM</b>
+                <span>{generating ? 'création…' : qcmCount > 0 ? `${qcmCount} questions` : hasAnySource ? 'à créer' : 'ajoute un cours'}</span>
+              </button>
+              <button type="button" className="rmod-act" onClick={openCartes}>
+                <b>Flashcards</b>
+                <span>{cartesCount > 0 ? `${cartesCount} cartes` : 'à créer'}</span>
+              </button>
             </div>
-
+            {(hasGenJob || missedCount > 0 || missedCardsCount > 0 || qcmCount > 0) && (
+              <div className="rmod-acts-more">
+                {missedCount > 0 && <button type="button" onClick={startMissedSession} disabled={generating}>Refaire {missedCount > 1 ? `les ${missedCount} QCM ratés` : 'le QCM raté'}</button>}
+                {missedCardsCount > 0 && <button type="button" onClick={openMissedCartes}>Refaire {missedCardsCount > 1 ? `les ${missedCardsCount} cartes ratées` : 'la carte ratée'}</button>}
+                {qcmCount > 0 && !hasGenJob && (
+                  <QcmPick
+                    open={genPick === 'append'}
+                    onOpen={() => setGenPick('append')}
+                    onClose={() => setGenPick(null)}
+                    onPick={n => generateQcms('append', n)}
+                    label="Plus de QCM"
+                    className="rmod-acts-link"
+                    plus
+                    disabled={generating}
+                  />
+                )}
+              </div>
+            )}
+            {hasGenJob && <GenProgress lessonId={lesson.id} variant="fiche" />}
             <div className="rmod-block-label">Révisions</div>
             <div className="rmod-jpicker" data-tour="picker-j">
               {j.map((jVal, i) => {

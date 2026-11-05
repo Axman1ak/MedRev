@@ -746,28 +746,20 @@ function SessionBody() {
   // Écran « ajoute ton cours » / « crée ta synthèse et tes QCM »
   const courseSetup = (
     !hasSource ? (
-      <div className="se-setup">
-        <h2>Ajoute ton cours pour réviser cette fiche</h2>
-        <p className="se-setup-sub">MedRev a besoin du poly ou de la vidéo de l&apos;amphi. À partir du fichier, il prépare tout le reste.</p>
-        <ol className="se-howto">
-          <li><b>1</b><span><strong>Dépose ton cours</strong>Le poly ou la vidéo de l&apos;amphi.</span></li>
-          <li><b>2</b><span><strong>MedRev prépare tout</strong>Synthèse, QCM, flashcards.</span></li>
-          <li><b>3</b><span><strong>Tu révises ici</strong>À chaque palier, au même endroit.</span></li>
-        </ol>
+      <div className="se-setup se-setup-min">
+        <p className="se-setup-lead">Ajoute ton cours : MedRev en tire une synthèse, des QCM et des flashcards.</p>
         <div
-          className={`se-drop${dragOver ? ' over' : ''}${uploading ? ' busy' : ''}`}
+          className={`se-drop se-drop-row${dragOver ? ' over' : ''}${uploading ? ' busy' : ''}`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) void uploadCourse(f) }}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
-          <b>{uploading === 'pdf' ? 'Envoi du poly…' : uploading === 'video' ? 'Envoi de la vidéo…' : 'Glisse ton fichier ici'}</b>
-          <span>ou</span>
-          <div className="se-drop-btns">
-            <button type="button" className="se-btn se-btn-primary" disabled={!!uploading} onClick={() => pdfInput.current?.click()}>Choisir le poly (PDF)</button>
-            <button type="button" className="se-btn se-btn-ghost" disabled={!!uploading} onClick={() => videoInput.current?.click()}>Ajouter la vidéo</button>
-          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+          <span className="se-drop-t">{uploading === 'pdf' ? 'Envoi du poly…' : uploading === 'video' ? 'Envoi de la vidéo…' : 'Glisse ton poly ou ta vidéo ici'}</span>
+          <button type="button" className="se-btn se-btn-primary" disabled={!!uploading} onClick={() => pdfInput.current?.click()}>Choisir un PDF</button>
+          <button type="button" className="se-btn se-btn-ghost" disabled={!!uploading} onClick={() => videoInput.current?.click()}>Vidéo</button>
         </div>
+        <p className="se-muted">Pas de fichier sous la main ? Relis ton cours de ton côté, puis note-toi.</p>
         {uploadErr && <p className="se-err" role="alert">{uploadErr}</p>}
       </div>
     ) : (
@@ -845,27 +837,19 @@ function SessionBody() {
 
   return (
     <div className="se-root">
-      <header className="se-head">
-        <div className="se-head-title">
-          <Link href="/dashboard" className="se-logo" aria-label="Retour au tableau de bord">M</Link>
-          <div>
-            <div className="se-head-name">Session du jour</div>
-            <div className="se-head-sub">{queue.length} fiche{queue.length > 1 ? 's' : ''} prévue{queue.length > 1 ? 's' : ''}, environ {estMin >= 60 ? `${Math.floor(estMin / 60)} h ${String(estMin % 60).padStart(2, '0')}` : `${estMin} min`}</div>
-          </div>
+      <header className="se-head se-head-min">
+        <Link href="/dashboard" className="se-close" aria-label="Quitter la session">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </Link>
+        <div className="se-progress" role="progressbar" aria-label="Progression de la session" aria-valuemin={0} aria-valuemax={queue.length} aria-valuenow={doneCount}>
+          <i style={{ width: `${queue.length ? Math.round(100 * doneCount / queue.length) : 0}%` }} />
         </div>
-        <div className="se-head-prog">
-          <div className="se-head-prog-lbl"><span>Fiche {idx + 1} sur {queue.length}</span><span>{doneCount} terminée{doneCount > 1 ? 's' : ''}</span></div>
-          <div className="se-segs" style={{ gridTemplateColumns: `repeat(${Math.min(queue.length, 40)}, minmax(0, 1fr))` }}>
-            {queue.slice(0, 40).map((_, i) => <i key={i} className={results[i] ? 'done' : i === idx ? 'cur' : ''} />)}
-          </div>
-        </div>
-        <div className="se-head-acts">
-          <span className="se-timer" aria-label="Temps de travail">{timer}</span>
-          <button type="button" className="se-btn se-btn-ghost-dark" onClick={() => {
-            if (paused) { setPausedMs(p => p + (Date.now() - pauseFrom!)); setPauseFrom(null) } else setPauseFrom(Date.now())
-          }}>{paused ? 'Reprendre' : 'Pause'}</button>
-          <button type="button" className="se-btn se-btn-link-dark" onClick={() => { void saveAllPending(); setPhase('done') }}>Terminer</button>
-        </div>
+        <span className="se-count">{idx + 1} / {queue.length}</span>
+        <span className="se-timer" aria-label="Temps de travail">{timer}</span>
+        <button type="button" className="se-btn se-btn-ghost-dark" onClick={() => {
+          if (paused) { setPausedMs(p => p + (Date.now() - pauseFrom!)); setPauseFrom(null) } else setPauseFrom(Date.now())
+        }}>{paused ? 'Reprendre' : 'Pause'}</button>
+        <button type="button" className="se-btn se-btn-link-dark" onClick={() => { void saveAllPending(); setPhase('done') }}>Terminer</button>
       </header>
 
       {paused && (
@@ -880,21 +864,21 @@ function SessionBody() {
 
       <div className="se-body">
         <aside className="se-queue" aria-label="Au programme">
-          <div className="se-kicker">Au programme</div>
           {queue.map((it, i) => {
             const r = results[i]
             const c = (systems.find(s => s.id === it.lesson.system_id) as { color?: string; name?: string } | undefined)
             const j = scheduleOf(systems.find(s => s.id === it.lesson.system_id))
             return (
               <button key={it.lesson.id} type="button" onClick={() => goTo(i)} className={`se-qrow${i === idx ? ' cur' : ''}${r ? ' done' : ''}`}>
-                <span className="se-dot" style={{ background: colorMap.get(it.lesson.system_id) || '#3E6F9C' }} />
+                {r?.kind === 'rated'
+                  ? <svg className="se-qcheck" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>
+                  : <span className="se-dot" style={{ background: colorMap.get(it.lesson.system_id) || '#3E6F9C' }} />}
                 <span className="se-qtxt">
                   <span className="se-qname">{it.lesson.name}</span>
                   <span className="se-qmeta">{c?.name ?? 'Matière'}, J+{j[it.due.stepIndex]}</span>
                 </span>
                 {r?.kind === 'rated' && <span className={`se-pill s${r.score}`}>{r.score}/5</span>}
                 {r?.kind === 'reported' && <span className="se-pill se-pill-muted">Reportée</span>}
-                {!r && i === idx && <span className="se-pill se-pill-cur">En cours</span>}
                 {!r && i !== idx && it.due.stepIndex === 0 && it.lastScore === null && <span className="se-pill se-pill-new">Nouvelle</span>}
               </button>
             )
@@ -904,7 +888,7 @@ function SessionBody() {
         <main className="se-main">
           <section className="se-card se-fiche">
             <div className="se-chips">
-              <span className="se-chip" style={{ color, background: `${color}1A` }}><span className="se-dot" style={{ background: color }} />{sys?.name ?? 'Matière'}</span>
+              <span className="se-chip se-chip-plain"><span className="se-dot" style={{ background: color }} />{sys?.name ?? 'Matière'}</span>
               <span className={`se-chip ${current.due.status === 'missed' ? 'se-chip-late' : 'se-chip-plain'}`}>{statusLabel}</span>
               {current.lastScore !== null && <span className="se-chip-text">Dernière note : {current.lastScore}/5{current.lastDate ? `, le ${shortDate(current.lastDate)}` : ''}</span>}
             </div>
@@ -1004,12 +988,7 @@ function SessionBody() {
                     {media.video_path && <button type="button" className="se-btn se-btn-ghost" onClick={() => setSource({ video_ts: 0 })}>Vidéo de l&apos;amphi</button>}
                   </div>
                 )}
-                {!hasSource && (
-                  <div className="se-box">
-                    <b>Pas de fichier sous la main ?</b>
-                    <span className="se-muted">Relis ton cours de ton côté, puis note-toi. Tu pourras ajouter le poly plus tard.</span>
-                  </div>
-                )}
+
                 {trainLocked && hasSource && synth && (
                   qcmRunning
                     ? <GenProgress lessonId={current.lesson.id} variant="fiche" />
@@ -1018,9 +997,7 @@ function SessionBody() {
                         label="Créer les QCM" className="se-btn se-btn-ghost" />
                 )}
                 {trainLocked && synth && genQcmErr && <p className="se-err" role="alert">{genQcmErr}</p>}
-                <button type="button" className={`se-btn se-push ${!trainLocked ? 'se-btn-primary' : 'se-btn-ghost'}`} onClick={!trainLocked ? startTraining : goRate}>
-                  {!trainLocked ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
-                </button>
+
               </div>
             </section>
           )}
@@ -1185,7 +1162,7 @@ function SessionBody() {
                     ? 'Chaque erreur devient une flashcard. Après les QCM, tu passes aux flashcards.'
                     : 'Les nouvelles cartes viennent de tes erreurs de QCM, puis celles que tu sais le moins.'}
                 </div>}
-                <button type="button" className="se-btn se-btn-ghost se-push" onClick={goRate}>{attempts.length || cardSeen ? 'Arrêter et me noter' : 'Passer à la note'}</button>
+
               </div>
             </section>
           )}
@@ -1227,8 +1204,15 @@ function SessionBody() {
           )}
 
           <div className="se-under">
-            <span />
-            <button type="button" className="se-btn se-btn-link" onClick={report} disabled={busy}>Reporter cette fiche à demain</button>
+            <button type="button" className="se-btn se-btn-link" onClick={report} disabled={busy}>Reporter à demain</button>
+            {step === 0 && (
+              <button type="button" className="se-btn se-btn-primary" onClick={!trainLocked ? startTraining : goRate}>
+                {!trainLocked ? "J'ai relu, je m'entraîne" : "J'ai relu, je me note"}
+              </button>
+            )}
+            {step === 1 && (
+              <button type="button" className="se-btn se-btn-primary" onClick={goRate}>{attempts.length || cardSeen ? 'Arrêter et me noter' : 'Passer à la note'}</button>
+            )}
           </div>
         </main>
       </div>
