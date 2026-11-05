@@ -69,35 +69,35 @@ export default function Page() {
               </span>
             </h1>
             <div style={{display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px"}}>
-              <div role="group" aria-label="Vue" style={{display: "flex", padding: "3px", borderRadius: "10px", background: "#F1EEE7"}}>
-                <button type="button" aria-pressed="true" style={{font: "inherit", fontSize: "14px", fontWeight: "600", color: "#1A1D23", background: "#FFFFFF", border: "0", padding: "7px 14px", borderRadius: "8px", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,.06)"}}>
+              <div role={"group"} aria-label={"Vue"} style={{display: "flex", padding: "3px", borderRadius: "10px", background: "#F1EEE7"}}>
+                <button type={"button"} aria-pressed={"true"} style={{font: "inherit", fontSize: "14px", fontWeight: "600", color: "#1A1D23", background: "#FFFFFF", border: "0", padding: "7px 14px", borderRadius: "8px", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,.06)"}}>
                   {"Semaine"}
                 </button>
-                <button type="button" aria-pressed="false" style={{font: "inherit", fontSize: "14px", color: "#6B6F76", background: "transparent", border: "0", padding: "7px 14px", borderRadius: "8px", cursor: "pointer"}}>
+                <button type={"button"} aria-pressed={"false"} style={{font: "inherit", fontSize: "14px", color: "#6B6F76", background: "transparent", border: "0", padding: "7px 14px", borderRadius: "8px", cursor: "pointer"}}>
                   {"Mois"}
                 </button>
               </div>
-              <button type="button" className="mr-ghost" aria-label="Semaine pr\u00e9c\u00e9dente" style={{font: "inherit", width: "40px", height: "40px", color: "#3D424A", background: "transparent", border: "0", borderRadius: "10px", cursor: "pointer", fontSize: "18px"}}>
+              <button type={"button"} className={"mr-ghost"} aria-label={"Semaine précédente"} style={{font: "inherit", width: "40px", height: "40px", color: "#3D424A", background: "transparent", border: "0", borderRadius: "10px", cursor: "pointer", fontSize: "18px"}}>
                 {"\u2039"}
               </button>
-              <button type="button" className="mr-ghost" style={{font: "inherit", fontSize: "14px", color: "#3D424A", background: "transparent", border: "0", padding: "10px 12px", borderRadius: "10px", cursor: "pointer"}}>
+              <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "14px", color: "#3D424A", background: "transparent", border: "0", padding: "10px 12px", borderRadius: "10px", cursor: "pointer"}}>
                 {"Aujourd'hui"}
               </button>
-              <button type="button" className="mr-ghost" aria-label="Semaine suivante" style={{font: "inherit", width: "40px", height: "40px", color: "#3D424A", background: "transparent", border: "0", borderRadius: "10px", cursor: "pointer", fontSize: "18px"}}>
+              <button type={"button"} className={"mr-ghost"} aria-label={"Semaine suivante"} style={{font: "inherit", width: "40px", height: "40px", color: "#3D424A", background: "transparent", border: "0", borderRadius: "10px", cursor: "pointer", fontSize: "18px"}}>
                 {"\u203a"}
               </button>
               <div style={{position: "relative"}}>
-                <button type="button" className="mr-btn" onClick={v.toggleMenu} aria-expanded={v.menuExpanded} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
+                <button type={"button"} className={"mr-btn"} onClick={v.toggleMenu} aria-expanded={v.menuExpanded} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
                   {"+ Ajouter"}
                 </button>
                 {v.menuOpen ? (
                   <>
-                    <div role="menu" style={{position: "absolute", right: "0", top: "48px", zIndex: "5", width: "300px", padding: "6px", borderRadius: "12px", background: "#FFFFFF", boxShadow: "0 8px 28px rgba(26,29,35,.14), 0 0 0 1px rgba(26,29,35,.06)", display: "flex", flexDirection: "column"}}>
+                    <div role={"menu"} style={{position: "absolute", right: "0", top: "48px", zIndex: "5", width: "300px", padding: "6px", borderRadius: "12px", background: "#FFFFFF", boxShadow: "0 8px 28px rgba(26,29,35,.14), 0 0 0 1px rgba(26,29,35,.06)", display: "flex", flexDirection: "column"}}>
                       {(v.menu || []).map((m: any, i_m: number) => (
                         <Fragment key={i_m}>
-                          <button type="button" role="menuitem" className="mr-menu" onClick={v.toggleMenu} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "8px", border: "0", background: "transparent", cursor: "pointer", textAlign: "left", color: "#1A1D23"}}>
-                            <span aria-hidden="true" style={{width: "32px", height: "32px", borderRadius: "8px", background: "#F1EEE7", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E3354"}}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                          <button type={"button"} role={"menuitem"} className={"mr-menu"} onClick={v.toggleMenu} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "8px", border: "0", background: "transparent", cursor: "pointer", textAlign: "left", color: "#1A1D23"}}>
+                            <span aria-hidden={"true"} style={{width: "32px", height: "32px", borderRadius: "8px", background: "#F1EEE7", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E3354"}}>
+                              <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.9"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                                 <path d={m.icon} />
                               </svg>
                             </span>
@@ -134,7 +134,7 @@ export default function Page() {
                     <div style={{display: "flex", flexDirection: "column", gap: "1px"}}>
                       {(d.items || []).map((it: any, i_it: number) => (
                         <Fragment key={i_it}>
-                          <Link href="/v2/session" className="mr-item" style={{display: "flex", alignItems: "center", gap: "8px", padding: "6px", borderRadius: "8px", textDecoration: "none", color: it.color, fontSize: "13px", lineHeight: "1.3"}}>
+                          <Link href={"/v2/session"} className={"mr-item"} style={{display: "flex", alignItems: "center", gap: "8px", padding: "6px", borderRadius: "8px", textDecoration: "none", color: it.color, fontSize: "13px", lineHeight: "1.3"}}>
                             <span style={{width: "7px", height: "7px", borderRadius: "50%", background: it.dot, flex: "none", opacity: it.opacity, margin: "0 3px"}}></span>
                             <span style={{overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>
                               {it.title}
@@ -144,7 +144,7 @@ export default function Page() {
                       ))}
                       {d.hasMore ? (
                         <>
-                          <button type="button" className="mr-ghost" style={{font: "inherit", fontSize: "13px", color: "#1E3354", background: "transparent", border: "0", padding: "6px", borderRadius: "8px", cursor: "pointer", textAlign: "left"}}>
+                          <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "13px", color: "#1E3354", background: "transparent", border: "0", padding: "6px", borderRadius: "8px", cursor: "pointer", textAlign: "left"}}>
                             {d.more}
                           </button>
                         </>

@@ -100,11 +100,11 @@ export default function Page() {
                 {"317 livres, +3 cette semaine"}
               </span>
             </div>
-            <button type="button" className="mr-chip" onClick={v.openPanel} aria-expanded={v.panelExpanded} style={{font: "inherit", display: "flex", alignItems: "center", gap: "14px", padding: "10px 16px 10px 10px", border: "0", borderRadius: "14px", background: "#F1EEE7", color: "#1A1D23", cursor: "pointer", textAlign: "left"}}>
-              <span aria-hidden="true" style={{width: "40px", height: "40px", borderRadius: "50%", background: "#F6EBCF", color: "#9A7420", display: "flex", alignItems: "center", justifyContent: "center"}}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" />
+            <button type={"button"} className={"mr-chip"} onClick={v.openPanel} aria-expanded={v.panelExpanded} style={{font: "inherit", display: "flex", alignItems: "center", gap: "14px", padding: "10px 16px 10px 10px", border: "0", borderRadius: "14px", background: "#F1EEE7", color: "#1A1D23", cursor: "pointer", textAlign: "left"}}>
+              <span aria-hidden={"true"} style={{width: "40px", height: "40px", borderRadius: "50%", background: "#F6EBCF", color: "#9A7420", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                <svg width={"20"} height={"20"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.7"} strokeLinecap={"round"}>
+                  <circle cx={"12"} cy={"12"} r={"9"} />
+                  <path d={"M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"} />
                 </svg>
               </span>
               <span style={{display: "flex", flexDirection: "column", gap: "6px", width: "150px"}}>
@@ -139,7 +139,7 @@ export default function Page() {
                     <div style={{display: "flex", alignItems: "flex-end", gap: "2px", height: "70px", overflow: "hidden", padding: "0 8px"}}>
                       {(s.books || []).map((b: any, i_b: number) => (
                         <Fragment key={i_b}>
-                          <span className="mr-book" title={b.label} style={{flex: "none", width: b.w, height: b.h, borderRadius: "2px 2px 1px 1px", background: b.bg, borderTop: `3px solid ${b.top}`, boxSizing: "border-box"}}></span>
+                          <span className={"mr-book"} title={b.label} style={{flex: "none", width: b.w, height: b.h, borderRadius: "2px 2px 1px 1px", background: b.bg, borderTop: `3px solid ${b.top}`, boxSizing: "border-box"}}></span>
                         </Fragment>
                       ))}
                       {s.hasMore ? (
@@ -161,14 +161,14 @@ export default function Page() {
       {v.panelOpen ? (
         <>
           <div onClick={v.closePanel} style={{position: "absolute", inset: "0", background: "rgba(26,29,35,.18)"}}></div>
-          <aside role="dialog" aria-label="Rangs" style={{position: "absolute", top: "0", right: "0", bottom: "0", width: "380px", maxWidth: "100%", boxSizing: "border-box", background: "#FFFFFF", boxShadow: "-12px 0 40px rgba(26,29,35,.12)", padding: "32px 28px", display: "flex", flexDirection: "column", gap: "28px", overflowY: "auto"}}>
+          <aside role={"dialog"} aria-label={"Rangs"} style={{position: "absolute", top: "0", right: "0", bottom: "0", width: "380px", maxWidth: "100%", boxSizing: "border-box", background: "#FFFFFF", boxShadow: "-12px 0 40px rgba(26,29,35,.12)", padding: "32px 28px", display: "flex", flexDirection: "column", gap: "28px", overflowY: "auto"}}>
             <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
               <span style={{fontSize: "22px", fontWeight: "700"}}>
                 {"Rangs"}
               </span>
-              <button type="button" className="mr-ghost" onClick={v.closePanel} aria-label="Fermer" style={{font: "inherit", width: "36px", height: "36px", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" />
+              <button type={"button"} className={"mr-ghost"} onClick={v.closePanel} aria-label={"Fermer"} style={{font: "inherit", width: "36px", height: "36px", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
+                <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} aria-hidden={"true"}>
+                  <path d={"M6 6l12 12M18 6L6 18"} />
                 </svg>
               </button>
             </div>
@@ -177,8 +177,8 @@ export default function Page() {
                 <Fragment key={i_r}>
                   <li style={{display: "flex", gap: "16px"}}>
                     <div style={{display: "flex", flexDirection: "column", alignItems: "center", width: "44px", flex: "none"}}>
-                      <span aria-hidden="true" style={{width: "44px", height: "44px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: r.circleBg, color: r.iconColor, boxShadow: r.ring}}>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <span aria-hidden={"true"} style={{width: "44px", height: "44px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: r.circleBg, color: r.iconColor, boxShadow: r.ring}}>
+                        <svg width={"22"} height={"22"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.6"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                           <path d={r.icon} />
                         </svg>
                       </span>

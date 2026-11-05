@@ -45,7 +45,7 @@ export default function Sidebar({ active = '0' }: { active?: string }) {
   return (
     <>
       <style>{CSS}</style>
-    <nav aria-label="Navigation principale" style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#FFFFFF", boxSizing: "border-box", width: "100%", height: "100vh", position: "sticky", top: "0", overflowY: "auto", padding: "24px 14px", display: "flex", flexDirection: "column", gap: "20px", background: "#15304E"}}>
+    <nav aria-label={"Navigation principale"} style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#FFFFFF", boxSizing: "border-box", width: "100%", height: "100vh", position: "sticky", top: "0", overflowY: "auto", padding: "24px 14px", display: "flex", flexDirection: "column", gap: "20px", background: "#15304E"}}>
       <div style={{display: "flex", alignItems: "center", gap: "10px", padding: "0 10px"}}>
         <div style={{width: "30px", height: "30px", borderRadius: "8px", background: "#FFFFFF", color: "#15304E", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "16px"}}>
           {"M"}
@@ -55,10 +55,10 @@ export default function Sidebar({ active = '0' }: { active?: string }) {
         </span>
       </div>
       <div style={{display: "flex", flexDirection: "column", gap: "2px"}}>
-        <button type="button" style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "9px 12px", borderRadius: "8px", border: "0", background: "transparent", color: "rgba(255,255,255,.62)", fontSize: "15px", fontWeight: "500", cursor: "pointer", textAlign: "left"}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
+        <button type={"button"} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "9px 12px", borderRadius: "8px", border: "0", background: "transparent", color: "rgba(255,255,255,.62)", fontSize: "15px", fontWeight: "500", cursor: "pointer", textAlign: "left"}}>
+          <svg width={"18"} height={"18"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.8"} strokeLinecap={"round"} aria-hidden={"true"}>
+            <circle cx={"11"} cy={"11"} r={"7"} />
+            <path d={"M20 20l-3.5-3.5"} />
           </svg>
           <span style={{flex: "1"}}>
             {"Rechercher"}
@@ -70,7 +70,7 @@ export default function Sidebar({ active = '0' }: { active?: string }) {
         {(v.nav || []).map((n: any, i_n: number) => (
           <Fragment key={i_n}>
             <a href={n.href} style={{display: "flex", alignItems: "center", gap: "12px", padding: "9px 12px", borderRadius: "8px", textDecoration: "none", color: "#FFFFFF", fontSize: "15px", fontWeight: n.weight, background: n.bg}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width={"18"} height={"18"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.8"} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
                 <path d={n.icon} />
               </svg>
               <span>
@@ -82,9 +82,9 @@ export default function Sidebar({ active = '0' }: { active?: string }) {
       </div>
       <div style={{height: "1px", background: "rgba(255,255,255,.12)", margin: "0 12px"}}></div>
       <div style={{display: "flex", flexDirection: "column", gap: "2px"}}>
-        <Link href="/v2/matieres" style={{display: "flex", alignItems: "center", gap: "12px", padding: "9px 12px", borderRadius: "8px", textDecoration: "none", color: "#FFFFFF", fontSize: "15px", fontWeight: v.allWeight, background: v.allBg}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-            <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+        <Link href={"/v2/matieres"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "9px 12px", borderRadius: "8px", textDecoration: "none", color: "#FFFFFF", fontSize: "15px", fontWeight: v.allWeight, background: v.allBg}}>
+          <svg width={"18"} height={"18"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.8"} strokeLinejoin={"round"} aria-hidden={"true"}>
+            <path d={"M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"} />
           </svg>
           <span style={{flex: "1"}}>
             {"Toutes les mati\u00e8res"}
@@ -114,7 +114,7 @@ export default function Sidebar({ active = '0' }: { active?: string }) {
         <span style={{fontSize: "14px", fontWeight: "600"}}>
           {"Lou"}
         </span>
-        <button type="button" style={{marginLeft: "auto", font: "inherit", fontSize: "13px", color: "rgba(255,255,255,.62)", background: "transparent", border: "0", padding: "8px", borderRadius: "6px", cursor: "pointer"}}>
+        <button type={"button"} style={{marginLeft: "auto", font: "inherit", fontSize: "13px", color: "rgba(255,255,255,.62)", background: "transparent", border: "0", padding: "8px", borderRadius: "6px", cursor: "pointer"}}>
           {"S2 \u25be"}
         </button>
       </div>

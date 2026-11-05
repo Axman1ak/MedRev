@@ -129,10 +129,10 @@ export default function Page() {
           <h1 style={{margin: "0", fontSize: "36px", fontWeight: "700", letterSpacing: "-.02em"}}>
             {"Statistiques"}
           </h1>
-          <div role="group" aria-label="P\u00e9riode" style={{display: "flex", padding: "4px", borderRadius: "12px", background: "#F1EEE7"}}>
+          <div role={"group"} aria-label={"Période"} style={{display: "flex", padding: "4px", borderRadius: "12px", background: "#F1EEE7"}}>
             {(v.periods || []).map((p: any, i_p: number) => (
               <Fragment key={i_p}>
-                <button type="button" onClick={p.pick} aria-pressed={p.pressed} style={{font: "inherit", fontSize: "15px", fontWeight: p.weight, color: p.color, background: p.bg, border: "0", padding: "9px 18px", borderRadius: "9px", cursor: "pointer", boxShadow: p.shadow}}>
+                <button type={"button"} onClick={p.pick} aria-pressed={p.pressed} style={{font: "inherit", fontSize: "15px", fontWeight: p.weight, color: p.color, background: p.bg, border: "0", padding: "9px 18px", borderRadius: "9px", cursor: "pointer", boxShadow: p.shadow}}>
                   {p.label}
                 </button>
               </Fragment>
@@ -142,7 +142,7 @@ export default function Page() {
         <div style={{display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "16px"}}>
           {(v.kpis || []).map((k: any, i_k: number) => (
             <Fragment key={i_k}>
-              <button type="button" className="mr-card" onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "22px", borderRadius: "16px", background: k.bg, border: "0", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
+              <button type={"button"} className={"mr-card"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "22px", borderRadius: "16px", background: k.bg, border: "0", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
                 <span style={{fontSize: "15px", opacity: ".72"}}>
                   {k.label}
                 </span>
@@ -157,7 +157,7 @@ export default function Page() {
           ))}
         </div>
         <div style={{display: "flex", gap: "20px", alignItems: "stretch"}}>
-          <section aria-label="\u00c9volution" style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
+          <section aria-label={"Évolution"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
             <div style={{display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "16px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {v.chartTitle}
@@ -169,8 +169,8 @@ export default function Page() {
             <div style={{display: "flex", alignItems: "flex-end", gap: v.gap, height: "220px", borderBottom: "1px solid #EDE9E1"}}>
               {(v.bars || []).map((b: any, i_b: number) => (
                 <Fragment key={i_b}>
-                  <button type="button" className="mr-bar" onClick={b.pick} title={b.title} style={{font: "inherit", flex: "1", height: "100%", display: "flex", alignItems: "flex-end", padding: "0", border: "0", background: "transparent", cursor: "pointer"}}>
-                    <span className="b" style={{display: "block", width: "100%", height: b.h, minHeight: "3px", borderRadius: "4px 4px 0 0", background: b.bg}}></span>
+                  <button type={"button"} className={"mr-bar"} onClick={b.pick} title={b.title} style={{font: "inherit", flex: "1", height: "100%", display: "flex", alignItems: "flex-end", padding: "0", border: "0", background: "transparent", cursor: "pointer"}}>
+                    <span className={"b"} style={{display: "block", width: "100%", height: b.h, minHeight: "3px", borderRadius: "4px 4px 0 0", background: b.bg}}></span>
                   </button>
                 </Fragment>
               ))}
@@ -184,7 +184,7 @@ export default function Page() {
               </span>
             </div>
           </section>
-          <aside aria-label="D\u00e9tail du jour" style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
+          <aside aria-label={"Détail du jour"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
             <span style={{fontSize: "18px", fontWeight: "700", textTransform: "capitalize"}}>
               {v.day.date}
             </span>
@@ -220,7 +220,7 @@ export default function Page() {
                   <div style={{display: "flex", flexDirection: "column"}}>
                     {(v.day.fiches || []).map((f: any, i_f: number) => (
                       <Fragment key={i_f}>
-                        <Link href="/v2/matieres" className="mr-row" style={{display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", borderRadius: "8px", borderBottom: "1px solid #F1EEE7", textDecoration: "none", color: "inherit", fontSize: "15px"}}>
+                        <Link href={"/v2/matieres"} className={"mr-row"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", borderRadius: "8px", borderBottom: "1px solid #F1EEE7", textDecoration: "none", color: "inherit", fontSize: "15px"}}>
                           <span style={{width: "9px", height: "9px", borderRadius: "50%", background: f.color}}></span>
                           <span style={{flex: "1", fontWeight: "600"}}>
                             {f.title}
@@ -248,7 +248,7 @@ export default function Page() {
           </aside>
         </div>
         <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
-          <section aria-label="\u00c0 risque d'oubli" style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
+          <section aria-label={"À risque d'oubli"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"\u00c0 risque d\u2019oubli"}
@@ -259,7 +259,7 @@ export default function Page() {
             </span>
             {(v.risk || []).map((r: any, i_r: number) => (
               <Fragment key={i_r}>
-                <Link href="/v2/session" style={{display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", textDecoration: "none", color: "#FFFFFF", fontSize: "15px"}}>
+                <Link href={"/v2/session"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", textDecoration: "none", color: "#FFFFFF", fontSize: "15px"}}>
                   <span style={{flex: "1", fontWeight: "600"}}>
                     {r.title}
                   </span>
@@ -273,7 +273,7 @@ export default function Page() {
               </Fragment>
             ))}
           </section>
-          <section aria-label="Ressenti et QCM" style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
+          <section aria-label={"Ressenti et QCM"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"Ton ressenti face aux QCM"}
@@ -290,7 +290,7 @@ export default function Page() {
                   </span>
                   <span style={{flex: "1", position: "relative", height: "8px", borderRadius: "4px", background: "#F1EEE7"}}>
                     <span style={{position: "absolute", left: "0", top: "0", height: "8px", borderRadius: "4px", width: c.qcm, background: c.color}}></span>
-                    <span title="Ton ressenti" style={{position: "absolute", top: "-4px", left: c.feel, width: "3px", height: "16px", marginLeft: "-1px", borderRadius: "2px", background: "#1A1D23"}}></span>
+                    <span title={"Ton ressenti"} style={{position: "absolute", top: "-4px", left: c.feel, width: "3px", height: "16px", marginLeft: "-1px", borderRadius: "2px", background: "#1A1D23"}}></span>
                   </span>
                   <span style={{width: "110px", textAlign: "right", fontSize: "14px", fontWeight: "600", color: c.gapColor}}>
                     {c.gap}
@@ -302,7 +302,7 @@ export default function Page() {
               {"Barre color\u00e9e, r\u00e9ussite QCM. Trait noir, ton ressenti."}
             </span>
           </section>
-          <section aria-label="Tes meilleurs moments" style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
+          <section aria-label={"Tes meilleurs moments"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"Quand tu retiens le mieux"}
@@ -353,7 +353,7 @@ export default function Page() {
           </section>
         </div>
         <div style={{display: "flex", gap: "20px", alignItems: "flex-start"}}>
-          <section aria-label="Par mati\u00e8re" style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", padding: "14px 16px", borderRadius: "18px", background: "#FFFFFF"}}>
+          <section aria-label={"Par matière"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", padding: "14px 16px", borderRadius: "18px", background: "#FFFFFF"}}>
             <div style={{display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "16px", padding: "12px", fontSize: "14px", color: "#6B6F76"}}>
               <span>
                 {"Mati\u00e8re"}
@@ -377,7 +377,7 @@ export default function Page() {
             {(v.subjects || []).map((s: any, i_s: number) => (
               <Fragment key={i_s}>
                 <div style={{display: "flex", flexDirection: "column", borderTop: "1px solid #F1EEE7"}}>
-                  <button type="button" className="mr-row" onClick={s.toggle} aria-expanded={s.expanded} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "16px", alignItems: "center", padding: "15px 12px", border: "0", borderRadius: "10px", background: "transparent", fontSize: "16px"}}>
+                  <button type={"button"} className={"mr-row"} onClick={s.toggle} aria-expanded={s.expanded} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "16px", alignItems: "center", padding: "15px 12px", border: "0", borderRadius: "10px", background: "transparent", fontSize: "16px"}}>
                     <span style={{display: "flex", alignItems: "center", gap: "10px", fontWeight: "600"}}>
                       <span style={{width: "10px", height: "10px", borderRadius: "50%", background: s.color}}></span>
                       {s.name}
@@ -408,7 +408,7 @@ export default function Page() {
                       <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", padding: "4px 12px 18px"}}>
                         {(s.weak || []).map((w: any, i_w: number) => (
                           <Fragment key={i_w}>
-                            <Link href="/v2/matieres" style={{display: "flex", flexDirection: "column", gap: "4px", padding: "14px 16px", borderRadius: "12px", background: "#FAF8F4", textDecoration: "none", color: "inherit"}}>
+                            <Link href={"/v2/matieres"} style={{display: "flex", flexDirection: "column", gap: "4px", padding: "14px 16px", borderRadius: "12px", background: "#FAF8F4", textDecoration: "none", color: "inherit"}}>
                               <span style={{fontSize: "15px", fontWeight: "600"}}>
                                 {w.title}
                               </span>
@@ -425,7 +425,7 @@ export default function Page() {
               </Fragment>
             ))}
           </section>
-          <section aria-label="Charge \u00e0 venir" style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
+          <section aria-label={"Charge à venir"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"Les 14 prochains jours"}

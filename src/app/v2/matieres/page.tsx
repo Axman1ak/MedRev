@@ -89,12 +89,12 @@ export default function Page() {
               {"Toutes les mati\u00e8res"}
             </h1>
             <div style={{display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px"}}>
-              <button type="button" className="mr-ghost" aria-label="Filtrer" style={{font: "inherit", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", color: "#3D424A", background: "transparent", border: "0", borderRadius: "10px", cursor: "pointer"}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                  <path d="M4 6h16M7 12h10M10 18h4" />
+              <button type={"button"} className={"mr-ghost"} aria-label={"Filtrer"} style={{font: "inherit", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", color: "#3D424A", background: "transparent", border: "0", borderRadius: "10px", cursor: "pointer"}}>
+                <svg width={"18"} height={"18"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.8"} strokeLinecap={"round"} aria-hidden={"true"}>
+                  <path d={"M4 6h16M7 12h10M10 18h4"} />
                 </svg>
               </button>
-              <button type="button" className="mr-btn" style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
+              <button type={"button"} className={"mr-btn"} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer"}}>
                 {"Nouvelle fiche"}
               </button>
             </div>
@@ -115,7 +115,7 @@ export default function Page() {
                   <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "14px"}}>
                     {(g.fiches || []).map((f: any, i_f: number) => (
                       <Fragment key={i_f}>
-                        <button type="button" className="mr-card" onClick={f.select} aria-pressed={f.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px", padding: "20px", borderRadius: "14px", background: "#FFFFFF", border: `2px solid ${f.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
+                        <button type={"button"} className={"mr-card"} onClick={f.select} aria-pressed={f.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px", padding: "20px", borderRadius: "14px", background: "#FFFFFF", border: `2px solid ${f.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
                           <span style={{fontSize: "17px", fontWeight: "700", lineHeight: "1.3"}}>
                             {f.title}
                           </span>
@@ -146,7 +146,7 @@ export default function Page() {
       </main>
       {v.hasSel ? (
         <>
-          <aside aria-label="D\u00e9tail de la fiche" style={{flex: "0 0 500px", boxSizing: "border-box", background: "#FFFFFF", borderLeft: "1px solid #EDE9E1", padding: "40px 36px 48px", display: "flex", flexDirection: "column", gap: "30px"}}>
+          <aside aria-label={"Détail de la fiche"} style={{flex: "0 0 500px", boxSizing: "border-box", background: "#FFFFFF", borderLeft: "1px solid #EDE9E1", padding: "40px 36px 48px", display: "flex", flexDirection: "column", gap: "30px"}}>
             <div style={{display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px"}}>
               <div style={{display: "flex", flexDirection: "column", gap: "6px"}}>
                 <span style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6B6F76"}}>
@@ -160,14 +160,14 @@ export default function Page() {
                   {v.sel.level}{", "}{v.sel.next}
                 </span>
               </div>
-              <button type="button" className="mr-ghost" onClick={v.close} aria-label="Fermer" hidden style={{font: "inherit", width: "36px", height: "36px", flex: "none", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" />
+              <button type={"button"} className={"mr-ghost"} onClick={v.close} aria-label={"Fermer"} hidden style={{font: "inherit", width: "36px", height: "36px", flex: "none", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
+                <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} aria-hidden={"true"}>
+                  <path d={"M6 6l12 12M18 6L6 18"} />
                 </svg>
               </button>
             </div>
             <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px"}}>
-              <Link href="/v2/session" className="mr-btn" style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#1E3354", color: "#FFFFFF", textDecoration: "none"}}>
+              <Link href={"/v2/session"} className={"mr-btn"} style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#1E3354", color: "#FFFFFF", textDecoration: "none"}}>
                 <span style={{fontSize: "14px", fontWeight: "600"}}>
                   {"R\u00e9viser"}
                 </span>
@@ -175,7 +175,7 @@ export default function Page() {
                   {v.sel.nextShort}
                 </span>
               </Link>
-              <Link href="/v2/session" className="mr-act" style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#F1EEE7", color: "#1A1D23", textDecoration: "none"}}>
+              <Link href={"/v2/session"} className={"mr-act"} style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#F1EEE7", color: "#1A1D23", textDecoration: "none"}}>
                 <span style={{fontSize: "14px", fontWeight: "600"}}>
                   {"QCM"}
                 </span>
@@ -183,7 +183,7 @@ export default function Page() {
                   {v.sel.qcm}
                 </span>
               </Link>
-              <Link href="/v2/session" className="mr-act" style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#F1EEE7", color: "#1A1D23", textDecoration: "none"}}>
+              <Link href={"/v2/session"} className={"mr-act"} style={{display: "flex", flexDirection: "column", gap: "2px", padding: "12px", borderRadius: "12px", background: "#F1EEE7", color: "#1A1D23", textDecoration: "none"}}>
                 <span style={{fontSize: "14px", fontWeight: "600"}}>
                   {"Flashcards"}
                 </span>
@@ -192,7 +192,7 @@ export default function Page() {
                 </span>
               </Link>
             </div>
-            <section aria-label="Historique des r\u00e9visions" style={{display: "flex", flexDirection: "column", gap: "14px"}}>
+            <section aria-label={"Historique des révisions"} style={{display: "flex", flexDirection: "column", gap: "14px"}}>
               <span style={{fontSize: "13px", fontWeight: "600", color: "#6B6F76"}}>
                 {"R\u00e9visions"}
               </span>
@@ -214,7 +214,7 @@ export default function Page() {
                 ))}
               </ol>
             </section>
-            <section aria-label="Chiffres" style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px"}}>
+            <section aria-label={"Chiffres"} style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px"}}>
               <div style={{display: "flex", flexDirection: "column", gap: "2px"}}>
                 <span style={{fontSize: "20px", fontWeight: "700"}}>
                   {v.sel.qcmPct}
@@ -240,14 +240,14 @@ export default function Page() {
                 </span>
               </div>
             </section>
-            <section aria-label="Sources" style={{display: "flex", flexDirection: "column", gap: "6px"}}>
+            <section aria-label={"Sources"} style={{display: "flex", flexDirection: "column", gap: "6px"}}>
               <span style={{fontSize: "13px", fontWeight: "600", color: "#6B6F76", paddingBottom: "4px"}}>
                 {"Sources"}
               </span>
               {(v.sel.sources || []).map((src: any, i_src: number) => (
                 <Fragment key={i_src}>
-                  <a href="#" className="mr-row" style={{display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", textDecoration: "none", color: "#1A1D23"}}>
-                    <span aria-hidden="true" style={{width: "34px", height: "34px", borderRadius: "8px", background: "#F1EEE7", color: "#1E3354", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "700"}}>
+                  <a href={"#"} className={"mr-row"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", textDecoration: "none", color: "#1A1D23"}}>
+                    <span aria-hidden={"true"} style={{width: "34px", height: "34px", borderRadius: "8px", background: "#F1EEE7", color: "#1E3354", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "700"}}>
                       {src.kind}
                     </span>
                     <span style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "1px"}}>
@@ -261,8 +261,8 @@ export default function Page() {
                   </a>
                 </Fragment>
               ))}
-              <button type="button" className="mr-ghost" style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", border: "1px dashed #D9D3C7", background: "transparent", color: "#1E3354", fontSize: "14px", fontWeight: "600", cursor: "pointer", textAlign: "left", marginTop: "4px"}}>
-                <span aria-hidden="true" style={{width: "34px", textAlign: "center", fontSize: "18px"}}>
+              <button type={"button"} className={"mr-ghost"} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "10px", border: "1px dashed #D9D3C7", background: "transparent", color: "#1E3354", fontSize: "14px", fontWeight: "600", cursor: "pointer", textAlign: "left", marginTop: "4px"}}>
+                <span aria-hidden={"true"} style={{width: "34px", textAlign: "center", fontSize: "18px"}}>
                   {"+"}
                 </span>
                 {"Ajouter un poly ou une vid\u00e9o "}

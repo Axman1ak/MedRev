@@ -70,7 +70,7 @@ export default function Page() {
         <Sidebar active="0" />
       </div>
       <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "44px 56px 56px", display: "flex", flexDirection: "column", gap: "36px"}}>
-        <section aria-label="Session du jour" style={{display: "flex", alignItems: "center", gap: "56px", minHeight: "420px", boxSizing: "border-box", padding: "56px", borderRadius: "24px", background: "#15304E", color: "#FFFFFF"}}>
+        <section aria-label={"Session du jour"} style={{display: "flex", alignItems: "center", gap: "56px", minHeight: "420px", boxSizing: "border-box", padding: "56px", borderRadius: "24px", background: "#15304E", color: "#FFFFFF"}}>
           <div style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "16px"}}>
             <span style={{fontSize: "18px", color: "rgba(255,255,255,.7)"}}>
               {v.kicker}
@@ -90,14 +90,14 @@ export default function Page() {
             </span>
             {v.canStart ? (
               <>
-                <Link href="/v2/session" className="mr-btn-light" style={{alignSelf: "flex-start", marginTop: "18px", display: "inline-block", fontSize: "21px", fontWeight: "700", color: "#15304E", background: "#F4F1EA", padding: "22px 48px", borderRadius: "16px", textDecoration: "none"}}>
+                <Link href={"/v2/session"} className={"mr-btn-light"} style={{alignSelf: "flex-start", marginTop: "18px", display: "inline-block", fontSize: "21px", fontWeight: "700", color: "#15304E", background: "#F4F1EA", padding: "22px 48px", borderRadius: "16px", textDecoration: "none"}}>
                   {"Lancer ma session"}
                 </Link>
               </>
             ) : null}
             {v.isDone ? (
               <>
-                <Link href="/v2/session" className="mr-ghost-dark" style={{alignSelf: "flex-start", marginTop: "18px", display: "inline-block", fontSize: "18px", fontWeight: "700", color: "#FFFFFF", background: "rgba(255,255,255,.1)", padding: "18px 32px", borderRadius: "14px", textDecoration: "none"}}>
+                <Link href={"/v2/session"} className={"mr-ghost-dark"} style={{alignSelf: "flex-start", marginTop: "18px", display: "inline-block", fontSize: "18px", fontWeight: "700", color: "#FFFFFF", background: "rgba(255,255,255,.1)", padding: "18px 32px", borderRadius: "14px", textDecoration: "none"}}>
                   {"Continuer \u00e0 r\u00e9viser"}
                 </Link>
               </>
@@ -129,10 +129,10 @@ export default function Page() {
           {v.showFlame ? (
             <>
               <div style={{flex: "0 0 340px", display: "flex", flexDirection: "column", alignItems: "center", gap: "22px"}}>
-                <button type="button" onClick={v.toggleDone} aria-label={v.flameLabel} style={{font: "inherit", position: "relative", width: "200px", height: "200px", padding: "0", border: "0", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                <button type={"button"} onClick={v.toggleDone} aria-label={v.flameLabel} style={{font: "inherit", position: "relative", width: "200px", height: "200px", padding: "0", border: "0", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"}}>
                   {v.isDone ? (
                     <>
-                      <span className="mr-glow" style={{position: "absolute", inset: "10px", borderRadius: "50%", background: "radial-gradient(circle at 50% 60%, rgba(255,170,60,.55), rgba(255,120,40,0) 65%)"}}></span>
+                      <span className={"mr-glow"} style={{position: "absolute", inset: "10px", borderRadius: "50%", background: "radial-gradient(circle at 50% 60%, rgba(255,170,60,.55), rgba(255,120,40,0) 65%)"}}></span>
                     </>
                   ) : null}
                   {v.isDone ? (
@@ -140,7 +140,7 @@ export default function Page() {
                       <span style={{position: "absolute", left: "0", top: "0", width: "200px", height: "200px"}}>
                         {(v.sparks || []).map((p: any, i_p: number) => (
                           <Fragment key={i_p}>
-                            <span className="mr-spark" style={{position: "absolute", left: p.x, top: "70px", width: "6px", height: "6px", borderRadius: "50%", background: "#FFD27A", "--dx": p.dx, animationDelay: p.delay}}></span>
+                            <span className={"mr-spark"} style={{position: "absolute", left: p.x, top: "70px", width: "6px", height: "6px", borderRadius: "50%", background: "#FFD27A", "--dx": p.dx, animationDelay: p.delay}}></span>
                           </Fragment>
                         ))}
                       </span>
@@ -148,27 +148,27 @@ export default function Page() {
                   ) : null}
                   {v.isDone ? (
                     <>
-                      <svg className="mr-flame-lit" width="150" height="170" viewBox="0 0 120 140" aria-hidden="true" style={{position: "relative"}}>
+                      <svg className={"mr-flame-lit"} width={"150"} height={"170"} viewBox={"0 0 120 140"} aria-hidden={"true"} style={{position: "relative"}}>
                         <defs>
-                          <linearGradient id="fo" x1="0" y1="1" x2="0" y2="0">
-                            <stop offset="0" stopColor="#E8572A" />
-                            <stop offset=".6" stopColor="#F49A2E" />
-                            <stop offset="1" stopColor="#FFC44D" />
+                          <linearGradient id={"fo"} x1={"0"} y1={"1"} x2={"0"} y2={"0"}>
+                            <stop offset={"0"} stopColor={"#E8572A"} />
+                            <stop offset={".6"} stopColor={"#F49A2E"} />
+                            <stop offset={"1"} stopColor={"#FFC44D"} />
                           </linearGradient>
-                          <linearGradient id="fi" x1="0" y1="1" x2="0" y2="0">
-                            <stop offset="0" stopColor="#FFD66B" />
-                            <stop offset="1" stopColor="#FFF6D6" />
+                          <linearGradient id={"fi"} x1={"0"} y1={"1"} x2={"0"} y2={"0"}>
+                            <stop offset={"0"} stopColor={"#FFD66B"} />
+                            <stop offset={"1"} stopColor={"#FFF6D6"} />
                           </linearGradient>
                         </defs>
-                        <path className="f-outer" fill="url(#fo)" d="M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z" />
-                        <path className="f-inner" fill="url(#fi)" d="M60 62c4 14 20 22 20 40a20 20 0 0 1-40 0c0-12 8-20 12-26 2 8 5 10 8 10-2-10-2-18 0-24z" />
+                        <path className={"f-outer"} fill={"url(#fo)"} d={"M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z"} />
+                        <path className={"f-inner"} fill={"url(#fi)"} d={"M60 62c4 14 20 22 20 40a20 20 0 0 1-40 0c0-12 8-20 12-26 2 8 5 10 8 10-2-10-2-18 0-24z"} />
                       </svg>
                     </>
                   ) : null}
                   {v.notDone ? (
                     <>
-                      <svg width="150" height="170" viewBox="0 0 120 140" aria-hidden="true">
-                        <path fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.28)" strokeWidth="3" strokeDasharray="6 7" strokeLinejoin="round" d="M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z" />
+                      <svg width={"150"} height={"170"} viewBox={"0 0 120 140"} aria-hidden={"true"}>
+                        <path fill={"rgba(255,255,255,.06)"} stroke={"rgba(255,255,255,.28)"} strokeWidth={"3"} strokeDasharray={"6 7"} strokeLinejoin={"round"} d={"M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z"} />
                       </svg>
                     </>
                   ) : null}
@@ -177,8 +177,8 @@ export default function Page() {
                   {(v.week || []).map((w: any, i_w: number) => (
                     <Fragment key={i_w}>
                       <span style={{display: "flex", flexDirection: "column", alignItems: "center", gap: "6px"}}>
-                        <svg width="22" height="26" viewBox="0 0 120 140" aria-hidden="true">
-                          <path fill={w.fill} stroke={w.stroke} strokeWidth="8" d="M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z" />
+                        <svg width={"22"} height={"26"} viewBox={"0 0 120 140"} aria-hidden={"true"}>
+                          <path fill={w.fill} stroke={w.stroke} strokeWidth={"8"} d={"M60 4C66 30 98 44 98 88a38 38 0 0 1-76 0c0-20 10-32 18-42 1 12 7 20 14 22-2-22 0-44 6-64z"} />
                         </svg>
                         <span style={{fontSize: "13px", fontWeight: w.weight, color: w.color}}>
                           {w.d}
@@ -191,7 +191,7 @@ export default function Page() {
             </>
           ) : null}
         </section>
-        <section aria-label="Cours d'aujourd'hui" style={{display: "flex", flexDirection: "column", gap: "16px"}}>
+        <section aria-label={"Cours d'aujourd'hui"} style={{display: "flex", flexDirection: "column", gap: "16px"}}>
           <span style={{fontSize: "20px", fontWeight: "700"}}>
             {"Cours d'aujourd'hui"}
           </span>
@@ -215,7 +215,7 @@ export default function Page() {
                   ) : null}
                   {c.todo ? (
                     <>
-                      <button type="button" className="mr-btn" onClick={c.add} style={{font: "inherit", alignSelf: "flex-start", fontSize: "15px", fontWeight: "700", color: "#15304E", background: "#E7ECF4", border: "0", padding: "11px 18px", borderRadius: "10px", cursor: "pointer"}}>
+                      <button type={"button"} className={"mr-btn"} onClick={c.add} style={{font: "inherit", alignSelf: "flex-start", fontSize: "15px", fontWeight: "700", color: "#15304E", background: "#E7ECF4", border: "0", padding: "11px 18px", borderRadius: "10px", cursor: "pointer"}}>
                         {"Ajouter le poly"}
                       </button>
                     </>
@@ -225,7 +225,7 @@ export default function Page() {
             ))}
             {v.noEdt ? (
               <>
-                <Link href="/v2/calendrier" style={{gridColumn: "span 2", display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px", padding: "22px", borderRadius: "16px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", textDecoration: "none", color: "#1A1D23"}}>
+                <Link href={"/v2/calendrier"} style={{gridColumn: "span 2", display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px", padding: "22px", borderRadius: "16px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)", textDecoration: "none", color: "#1A1D23"}}>
                   <span style={{fontSize: "18px", fontWeight: "700"}}>
                     {"Importe ton emploi du temps"}
                   </span>
@@ -235,7 +235,7 @@ export default function Page() {
                 </Link>
               </>
             ) : null}
-            <button type="button" className="mr-drop" style={{font: "inherit", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", padding: "22px", borderRadius: "16px", border: "2px dashed #D9D3C7", background: "transparent", color: "#1A1D23", cursor: "pointer"}}>
+            <button type={"button"} className={"mr-drop"} style={{font: "inherit", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", padding: "22px", borderRadius: "16px", border: "2px dashed #D9D3C7", background: "transparent", color: "#1A1D23", cursor: "pointer"}}>
               <span style={{fontSize: "28px", lineHeight: "1", color: "#15304E"}}>
                 {"+"}
               </span>

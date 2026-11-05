@@ -106,10 +106,10 @@ export default function Page() {
             <h1 style={{margin: "0", fontSize: "36px", fontWeight: "700", letterSpacing: "-.02em"}}>
               {"Simulateur"}
             </h1>
-            <nav aria-label="Sections du simulateur" style={{display: "flex", gap: "36px"}}>
+            <nav aria-label={"Sections du simulateur"} style={{display: "flex", gap: "36px"}}>
               {(v.tabs || []).map((t: any, i_t: number) => (
                 <Fragment key={i_t}>
-                  <button type="button" className="mr-tab" onClick={t.go} aria-current={t.current} style={{font: "inherit", fontSize: "17px", fontWeight: t.weight, color: t.color, background: "transparent", border: "0", borderBottom: `3px solid ${t.line}`, padding: "0 0 14px", marginBottom: "-1px", cursor: "pointer"}}>
+                  <button type={"button"} className={"mr-tab"} onClick={t.go} aria-current={t.current} style={{font: "inherit", fontSize: "17px", fontWeight: t.weight, color: t.color, background: "transparent", border: "0", borderBottom: `3px solid ${t.line}`, padding: "0 0 14px", marginBottom: "-1px", cursor: "pointer"}}>
                     {t.label}
                   </button>
                 </Fragment>
@@ -124,7 +124,7 @@ export default function Page() {
                 <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
                   {(v.epreuves || []).map((e: any, i_e: number) => (
                     <Fragment key={i_e}>
-                      <button type="button" className="mr-card" onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "18px", padding: "24px", borderRadius: "16px", background: "#FFFFFF", border: `2px solid ${e.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)", gridColumn: e.span}}>
+                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "18px", padding: "24px", borderRadius: "16px", background: "#FFFFFF", border: `2px solid ${e.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)", gridColumn: e.span}}>
                         <span style={{display: "flex", alignItems: "center", gap: "10px"}}>
                           <span style={{width: "12px", height: "12px", borderRadius: "50%", background: e.color}}></span>
                           <span style={{fontSize: "20px", fontWeight: "700"}}>
@@ -150,7 +150,7 @@ export default function Page() {
                   ))}
                 </div>
               </div>
-              <aside aria-label="Lancer un partiel blanc" style={{flex: "0 0 440px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "28px", padding: "32px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05), 0 10px 30px rgba(26,29,35,.06)"}}>
+              <aside aria-label={"Lancer un partiel blanc"} style={{flex: "0 0 440px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "28px", padding: "32px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05), 0 10px 30px rgba(26,29,35,.06)"}}>
                 <div style={{display: "flex", flexDirection: "column", gap: "6px"}}>
                   <span style={{display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: "700"}}>
                     <span style={{width: "12px", height: "12px", borderRadius: "50%", background: v.sel.color}}></span>
@@ -160,10 +160,10 @@ export default function Page() {
                     {v.sel.format}
                   </span>
                 </div>
-                <div role="radiogroup" aria-label="Mode" style={{display: "flex", flexDirection: "column", gap: "10px"}}>
+                <div role={"radiogroup"} aria-label={"Mode"} style={{display: "flex", flexDirection: "column", gap: "10px"}}>
                   {(v.modes || []).map((m: any, i_m: number) => (
                     <Fragment key={i_m}>
-                      <button type="button" role="radio" className="mr-opt" onClick={m.pick} aria-checked={m.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", borderRadius: "14px", background: m.bg, border: `2px solid ${m.border}`}}>
+                      <button type={"button"} role={"radio"} className={"mr-opt"} onClick={m.pick} aria-checked={m.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", borderRadius: "14px", background: m.bg, border: `2px solid ${m.border}`}}>
                         <span style={{width: "20px", height: "20px", borderRadius: "50%", border: `2px solid ${m.ring}`, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", flex: "none"}}>
                           <span style={{width: "10px", height: "10px", borderRadius: "50%", background: m.dot}}></span>
                         </span>
@@ -179,7 +179,7 @@ export default function Page() {
                     </Fragment>
                   ))}
                 </div>
-                <button type="button" className="mr-btn" style={{font: "inherit", fontSize: "18px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", border: "0", padding: "18px", borderRadius: "14px", cursor: "pointer"}}>
+                <button type={"button"} className={"mr-btn"} style={{font: "inherit", fontSize: "18px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", border: "0", padding: "18px", borderRadius: "14px", cursor: "pointer"}}>
                   {"Lancer le partiel blanc"}
                 </button>
                 {v.sel.hasHistory ? (
@@ -191,7 +191,7 @@ export default function Page() {
                       <div style={{display: "flex", alignItems: "flex-end", gap: "12px", height: "110px"}}>
                         {(v.sel.bars || []).map((b: any, i_b: number) => (
                           <Fragment key={i_b}>
-                            <a href="#" title="Revoir la copie" style={{flex: "1", height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: "6px", textDecoration: "none", color: "#1A1D23"}}>
+                            <a href={"#"} title={"Revoir la copie"} style={{flex: "1", height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: "6px", textDecoration: "none", color: "#1A1D23"}}>
                               <span style={{fontSize: "14px", fontWeight: "700"}}>
                                 {b.score}
                               </span>
@@ -239,11 +239,11 @@ export default function Page() {
                       {"Toutes les UE, 4 h 30. "}{v.registered}{" \u00e9tudiants inscrits."}
                     </span>
                   </span>
-                  <button type="button" onClick={v.toggleJoin} aria-pressed={v.joinedPressed} style={{font: "inherit", flex: "none", fontSize: "17px", fontWeight: "700", color: v.joinColor, background: v.joinBg, border: "0", padding: "16px 28px", borderRadius: "14px", cursor: "pointer"}}>
+                  <button type={"button"} onClick={v.toggleJoin} aria-pressed={v.joinedPressed} style={{font: "inherit", flex: "none", fontSize: "17px", fontWeight: "700", color: v.joinColor, background: v.joinBg, border: "0", padding: "16px 28px", borderRadius: "14px", cursor: "pointer"}}>
                     {v.joinLabel}
                   </button>
                 </div>
-                <section aria-label="Ton dernier concours" style={{display: "flex", flexDirection: "column", gap: "20px"}}>
+                <section aria-label={"Ton dernier concours"} style={{display: "flex", flexDirection: "column", gap: "20px"}}>
                   <span style={{fontSize: "20px", fontWeight: "700"}}>
                     {"Ton dernier concours, 18 octobre"}
                   </span>
@@ -301,7 +301,7 @@ export default function Page() {
                   </div>
                 </section>
               </div>
-              <aside aria-label="Classement" style={{flex: "0 0 400px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "14px", padding: "28px", borderRadius: "20px", background: "#FFFFFF"}}>
+              <aside aria-label={"Classement"} style={{flex: "0 0 400px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "14px", padding: "28px", borderRadius: "20px", background: "#FFFFFF"}}>
                 <span style={{fontSize: "18px", fontWeight: "700"}}>
                   {"Classement de la fac"}
                 </span>
@@ -322,7 +322,7 @@ export default function Page() {
                     </Fragment>
                   ))}
                 </ol>
-                <a href="#" style={{fontSize: "15px", fontWeight: "600", textDecoration: "none", padding: "4px 12px"}}>
+                <a href={"#"} style={{fontSize: "15px", fontWeight: "600", textDecoration: "none", padding: "4px 12px"}}>
                   {"Voir tes anciens concours"}
                 </a>
               </aside>
@@ -338,14 +338,14 @@ export default function Page() {
                     {v.errTitle}
                   </span>
                 </span>
-                <button type="button" className="mr-btn" style={{font: "inherit", flex: "none", fontSize: "17px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", border: "0", padding: "16px 28px", borderRadius: "14px", cursor: "pointer"}}>
+                <button type={"button"} className={"mr-btn"} style={{font: "inherit", flex: "none", fontSize: "17px", fontWeight: "700", color: "#FFFFFF", background: "#15304E", border: "0", padding: "16px 28px", borderRadius: "14px", cursor: "pointer"}}>
                   {"Les refaire"}
                 </button>
               </div>
               <div style={{display: "flex", flexWrap: "wrap", gap: "10px"}}>
                 {(v.errFilters || []).map((f: any, i_f: number) => (
                   <Fragment key={i_f}>
-                    <button type="button" onClick={f.pick} aria-pressed={f.pressed} style={{font: "inherit", display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", borderRadius: "999px", border: `1px solid ${f.border}`, background: f.bg, fontSize: "15px", fontWeight: "500", color: "#1A1D23", cursor: "pointer"}}>
+                    <button type={"button"} onClick={f.pick} aria-pressed={f.pressed} style={{font: "inherit", display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", borderRadius: "999px", border: `1px solid ${f.border}`, background: f.bg, fontSize: "15px", fontWeight: "500", color: "#1A1D23", cursor: "pointer"}}>
                       <span style={{width: "9px", height: "9px", borderRadius: "50%", background: f.color}}></span>
                       {f.label}
                       <span style={{color: "#6B6F76"}}>
@@ -366,7 +366,7 @@ export default function Page() {
                       <span style={{fontSize: "17px", lineHeight: "1.45"}}>
                         {q.stem}
                       </span>
-                      <a href="#" style={{fontSize: "15px", fontWeight: "600", textDecoration: "none"}}>
+                      <a href={"#"} style={{fontSize: "15px", fontWeight: "600", textDecoration: "none"}}>
                         {"Voir dans le cours, "}{q.ref}
                       </a>
                     </div>

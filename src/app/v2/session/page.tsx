@@ -116,12 +116,12 @@ export default function Page() {
       <style>{CSS}</style>
     <div style={{fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#1A1D23", background: "#FAF8F4", minHeight: "100vh", display: "flex", flexDirection: "column"}}>
       <header style={{display: "flex", alignItems: "center", gap: "20px", padding: "16px clamp(16px, 3vw, 32px)", borderBottom: "1px solid #EDE9E1"}}>
-        <Link href="/v2" className="mr-ghost" aria-label="Quitter la session" style={{width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", color: "#3D424A", textDecoration: "none"}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" />
+        <Link href={"/v2"} className={"mr-ghost"} aria-label={"Quitter la session"} style={{width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", color: "#3D424A", textDecoration: "none"}}>
+          <svg width={"18"} height={"18"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} aria-hidden={"true"}>
+            <path d={"M6 6l12 12M18 6L6 18"} />
           </svg>
         </Link>
-        <div role="progressbar" aria-label="Progression de la session" aria-valuemin="0" aria-valuemax="13" aria-valuenow="2" style={{flex: "1", height: "6px", borderRadius: "3px", background: "#ECE8E0", overflow: "hidden"}}>
+        <div role={"progressbar"} aria-label={"Progression de la session"} aria-valuemin={"0"} aria-valuemax={"13"} aria-valuenow={"2"} style={{flex: "1", height: "6px", borderRadius: "3px", background: "#ECE8E0", overflow: "hidden"}}>
           <div style={{width: "15%", height: "6px", borderRadius: "3px", background: "#1E3354"}}></div>
         </div>
         <span style={{fontSize: "14px", color: "#6B6F76", whiteSpace: "nowrap"}}>
@@ -130,20 +130,20 @@ export default function Page() {
         <span style={{fontSize: "14px", color: "#6B6F76", fontVariantNumeric: "tabular-nums"}}>
           {"4:12"}
         </span>
-        <button type="button" className="mr-ghost" style={{font: "inherit", fontSize: "14px", color: "#3D424A", background: "transparent", border: "0", padding: "9px 12px", borderRadius: "10px", cursor: "pointer"}}>
+        <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "14px", color: "#3D424A", background: "transparent", border: "0", padding: "9px 12px", borderRadius: "10px", cursor: "pointer"}}>
           {"Pause"}
         </button>
       </header>
       <div style={{flex: "1", display: "flex", flexWrap: "wrap"}}>
-        <aside aria-label="Au programme" style={{flex: "0 0 320px", boxSizing: "border-box", padding: "24px 12px", borderRight: "1px solid #EDE9E1", display: "flex", flexDirection: "column", gap: "2px"}}>
+        <aside aria-label={"Au programme"} style={{flex: "0 0 320px", boxSizing: "border-box", padding: "24px 12px", borderRight: "1px solid #EDE9E1", display: "flex", flexDirection: "column", gap: "2px"}}>
           {(v.queue || []).map((q: any, i_q: number) => (
             <Fragment key={i_q}>
-              <button type="button" className="mr-opt" onClick={q.go} aria-current={q.current} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "10px", border: "0", background: q.bg, cursor: "pointer", textAlign: "left"}}>
+              <button type={"button"} className={"mr-opt"} onClick={q.go} aria-current={q.current} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "10px", border: "0", background: q.bg, cursor: "pointer", textAlign: "left"}}>
                 <span style={{width: "18px", height: "18px", flex: "none", display: "flex", alignItems: "center", justifyContent: "center"}}>
                   {q.done ? (
                     <>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3E7A52" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M5 12l5 5 9-10" />
+                      <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"#3E7A52"} strokeWidth={"2.4"} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
+                        <path d={"M5 12l5 5 9-10"} />
                       </svg>
                     </>
                   ) : null}
@@ -175,10 +175,10 @@ export default function Page() {
               {v.cur.title}
             </h1>
           </div>
-          <nav aria-label="\u00c9tapes" style={{display: "flex", gap: "28px", borderBottom: "1px solid #EDE9E1"}}>
+          <nav aria-label={"Étapes"} style={{display: "flex", gap: "28px", borderBottom: "1px solid #EDE9E1"}}>
             {(v.steps || []).map((s: any, i_s: number) => (
               <Fragment key={i_s}>
-                <button type="button" onClick={s.go} aria-current={s.current} style={{font: "inherit", fontSize: "15px", fontWeight: s.weight, color: s.color, background: "transparent", border: "0", borderBottom: `2px solid ${s.line}`, padding: "0 0 12px", marginBottom: "-1px", cursor: "pointer"}}>
+                <button type={"button"} onClick={s.go} aria-current={s.current} style={{font: "inherit", fontSize: "15px", fontWeight: s.weight, color: s.color, background: "transparent", border: "0", borderBottom: `2px solid ${s.line}`, padding: "0 0 12px", marginBottom: "-1px", cursor: "pointer"}}>
                   {s.label}
                 </button>
               </Fragment>
@@ -220,10 +220,10 @@ export default function Page() {
                   {"Loi du tout ou rien, l'amplitude ne d\u00e9pend pas de l'intensit\u00e9 du stimulus."}
                 </p>
                 <div style={{display: "flex", gap: "16px", fontSize: "14px"}}>
-                  <a href="#">
+                  <a href={"#"}>
                     {"poly p. 12"}
                   </a>
-                  <a href="#">
+                  <a href={"#"}>
                     {"vid\u00e9o 34:10"}
                   </a>
                 </div>
@@ -234,10 +234,10 @@ export default function Page() {
             <>
               <div style={{display: "flex", flexDirection: "column", gap: "20px"}}>
                 <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px"}}>
-                  <div role="group" aria-label="Type d'entra\u00eenement" style={{display: "flex", padding: "3px", borderRadius: "10px", background: "#F1EEE7"}}>
+                  <div role={"group"} aria-label={"Type d'entraînement"} style={{display: "flex", padding: "3px", borderRadius: "10px", background: "#F1EEE7"}}>
                     {(v.kinds || []).map((k: any, i_k: number) => (
                       <Fragment key={i_k}>
-                        <button type="button" onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", fontSize: "14px", fontWeight: k.weight, color: k.color, background: k.bg, border: "0", padding: "7px 14px", borderRadius: "8px", cursor: "pointer", boxShadow: k.shadow}}>
+                        <button type={"button"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", fontSize: "14px", fontWeight: k.weight, color: k.color, background: k.bg, border: "0", padding: "7px 14px", borderRadius: "8px", cursor: "pointer", boxShadow: k.shadow}}>
                           {k.label}
                         </button>
                       </Fragment>
@@ -250,7 +250,7 @@ export default function Page() {
                 {v.isFlash ? (
                   <>
                     <div style={{display: "flex", flexDirection: "column", gap: "16px"}}>
-                      <button type="button" onClick={v.flip} aria-label="Retourner la carte" style={{font: "inherit", color: "#1A1D23", minHeight: "240px", padding: "32px", borderRadius: "16px", border: "1px solid #E4DFD4", background: v.cardBg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "14px", textAlign: "center", cursor: "pointer", boxShadow: "0 1px 2px rgba(26,29,35,.04), 0 10px 30px rgba(26,29,35,.05)"}}>
+                      <button type={"button"} onClick={v.flip} aria-label={"Retourner la carte"} style={{font: "inherit", color: "#1A1D23", minHeight: "240px", padding: "32px", borderRadius: "16px", border: "1px solid #E4DFD4", background: v.cardBg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "14px", textAlign: "center", cursor: "pointer", boxShadow: "0 1px 2px rgba(26,29,35,.04), 0 10px 30px rgba(26,29,35,.05)"}}>
                         <span style={{fontSize: "12px", fontWeight: "600", letterSpacing: ".06em", textTransform: "uppercase", color: "#6B6F76"}}>
                           {v.cardSide}
                         </span>
@@ -268,10 +268,10 @@ export default function Page() {
                       {v.flipped ? (
                         <>
                           <div style={{display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px"}}>
-                            <button type="button" onClick={v.nextCard} style={{font: "inherit", fontSize: "15px", fontWeight: "600", padding: "13px", borderRadius: "12px", border: "1px solid #E4DFD4", background: "#FFFFFF", color: "#9A5A1F", cursor: "pointer"}}>
+                            <button type={"button"} onClick={v.nextCard} style={{font: "inherit", fontSize: "15px", fontWeight: "600", padding: "13px", borderRadius: "12px", border: "1px solid #E4DFD4", background: "#FFFFFF", color: "#9A5A1F", cursor: "pointer"}}>
                               {"\u00c0 revoir"}
                             </button>
-                            <button type="button" onClick={v.nextCard} style={{font: "inherit", fontSize: "15px", fontWeight: "600", padding: "13px", borderRadius: "12px", border: "1px solid #E4DFD4", background: "#FFFFFF", color: "#3E7A52", cursor: "pointer"}}>
+                            <button type={"button"} onClick={v.nextCard} style={{font: "inherit", fontSize: "15px", fontWeight: "600", padding: "13px", borderRadius: "12px", border: "1px solid #E4DFD4", background: "#FFFFFF", color: "#3E7A52", cursor: "pointer"}}>
                               {"Je savais"}
                             </button>
                           </div>
@@ -289,7 +289,7 @@ export default function Page() {
                       <div style={{display: "flex", flexDirection: "column", gap: "8px"}}>
                         {(v.options || []).map((o: any, i_o: number) => (
                           <Fragment key={i_o}>
-                            <button type="button" className="mr-opt" onClick={o.toggle} aria-pressed={o.pressed} style={{font: "inherit", fontSize: "15px", textAlign: "left", display: "flex", alignItems: "center", gap: "14px", padding: "14px", borderRadius: "10px", border: `1px solid ${o.border}`, background: o.bg, color: "#1A1D23", cursor: "pointer"}}>
+                            <button type={"button"} className={"mr-opt"} onClick={o.toggle} aria-pressed={o.pressed} style={{font: "inherit", fontSize: "15px", textAlign: "left", display: "flex", alignItems: "center", gap: "14px", padding: "14px", borderRadius: "10px", border: `1px solid ${o.border}`, background: o.bg, color: "#1A1D23", cursor: "pointer"}}>
                               <span style={{width: "22px", height: "22px", borderRadius: "6px", flex: "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700", background: o.boxBg, color: o.boxColor}}>
                                 {o.letter}
                               </span>
@@ -307,7 +307,7 @@ export default function Page() {
                         <>
                           <p style={{margin: "0", fontSize: "14px", color: "#6B6F76"}}>
                             {"R\u00e9ponse A et C. "}
-                            <a href="#">
+                            <a href={"#"}>
                               {"poly p. 12"}
                             </a>
                           </p>
@@ -328,7 +328,7 @@ export default function Page() {
                 <div style={{display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "8px"}}>
                   {(v.ratings || []).map((r: any, i_r: number) => (
                     <Fragment key={i_r}>
-                      <button type="button" onClick={r.pick} aria-pressed={r.pressed} style={{font: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", padding: "16px 8px", borderRadius: "12px", border: `1px solid ${r.border}`, background: r.bg, color: "#1A1D23", cursor: "pointer"}}>
+                      <button type={"button"} onClick={r.pick} aria-pressed={r.pressed} style={{font: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", padding: "16px 8px", borderRadius: "12px", border: `1px solid ${r.border}`, background: r.bg, color: "#1A1D23", cursor: "pointer"}}>
                         <span style={{fontSize: "22px", fontWeight: "700"}}>
                           {r.n}
                         </span>
@@ -350,10 +350,10 @@ export default function Page() {
             </>
           ) : null}
           <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", paddingTop: "24px"}}>
-            <button type="button" className="mr-ghost" style={{font: "inherit", fontSize: "14px", color: "#6B6F76", background: "transparent", border: "0", padding: "10px 12px", borderRadius: "10px", cursor: "pointer"}}>
+            <button type={"button"} className={"mr-ghost"} style={{font: "inherit", fontSize: "14px", color: "#6B6F76", background: "transparent", border: "0", padding: "10px 12px", borderRadius: "10px", cursor: "pointer"}}>
               {"Reporter \u00e0 demain"}
             </button>
-            <button type="button" className="mr-btn" onClick={v.primary} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "12px 26px", borderRadius: "10px", cursor: "pointer"}}>
+            <button type={"button"} className={"mr-btn"} onClick={v.primary} style={{font: "inherit", fontSize: "15px", fontWeight: "600", color: "#FFFFFF", background: "#1E3354", border: "0", padding: "12px 26px", borderRadius: "10px", cursor: "pointer"}}>
               {v.primaryLabel}
             </button>
           </div>
