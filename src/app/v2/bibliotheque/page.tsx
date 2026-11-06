@@ -54,8 +54,8 @@ class Logic extends DCLogic {
         const r = Math.abs(Math.sin((i + 1) * 12.9898 + si * 78.233)) % 1;
         const gold = (i * 7 + si * 3) % 9 === 0;
         books.push({
-          w: ((6 + Math.round(r * 5)) * 0.92).toFixed(1) + 'px',
-          h: ((44 + Math.round(((r * 7) % 1) * 20)) * 0.92).toFixed(1) + 'px',
+          w: ((6 + Math.round(r * 5)) * 0.846).toFixed(1) + 'px',
+          h: ((44 + Math.round(((r * 7) % 1) * 20)) * 0.846).toFixed(1) + 'px',
           bg: shade(color, 0.1 + ((r * 13) % 1) * 0.3),
           top: 'transparent',
           label: '',
@@ -115,65 +115,65 @@ export default function Page() {
         <Sidebar active="3" />
       </div>
       <main style={{flex: "999 1 560px", minWidth: "0", boxSizing: "border-box", padding: "48px clamp(20px, 4vw, 56px) 56px", display: "flex", flexDirection: "column"}}>
-        <div style={{flex: "1", display: "flex", flexDirection: "column", gap: "18.4px"}}>
-          <header style={{display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "14.7px"}}>
-            <div style={{display: "flex", flexDirection: "column", gap: "3.7px"}}>
-              <h1 style={{margin: "0", fontSize: "31.3px", fontWeight: "700", letterSpacing: "-.02em"}}>
+        <div style={{flex: "1", display: "flex", flexDirection: "column", gap: "16.9px"}}>
+          <header style={{display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "13.5px"}}>
+            <div style={{display: "flex", flexDirection: "column", gap: "3.4px"}}>
+              <h1 style={{margin: "0", fontSize: "28.8px", fontWeight: "700", letterSpacing: "-.02em"}}>
                 {" Ta biblioth\u00e8que "}
               </h1>
-              <span style={{fontSize: "13.8px", color: "#6B6F76"}}>
+              <span style={{fontSize: "12.7px", color: "#6B6F76"}}>
                 {" 317 livres, +3 cette semaine "}
               </span>
             </div>
-            <button type={"button"} className={"mr-chip"} onClick={v.openPanel} aria-expanded={v.panelExpanded} style={{font: "inherit", display: "flex", alignItems: "center", gap: "12.9px", padding: "9.2px 14.7px 9.2px 9.2px", border: "0", borderRadius: "12.9px", background: "#F1EEE7", color: "#1A1D23", cursor: "pointer", textAlign: "left"}}>
-              <span aria-hidden={"true"} style={{width: "36.8px", height: "36.8px", borderRadius: "50%", background: "#F6EBCF", color: "#9A7420", display: "flex", alignItems: "center", justifyContent: "center"}}>
+            <button type={"button"} className={"mr-chip"} onClick={v.openPanel} aria-expanded={v.panelExpanded} style={{font: "inherit", display: "flex", alignItems: "center", gap: "11.9px", padding: "8.5px 13.5px 8.5px 8.5px", border: "0", borderRadius: "11.9px", background: "#F1EEE7", color: "#1A1D23", cursor: "pointer", textAlign: "left"}}>
+              <span aria-hidden={"true"} style={{width: "33.9px", height: "33.9px", borderRadius: "50%", background: "#F6EBCF", color: "#9A7420", display: "flex", alignItems: "center", justifyContent: "center"}}>
                 <svg width={"20"} height={"20"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.7"} strokeLinecap={"round"}>
                   <circle cx={"12"} cy={"12"} r={"9"} />
                   <path d={"M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"} />
                 </svg>
               </span>
-              <span style={{display: "flex", flexDirection: "column", gap: "5.5px", width: "138px"}}>
-                <span style={{display: "flex", justifyContent: "space-between", fontSize: "13.8px"}}>
+              <span style={{display: "flex", flexDirection: "column", gap: "5.1px", width: "127px"}}>
+                <span style={{display: "flex", justifyContent: "space-between", fontSize: "12.7px"}}>
                   <strong>
                     {" Lettr\u00e9 "}
                   </strong>
-                  <span style={{color: "#6B6F76", fontSize: "12px"}}>
+                  <span style={{color: "#6B6F76", fontSize: "11px"}}>
                     {" 317 / 500 "}
                   </span>
                 </span>
-                <span style={{height: "3.7px", borderRadius: "2px", background: "#E2DCCF", overflow: "hidden"}}>
-                  <span style={{display: "block", width: "27%", height: "3.7px", background: "#D4A93C"}}></span>
+                <span style={{height: "3.4px", borderRadius: "2px", background: "#E2DCCF", overflow: "hidden"}}>
+                  <span style={{display: "block", width: "27%", height: "3.4px", background: "#D4A93C"}}></span>
                 </span>
               </span>
             </button>
           </header>
-          <div style={{flex: "1", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "27.6px"}}>
+          <div style={{flex: "1", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "25.4px"}}>
             {(v.shelves || []).map((s: any, i_s: number) => (
               <Fragment key={i_s}>
-                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "11px 22.1px", padding: "22.1px 25.8px 20.2px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-                  <div style={{width: "165.6px", display: "flex", flexDirection: "column", gap: "2px", paddingTop: "22.1px"}}>
-                    <span style={{display: "flex", alignItems: "center", gap: "7.4px", fontSize: "12.9px", fontWeight: "600"}}>
-                      <span style={{width: "7.4px", height: "7.4px", borderRadius: "50%", background: s.color, flex: "none"}}></span>
+                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "10.1px 20.3px", padding: "20.3px 23.7px 18.6px", borderRadius: "15.3px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+                  <div style={{width: "152.4px", display: "flex", flexDirection: "column", gap: "2px", paddingTop: "20.3px"}}>
+                    <span style={{display: "flex", alignItems: "center", gap: "6.8px", fontSize: "11.9px", fontWeight: "600"}}>
+                      <span style={{width: "6.8px", height: "6.8px", borderRadius: "50%", background: s.color, flex: "none"}}></span>
                       {" "}{s.name}{" "}
                     </span>
-                    <span style={{fontSize: "12px", color: "#6B6F76", paddingLeft: "14.7px"}}>
+                    <span style={{fontSize: "11px", color: "#6B6F76", paddingLeft: "13.5px"}}>
                       {" "}{s.count}{" livres "}
                     </span>
                   </div>
-                  <div style={{flex: "1 1 386.4px", minWidth: "0", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "16.6px 2px", padding: "0 7.4px", backgroundImage: "linear-gradient(to bottom, transparent 64.4px, #DCCFBA 64.4px, #DCCFBA 70.8px, transparent 70.8px)", backgroundSize: "100% 87.4px", borderRadius: "2px"}}>
+                  <div style={{flex: "1 1 355.5px", minWidth: "0", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "15.3px 2px", padding: "0 6.8px", backgroundImage: "linear-gradient(to bottom, transparent 59.2px, #DCCFBA 59.2px, #DCCFBA 65.1px, transparent 65.1px)", backgroundSize: "100% 80.4px", borderRadius: "2px"}}>
                     {(s.books || []).map((b: any, i_b: number) => (
                       <Fragment key={i_b}>
-                        <Link href={"/v2/matieres"} className={"mr-bk"} aria-label={b.label} style={{flex: "none", height: "70.8px", display: "flex", alignItems: "flex-end", paddingBottom: "6.4px", boxSizing: "border-box", textDecoration: "none", color: "inherit"}}>
+                        <Link href={"/v2/matieres"} className={"mr-bk"} aria-label={b.label} style={{flex: "none", height: "65.1px", display: "flex", alignItems: "flex-end", paddingBottom: "5.9px", boxSizing: "border-box", textDecoration: "none", color: "inherit"}}>
                           <span className={"mr-book"} style={{flex: "none", width: b.w, height: b.h, borderRadius: "2px 2px 1px 1px", background: b.bg, borderTop: `3px solid ${b.top}`, boxSizing: "border-box"}}></span>
-                          <span className={"mr-tip"} role={"tooltip"} style={{position: "absolute", left: "50%", bottom: "69.9px", width: "193.2px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "3px", padding: "9.2px 11px", borderRadius: "9.2px", background: "#1A1D23", color: "#FFFFFF", fontSize: "12px", lineHeight: "1.35", pointerEvents: "none", boxShadow: "0 5.5px 18.4px rgba(26,29,35,.18)"}}>
-                            <span style={{fontSize: "12.9px", fontWeight: "700"}}>
+                          <span className={"mr-tip"} role={"tooltip"} style={{position: "absolute", left: "50%", bottom: "64.3px", width: "177.7px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "3px", padding: "8.5px 10.1px", borderRadius: "8.5px", background: "#1A1D23", color: "#FFFFFF", fontSize: "11px", lineHeight: "1.35", pointerEvents: "none", boxShadow: "0 5.1px 16.9px rgba(26,29,35,.18)"}}>
+                            <span style={{fontSize: "11.9px", fontWeight: "700"}}>
                               {b.fiche}
                             </span>
                             <span style={{color: "rgba(255,255,255,.7)"}}>
                               {b.when}
                             </span>
-                            <span style={{display: "flex", alignItems: "center", gap: "7.4px"}}>
-                              <span style={{width: "7.4px", height: "7.4px", borderRadius: "50%", background: b.noteColor}}></span>
+                            <span style={{display: "flex", alignItems: "center", gap: "6.8px"}}>
+                              <span style={{width: "6.8px", height: "6.8px", borderRadius: "50%", background: b.noteColor}}></span>
                               {b.result}
                             </span>
                           </span>

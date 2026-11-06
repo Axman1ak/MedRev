@@ -112,7 +112,7 @@ export default function Page() {
                       {g.count}{" fiches"}
                     </span>
                   </div>
-                  <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fill, 264px)", gap: "14px"}}>
+                  <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(225px, 1fr))", gap: "14px"}}>
                     {(g.fiches || []).map((f: any, i_f: number) => (
                       <Fragment key={i_f}>
                         <button type={"button"} className={"mr-card"} onClick={f.select} aria-pressed={f.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px", padding: "20px", borderRadius: "14px", background: "#FDFCFA", border: `2px solid ${f.border}`, boxShadow: "0 0 0 1px #ECE8DF"}}>
@@ -160,7 +160,7 @@ export default function Page() {
                   {v.sel.level}{", "}{v.sel.next}
                 </span>
               </div>
-              <button type={"button"} className={"mr-ghost"} onClick={v.close} aria-label={"Fermer"} hidden style={{font: "inherit", width: "36px", height: "36px", flex: "none", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
+              <button type={"button"} className={"mr-ghost"} onClick={v.close} aria-label={"Fermer le détail"} style={{font: "inherit", width: "36px", height: "36px", flex: "none", border: "0", borderRadius: "10px", background: "transparent", color: "#3D424A", cursor: "pointer"}}>
                 <svg width={"16"} height={"16"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} aria-hidden={"true"}>
                   <path d={"M6 6l12 12M18 6L6 18"} />
                 </svg>
