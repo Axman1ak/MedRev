@@ -6,7 +6,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.9)}\n.mr-tab:hover{color:#1A1D23}\n.mr-card{transition:box-shadow .15s ease, transform .15s ease}\n.mr-card:hover{box-shadow:0 2px 4px rgba(26,29,35,.06),0 12px 28px rgba(26,29,35,.08)}\n.mr-opt:hover{border-color:#15304E !important}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.9)}\n.mr-tab:hover{color:#1A1D23}\n.mr-card{transition:border-color .15s ease}\n.mr-card:hover{border-top-color:#8EA8CC !important}\n.mr-opt:hover{color:#15304E !important}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -38,9 +38,9 @@ class Logic extends DCLogic {
         name, color, format,
         last: n ? fmt(scores[n - 1]) : 'Pas encore fait', unit: n ? '/20' : '',
         trend: diff === null ? '' : (diff >= 0 ? '+' : '') + fmt(diff),
-        trendColor: id === 'all' ? (diff !== null && diff < 0 ? '#F2B4A4' : '#9BD3AE') : (diff !== null && diff < 0 ? '#B4533A' : '#2F6B45'),
-        bg: id === 'all' ? '#15304E' : '#FFFFFF', fg: id === 'all' ? '#FFFFFF' : '#1A1D23', sub: id === 'all' ? 'rgba(255,255,255,.7)' : '#6B6F76',
-        border: on ? (id === 'all' ? '#F4C35A' : '#15304E') : 'transparent', pressed: on ? 'true' : 'false',
+        trendColor: (diff !== null && diff < 0 ? '#B4533A' : '#2F6B45'),
+        bg: 'transparent', fg: '#1A1D23', sub: '#6B6F76',
+        border: on ? '#15304E' : '#E8E3D9', pressed: on ? 'true' : 'false',
         span: id === 'all' ? 'span 3' : 'auto',
         pick: () => this.setState({ sel: id })
       };
@@ -84,8 +84,8 @@ class Logic extends DCLogic {
       errTitle: errCount + ' questions à retravailler',
       registered: st.joined ? 413 : 412,
       joinLabel: st.joined ? 'Inscrit ✓' : 'Je m’inscris',
-      joinBg: st.joined ? '#E8F1EA' : '#FFFFFF',
-      joinColor: st.joined ? '#2F6B45' : '#15304E',
+      joinBg: st.joined ? '#E8F1EA' : '#15304E',
+      joinColor: st.joined ? '#2F6B45' : '#FFFFFF',
       joinedPressed: st.joined ? 'true' : 'false',
       toggleJoin: () => this.setState({ joined: !st.joined })
     };
@@ -122,10 +122,10 @@ export default function Page() {
           <>
             <div style={{display: "flex", gap: "48px", alignItems: "flex-start"}}>
               <div style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "20px"}}>
-                <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
+                <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px 40px"}}>
                   {(v.epreuves || []).map((e: any, i_e: number) => (
                     <Fragment key={i_e}>
-                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: e.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "18px", padding: "24px", borderRadius: "16px", background: e.bg, border: `2px solid ${e.border}`, boxShadow: "0 1px 2px rgba(26,29,35,.05)", gridColumn: e.span}}>
+                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: e.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px", padding: "22px 4px 26px", borderRadius: "0", background: "transparent", border: "0", borderTop: `3px solid ${e.border}`, gridColumn: e.span}}>
                         <span style={{display: "flex", alignItems: "center", gap: "10px"}}>
                           <span style={{width: "12px", height: "12px", borderRadius: "50%", background: e.color}}></span>
                           <span style={{fontSize: "20px", fontWeight: "700"}}>
@@ -151,7 +151,7 @@ export default function Page() {
                   ))}
                 </div>
               </div>
-              <aside aria-label={"Lancer un partiel blanc"} style={{flex: "0 0 440px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "28px", padding: "32px", borderRadius: "20px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05), 0 10px 30px rgba(26,29,35,.06)"}}>
+              <aside aria-label={"Lancer un partiel blanc"} style={{flex: "0 0 440px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "28px", padding: "6px 0 8px 48px", borderLeft: "1px solid #E8E3D9"}}>
                 <div style={{display: "flex", flexDirection: "column", gap: "6px"}}>
                   <span style={{display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: "700"}}>
                     <span style={{width: "12px", height: "12px", borderRadius: "50%", background: v.sel.color}}></span>
@@ -164,7 +164,7 @@ export default function Page() {
                 <div role={"radiogroup"} aria-label={"Mode"} style={{display: "flex", flexDirection: "column", gap: "10px"}}>
                   {(v.modes || []).map((m: any, i_m: number) => (
                     <Fragment key={i_m}>
-                      <button type={"button"} role={"radio"} className={"mr-opt"} onClick={m.pick} aria-checked={m.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", borderRadius: "14px", background: m.bg, border: `2px solid ${m.border}`}}>
+                      <button type={"button"} role={"radio"} className={"mr-opt"} onClick={m.pick} aria-checked={m.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "14px", padding: "10px 0", borderRadius: "0", background: "transparent", border: "0"}}>
                         <span style={{width: "20px", height: "20px", borderRadius: "50%", border: `2px solid ${m.ring}`, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", flex: "none"}}>
                           <span style={{width: "10px", height: "10px", borderRadius: "50%", background: m.dot}}></span>
                         </span>
@@ -225,15 +225,15 @@ export default function Page() {
           <>
             <div style={{display: "flex", gap: "48px", alignItems: "flex-start"}}>
               <div style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "40px"}}>
-                <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "32px 36px", borderRadius: "20px", background: "#15304E", color: "#FFFFFF"}}>
+                <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "0 0 36px", borderBottom: "1px solid #E8E3D9"}}>
                   <span style={{display: "flex", flexDirection: "column", gap: "8px"}}>
-                    <span style={{fontSize: "16px", color: "rgba(255,255,255,.7)"}}>
+                    <span style={{fontSize: "16px", color: "#6B6F76"}}>
                       {"Prochain concours blanc"}
                     </span>
                     <span style={{fontSize: "32px", fontWeight: "700", letterSpacing: "-.01em"}}>
                       {"Samedi 22 novembre, 14h"}
                     </span>
-                    <span style={{fontSize: "16px", color: "rgba(255,255,255,.7)"}}>
+                    <span style={{fontSize: "16px", color: "#6B6F76"}}>
                       {"Toutes les UE, 4 h 30. "}{v.registered}{" \u00e9tudiants inscrits."}
                     </span>
                   </span>
@@ -246,7 +246,7 @@ export default function Page() {
                     {"Ton dernier concours, 18 octobre"}
                   </span>
                   <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
-                    <div style={{display: "flex", flexDirection: "column", gap: "4px", padding: "22px", borderRadius: "16px", background: "#FFFFFF"}}>
+                    <div style={{display: "flex", flexDirection: "column", gap: "4px", padding: "4px 0"}}>
                       <span style={{fontSize: "36px", fontWeight: "700"}}>
                         {"13,4"}
                         <span style={{fontSize: "18px", color: "#9AA0A8"}}>
@@ -257,7 +257,7 @@ export default function Page() {
                         {"ta note"}
                       </span>
                     </div>
-                    <div style={{display: "flex", flexDirection: "column", gap: "4px", padding: "22px", borderRadius: "16px", background: "#FFFFFF"}}>
+                    <div style={{display: "flex", flexDirection: "column", gap: "4px", padding: "4px 0"}}>
                       <span style={{fontSize: "36px", fontWeight: "700"}}>
                         {"142"}
                         <span style={{fontSize: "18px", color: "#9AA0A8"}}>
@@ -268,7 +268,7 @@ export default function Page() {
                         {"ton classement"}
                       </span>
                     </div>
-                    <div style={{display: "flex", flexDirection: "column", gap: "4px", padding: "22px", borderRadius: "16px", background: "#FFFFFF"}}>
+                    <div style={{display: "flex", flexDirection: "column", gap: "4px", padding: "4px 0"}}>
                       <span style={{fontSize: "36px", fontWeight: "700", color: "#2F6B45"}}>
                         {"Top 17%"}
                       </span>
@@ -299,7 +299,7 @@ export default function Page() {
                   </div>
                 </section>
               </div>
-              <aside aria-label={"Classement"} style={{flex: "0 0 400px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "14px", padding: "28px", borderRadius: "20px", background: "#FFFFFF"}}>
+              <aside aria-label={"Classement"} style={{flex: "0 0 400px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "14px", padding: "6px 0 8px 48px", borderLeft: "1px solid #E8E3D9"}}>
                 <span style={{fontSize: "18px", fontWeight: "700"}}>
                   {"Classement de la fac"}
                 </span>
@@ -330,7 +330,7 @@ export default function Page() {
         {v.isErreurs ? (
           <>
             <div style={{display: "flex", flexDirection: "column", gap: "28px"}}>
-              <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "28px 32px", borderRadius: "20px", background: "#FFFFFF"}}>
+              <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px", padding: "0 0 28px", borderBottom: "1px solid #E8E3D9"}}>
                 <span style={{display: "flex", flexDirection: "column", gap: "6px"}}>
                   <span style={{fontSize: "30px", fontWeight: "700"}}>
                     {v.errTitle}
@@ -353,10 +353,10 @@ export default function Page() {
                   </Fragment>
                 ))}
               </div>
-              <div style={{display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "16px"}}>
+              <div style={{display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0 48px"}}>
                 {(v.errors || []).map((q: any, i_q: number) => (
                   <Fragment key={i_q}>
-                    <div style={{display: "flex", flexDirection: "column", gap: "12px", padding: "22px 24px", borderRadius: "16px", background: "#FFFFFF"}}>
+                    <div style={{display: "flex", flexDirection: "column", gap: "10px", padding: "20px 0", borderTop: "1px solid #E8E3D9"}}>
                       <span style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#6B6F76"}}>
                         <span style={{width: "9px", height: "9px", borderRadius: "50%", background: q.color}}></span>
                         {q.fiche}
