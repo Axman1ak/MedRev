@@ -124,7 +124,7 @@ export default function Page() {
           <div style={{flex: "1", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "30px"}}>
             {(v.shelves || []).map((s: any, i_s: number) => (
               <Fragment key={i_s}>
-                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "12px 24px", padding: "24px 28px 22px", borderRadius: "18px", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(26,29,35,.05)"}}>
+                <div style={{display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "12px 24px", padding: "24px 28px 22px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
                   <div style={{width: "180px", display: "flex", flexDirection: "column", gap: "2px", paddingTop: "24px"}}>
                     <span style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: "600"}}>
                       <span style={{width: "8px", height: "8px", borderRadius: "50%", background: s.color, flex: "none"}}></span>

@@ -7,7 +7,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-act:hover{background:#EAE5DB}\n.mr-card{transition:background-color .12s ease}\n.mr-card:hover{background-color:#F1EEE7 !important}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-ghost:hover{background:#F1EEE7}\n.mr-btn:hover{filter:brightness(.88)}\n.mr-act:hover{background:#EAE5DB}\n.mr-card{transition:box-shadow .15s ease}\n.mr-card:hover{box-shadow:0 0 0 1px #D9D3C7 !important}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -41,7 +41,7 @@ class Logic extends DCLogic {
         const chip = { 'Maîtrisée': ['#E5F0E7', '#2F6B45'], 'Bien': ['#E7EEF7', '#2F5D8A'], 'Moyen': ['#F6EEDC', '#8A6420'], 'Faible': ['#F7E4E0', '#A0443A'] }[f[4]];
         return {
           title: f[0], dots, qcm: f[9], time: f[10], level: f[4], next: f[5], nextColor: f[6] ? '#9A5A1F' : '#6B6F76',
-          chipBg: chip[0], chipColor: chip[1], doneLabel: f[3].length + ' révisions sur 14', border: id === cur ? '#15304E' : 'transparent', rowBg: id === cur ? '#F1EEE7' : 'transparent', pressed: id === cur ? 'true' : 'false',
+          chipBg: chip[0], chipColor: chip[1], doneLabel: f[3].length + ' révisions sur 14', border: id === cur ? '#15304E' : 'transparent', pressed: id === cur ? 'true' : 'false',
           select: () => this.setState({ sel: id })
         };
       })
@@ -112,27 +112,27 @@ export default function Page() {
                       {g.count}{" fiches"}
                     </span>
                   </div>
-                  <div style={{display: "flex", flexDirection: "column", borderBottom: "1px solid #E8E3D9"}}>
+                  <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "14px"}}>
                     {(g.fiches || []).map((f: any, i_f: number) => (
                       <Fragment key={i_f}>
-                        <button type={"button"} className={"mr-card"} onClick={f.select} aria-pressed={f.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "24px", padding: "16px 14px", border: "0", borderTop: "1px solid #E8E3D9", borderRadius: "0", background: f.rowBg, boxShadow: `inset 3px 0 0 ${f.border}`}}>
-                          <span style={{flex: "1", minWidth: "0", fontSize: "16px", fontWeight: "600", lineHeight: "1.3"}}>
+                        <button type={"button"} className={"mr-card"} onClick={f.select} aria-pressed={f.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px", padding: "20px", borderRadius: "14px", background: "#FDFCFA", border: `2px solid ${f.border}`, boxShadow: "0 0 0 1px #ECE8DF"}}>
+                          <span style={{fontSize: "17px", fontWeight: "700", lineHeight: "1.3"}}>
                             {f.title}
                           </span>
-                          <span aria-label={f.doneLabel} style={{flex: "0 0 200px", display: "flex", gap: "3px"}}>
+                          <span style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px"}}>
+                            <span style={{fontSize: "13px", fontWeight: "600", color: f.chipColor, background: f.chipBg, padding: "4px 10px", borderRadius: "999px"}}>
+                              {f.level}
+                            </span>
+                            <span style={{fontSize: "14px", color: f.nextColor}}>
+                              {f.next}
+                            </span>
+                          </span>
+                          <span aria-label={f.doneLabel} style={{display: "flex", gap: "3px"}}>
                             {(f.dots || []).map((d: any, i_d: number) => (
                               <Fragment key={i_d}>
                                 <span style={{flex: "1", height: "6px", borderRadius: "3px", background: d.bg}}></span>
                               </Fragment>
                             ))}
-                          </span>
-                          <span style={{flex: "0 0 96px", display: "flex"}}>
-                            <span style={{fontSize: "13px", fontWeight: "600", color: f.chipColor, background: f.chipBg, padding: "4px 10px", borderRadius: "999px"}}>
-                              {f.level}
-                            </span>
-                          </span>
-                          <span style={{flex: "0 0 110px", textAlign: "right", fontSize: "14px", color: f.nextColor}}>
-                            {f.next}
                           </span>
                         </button>
                       </Fragment>
@@ -146,7 +146,7 @@ export default function Page() {
       </main>
       {v.hasSel ? (
         <>
-          <aside aria-label={"Détail de la fiche"} style={{flex: "0 0 500px", boxSizing: "border-box", background: "#FAF8F4", borderLeft: "1px solid #E8E3D9", padding: "40px 36px 48px", display: "flex", flexDirection: "column", gap: "30px"}}>
+          <aside aria-label={"Détail de la fiche"} style={{flex: "0 0 500px", boxSizing: "border-box", background: "#FDFCFA", borderLeft: "1px solid #ECE8DF", padding: "40px 36px 48px", display: "flex", flexDirection: "column", gap: "30px"}}>
             <div style={{display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px"}}>
               <div style={{display: "flex", flexDirection: "column", gap: "6px"}}>
                 <span style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6B6F76"}}>
