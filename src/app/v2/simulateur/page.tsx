@@ -49,9 +49,10 @@ class Logic extends DCLogic {
         name, color, format,
         last: n ? fmt(scores[n - 1]) : 'Pas encore fait', unit: n ? '/20' : '',
         trend: diff === null ? '' : (diff >= 0 ? '+' : '') + fmt(diff),
-        trendColor: diff !== null && diff < 0 ? '#B4533A' : '#2F6B45',
-        bg: on ? '#F4F6FA' : '#FDFCFA',
-        border: on ? '#15304E' : 'transparent', pressed: on ? 'true' : 'false',
+        trendColor: id === 'all' ? (diff !== null && diff < 0 ? '#F2B4A4' : '#9BD3AE') : (diff !== null && diff < 0 ? '#B4533A' : '#2F6B45'),
+        bg: id === 'all' ? '#15304E' : (on ? '#F4F6FA' : '#FDFCFA'),
+        fg: id === 'all' ? '#FFFFFF' : '#1A1D23', sub: id === 'all' ? 'rgba(255,255,255,.7)' : '#6B6F76',
+        border: on ? (id === 'all' ? '#F4C35A' : '#15304E') : 'transparent', pressed: on ? 'true' : 'false',
         boxBorder: on ? '#15304E' : '#C9C3B8', boxBg: on ? '#15304E' : 'transparent', checkOpacity: on ? 1 : 0,
         span: id === 'all' ? 'span 3' : 'auto',
         pick: () => toggle(id)
@@ -143,13 +144,8 @@ export default function Page() {
                 <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "16.9px"}}>
                   {(v.epreuves || []).map((e: any, i_e: number) => (
                     <Fragment key={i_e}>
-                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: "#1A1D23", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "15px 17px 14px", borderRadius: "13.5px", background: e.bg, border: `2px solid ${e.border}`, boxShadow: "0 0 0 1px #ECE8DF", gridColumn: e.span}}>
+                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: e.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "15px 17px 14px", borderRadius: "13.5px", background: e.bg, border: `2px solid ${e.border}`, boxShadow: "0 0 0 1px #ECE8DF", gridColumn: e.span}}>
                         <span style={{display: "flex", alignItems: "center", gap: "9px"}}>
-                          <span aria-hidden={"true"} style={{width: "17px", height: "17px", flex: "none", boxSizing: "border-box", borderRadius: "5px", border: `2px solid ${e.boxBorder}`, background: e.boxBg, display: "flex", alignItems: "center", justifyContent: "center"}}>
-                            <svg width={"11"} height={"11"} viewBox={"0 0 24 24"} fill={"none"} stroke={"#FFFFFF"} strokeWidth={"3.5"} strokeLinecap={"round"} strokeLinejoin={"round"} style={{opacity: e.checkOpacity}}>
-                              <path d={"M5 12l5 5 9-10"} />
-                            </svg>
-                          </span>
                           <span style={{width: "9px", height: "9px", borderRadius: "50%", flex: "none", background: e.color}}></span>
                           <span style={{flex: "1", minWidth: "0", fontSize: "15.5px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>
                             {e.name}
@@ -158,12 +154,12 @@ export default function Page() {
                             <span style={{fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em"}}>
                               {e.last}
                             </span>
-                            <span style={{fontSize: "12.5px", color: "#6B6F76"}}>
+                            <span style={{fontSize: "12.5px", color: e.sub}}>
                               {e.unit}
                             </span>
                           </span>
                         </span>
-                        <span style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingLeft: "26px", fontSize: "13px", color: "#6B6F76"}}>
+                        <span style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingLeft: "18px", fontSize: "13px", color: e.sub}}>
                           <span>
                             {e.format}
                           </span>
