@@ -112,7 +112,7 @@ export default function Page() {
                       {g.count}{" fiches"}
                     </span>
                   </div>
-                  <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "14px"}}>
+                  <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fill, 264px)", gap: "14px"}}>
                     {(g.fiches || []).map((f: any, i_f: number) => (
                       <Fragment key={i_f}>
                         <button type={"button"} className={"mr-card"} onClick={f.select} aria-pressed={f.pressed} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px", padding: "20px", borderRadius: "14px", background: "#FDFCFA", border: `2px solid ${f.border}`, boxShadow: "0 0 0 1px #ECE8DF"}}>

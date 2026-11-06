@@ -124,57 +124,57 @@ export default function Page() {
         <Sidebar active="2" />
       </div>
       <main style={{flex: "1", minWidth: "0", boxSizing: "border-box", padding: "44px 56px 64px", display: "flex", flexDirection: "column", gap: "28px"}}>
-        <header style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "24px"}}>
-          <h1 style={{margin: "0", fontSize: "36px", fontWeight: "700", letterSpacing: "-.02em"}}>
+        <header style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "22.1px"}}>
+          <h1 style={{margin: "0", fontSize: "33.1px", fontWeight: "700", letterSpacing: "-.02em"}}>
             {"Statistiques"}
           </h1>
-          <div role={"group"} aria-label={"Période"} style={{display: "flex", padding: "4px", borderRadius: "12px", background: "#F1EEE7"}}>
+          <div role={"group"} aria-label={"Période"} style={{display: "flex", padding: "3.7px", borderRadius: "11px", background: "#F1EEE7"}}>
             {(v.periods || []).map((p: any, i_p: number) => (
               <Fragment key={i_p}>
-                <button type={"button"} onClick={p.pick} aria-pressed={p.pressed} style={{font: "inherit", fontSize: "15px", fontWeight: p.weight, color: p.color, background: p.bg, border: "0", padding: "9px 18px", borderRadius: "9px", cursor: "pointer", boxShadow: p.shadow}}>
+                <button type={"button"} onClick={p.pick} aria-pressed={p.pressed} style={{font: "inherit", fontSize: "13.8px", fontWeight: p.weight, color: p.color, background: p.bg, border: "0", padding: "8.3px 16.6px", borderRadius: "8.3px", cursor: "pointer", boxShadow: p.shadow}}>
                   {p.label}
                 </button>
               </Fragment>
             ))}
           </div>
         </header>
-        <div style={{display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "16px"}}>
+        <div style={{display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "14.7px"}}>
           {(v.kpis || []).map((k: any, i_k: number) => (
             <Fragment key={i_k}>
-              <button type={"button"} className={"mr-card"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "22px", borderRadius: "16px", background: k.bg, border: "0", boxShadow: "0 0 0 1px #ECE8DF"}}>
-                <span style={{fontSize: "15px", opacity: ".72"}}>
+              <button type={"button"} className={"mr-card"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "5.5px", padding: "20.2px", borderRadius: "14.7px", background: k.bg, border: "0", boxShadow: "0 0 0 1px #ECE8DF"}}>
+                <span style={{fontSize: "13.8px", opacity: ".72"}}>
                   {k.label}
                 </span>
-                <span style={{fontSize: "34px", fontWeight: "700", letterSpacing: "-.02em"}}>
+                <span style={{fontSize: "31.3px", fontWeight: "700", letterSpacing: "-.02em"}}>
                   {k.value}
                 </span>
-                <span style={{fontSize: "14px", fontWeight: "600", color: k.deltaColor}}>
+                <span style={{fontSize: "12.9px", fontWeight: "600", color: k.deltaColor}}>
                   {k.delta}
                 </span>
               </button>
             </Fragment>
           ))}
         </div>
-        <div style={{display: "flex", gap: "20px", alignItems: "stretch"}}>
-          <section aria-label={"Évolution"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-            <div style={{display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "16px"}}>
-              <span style={{fontSize: "18px", fontWeight: "700"}}>
+        <div style={{display: "flex", gap: "18.4px", alignItems: "stretch"}}>
+          <section aria-label={"Évolution"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "16.6px", padding: "23.9px 25.8px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+            <div style={{display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "14.7px"}}>
+              <span style={{fontSize: "16.6px", fontWeight: "700"}}>
                 {v.chartTitle}
               </span>
-              <span style={{fontSize: "15px", color: "#6B6F76"}}>
+              <span style={{fontSize: "13.8px", color: "#6B6F76"}}>
                 {v.regular}
               </span>
             </div>
-            <div style={{display: "flex", alignItems: "flex-end", gap: v.gap, height: "220px", borderBottom: "1px solid #EDE9E1"}}>
+            <div style={{display: "flex", alignItems: "flex-end", gap: v.gap, height: "202.4px", borderBottom: "1px solid #EDE9E1"}}>
               {(v.bars || []).map((b: any, i_b: number) => (
                 <Fragment key={i_b}>
                   <button type={"button"} className={"mr-bar"} onClick={b.pick} title={b.title} style={{font: "inherit", flex: "1", height: "100%", display: "flex", alignItems: "flex-end", padding: "0", border: "0", background: "transparent", cursor: "pointer"}}>
-                    <span className={"b"} style={{display: "block", width: "100%", height: b.h, minHeight: "3px", borderRadius: "4px 4px 0 0", background: b.bg}}></span>
+                    <span className={"b"} style={{display: "block", width: "100%", height: b.h, minHeight: "3px", borderRadius: "3.7px 3.7px 0 0", background: b.bg}}></span>
                   </button>
                 </Fragment>
               ))}
             </div>
-            <div style={{display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#9AA0A8"}}>
+            <div style={{display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#9AA0A8"}}>
               <span>
                 {v.firstLabel}
               </span>
@@ -183,35 +183,35 @@ export default function Page() {
               </span>
             </div>
           </section>
-          <aside aria-label={"Détail du jour"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-            <span style={{fontSize: "18px", fontWeight: "700", textTransform: "capitalize"}}>
+          <aside aria-label={"Détail du jour"} style={{flex: "0 0 386.4px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "16.6px", padding: "23.9px 25.8px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+            <span style={{fontSize: "16.6px", fontWeight: "700", textTransform: "capitalize"}}>
               {v.day.date}
             </span>
             {v.day.active ? (
               <>
-                <div style={{display: "flex", flexDirection: "column", gap: "18px"}}>
-                  <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px"}}>
+                <div style={{display: "flex", flexDirection: "column", gap: "16.6px"}}>
+                  <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "11px"}}>
                     <div style={{display: "flex", flexDirection: "column"}}>
-                      <span style={{fontSize: "24px", fontWeight: "700"}}>
+                      <span style={{fontSize: "22.1px", fontWeight: "700"}}>
                         {v.day.mins}
                       </span>
-                      <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                      <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                         {"r\u00e9vis\u00e9es"}
                       </span>
                     </div>
                     <div style={{display: "flex", flexDirection: "column"}}>
-                      <span style={{fontSize: "24px", fontWeight: "700"}}>
+                      <span style={{fontSize: "22.1px", fontWeight: "700"}}>
                         {v.day.nf}
                       </span>
-                      <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                      <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                         {"fiches"}
                       </span>
                     </div>
                     <div style={{display: "flex", flexDirection: "column"}}>
-                      <span style={{fontSize: "24px", fontWeight: "700"}}>
+                      <span style={{fontSize: "22.1px", fontWeight: "700"}}>
                         {v.day.qcm}
                       </span>
-                      <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                      <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                         {"QCM"}
                       </span>
                     </div>
@@ -219,15 +219,15 @@ export default function Page() {
                   <div style={{display: "flex", flexDirection: "column"}}>
                     {(v.day.fiches || []).map((f: any, i_f: number) => (
                       <Fragment key={i_f}>
-                        <Link href={"/v2/matieres"} className={"mr-row"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", borderRadius: "8px", borderBottom: "1px solid #F1EEE7", textDecoration: "none", color: "inherit", fontSize: "15px"}}>
-                          <span style={{width: "9px", height: "9px", borderRadius: "50%", background: f.color}}></span>
+                        <Link href={"/v2/matieres"} className={"mr-row"} style={{display: "flex", alignItems: "center", gap: "11px", padding: "10.1px 7.4px", borderRadius: "7.4px", borderBottom: "1px solid #F1EEE7", textDecoration: "none", color: "inherit", fontSize: "13.8px"}}>
+                          <span style={{width: "8.3px", height: "8.3px", borderRadius: "50%", background: f.color}}></span>
                           <span style={{flex: "1", fontWeight: "600"}}>
                             {f.title}
                           </span>
-                          <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                          <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                             {f.qcm}
                           </span>
-                          <span style={{width: "26px", height: "26px", borderRadius: "50%", background: f.noteBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700"}}>
+                          <span style={{width: "23.9px", height: "23.9px", borderRadius: "50%", background: f.noteBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "700"}}>
                             {f.note}
                           </span>
                         </Link>
@@ -239,78 +239,78 @@ export default function Page() {
             ) : null}
             {v.day.inactive ? (
               <>
-                <span style={{fontSize: "16px", color: "#6B6F76"}}>
+                <span style={{fontSize: "14.7px", color: "#6B6F76"}}>
                   {"Pas de r\u00e9vision ce jour l\u00e0."}
                 </span>
               </>
             ) : null}
           </aside>
         </div>
-        <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
-          <section aria-label={"À risque d'oubli"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
-            <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
-              <span style={{fontSize: "18px", fontWeight: "700"}}>
+        <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "18.4px"}}>
+          <section aria-label={"À risque d'oubli"} style={{display: "flex", flexDirection: "column", gap: "12.9px", padding: "23.9px 25.8px", borderRadius: "16.6px", background: "#15304E", color: "#FFFFFF"}}>
+            <span style={{display: "flex", flexDirection: "column", gap: "3.7px"}}>
+              <span style={{fontSize: "16.6px", fontWeight: "700"}}>
                 {"\u00c0 risque d\u2019oubli"}
               </span>
-              <span style={{fontSize: "14px", color: "rgba(255,255,255,.65)"}}>
+              <span style={{fontSize: "12.9px", color: "rgba(255,255,255,.65)"}}>
                 {"M\u00e9moire estim\u00e9e aujourd\u2019hui"}
               </span>
             </span>
             {(v.risk || []).map((r: any, i_r: number) => (
               <Fragment key={i_r}>
-                <Link href={"/v2/session"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", textDecoration: "none", color: "#FFFFFF", fontSize: "15px"}}>
+                <Link href={"/v2/session"} style={{display: "flex", alignItems: "center", gap: "11px", padding: "7.4px 0", textDecoration: "none", color: "#FFFFFF", fontSize: "13.8px"}}>
                   <span style={{flex: "1", fontWeight: "600"}}>
                     {r.title}
                   </span>
-                  <span style={{width: "90px", height: "6px", borderRadius: "3px", background: "rgba(255,255,255,.16)", overflow: "hidden"}}>
-                    <span style={{display: "block", height: "6px", width: r.pct, background: r.color}}></span>
+                  <span style={{width: "82.8px", height: "5.5px", borderRadius: "3px", background: "rgba(255,255,255,.16)", overflow: "hidden"}}>
+                    <span style={{display: "block", height: "5.5px", width: r.pct, background: r.color}}></span>
                   </span>
-                  <span style={{width: "40px", textAlign: "right", fontWeight: "700"}}>
+                  <span style={{width: "36.8px", textAlign: "right", fontWeight: "700"}}>
                     {r.pct}
                   </span>
                 </Link>
               </Fragment>
             ))}
           </section>
-          <section aria-label={"Ressenti et QCM"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-            <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
-              <span style={{fontSize: "18px", fontWeight: "700"}}>
+          <section aria-label={"Ressenti et QCM"} style={{display: "flex", flexDirection: "column", gap: "12.9px", padding: "23.9px 25.8px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+            <span style={{display: "flex", flexDirection: "column", gap: "3.7px"}}>
+              <span style={{fontSize: "16.6px", fontWeight: "700"}}>
                 {"Ton ressenti face aux QCM"}
               </span>
-              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+              <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                 {"Ta note perso compar\u00e9e aux QCM"}
               </span>
             </span>
             {(v.calib || []).map((c: any, i_c: number) => (
               <Fragment key={i_c}>
-                <div style={{display: "flex", alignItems: "center", gap: "12px", fontSize: "15px"}}>
-                  <span style={{width: "120px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>
+                <div style={{display: "flex", alignItems: "center", gap: "11px", fontSize: "13.8px"}}>
+                  <span style={{width: "110.4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>
                     {c.name}
                   </span>
-                  <span style={{flex: "1", position: "relative", height: "8px", borderRadius: "4px", background: "#F1EEE7"}}>
-                    <span style={{position: "absolute", left: "0", top: "0", height: "8px", borderRadius: "4px", width: c.qcm, background: c.color}}></span>
-                    <span title={"Ton ressenti"} style={{position: "absolute", top: "-4px", left: c.feel, width: "3px", height: "16px", marginLeft: "-1px", borderRadius: "2px", background: "#1A1D23"}}></span>
+                  <span style={{flex: "1", position: "relative", height: "7.4px", borderRadius: "3.7px", background: "#F1EEE7"}}>
+                    <span style={{position: "absolute", left: "0", top: "0", height: "7.4px", borderRadius: "3.7px", width: c.qcm, background: c.color}}></span>
+                    <span title={"Ton ressenti"} style={{position: "absolute", top: "-4px", left: c.feel, width: "3px", height: "14.7px", marginLeft: "-1px", borderRadius: "2px", background: "#1A1D23"}}></span>
                   </span>
-                  <span style={{width: "110px", textAlign: "right", fontSize: "14px", fontWeight: "600", color: c.gapColor}}>
+                  <span style={{width: "101.2px", textAlign: "right", fontSize: "12.9px", fontWeight: "600", color: c.gapColor}}>
                     {c.gap}
                   </span>
                 </div>
               </Fragment>
             ))}
-            <span style={{fontSize: "13px", color: "#9AA0A8"}}>
+            <span style={{fontSize: "12px", color: "#9AA0A8"}}>
               {"Barre color\u00e9e, r\u00e9ussite QCM. Trait noir, ton ressenti."}
             </span>
           </section>
-          <section aria-label={"Tes meilleurs moments"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-            <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
-              <span style={{fontSize: "18px", fontWeight: "700"}}>
+          <section aria-label={"Tes meilleurs moments"} style={{display: "flex", flexDirection: "column", gap: "12.9px", padding: "23.9px 25.8px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+            <span style={{display: "flex", flexDirection: "column", gap: "3.7px"}}>
+              <span style={{fontSize: "16.6px", fontWeight: "700"}}>
                 {"Quand tu retiens le mieux"}
               </span>
-              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+              <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                 {"R\u00e9ussite QCM par moment"}
               </span>
             </span>
-            <div style={{display: "grid", gridTemplateColumns: "80px repeat(7, minmax(0, 1fr))", gap: "5px", alignItems: "center", fontSize: "13px", color: "#6B6F76"}}>
+            <div style={{display: "grid", gridTemplateColumns: "73.6px repeat(7, minmax(0, 1fr))", gap: "4.6px", alignItems: "center", fontSize: "12px", color: "#6B6F76"}}>
               <span></span>
               <span style={{textAlign: "center"}}>
                 {"L"}
@@ -340,20 +340,20 @@ export default function Page() {
                   </span>
                   {(s.cells || []).map((c: any, i_c: number) => (
                     <Fragment key={i_c}>
-                      <span title={c.t} style={{height: "30px", borderRadius: "6px", background: c.bg}}></span>
+                      <span title={c.t} style={{height: "27.6px", borderRadius: "5.5px", background: c.bg}}></span>
                     </Fragment>
                   ))}
                 </Fragment>
               ))}
             </div>
-            <span style={{fontSize: "15px", fontWeight: "600"}}>
+            <span style={{fontSize: "13.8px", fontWeight: "600"}}>
               {"Le matin, 78% de r\u00e9ussite. Le soir, 54%."}
             </span>
           </section>
         </div>
-        <div style={{display: "flex", gap: "20px", alignItems: "flex-start"}}>
-          <section aria-label={"Par matière"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", padding: "14px 16px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-            <div style={{display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "16px", padding: "12px", fontSize: "14px", color: "#6B6F76"}}>
+        <div style={{display: "flex", gap: "18.4px", alignItems: "flex-start"}}>
+          <section aria-label={"Par matière"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", padding: "12.9px 14.7px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+            <div style={{display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "14.7px", padding: "11px", fontSize: "12.9px", color: "#6B6F76"}}>
               <span>
                 {"Mati\u00e8re"}
               </span>
@@ -376,16 +376,16 @@ export default function Page() {
             {(v.subjects || []).map((s: any, i_s: number) => (
               <Fragment key={i_s}>
                 <div style={{display: "flex", flexDirection: "column", borderTop: "1px solid #F1EEE7"}}>
-                  <button type={"button"} className={"mr-row"} onClick={s.toggle} aria-expanded={s.expanded} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "16px", alignItems: "center", padding: "15px 12px", border: "0", borderRadius: "10px", background: "transparent", fontSize: "16px"}}>
-                    <span style={{display: "flex", alignItems: "center", gap: "10px", fontWeight: "600"}}>
-                      <span style={{width: "10px", height: "10px", borderRadius: "50%", background: s.color}}></span>
+                  <button type={"button"} className={"mr-row"} onClick={s.toggle} aria-expanded={s.expanded} style={{font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer", display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "14.7px", alignItems: "center", padding: "13.8px 11px", border: "0", borderRadius: "9.2px", background: "transparent", fontSize: "14.7px"}}>
+                    <span style={{display: "flex", alignItems: "center", gap: "9.2px", fontWeight: "600"}}>
+                      <span style={{width: "9.2px", height: "9.2px", borderRadius: "50%", background: s.color}}></span>
                       {s.name}
                     </span>
-                    <span style={{display: "flex", alignItems: "center", gap: "10px"}}>
-                      <span style={{flex: "1", height: "7px", borderRadius: "4px", background: "#F1EEE7", overflow: "hidden"}}>
-                        <span style={{display: "block", height: "7px", width: s.mastery, background: s.color}}></span>
+                    <span style={{display: "flex", alignItems: "center", gap: "9.2px"}}>
+                      <span style={{flex: "1", height: "6.4px", borderRadius: "3.7px", background: "#F1EEE7", overflow: "hidden"}}>
+                        <span style={{display: "block", height: "6.4px", width: s.mastery, background: s.color}}></span>
                       </span>
-                      <span style={{width: "40px", fontWeight: "600"}}>
+                      <span style={{width: "36.8px", fontWeight: "600"}}>
                         {s.mastery}
                       </span>
                     </span>
@@ -404,14 +404,14 @@ export default function Page() {
                   </button>
                   {s.open ? (
                     <>
-                      <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", padding: "4px 12px 18px"}}>
+                      <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "11px", padding: "3.7px 11px 16.6px"}}>
                         {(s.weak || []).map((w: any, i_w: number) => (
                           <Fragment key={i_w}>
-                            <Link href={"/v2/matieres"} style={{display: "flex", flexDirection: "column", gap: "4px", padding: "14px 16px", borderRadius: "12px", background: "#FAF8F4", textDecoration: "none", color: "inherit"}}>
-                              <span style={{fontSize: "15px", fontWeight: "600"}}>
+                            <Link href={"/v2/matieres"} style={{display: "flex", flexDirection: "column", gap: "3.7px", padding: "12.9px 14.7px", borderRadius: "11px", background: "#FAF8F4", textDecoration: "none", color: "inherit"}}>
+                              <span style={{fontSize: "13.8px", fontWeight: "600"}}>
                                 {w.title}
                               </span>
-                              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+                              <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                                 {w.info}
                               </span>
                             </Link>
@@ -424,37 +424,37 @@ export default function Page() {
               </Fragment>
             ))}
           </section>
-          <section aria-label={"Charge à venir"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
-            <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
-              <span style={{fontSize: "18px", fontWeight: "700"}}>
+          <section aria-label={"Charge à venir"} style={{flex: "0 0 386.4px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "16.6px", padding: "23.9px 25.8px", borderRadius: "16.6px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
+            <span style={{display: "flex", flexDirection: "column", gap: "3.7px"}}>
+              <span style={{fontSize: "16.6px", fontWeight: "700"}}>
                 {"Les 14 prochains jours"}
               </span>
-              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+              <span style={{fontSize: "12.9px", color: "#6B6F76"}}>
                 {"Fiches pr\u00e9vues par jour"}
               </span>
             </span>
-            <div style={{display: "flex", alignItems: "flex-end", gap: "6px", height: "140px"}}>
+            <div style={{display: "flex", alignItems: "flex-end", gap: "5.5px", height: "128.8px"}}>
               {(v.load || []).map((l: any, i_l: number) => (
                 <Fragment key={i_l}>
-                  <span title={l.t} style={{flex: "1", height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: "4px"}}>
-                    <span style={{fontSize: "12px", fontWeight: "600", color: "#6B6F76"}}>
+                  <span title={l.t} style={{flex: "1", height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: "3.7px"}}>
+                    <span style={{fontSize: "11px", fontWeight: "600", color: "#6B6F76"}}>
                       {l.n}
                     </span>
-                    <span style={{width: "100%", height: l.h, borderRadius: "4px 4px 0 0", background: l.bg}}></span>
+                    <span style={{width: "100%", height: l.h, borderRadius: "3.7px 3.7px 0 0", background: l.bg}}></span>
                   </span>
                 </Fragment>
               ))}
             </div>
-            <div style={{display: "flex", gap: "6px"}}>
+            <div style={{display: "flex", gap: "5.5px"}}>
               {(v.load || []).map((l: any, i_l: number) => (
                 <Fragment key={i_l}>
-                  <span style={{flex: "1", textAlign: "center", fontSize: "12px", color: "#9AA0A8"}}>
+                  <span style={{flex: "1", textAlign: "center", fontSize: "11px", color: "#9AA0A8"}}>
                     {l.d}
                   </span>
                 </Fragment>
               ))}
             </div>
-            <span style={{fontSize: "15px", fontWeight: "600"}}>
+            <span style={{fontSize: "13.8px", fontWeight: "600"}}>
               {"Mardi prochain est charg\u00e9, 9 fiches."}
             </span>
           </section>
