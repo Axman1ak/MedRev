@@ -11,7 +11,7 @@ const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:back
 class Logic extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { tab: 0, mode: 0, sel: 'ana', joined: false, err: 'all' };
+    this.state = { tab: 0, mode: 0, sel: ['ana'], joined: false, err: 'all' };
   }
   renderVals() {
     const st = this.state;
@@ -27,30 +27,48 @@ class Logic extends DCLogic {
       ['pha', 'Pharmacologie', '#D08A3E', '20 QCM, 30 min', [9.8, 11.2, 10.9], ''],
       ['bio', 'Biophysique', '#C4554D', '30 QCM, 1 h', [8.6], ''],
       ['stat', 'Biostatistiques', '#9C7148', '20 QCM, 45 min', [], ''],
-      ['ssh', 'SSH', '#3E8E85', 'QCM et QROC, 1 h', [], '']
+      ['ssh', 'SSH', '#3E8E85', 'QCM et QROC, 1 h', [], ''],
+      ['bch', 'Biochimie', '#5E8F3E', '30 QCM, 45 min', [11.9, 12.4], ''],
+      ['bcel', 'Biologie cellulaire', '#B0607E', '20 QCM, 30 min', [13.1], ''],
+      ['his', 'Histo-embryologie', '#4F9BB0', '20 QCM, 30 min', [], '']
     ];
+    const NUM = { all: [180, 270], ana: [30, 45], phy: [30, 45], pha: [20, 30], bio: [30, 60], stat: [20, 45], ssh: [20, 60], bch: [30, 45], bcel: [20, 30], his: [20, 30] };
+    const selected = st.sel;
+    const toggle = (id) => {
+      if (id === 'all') return this.setState({ sel: ['all'] });
+      const cur0 = st.sel.filter((x) => x !== 'all');
+      const next = cur0.includes(id) ? cur0.filter((x) => x !== id) : cur0.concat(id);
+      this.setState({ sel: next.length ? next : cur0 });
+    };
     const fmt = (n) => n.toFixed(1).replace('.', ',');
     const epreuves = E.map(([id, name, color, format, scores]) => {
-      const on = st.sel === id;
+      const on = selected.includes(id);
       const n = scores.length;
       const diff = n > 1 ? scores[n - 1] - scores[n - 2] : null;
       return {
         name, color, format,
         last: n ? fmt(scores[n - 1]) : 'Pas encore fait', unit: n ? '/20' : '',
         trend: diff === null ? '' : (diff >= 0 ? '+' : '') + fmt(diff),
-        trendColor: id === 'all' ? (diff !== null && diff < 0 ? '#F2B4A4' : '#9BD3AE') : (diff !== null && diff < 0 ? '#B4533A' : '#2F6B45'),
-        bg: id === 'all' ? '#15304E' : '#FDFCFA', fg: id === 'all' ? '#FFFFFF' : '#1A1D23', sub: id === 'all' ? 'rgba(255,255,255,.7)' : '#6B6F76',
-        border: on ? (id === 'all' ? '#F4C35A' : '#15304E') : 'transparent', pressed: on ? 'true' : 'false',
+        trendColor: diff !== null && diff < 0 ? '#B4533A' : '#2F6B45',
+        bg: on ? '#F4F6FA' : '#FDFCFA',
+        border: on ? '#15304E' : 'transparent', pressed: on ? 'true' : 'false',
+        boxBorder: on ? '#15304E' : '#C9C3B8', boxBg: on ? '#15304E' : 'transparent', checkOpacity: on ? 1 : 0,
         span: id === 'all' ? 'span 3' : 'auto',
-        pick: () => this.setState({ sel: id })
+        pick: () => toggle(id)
       };
     });
     epreuves.forEach((e) => { if (e.unit === '') e.last = '—'; });
-    const cur = E.find((e) => e[0] === st.sel) || E[0];
+    const picked = E.filter((e) => selected.includes(e[0]));
+    const cur = picked[0] || E[0];
+    const multi = picked.length > 1;
+    const dur = (m) => (m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + String(m % 60).padStart(2, '0') : '') : m + ' min');
+    const tq = picked.reduce((a, e) => a + NUM[e[0]][0], 0), tm = picked.reduce((a, e) => a + NUM[e[0]][1], 0);
     const dates = ['14 oct.', '21 oct.', '28 oct.', '2 nov.'];
     const sc = cur[4].slice(-4);
     const bars = sc.map((s, i) => ({ score: fmt(s), h: Math.round(s / 20 * 80) + '%', bg: i === sc.length - 1 ? cur[2] : '#E4DFD4', date: dates[4 - sc.length + i] }));
-    const sel = { name: cur[1], color: cur[2], format: cur[3], bars, hasHistory: sc.length > 0, noHistory: sc.length === 0 };
+    const sel = multi
+      ? { name: 'Simulation groupée', color: '#15304E', format: tq + ' QCM, ' + dur(tm), multi: true, chips: picked.map((e) => ({ name: e[1], color: e[2] })), bars: [], hasHistory: false, noHistory: true, empty: 'Première simulation avec ces ' + picked.length + ' matières.' }
+      : { name: cur[1], color: cur[2], format: cur[3], multi: false, chips: [], bars, hasHistory: sc.length > 0, noHistory: sc.length === 0, empty: 'Pas encore de partiel blanc dans cette UE.' };
     const modeDefs = [['Mode examen', ''], ['Mode étude', '']];
     const modes = modeDefs.map(([label, desc], i) => {
       const on = st.mode === i;
@@ -125,24 +143,31 @@ export default function Page() {
                 <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "16.9px"}}>
                   {(v.epreuves || []).map((e: any, i_e: number) => (
                     <Fragment key={i_e}>
-                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: e.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "15.3px", padding: "20.3px", borderRadius: "13.5px", background: e.bg, border: `2px solid ${e.border}`, boxShadow: "0 0 0 1px #ECE8DF", gridColumn: e.span}}>
-                        <span style={{display: "flex", alignItems: "center", gap: "8.5px"}}>
-                          <span style={{width: "10.1px", height: "10.1px", borderRadius: "50%", background: e.color}}></span>
-                          <span style={{fontSize: "16.9px", fontWeight: "700"}}>
+                      <button type={"button"} className={"mr-card"} onClick={e.pick} aria-pressed={e.pressed} style={{font: "inherit", color: "#1A1D23", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "15px 17px 14px", borderRadius: "13.5px", background: e.bg, border: `2px solid ${e.border}`, boxShadow: "0 0 0 1px #ECE8DF", gridColumn: e.span}}>
+                        <span style={{display: "flex", alignItems: "center", gap: "9px"}}>
+                          <span aria-hidden={"true"} style={{width: "17px", height: "17px", flex: "none", boxSizing: "border-box", borderRadius: "5px", border: `2px solid ${e.boxBorder}`, background: e.boxBg, display: "flex", alignItems: "center", justifyContent: "center"}}>
+                            <svg width={"11"} height={"11"} viewBox={"0 0 24 24"} fill={"none"} stroke={"#FFFFFF"} strokeWidth={"3.5"} strokeLinecap={"round"} strokeLinejoin={"round"} style={{opacity: e.checkOpacity}}>
+                              <path d={"M5 12l5 5 9-10"} />
+                            </svg>
+                          </span>
+                          <span style={{width: "9px", height: "9px", borderRadius: "50%", flex: "none", background: e.color}}></span>
+                          <span style={{flex: "1", minWidth: "0", fontSize: "15.5px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>
                             {e.name}
                           </span>
-                        </span>
-                        <span style={{fontSize: "13.5px", color: e.sub}}>
-                          {e.format}
-                        </span>
-                        <span style={{display: "flex", alignItems: "baseline", gap: "8.5px"}}>
-                          <span style={{fontSize: "32.2px", fontWeight: "700", letterSpacing: "-.02em"}}>
-                            {e.last}
+                          <span style={{display: "flex", alignItems: "baseline", gap: "3px", flex: "none"}}>
+                            <span style={{fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em"}}>
+                              {e.last}
+                            </span>
+                            <span style={{fontSize: "12.5px", color: "#6B6F76"}}>
+                              {e.unit}
+                            </span>
                           </span>
-                          <span style={{fontSize: "13.5px", color: e.sub}}>
-                            {e.unit}
+                        </span>
+                        <span style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingLeft: "26px", fontSize: "13px", color: "#6B6F76"}}>
+                          <span>
+                            {e.format}
                           </span>
-                          <span style={{fontSize: "13.5px", fontWeight: "600", color: e.trendColor}}>
+                          <span style={{fontWeight: "600", color: e.trendColor}}>
                             {e.trend}
                           </span>
                         </span>
@@ -160,6 +185,20 @@ export default function Page() {
                   <span style={{fontSize: "13.5px", color: "#6B6F76"}}>
                     {v.sel.format}
                   </span>
+                  {v.sel.multi ? (
+                    <>
+                      <div style={{display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "8px"}}>
+                        {(v.sel.chips || []).map((c: any, i_c: number) => (
+                          <Fragment key={i_c}>
+                            <span style={{display: "flex", alignItems: "center", gap: "6px", padding: "5px 10px", borderRadius: "999px", background: "#F1EEE7", fontSize: "12.5px", fontWeight: "600"}}>
+                              <span style={{width: "7px", height: "7px", borderRadius: "50%", background: c.color}}></span>
+                              {c.name}
+                            </span>
+                          </Fragment>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
                 <div role={"radiogroup"} aria-label={"Mode"} style={{display: "flex", flexDirection: "column", gap: "8.5px"}}>
                   {(v.modes || []).map((m: any, i_m: number) => (
@@ -213,7 +252,7 @@ export default function Page() {
                 {v.sel.noHistory ? (
                   <>
                     <span style={{fontSize: "13.5px", color: "#6B6F76"}}>
-                      {"Pas encore de partiel blanc dans cette UE."}
+                      {v.sel.empty}
                     </span>
                   </>
                 ) : null}
