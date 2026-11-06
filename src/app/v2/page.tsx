@@ -7,7 +7,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {"fiches": "beaucoup"}
 
-const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F1EEE7}\n.mr-btn{transition:transform .15s ease, filter .15s ease}\n.mr-btn:hover{filter:brightness(1.15);transform:translateY(-1px)}\n.mr-btn:active{transform:scale(.97)}\n.mr-tile{transition:transform .15s ease}\n.mr-tile:hover{transform:scale(1.25)}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}\n.mr-rise{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\n.mr-pop{animation:mr-pop .35s cubic-bezier(.2,.8,.2,1) both}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F6F4EF}\n.mr-btn{transition:transform .15s ease, filter .15s ease}\n.mr-btn:hover{filter:brightness(1.15);transform:translateY(-1px)}\n.mr-btn:active{transform:scale(.97)}\n.mr-tile{transition:transform .15s ease}\n.mr-tile:hover{transform:scale(1.25)}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}\n.mr-rise{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\n.mr-pop{animation:mr-pop .35s cubic-bezier(.2,.8,.2,1) both}\n"
 
 class Logic extends DCLogic {
   renderVals() {
@@ -32,7 +32,7 @@ class Logic extends DCLogic {
       return { title, subject, color, tag, tagBg: late ? '#F6EEDC' : '#EEF2F8', tagColor: late ? '#8A6420' : '#2F5D8A', delay: (0.1 + i * 0.04).toFixed(2) + 's' };
     });
     const n = list.length;
-    const stats = [['4 j', 'd’affilée'], ['6 h 40', 'cette semaine'], ['16/26', 'fiches maîtrisées']].map(([v, l], i) => ({ v, l, line: i === 0 ? '0' : '1px solid #E8E3D9', pl: i === 0 ? '0' : '20px', fg: i === 0 ? '#15304E' : '#1A1D23' }));
+    const stats = [['4 j', 'd’affilée'], ['6 h 40', 'cette semaine'], ['16/26', 'fiches maîtrisées']].map(([v, l], i) => ({ v, l, bg: i === 0 ? '#15304E' : '#FDFCFA', fg: i === 0 ? '#FFFFFF' : '#1A1D23' }));
     const shades = ['#EEEAE2', '#C9D6E8', '#8EA8CC', '#4F72A3', '#15304E'];
     const heat = Array.from({ length: 112 }, (_, i) => {
       const r = Math.abs(Math.sin((i + 1) * 7.31)) % 1;
@@ -74,8 +74,8 @@ export default function Page() {
             {"Bonjour Lou"}
           </h1>
         </header>
-        <div style={{display: "flex", gap: "64px", alignItems: "flex-start"}}>
-          <section aria-label={"À réviser aujourd'hui"} className={"mr-rise"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", animationDelay: ".05s"}}>
+        <div style={{display: "flex", gap: "28px", alignItems: "flex-start"}}>
+          <section aria-label={"À réviser aujourd'hui"} className={"mr-rise"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", padding: "28px 30px 16px", borderRadius: "20px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF", animationDelay: ".05s"}}>
             <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", paddingBottom: "18px"}}>
               <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
                 <span style={{fontSize: "26px", fontWeight: "700", letterSpacing: "-.01em"}}>
@@ -91,7 +91,7 @@ export default function Page() {
             </div>
             {(v.fiches || []).map((f: any, i_f: number) => (
               <Fragment key={i_f}>
-                <Link href={"/v2/session"} className={"mr-row mr-rise"} style={{display: "flex", alignItems: "center", gap: "16px", padding: "16px 12px", borderTop: "1px solid #E8E3D9", borderRadius: "10px", textDecoration: "none", color: "inherit", animationDelay: f.delay}}>
+                <Link href={"/v2/session"} className={"mr-row mr-rise"} style={{display: "flex", alignItems: "center", gap: "16px", padding: "15px 12px", borderTop: "1px solid #F1EEE7", borderRadius: "10px", textDecoration: "none", color: "inherit", animationDelay: f.delay}}>
                   <span style={{width: "10px", height: "10px", borderRadius: "50%", background: f.color, flex: "none"}}></span>
                   <span style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "2px"}}>
                     <span style={{fontSize: "16px", fontWeight: "600"}}>
@@ -109,21 +109,21 @@ export default function Page() {
             ))}
           </section>
           <aside style={{flex: "0 0 420px", display: "flex", flexDirection: "column", gap: "20px"}}>
-            <div className={"mr-rise"} style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "0", paddingTop: "6px", animationDelay: ".1s"}}>
+            <div className={"mr-rise"} style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", animationDelay: ".1s"}}>
               {(v.stats || []).map((s: any, i_s: number) => (
                 <Fragment key={i_s}>
-                  <Link href={"/v2/statistiques"} style={{display: "flex", flexDirection: "column", gap: "4px", padding: `4px 20px 4px ${s.pl}`, borderLeft: s.line, color: s.fg, textDecoration: "none"}}>
-                    <span style={{fontSize: "28px", fontWeight: "700", letterSpacing: "-.01em"}}>
+                  <Link href={"/v2/statistiques"} style={{display: "flex", flexDirection: "column", gap: "4px", padding: "18px", borderRadius: "16px", background: s.bg, color: s.fg, textDecoration: "none", boxShadow: "0 0 0 1px #ECE8DF"}}>
+                    <span style={{fontSize: "26px", fontWeight: "700", letterSpacing: "-.01em"}}>
                       {s.v}
                     </span>
-                    <span style={{fontSize: "13px", color: "#6B6F76"}}>
+                    <span style={{fontSize: "13px", opacity: ".72"}}>
                       {s.l}
                     </span>
                   </Link>
                 </Fragment>
               ))}
             </div>
-            <section aria-label={"Ton activité"} className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "14px", paddingTop: "26px", borderTop: "1px solid #E8E3D9", animationDelay: ".15s"}}>
+            <section aria-label={"Ton activité"} className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "22px 24px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF", animationDelay: ".15s"}}>
               <span style={{display: "flex", justifyContent: "space-between", alignItems: "baseline"}}>
                 <span style={{fontSize: "17px", fontWeight: "700"}}>
                   {"Ton activit\u00e9"}
@@ -165,7 +165,7 @@ export default function Page() {
                 {"Plus"}
               </span>
             </section>
-            <section aria-label={"À faire"} className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "2px", paddingTop: "26px", borderTop: "1px solid #E8E3D9", animationDelay: ".2s"}}>
+            <section aria-label={"À faire"} className={"mr-rise"} style={{display: "flex", flexDirection: "column", gap: "2px", padding: "22px 24px 14px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF", animationDelay: ".2s"}}>
               <span style={{fontSize: "17px", fontWeight: "700", paddingBottom: "8px"}}>
                 {"\u00c0 faire"}
               </span>

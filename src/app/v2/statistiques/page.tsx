@@ -7,7 +7,7 @@ import Sidebar from '@/app/v2/_ui/Sidebar'
 
 const DEFAULTS = {}
 
-const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F6F4EF}\n.mr-card{transition:box-shadow .15s ease}\n.mr-card:hover{box-shadow:0 2px 4px rgba(26,29,35,.06),0 10px 24px rgba(26,29,35,.08) !important}\n.mr-bar:hover span.b{filter:brightness(.9)}\n.mr-btn:hover{filter:brightness(.9)}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
+const CSS = "\n\na{color:#15304E}a:hover{color:#0F1E36}\n.mr-row{transition:background .12s ease}\n.mr-row:hover{background:#F6F4EF}\n.mr-card{transition:box-shadow .15s ease}\n.mr-card:hover{box-shadow:0 0 0 1px #D9D3C7 !important}\n.mr-bar:hover span.b{filter:brightness(.9)}\n.mr-btn:hover{filter:brightness(.9)}\n@keyframes mr-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}\n@keyframes mr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}\nmain > *, main > * > *{animation:mr-up .5s cubic-bezier(.2,.8,.2,1) both}\nmain > *:nth-child(2), main > * > *:nth-child(2){animation-delay:.06s}\nmain > *:nth-child(3), main > * > *:nth-child(3){animation-delay:.12s}\nmain > *:nth-child(4), main > * > *:nth-child(4){animation-delay:.18s}\nmain > *:nth-child(5), main > * > *:nth-child(5){animation-delay:.24s}\nmain > *:nth-child(n+6), main > * > *:nth-child(n+6){animation-delay:.3s}\nmain button, main a{transition:transform .15s ease, filter .15s ease, background-color .15s ease, box-shadow .2s ease}\nmain button:active, main a:active{transform:scale(.97)}\n.mr-bar span.b{transform-origin:bottom;animation:mr-grow .6s cubic-bezier(.2,.8,.2,1) .2s both}\n"
 
 class Logic extends DCLogic {
   constructor(props) {
@@ -59,7 +59,7 @@ class Logic extends DCLogic {
     ];
     const kpis = K.map(([label, value, delta, dc], i) => {
       const on = st.metric === i;
-      return { label, value, delta, deltaColor: dc, pressed: on ? 'true' : 'false', line: on ? '#15304E' : '#E8E3D9', fg: on ? '#15304E' : '#1A1D23', pick: () => this.setState({ metric: i }) };
+      return { label, value, delta, deltaColor: on ? (dc === '#2F6B45' ? '#9BD3AE' : '#F2B4A4') : dc, pressed: on ? 'true' : 'false', bg: on ? '#15304E' : '#FDFCFA', fg: on ? '#FFFFFF' : '#1A1D23', pick: () => this.setState({ metric: i }) };
     });
     const km = K[st.metric];
     const key = km[4];
@@ -73,7 +73,7 @@ class Logic extends DCLogic {
     }));
     const sd = days[selIdx];
     const day = { date: sd.date, active: sd.active, inactive: !sd.active, mins: hm(sd.mins), nf: String(sd.nf), qcm: sd.qcm + '%', fiches: sd.fiches };
-    const risk = [['Pharmacocinétique', 34], ['Optique géométrique', 41], ['Nerfs crâniens', 48], ['Tronc cérébral', 57]].map(([title, v]) => ({ title, pct: v + '%', color: v < 45 ? '#D9735F' : '#D9A441' }));
+    const risk = [['Pharmacocinétique', 34], ['Optique géométrique', 41], ['Nerfs crâniens', 48], ['Tronc cérébral', 57]].map(([title, v]) => ({ title, pct: v + '%', color: v < 45 ? '#F2B4A4' : '#F3D49A' }));
     const calib = [['Anatomie', 72, 70, C.ana], ['Physiologie', 74, 66, C.phy], ['Pharmacologie', 46, 70, C.pha], ['Biophysique', 41, 50, C.bio], ['SSH', 88, 80, C.ssh]].map(([name, q, f, color]) => {
       const g = f - q;
       return { name, color, qcm: q + '%', feel: f + '%', gap: Math.abs(g) < 6 ? 'juste' : (g > 0 ? 'surestimé' : 'sous-estimé'), gapColor: Math.abs(g) < 6 ? '#2F6B45' : (g > 0 ? '#B4533A' : '#2F5D8A') };
@@ -138,11 +138,11 @@ export default function Page() {
             ))}
           </div>
         </header>
-        <div style={{display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "32px"}}>
+        <div style={{display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "16px"}}>
           {(v.kpis || []).map((k: any, i_k: number) => (
             <Fragment key={i_k}>
-              <button type={"button"} className={"mr-card"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "18px 4px 4px", borderRadius: "0", background: "transparent", border: "0", borderTop: `3px solid ${k.line}`}}>
-                <span style={{fontSize: "15px", color: "#6B6F76"}}>
+              <button type={"button"} className={"mr-card"} onClick={k.pick} aria-pressed={k.pressed} style={{font: "inherit", color: k.fg, textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", padding: "22px", borderRadius: "16px", background: k.bg, border: "0", boxShadow: "0 0 0 1px #ECE8DF"}}>
+                <span style={{fontSize: "15px", opacity: ".72"}}>
                   {k.label}
                 </span>
                 <span style={{fontSize: "34px", fontWeight: "700", letterSpacing: "-.02em"}}>
@@ -155,8 +155,8 @@ export default function Page() {
             </Fragment>
           ))}
         </div>
-        <div style={{display: "flex", gap: "56px", alignItems: "stretch"}}>
-          <section aria-label={"Évolution"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "18px", paddingTop: "24px", borderTop: "1px solid #E8E3D9"}}>
+        <div style={{display: "flex", gap: "20px", alignItems: "stretch"}}>
+          <section aria-label={"Évolution"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
             <div style={{display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "16px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {v.chartTitle}
@@ -183,7 +183,7 @@ export default function Page() {
               </span>
             </div>
           </section>
-          <aside aria-label={"Détail du jour"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", paddingTop: "24px", borderTop: "1px solid #E8E3D9"}}>
+          <aside aria-label={"Détail du jour"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
             <span style={{fontSize: "18px", fontWeight: "700", textTransform: "capitalize"}}>
               {v.day.date}
             </span>
@@ -246,23 +246,23 @@ export default function Page() {
             ) : null}
           </aside>
         </div>
-        <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "56px"}}>
-          <section aria-label={"À risque d'oubli"} style={{display: "flex", flexDirection: "column", gap: "14px", paddingTop: "24px", borderTop: "1px solid #E8E3D9"}}>
+        <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "20px"}}>
+          <section aria-label={"À risque d'oubli"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#15304E", color: "#FFFFFF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"\u00c0 risque d\u2019oubli"}
               </span>
-              <span style={{fontSize: "14px", color: "#6B6F76"}}>
+              <span style={{fontSize: "14px", color: "rgba(255,255,255,.65)"}}>
                 {"M\u00e9moire estim\u00e9e aujourd\u2019hui"}
               </span>
             </span>
             {(v.risk || []).map((r: any, i_r: number) => (
               <Fragment key={i_r}>
-                <Link href={"/v2/session"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", textDecoration: "none", color: "#1A1D23", fontSize: "15px"}}>
+                <Link href={"/v2/session"} style={{display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", textDecoration: "none", color: "#FFFFFF", fontSize: "15px"}}>
                   <span style={{flex: "1", fontWeight: "600"}}>
                     {r.title}
                   </span>
-                  <span style={{width: "90px", height: "6px", borderRadius: "3px", background: "#ECE8E0", overflow: "hidden"}}>
+                  <span style={{width: "90px", height: "6px", borderRadius: "3px", background: "rgba(255,255,255,.16)", overflow: "hidden"}}>
                     <span style={{display: "block", height: "6px", width: r.pct, background: r.color}}></span>
                   </span>
                   <span style={{width: "40px", textAlign: "right", fontWeight: "700"}}>
@@ -272,7 +272,7 @@ export default function Page() {
               </Fragment>
             ))}
           </section>
-          <section aria-label={"Ressenti et QCM"} style={{display: "flex", flexDirection: "column", gap: "14px", paddingTop: "24px", borderTop: "1px solid #E8E3D9"}}>
+          <section aria-label={"Ressenti et QCM"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"Ton ressenti face aux QCM"}
@@ -301,7 +301,7 @@ export default function Page() {
               {"Barre color\u00e9e, r\u00e9ussite QCM. Trait noir, ton ressenti."}
             </span>
           </section>
-          <section aria-label={"Tes meilleurs moments"} style={{display: "flex", flexDirection: "column", gap: "14px", paddingTop: "24px", borderTop: "1px solid #E8E3D9"}}>
+          <section aria-label={"Tes meilleurs moments"} style={{display: "flex", flexDirection: "column", gap: "14px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"Quand tu retiens le mieux"}
@@ -351,8 +351,8 @@ export default function Page() {
             </span>
           </section>
         </div>
-        <div style={{display: "flex", gap: "56px", alignItems: "flex-start"}}>
-          <section aria-label={"Par matière"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", borderTop: "1px solid #E8E3D9"}}>
+        <div style={{display: "flex", gap: "20px", alignItems: "flex-start"}}>
+          <section aria-label={"Par matière"} style={{flex: "1", minWidth: "0", display: "flex", flexDirection: "column", padding: "14px 16px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
             <div style={{display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr))", gap: "16px", padding: "12px", fontSize: "14px", color: "#6B6F76"}}>
               <span>
                 {"Mati\u00e8re"}
@@ -407,7 +407,7 @@ export default function Page() {
                       <div style={{display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", padding: "4px 12px 18px"}}>
                         {(s.weak || []).map((w: any, i_w: number) => (
                           <Fragment key={i_w}>
-                            <Link href={"/v2/matieres"} style={{display: "flex", flexDirection: "column", gap: "4px", padding: "10px 0", borderRadius: "0", background: "transparent", textDecoration: "none", color: "inherit"}}>
+                            <Link href={"/v2/matieres"} style={{display: "flex", flexDirection: "column", gap: "4px", padding: "14px 16px", borderRadius: "12px", background: "#FAF8F4", textDecoration: "none", color: "inherit"}}>
                               <span style={{fontSize: "15px", fontWeight: "600"}}>
                                 {w.title}
                               </span>
@@ -424,7 +424,7 @@ export default function Page() {
               </Fragment>
             ))}
           </section>
-          <section aria-label={"Charge à venir"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", paddingTop: "24px", borderTop: "1px solid #E8E3D9"}}>
+          <section aria-label={"Charge à venir"} style={{flex: "0 0 420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "18px", padding: "26px 28px", borderRadius: "18px", background: "#FDFCFA", boxShadow: "0 0 0 1px #ECE8DF"}}>
             <span style={{display: "flex", flexDirection: "column", gap: "4px"}}>
               <span style={{fontSize: "18px", fontWeight: "700"}}>
                 {"Les 14 prochains jours"}
